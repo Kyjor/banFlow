@@ -15,8 +15,7 @@ import { IMAGES } from '../../config';
 function Footer() {
   return (
     <Layout.Footer className="footer">
-      <img alt="" className="logo" src={IMAGES.LOGO} />
-      banFlow ©2022
+      banFlow ©{new Date().getFullYear()}
     </Layout.Footer>
   );
 }
