@@ -1,0 +1,17 @@
+.container
+{
+  margin: 8px;
+  border: 1px solid lightgray;
+  border-radius: 10px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.title
+{
+  padding: 8px;
+}
+.nodeList
+{
+  padding: 8px;
+}

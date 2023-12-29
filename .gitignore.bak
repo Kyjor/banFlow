@@ -27,9 +27,3 @@ npm-debug.log.*
 *.css.d.ts
 *.sass.d.ts
 *.scss.d.ts
-
-images
-
-release/win-unpacked/resources/app.asar
-
-release/win-unpacked/resources/app/destfolder/app.asar

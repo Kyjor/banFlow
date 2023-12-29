@@ -1,0 +1,36 @@
+import { TrelloClient } from 'trello.js';
+
+const key = 'nothing';
+const token = '';
+
+const client = new TrelloClient({
+  key,
+  token,
+});
+
+
+function App() {
+  const [board, setBoard] = useState([]);
+
+  if (board.length === 0) {
+    client.boards
+      .getBoardLists({
+        id: 'D95tr6kI', // board id
+      })
+      .then((boards) => {
+        setBoard(boards);
+        console.log(board);
+      })
+      .catch((e) => {
+        console.error(e);
+        throw e;
+      });
+  }
+
+  return (
+    <div>
+      <span>Trello app</span>
+      <span>Boards length: {JSON.stringify(board)}</span>
+    </div>
+  );
+}

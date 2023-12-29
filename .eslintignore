@@ -28,8 +28,6 @@ npm-debug.log.*
 *.sass.d.ts
 *.scss.d.ts
 
-images
-
-release/win-unpacked/resources/app.asar
-
-release/win-unpacked/resources/app/destfolder/app.asar
+# eslint ignores hidden directories by default:
+# https://github.com/eslint/eslint/issues/8429
+!.erb

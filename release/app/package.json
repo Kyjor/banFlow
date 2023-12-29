@@ -1,0 +1,18 @@
+{
+  "name": "banFlow",
+  "version": "0.5.7",
+  "description": "Kanban and Time Tracking Made Easy",
+  "main": "./dist/main/main.js",
+  "author": {
+    "name": "Kyjor",
+    "email": "kyjordev@gmail.com",
+    "url": "https://github.com/Kyjor/banflow"
+  },
+  "scripts": {
+    "electron-rebuild": "node -r ts-node/register ../../.erb/scripts/electron-rebuild.js",
+    "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts",
+    "postinstall": "npm run electron-rebuild && npm run link-modules"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}
