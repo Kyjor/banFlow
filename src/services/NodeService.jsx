@@ -113,6 +113,11 @@ class NodeService {
   };
 
   updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
+    // If debug, print out the property to update and the new value
+    if (process.env.NODE_ENV === `development`) {
+      console.log(`Updating ${propertyToUpdate} to ${newValue}`);
+    }
+
     if (propertyToUpdate === `timeSpent` && !newValue) {
       // eslint-disable-next-line no-param-reassign
       newValue = 0;

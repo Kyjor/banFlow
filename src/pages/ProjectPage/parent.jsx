@@ -52,7 +52,6 @@ class ParentInnerList extends React.Component {
 
   render() {
     const { nodes = {}, ...rest } = this.props;
-    console.log(nodes);
     return nodes.map((node, index) => (
       <>
         {node && (

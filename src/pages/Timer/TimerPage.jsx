@@ -64,7 +64,7 @@ class TimerPage extends Component {
       nodeController.updateNodeProperty(
         'timeSpent',
         self.state.currentNodeSelectedInTimer,
-        self.state.seconds
+        self.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent
       );
     });
   }
@@ -89,7 +89,7 @@ class TimerPage extends Component {
       nodeController.updateNodeProperty(
         'timeSpent',
         this.state.currentNodeSelectedInTimer,
-        this.state.seconds
+        this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent
       );
     }
     const { nodes } = this.state;
@@ -126,7 +126,7 @@ class TimerPage extends Component {
     nodeController.updateNodeProperty(
       `timeSpent`,
       this.state.currentNodeSelectedInTimer,
-      this.state.seconds
+      this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent
     );
   };
 
@@ -141,7 +141,7 @@ class TimerPage extends Component {
       finishDateTime: '',
       length: 0,
       startDateTime: ISO8601ServiceInstance.getISO8601Time(),
-      startingSeconds: this.state.seconds,
+      startingSeconds: this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
     });
 
     nodeController.updateNodeProperty(
