@@ -9,7 +9,15 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, protocol, BrowserWindow, shell, ipcMain, Menu } from 'electron';
+import {
+  app,
+  protocol,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  Menu,
+  dialog,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import * as remoteMain from '@electron/remote/main';
@@ -210,6 +218,14 @@ ipcMain.on(
 
 ipcMain.on('SaveNodeTime', (event, nodeId, seconds) => {
   mainWindow.webContents.send('SaveNodeTime', nodeId, seconds);
+});
+
+ipcMain.on('GetProjectFile', () => {
+  const fileName = dialog.showOpenDialogSync({
+    properties: ['openFile'],
+  });
+  console.log(fileName);
+  // mainWindow.webContents.send('ReturnProjectFile', fileName);
 });
 
 let timerWindow;

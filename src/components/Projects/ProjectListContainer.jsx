@@ -71,6 +71,10 @@ class ProjectListContainer extends Component {
     this.getProjects();
   };
 
+  openProjectFile = () => {
+    ipcRenderer.send('GetProjectFile');
+  };
+
   render() {
     return (
       <>
@@ -82,6 +86,7 @@ class ProjectListContainer extends Component {
                 placeholder="Create new project"
               />
               <button type="submit">+</button>
+              <button onClick={this.openProjectFile}>Open File</button>
             </form>
           </div>
           <ProjectList
