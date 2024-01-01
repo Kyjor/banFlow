@@ -89,10 +89,11 @@ class LokiService {
    */
   init = (cb) => {
     const path =
-      // this.isDev
-      // ?
-      `../banFlowProjects/${this.projectName}.json`;
-    // : `./projects/${this.projectName}.json`;
+      // if projectname contains slashes, use it as the path
+      this.projectName.indexOf('/') !== -1 ||
+      this.projectName.indexOf('\\') !== -1
+        ? this.projectName
+        : `../banFlowProjects/${this.projectName}.json`;
 
     this.db = new loki(path, {
       // options
