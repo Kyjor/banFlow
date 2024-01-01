@@ -13,6 +13,7 @@ class LokiService {
     this.nodeTypes = null;
     this.timerPreferences = null;
     this.projectName = '';
+    this.isSelectedFromDialog = false;
     this.isDev = null;
     const self = this;
   }

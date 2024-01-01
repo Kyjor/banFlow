@@ -101,6 +101,7 @@ class ProjectPage extends Component {
 
   componentDidMount() {
     if (!this.state.lokiLoaded) {
+      console.log(this.projectName)
       sharedControllers
         .getState()
         .projectController.setCurrentProjectName(this.projectName);

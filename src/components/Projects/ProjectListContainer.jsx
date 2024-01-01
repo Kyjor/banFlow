@@ -1,6 +1,8 @@
 // Libs
 import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
+import { withRouter } from 'react-router-dom';
+
 import ProjectList from './ProjectItems/ProjectList';
 import './ProjectListContainer.scss';
 import ProjectController from '../../api/project/ProjectController';
@@ -26,6 +28,10 @@ class ProjectListContainer extends Component {
 
   componentDidMount = () => {
     this.getProjects();
+    ipcRenderer.on('ReturnProjectFile', function (e, fileName) {
+      self.props.history.push(`/projectpage/${fileName}`);
+      console.log(fileName);
+    });
   };
 
   getProjects = (isDev) => {
@@ -73,6 +79,7 @@ class ProjectListContainer extends Component {
 
   openProjectFile = () => {
     ipcRenderer.send('GetProjectFile');
+
   };
 
   render() {
@@ -100,4 +107,4 @@ class ProjectListContainer extends Component {
   }
 }
 
-export default ProjectListContainer;
+export default withRouter(ProjectListContainer);
