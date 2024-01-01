@@ -60,7 +60,7 @@ const StopWatch = (props) => {
         }
       }}
     >
-      {new Date(seconds * 1000).toISOString().substr(11, 8)}
+      {new Date((seconds ?? 0) * 1000).toISOString().substr(11, 8)}
     </div>
   );
 };

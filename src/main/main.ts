@@ -224,8 +224,7 @@ ipcMain.on('GetProjectFile', () => {
   const fileName = dialog.showOpenDialogSync({
     properties: ['openFile'],
   });
-  console.log(fileName);
-  // mainWindow.webContents.send('ReturnProjectFile', fileName);
+  mainWindow.webContents.send('ReturnProjectFile', fileName);
 });
 
 let timerWindow;

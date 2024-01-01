@@ -47,6 +47,9 @@ class ProjectPage extends Component {
     super(props);
 
     this.projectName = this.props.match.params.name;
+    // if projectname contains @ symbols, replace them with slashes
+    this.projectName = this.projectName.replace(/[@]/g, '/');
+
     this.state = {
       ...sharedIndividualProjectState.getState(),
       currentProjectName: this.projectName,
@@ -101,6 +104,7 @@ class ProjectPage extends Component {
 
   componentDidMount() {
     if (!this.state.lokiLoaded) {
+      console.log(this.projectName)
       sharedControllers
         .getState()
         .projectController.setCurrentProjectName(this.projectName);

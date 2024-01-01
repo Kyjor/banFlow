@@ -118,14 +118,10 @@ class NodeService {
       console.log(`Updating ${propertyToUpdate} to ${newValue}`);
     }
 
-    if (propertyToUpdate === `timeSpent` && !newValue) {
-      // eslint-disable-next-line no-param-reassign
-      newValue = 0;
-    }
-
-    if (newValue === undefined) {
+    if (newValue == null) {
       // print error to console
       console.error(`You must pass a value to updateNodeProperty`);
+      return;
     }
     let nodeToReturn = null;
     lokiService.nodes
