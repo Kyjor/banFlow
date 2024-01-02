@@ -104,7 +104,6 @@ class ProjectPage extends Component {
 
   componentDidMount() {
     if (!this.state.lokiLoaded) {
-      console.log(this.projectName)
       sharedControllers
         .getState()
         .projectController.setCurrentProjectName(this.projectName);
@@ -115,6 +114,14 @@ class ProjectPage extends Component {
         });
       });
     }
+  }
+
+  componentWillUnmount() {
+    sharedIndividualProjectState.setState((state) => {
+      state.lokiLoaded = false;
+    });
+
+    // todo: close timer window
   }
 
   createNewParent = (parentTitle) => {
