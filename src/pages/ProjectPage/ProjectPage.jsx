@@ -9,7 +9,6 @@ import Layout from '../../layouts/App';
 // Components
 import NodeModal from '../../components/NodeModal/NodeModal';
 import ParentModal from '../../components/ParentModal/ParentModal';
-import StopWatch from '../../components/StopWatch/StopWatch';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 
 import {
@@ -346,7 +345,6 @@ class ProjectPage extends Component {
       <>
         <Layout>
           <div>{this.projectName}</div>
-          <div>{/* <StopWatch startingSeconds={0} /> */}</div>
           <div>
             {this.state.modalNode && (
               <NodeModal

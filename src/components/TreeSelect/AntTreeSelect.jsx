@@ -16,6 +16,7 @@ class AntTreeSelect extends React.Component {
     const { onSelect } = this.props;
     const { defaultValue } = this.props;
     const { value } = this.props;
+    const { disabled } = this.props;
     return (
       <div
         style={{
@@ -32,6 +33,7 @@ class AntTreeSelect extends React.Component {
           dropdownStyle={{ maxHeight: 150, overflowY: 'auto' }}
           treeData={nodes}
           placeholder="Please select"
+          disabled={disabled}
           // treeDefaultExpandAll
           onChange={this.onChange}
           onSelect={onSelect}
@@ -46,6 +48,7 @@ export default AntTreeSelect;
 
 AntTreeSelect.propTypes = {
   defaultValue: PropTypes.string,
+  disabled: PropTypes.bool,
   nodes: PropTypes.array,
   onSelect: PropTypes.func,
   value: PropTypes.string,

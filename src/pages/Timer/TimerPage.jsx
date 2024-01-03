@@ -128,6 +128,10 @@ class TimerPage extends Component {
       this.state.currentNodeSelectedInTimer,
       this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent
     );
+
+    sharedIndividualProjectState.setState((state) => {
+      state.timerRunning = false;
+    });
   };
 
   startSession = (_seconds) => {
@@ -149,6 +153,10 @@ class TimerPage extends Component {
       this.state.currentNodeSelectedInTimer,
       nodeHistory
     );
+
+    sharedIndividualProjectState.setState((state) => {
+      state.timerRunning = true;
+    });
   };
 
   buildTreeData = () => {
@@ -203,6 +211,7 @@ class TimerPage extends Component {
               nodes={this.buildTreeData()}
               updateSelectedNode={this.updateSelectedNode}
               currentNode={this.state.currentNodeSelectedInTimer}
+              isTimerRunning={this.state.timerRunning}
             />
             <Timer
               endSession={this.endSession}
@@ -245,6 +254,7 @@ function TreeDisplay(props) {
   return (
     <AntTreeSelect
       allowClear
+      disabled={props.isTimerRunning}
       nodes={nodes}
       onSelect={(selectedNode, evt) => {
         props.updateSelectedNode(selectedNode);
