@@ -138,7 +138,6 @@ class KanbanBoard extends Component {
               >
                 {this.props.parentOrder.map((parentId, index) => {
                   const parent = this.props.parents[parentId];
-
                   return (
                     parent && (
                       <BoardInnerList
@@ -146,6 +145,7 @@ class KanbanBoard extends Component {
                         createNewNode={this.props.createNewNode}
                         deleteNode={this.props.deleteNode}
                         index={index}
+                        isTimerRunning={this.props.isTimerRunning}
                         key={parent.id}
                         mustFocusNodeTitle={this.props.mustFocusNodeTitle}
                         mustFocusParentTitle={this.props.mustFocusParentTitle}

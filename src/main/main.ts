@@ -241,7 +241,7 @@ function createTimerWindow(node, projectName, stateInit, timerPrefs) {
     width: 275,
     height: 175,
     titleBarStyle: 'customButtonsOnHover',
-    frame: false,
+    frame: true,
     alwaysOnTop: true,
     show: false,
     // resizable: false,

@@ -11,6 +11,7 @@ class BoardInnerList extends React.PureComponent {
     const {
       createNewNode,
       deleteNode,
+      isTimerRunning,
       showParentModal,
       showModal,
       updateNodeTitle,
@@ -22,6 +23,7 @@ class BoardInnerList extends React.PureComponent {
         nodes={nodes}
         index={index}
         createNewNode={createNewNode}
+        isTimerRunning={isTimerRunning}
         mustFocusNodeTitle={mustFocusNodeTitle}
         saveTime={this.props.saveTime}
         mustFocusParentTitle={mustFocusParentTitle}

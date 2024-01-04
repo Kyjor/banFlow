@@ -56,6 +56,7 @@ class ParentInnerList extends React.Component {
       <>
         {node && (
           <Node
+            isTimerRunning={this.props.isTimerRunning}
             key={node.id}
             node={node}
             index={index}
@@ -159,6 +160,7 @@ const Parent = (props) => {
                   isDraggingOver={snapshot.isDraggingOver}
                 >
                   <ParentInnerList
+                    isTimerRunning={props.isTimerRunning}
                     nodes={nodes}
                     mustFocusNodeTitle={mustFocusNodeTitle}
                     updateNodeTitle={updateNodeTitle}

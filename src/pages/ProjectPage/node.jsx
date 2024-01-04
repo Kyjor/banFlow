@@ -50,7 +50,7 @@ const Node = (props) => {
     <Draggable
       draggableId={node.id}
       index={props.index}
-      isDragDisabled={isDragDisabled}
+      isDragDisabled={isDragDisabled || props.isTimerRunning}
     >
       {(provided, snapshot) => (
         <div

@@ -130,7 +130,7 @@ class TimerPage extends Component {
     );
 
     sharedIndividualProjectState.setState((state) => {
-      state.timerRunning = false;
+      state.isTimerRunning = false;
     });
   };
 
@@ -155,7 +155,7 @@ class TimerPage extends Component {
     );
 
     sharedIndividualProjectState.setState((state) => {
-      state.timerRunning = true;
+      state.isTimerRunning = true;
     });
   };
 
@@ -211,7 +211,7 @@ class TimerPage extends Component {
               nodes={this.buildTreeData()}
               updateSelectedNode={this.updateSelectedNode}
               currentNode={this.state.currentNodeSelectedInTimer}
-              isTimerRunning={this.state.timerRunning}
+              isTimerRunning={this.state.isTimerRunning}
             />
             <Timer
               endSession={this.endSession}

@@ -379,6 +379,7 @@ class ProjectPage extends Component {
             createNewNode={this.createNewNode}
             deleteNode={this.deleteNode}
             handleAddParent={() => this.createNewParent('New Parent')}
+            isTimerRunning={this.state.isTimerRunning}
             mustFocusNodeTitle={this.state.mustFocusNodeTitle}
             mustFocusParentTitle={this.state.mustFocusParentTitle}
             nodes={this.state.nodes}
