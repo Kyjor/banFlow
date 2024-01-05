@@ -99,6 +99,7 @@ class LokiService {
       // options
       autoload: true,
       autosave: true,
+      serializationMethod: 'pretty',
       verbose: true,
       autosaveInterval: 600000,
       autoloadCallback: () => {
