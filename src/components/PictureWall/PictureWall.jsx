@@ -1,9 +1,8 @@
 import * as fs from 'fs';
-import { Upload, Modal, Icon, Button } from 'antd';
+import { Button, Modal, Upload } from 'antd';
 import React, { Component } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
-import ParentModal from '../ParentModal/ParentModal';
 
 function getBase64(file) {
   return new Promise((resolve, reject) => {

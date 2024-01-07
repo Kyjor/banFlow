@@ -24,7 +24,10 @@
   "compounds": [
     {
       "name": "Electron: All",
-      "configurations": ["Electron: Main", "Electron: Renderer"]
+      "configurations": [
+        "Electron: Main",
+        "Electron: Renderer"
+      ]
     }
   ]
 }

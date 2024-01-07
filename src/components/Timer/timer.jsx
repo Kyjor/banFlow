@@ -22,6 +22,7 @@ function showRoundOverNotification() {
     body: SESSION_END_NOTIFICATION_BODY,
   }).onclick = () => console.log(CLICK_MESSAGE);
 }
+
 function showBreakOverNotification() {
   new Notification(BREAK_END_NOTIFICATION_TITLE, {
     body: BREAK_END_NOTIFICATION_BODY,
@@ -62,6 +63,7 @@ const Timer = (props) => {
 
     updateEvent({ isActive: !event.isActive });
   }
+
   function toggleTomatoTimer() {
     if (
       (event.isOnBreak || event.isBetweenRounds || event.isTomatoTimerActive) &&
@@ -80,6 +82,7 @@ const Timer = (props) => {
       tomatoSeconds: event.timerPreferences.time * 60,
     });
   }
+
   function cycleTomatoTimer() {
     if (!event.isActive) {
       return;
@@ -137,6 +140,7 @@ const Timer = (props) => {
       // setIsActive(true);
     }
   }
+
   const handleHoverChange = (visible) => {
     updateEvent({ isHovered: visible });
   };
@@ -185,6 +189,7 @@ const Timer = (props) => {
   function handleTomatoTimerButtonClick() {
     !event.isActive ? (toggle(), toggleTomatoTimer()) : toggleTomatoTimer();
   }
+
   function handlePlayButtonClick() {
     event.isActive && !event.isBetweenRounds
       ? toggle()
@@ -192,6 +197,7 @@ const Timer = (props) => {
       ? cycleTomatoTimer()
       : toggle();
   }
+
   const hoverContent = (
     <>
       <div

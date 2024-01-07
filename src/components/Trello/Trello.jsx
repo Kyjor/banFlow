@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 // import TrelloClient from 'react-trello-client'
-import { TrelloClient, Config } from 'trello.js';
+import { TrelloClient } from 'trello.js';
 
 const TRELLO_API_KEY = 'nothing';
 // const  trelloClient = new TrelloClient({
@@ -30,6 +30,7 @@ async function main() {
     desc: 'From trello.js with love',
   });
 }
+
 const Trello = () => {
   useEffect(() => {
     main();

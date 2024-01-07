@@ -5,9 +5,11 @@ import * as PropTypes from 'prop-types';
 const { Option } = Select;
 
 function CustomSelectOption(props) {
+  const { item } = props;
+
   return (
     <>
-      <span style={{ whiteSpace: 'normal' }}>{props.item}</span>
+      <span style={{ whiteSpace: 'normal' }}>{item}</span>
     </>
   );
 }

@@ -1,6 +1,6 @@
 // Libs
 import React from 'react';
-import { HashRouter, Switch, Route } from 'react-router-dom';
+import { HashRouter, Route, Switch } from 'react-router-dom';
 // Pages
 import Dashboard from '../pages/Dashboard/Dashboard';
 import ProjectPage from '../pages/ProjectPage/ProjectPage';

@@ -1,8 +1,7 @@
 import React from 'react';
-import { Tag, Input, Tooltip, Icon, AutoComplete } from 'antd';
+import { AutoComplete, Input, Tag, Tooltip } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import * as PropTypes from 'prop-types';
-import CustomSelect from '../CustomSelect/CustomSelect';
 
 export default class EditableTagGroup extends React.Component {
   state = {

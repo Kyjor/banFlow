@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTimer } from 'react-use-precision-timer';
 import PropTypes from 'prop-types';
-import ProjectList from '../Projects/ProjectItems/ProjectList';
 
 // The callback will be called every 1000 milliseconds.
 const StopWatch = (props) => {
@@ -29,6 +28,7 @@ const StopWatch = (props) => {
       props.onToggle();
     }
   }
+
   const timer = useTimer({
     delay: 1000,
     callback: () => {

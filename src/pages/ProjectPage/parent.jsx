@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Droppable, Draggable } from 'react-beautiful-dnd';
-import { Button, Icon, Typography } from 'antd';
+import { Draggable, Droppable } from 'react-beautiful-dnd';
+import { Button } from 'antd';
 import PropTypes from 'prop-types';
 import { EllipsisOutlined, PlusOutlined } from '@ant-design/icons';
 
