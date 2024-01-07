@@ -82,7 +82,6 @@ class ProjectListContainer extends Component {
 
   openProjectFile = () => {
     ipcRenderer.send('GetProjectFile');
-
   };
 
   render() {

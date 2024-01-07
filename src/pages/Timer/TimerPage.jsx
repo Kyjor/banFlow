@@ -144,7 +144,8 @@ class TimerPage extends Component {
       finishDateTime: '',
       length: 0,
       startDateTime: ISO8601ServiceInstance.getISO8601Time(),
-      startingSeconds: this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
+      startingSeconds:
+        this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
     });
 
     nodeController.updateNodeProperty(
