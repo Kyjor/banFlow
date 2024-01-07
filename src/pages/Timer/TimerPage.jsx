@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useReducer, Component } from 'react';
-import styled from 'styled-components';
 import { ipcRenderer } from 'electron';
 import { createSharedStore } from 'electron-shared-state'; // or wherever the above file is stored
 import AntTreeSelect from '../../components/TreeSelect/AntTreeSelect';
@@ -22,11 +21,11 @@ const sharedIndividualProjectState = createSharedStore(
 );
 const sharedTimerPrefs = createSharedStore(defaultTimerPreferences);
 
-const TitleBar = styled.div`
-  -webkit-app-region: drag;
-  height: 15px;
-  background-color: black;
-`;
+const titleBarStyle = {
+  WebkitAppRegion: 'drag',
+  height: '15px',
+  backgroundColor: 'black',
+};
 
 class TimerPage extends Component {
   constructor(props) {
@@ -197,7 +196,7 @@ class TimerPage extends Component {
   render() {
     return (
       <div className="app" style={{ overflow: 'hidden' }}>
-        <TitleBar />
+        <div style={titleBarStyle} />
         <div
           style={{
             margin: '10px',

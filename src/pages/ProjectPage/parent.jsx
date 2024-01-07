@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Droppable, Draggable } from 'react-beautiful-dnd';
-import styled from 'styled-components';
 import { Button, Icon, Typography } from 'antd';
 import PropTypes from 'prop-types';
 import { EllipsisOutlined, PlusOutlined } from '@ant-design/icons';
@@ -9,32 +8,31 @@ import Node from './node';
 import EditableTextArea from '../../components/EditableTextArea/EditableTextArea';
 import styles from './parent.module.scss';
 
-const TitleContainer = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-`;
-const Title = styled.h3`
-  padding: 8px;
-`;
+const titleContainerStyle = {
+  display: 'flex',
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+};
 
-const NodeList = styled.div`
-  padding: 8px;
-  background-color: ${(props) =>
-    props.isDraggingOver ? 'skyblue' : 'inherit'};
-  flex-grow: 1;
-  min-height: 200px;
-  max-height: 675px;
-  overflow-y: auto;
-`;
+const nodeListStyle = (isDraggingOver) => {
+  return {
+    padding: '8px',
+    backgroundColor: isDraggingOver ? 'skyblue' : 'inherit',
+    flexGrow: 1,
+    minHeight: '200px',
+    maxHeight: '675px',
+    overflowY: 'auto',
+  };
+};
 
-const ParentSettingsButton = styled.button`
-  padding: 5px;
-  align-self: end;
-  border: none;
-  cursor: pointer;
-  //background-color: transparent;
-`;
+const parentSettingsButtonStyle = {
+  padding: '5px',
+  alignSelf: 'flex-end',
+  border: 'none',
+  cursor: 'pointer',
+  // backgroundColor: 'transparent',
+};
+
 class ParentInnerList extends React.Component {
   constructor(props) {
     super(props);
@@ -112,8 +110,8 @@ const Parent = (props) => {
           ref={provided.innerRef}
           // Do not place styles in here. It will break the dragging animation
         >
-          <TitleContainer {...provided.dragHandleProps}>
-            <Title>
+          <div style={titleContainerStyle} {...provided.dragHandleProps}>
+            <h3 style={{ padding: '8px' }}>
               {isEditing || isFirstEdit ? (
                 <EditableTextArea
                   editing={isEditing || isFirstEdit}
@@ -141,11 +139,14 @@ const Parent = (props) => {
                   {parent.title}
                 </span>
               )}
-            </Title>
-            <ParentSettingsButton onClick={() => showParentModal(parent)}>
+            </h3>
+            <button
+              style={parentSettingsButtonStyle}
+              onClick={() => showParentModal(parent)}
+            >
               <EllipsisOutlined style={{ fontSize: '20px' }} />
-            </ParentSettingsButton>
-          </TitleContainer>
+            </button>
+          </div>
           <Droppable
             droppableId={parent.id}
             // type={parent.id === 'parent-3' ? 'done' : 'active'}
@@ -154,10 +155,10 @@ const Parent = (props) => {
           >
             {(provided, snapshot) => (
               <div style={{ width: '300px', margin: `inherit` }}>
-                <NodeList
+                <div
+                  style={nodeListStyle(snapshot.isDraggingOver)}
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  isDraggingOver={snapshot.isDraggingOver}
                 >
                   <ParentInnerList
                     isTimerRunning={props.isTimerRunning}
@@ -169,7 +170,7 @@ const Parent = (props) => {
                     saveTime={props.saveTime}
                   />
                   {provided.placeholder}
-                </NodeList>
+                </div>
                 <Button
                   type="primary"
                   block

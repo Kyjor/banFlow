@@ -242,7 +242,6 @@
     "react-indiana-drag-scroll": "^2.1.0",
     "react-router-dom": "^5.3.1",
     "react-use-precision-timer": "^2.0.4",
-    "styled-components": "^5.3.5",
     "trello.js": "^1.2.3"
   },
   "devEngines": {
