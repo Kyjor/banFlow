@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import { ipcRenderer } from 'electron';
 import lokiService from './LokiService';
 
 /**
@@ -11,6 +10,7 @@ class ProjectService {
     this.isDev = null;
     const self = this;
   }
+
   /**
    * @function getProjects
    * @desc gets all projects

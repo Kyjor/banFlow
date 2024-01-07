@@ -1,7 +1,7 @@
 // Libs
 import React, { Component } from 'react';
 // Layouts
-import { dialog, ipcRenderer } from 'electron';
+import { ipcRenderer } from 'electron';
 import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { createSharedStore } from 'electron-shared-state';

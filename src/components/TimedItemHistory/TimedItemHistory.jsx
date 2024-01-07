@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button, Table } from 'antd';
 import PropTypes from 'prop-types';
-import StopWatch from '../StopWatch/StopWatch';
 
 const count = 3;
 

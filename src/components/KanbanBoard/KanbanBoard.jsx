@@ -12,12 +12,7 @@ class KanbanBoard extends Component {
     provided.announce(
       `You have lifted the node in the position ${start.source.index + 1}`
     );
-    const homeIndex = this.props.parentOrder.indexOf(start.source.droppableId);
     document.body.style.transition = 'background-color 0.2s ease';
-
-    this.setState({
-      homeIndex,
-    });
   };
 
   onDragUpdate = (update, provided) => {
@@ -29,7 +24,6 @@ class KanbanBoard extends Component {
     const opacity = destination
       ? destination.index / Object.keys(this.props.nodes).length
       : 0;
-    // document.body.style.backgroundColor = `rgba(153, 141, 217, ${opacity})`;
   };
 
   onDragEnd = (result, provided) => {
@@ -43,9 +37,6 @@ class KanbanBoard extends Component {
     provided.announce(message);
     const { destination, source, draggableId, type } = result;
 
-    this.setState({
-      homeIndex: null,
-    });
     document.body.style.color = 'inherit';
 
     if (!destination) {

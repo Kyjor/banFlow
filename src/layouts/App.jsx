@@ -1,5 +1,5 @@
 import { PieChartOutlined } from '@ant-design/icons';
-import { Breadcrumb, Layout, Menu } from 'antd';
+import { Layout, Menu } from 'antd';
 import React, { useState } from 'react';
 // Styles
 import './App.scss';

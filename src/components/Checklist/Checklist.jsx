@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Button } from 'antd';
 import Check from '../Check/Check';
@@ -29,6 +29,7 @@ const Checklist = (props) => {
 
     props.updateNodeProperty(`checklist`, props.nodeId, newChecklist, true);
   }
+
   function deleteCheck(index) {
     const newChecks = [...checks];
     newChecks.splice(index, 1);
@@ -41,6 +42,7 @@ const Checklist = (props) => {
 
     props.updateNodeProperty(`checklist`, props.nodeId, newChecklist, true);
   }
+
   function updateCheck(index, isChecked, title, timeSpent) {
     const newCheck = {
       title,
@@ -58,6 +60,7 @@ const Checklist = (props) => {
 
     props.updateNodeProperty(`checklist`, props.nodeId, newChecklist, true);
   }
+
   return (
     <div>
       <EditableTextArea
@@ -100,6 +103,7 @@ const Checklist = (props) => {
 };
 
 Checklist.propTypes = {
+  check: PropTypes.object,
   checklist: PropTypes.object.isRequired,
   nodeId: PropTypes.number.isRequired,
   updateNodeProperty: PropTypes.func.isRequired,

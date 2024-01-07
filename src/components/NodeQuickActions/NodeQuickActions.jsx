@@ -31,12 +31,12 @@ Content.propTypes = {
 };
 
 export default function NodeQuickActions(props) {
+  const { button, deleteNode, node } = props;
+
   return (
     <div>
-      <Dropdown
-        overlay={<Content node={props.node} deleteNode={props.deleteNode} />}
-      >
-        {props.button}
+      <Dropdown overlay={<Content node={node} deleteNode={deleteNode} />}>
+        {button}
       </Dropdown>
     </div>
   );

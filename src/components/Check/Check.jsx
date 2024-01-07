@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Checkbox } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
@@ -6,7 +6,7 @@ import EditableTextArea from '../EditableTextArea/EditableTextArea';
 
 // The callback will be called every 1000 milliseconds.
 const Check = (props) => {
-  const { check, deleteCheck, index } = props;
+  const { check, deleteCheck, index, updateCheck } = props;
 
   const [isChecked, setIsChecked] = useState(
     check.isChecked ? check.isChecked : false
@@ -20,6 +20,7 @@ const Check = (props) => {
     console.log('delete check');
     deleteCheck(index);
   }
+
   useEffect(() => {}, []);
   useEffect(() => {}, [check]);
 
@@ -30,7 +31,7 @@ const Check = (props) => {
         flexDirection: 'row',
         width: '400px',
         borderRadius: '5px',
-        // backgroundColor: `${isHoveringContainer ? `#e4e4e4` : `transparent`}`,
+        backgroundColor: `${isHoveringContainer ? `#e4e4e4` : `transparent`}`,
         alignItems: 'baseline',
         paddingLeft: '5px',
       }}
@@ -45,12 +46,7 @@ const Check = (props) => {
         defaultChecked={isChecked}
         onChange={(e) => {
           setIsChecked(e.target.checked);
-          props.updateCheck(
-            props.index,
-            e.target.checked,
-            checkTitle,
-            checkTimeSpent
-          );
+          updateCheck(index, e.target.checked, checkTitle, checkTimeSpent);
         }}
       />
       <EditableTextArea
@@ -67,7 +63,7 @@ const Check = (props) => {
         autoSize={{ maxRows: 1 }}
         updateText={(value) => {
           setCheckTitle(value);
-          props.updateCheck(props.index, isChecked, value, checkTimeSpent);
+          updateCheck(index, isChecked, value, checkTimeSpent);
         }}
       />
       <div

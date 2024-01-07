@@ -1,10 +1,8 @@
 // Libs
-import React, { Component } from 'react';
+import React from 'react';
 import { Layout } from 'antd';
 // Styles
 import './Footer.scss';
-// Config
-import { IMAGES } from '../../config';
 
 /**
  * Footer

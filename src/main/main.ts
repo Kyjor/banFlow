@@ -11,12 +11,12 @@
 import path from 'path';
 import {
   app,
-  protocol,
   BrowserWindow,
-  shell,
+  dialog,
   ipcMain,
   Menu,
-  dialog,
+  protocol,
+  shell,
 } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';

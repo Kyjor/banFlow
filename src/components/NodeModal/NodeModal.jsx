@@ -25,21 +25,17 @@ import ISO8601ServiceInstance from '../../services/ISO8601Service';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import EditableTagGroup from '../EditableTagGroup/EditableTagGroup';
 import Checklist from '../Checklist/Checklist';
-import KanbanBoard from '../KanbanBoard/KanbanBoard';
 
 const { TabPane } = Tabs;
 
 class NodeModal extends React.Component {
   constructor(props) {
     super(props);
-    this.node = this.props.node;
-    this.nodeTypes = this.props.nodeTypes;
-    this.nodeStates = this.props.nodeStates;
-    this.state = {
-      modalDescriptionSelected: false,
-      modalNotesSelected: false,
-      endOpen: false,
-    };
+
+    const { node, nodeTypes, nodeStates } = this.props;
+    this.node = node;
+    this.nodeTypes = nodeTypes;
+    this.nodeStates = nodeStates;
   }
 
   handleEstimatedTimeChange = (time, timeString) => {
@@ -47,7 +43,7 @@ class NodeModal extends React.Component {
     this.props.updateNodeProperty(`estimatedTime`, this.node.id, seconds, true);
   };
 
-  handleEstimatedDateChange(date, dateString) {
+  handleEstimatedDateChange = (date, dateString) => {
     const dateToSave = `${`${dateString.split(` `)[0]}T${
       dateString.split(` `)[1]
     }:00`}`;
@@ -57,7 +53,7 @@ class NodeModal extends React.Component {
       dateToSave,
       true
     );
-  }
+  };
 
   handleLockCheckboxChange = (e) => {
     this.props.updateNodeProperty(
@@ -160,19 +156,9 @@ class NodeModal extends React.Component {
             }
             key="1"
           >
-            {/* //TODO: Change node parent and index in parent with select */}
-            {/* <div style={{width:"100%", display:"flex"}}> */}
-            {/*  <div>Parent:</div> */}
-            {/*  <Select */}
-            {/*    style={{width:"50%", marginLeft:"20px", marginBottom:"10px"}} */}
-            {/*  > */}
-            {/*    <Option value="lucy">lucy</Option> */}
-            {/*  </Select> */}
-            {/* </div> */}
             <div>Description</div>
             <EditableTextArea
               defaultValue={this.node.description}
-              // showCount={this.state.modalDescriptionSelected}
               maxLength={500}
               autoSize={{ minRows: 6 }}
               style={{
@@ -180,7 +166,6 @@ class NodeModal extends React.Component {
                 backgroundColor: this.node.description
                   ? `transparent`
                   : `#eeeeee`,
-                // backgroundColor: `#eeeeee`,
               }}
               placeholder="Add a more detailed description here..."
               updateText={(value) => {
@@ -200,8 +185,6 @@ class NodeModal extends React.Component {
               autoSize={{ minRows: 3 }}
               style={{
                 marginBottom: '10px',
-                // backgroundColor: this.node.notes ? `transparent` : `#eeeeee`,
-                // backgroundColor: `#eeeeee`,
               }}
               placeholder="Take some notes here..."
               updateText={(value) => {
@@ -272,7 +255,7 @@ class NodeModal extends React.Component {
               <div>Priority</div>
               <div>
                 <Checkbox
-                  onChange={this.handleCompleteCheckboxChange.bind(this)}
+                  onChange={this.handleCompleteCheckboxChange}
                   defaultChecked={this.node.isComplete}
                 >
                   Mark as complete
@@ -280,7 +263,7 @@ class NodeModal extends React.Component {
               </div>
               <div>
                 <Checkbox
-                  onChange={this.handleLockCheckboxChange.bind(this)}
+                  onChange={this.handleLockCheckboxChange}
                   defaultChecked={this.node.isLocked}
                 >
                   Lock Node
@@ -325,7 +308,7 @@ class NodeModal extends React.Component {
                   )}
                   allowClear
                   format={format}
-                  onChange={this.handleEstimatedTimeChange.bind(this)}
+                  onChange={this.handleEstimatedTimeChange}
                   defaultValue={moment(
                     `${
                       this.node.estimatedTime
@@ -374,7 +357,7 @@ class NodeModal extends React.Component {
                   )}
                   showTime
                   size="default"
-                  onChange={this.handleEstimatedDateChange.bind(this)}
+                  onChange={this.handleEstimatedDateChange}
                   format="YYYY-MM-DD HH:mm"
                 />
               </div>
@@ -455,6 +438,7 @@ class NodeModal extends React.Component {
     );
   }
 }
+
 export default NodeModal;
 
 NodeModal.propTypes = {

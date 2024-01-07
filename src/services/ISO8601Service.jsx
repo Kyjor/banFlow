@@ -1,12 +1,4 @@
 class ISO8601Service {
-  constructor(props) {
-    // function bindings
-    this.convertToISO8601 = this.convertToISO8601.bind(this);
-    this.getISO8601Time = this.getISO8601Time.bind(this);
-  }
-
-  convertToISO8601 = (time) => {};
-
   getISO8601Time = () => {
     const today = new Date();
     const month = today.getMonth() + 1;

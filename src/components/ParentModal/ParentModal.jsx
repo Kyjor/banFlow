@@ -1,13 +1,5 @@
 import React from 'react';
-import {
-  Button,
-  Checkbox,
-  message,
-  Modal,
-  Popconfirm,
-  Select,
-  Tabs,
-} from 'antd';
+import { Button, Checkbox, message, Modal, Popconfirm, Tabs } from 'antd';
 import PropTypes from 'prop-types';
 import EditableTextArea from '../EditableTextArea/EditableTextArea';
 import TimedItemHistory from '../TimedItemHistory/TimedItemHistory';
@@ -115,6 +107,7 @@ class ParentModal extends React.Component {
     );
   }
 }
+
 export default ParentModal;
 
 ParentModal.propTypes = {

@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useReducer, Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import { ipcRenderer } from 'electron';
 import { createSharedStore } from 'electron-shared-state'; // or wherever the above file is stored
 import AntTreeSelect from '../../components/TreeSelect/AntTreeSelect';
 import Timer from '../../components/Timer/timer';
 import './TimerPage.scss';
-import parentController from '../../api/parent/ParentController';
 import projectController from '../../api/project/ProjectController';
 import lokiService from '../../services/LokiService';
 import nodeController from '../../api/nodes/NodeController';
