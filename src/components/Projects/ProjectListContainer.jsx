@@ -102,6 +102,7 @@ class ProjectListContainer extends Component {
             items={this.state.items}
             deleteProject={this.deleteProject}
             renameProject={this.renameProject}
+            openProjectDetails={this.props.openProjectDetails}
           />
         </div>
       </>
