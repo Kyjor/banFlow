@@ -67,7 +67,7 @@ class ParentInnerList extends React.Component {
   }
 }
 
-const Parent = (props) => {
+function Parent(props) {
   const [isEditing, setIsEditing] = useState(false);
   const [isFirstEdit, setIsFirstEdit] = useState(false);
 
@@ -186,7 +186,7 @@ const Parent = (props) => {
       )}
     </Draggable>
   );
-};
+}
 
 export default Parent;
 

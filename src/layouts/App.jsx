@@ -21,7 +21,7 @@ function getItem(label, key, icon, children) {
 
 const items = [getItem('Option 1', '1', <PieChartOutlined />)];
 
-const App = (props) => {
+function App(props) {
   const [collapsed, setCollapsed] = useState(true);
   const { children } = props;
 
@@ -65,7 +65,7 @@ const App = (props) => {
       <Footer />
     </Layout>
   );
-};
+}
 
 App.propTypes = {
   children: PropTypes.array.isRequired,

@@ -20,7 +20,7 @@ export function pathCreator(route: string) {
           : __dirname.split('\\').slice(0, -2).join('/'),
         'dist',
         'renderer',
-        'index.html'
+        'index.html',
       ),
       slashes: false,
     })}?${route}`;

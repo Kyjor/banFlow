@@ -5,11 +5,11 @@ import { CloseOutlined } from '@ant-design/icons';
 import EditableTextArea from '../EditableTextArea/EditableTextArea';
 
 // The callback will be called every 1000 milliseconds.
-const Check = (props) => {
+function Check(props) {
   const { check, deleteCheck, index, updateCheck } = props;
 
   const [isChecked, setIsChecked] = useState(
-    check.isChecked ? check.isChecked : false
+    check.isChecked ? check.isChecked : false,
   );
   const [checkTitle, setCheckTitle] = useState(check.title ?? '');
   const [checkTimeSpent, setCheckTimeSpent] = useState(check.timeSpent ?? 0);
@@ -91,7 +91,7 @@ const Check = (props) => {
       />
     </div>
   );
-};
+}
 
 Check.propTypes = {
   check: PropTypes.object.isRequired,
