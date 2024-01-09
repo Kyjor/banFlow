@@ -3,7 +3,12 @@ import React, { Component } from 'react';
 // Styles
 import PropTypes from 'prop-types';
 import { Icon } from 'antd';
-import { DoubleLeftOutlined, DoubleRightOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import {
+  DoubleLeftOutlined,
+  DoubleRightOutlined,
+  LeftOutlined,
+  RightOutlined,
+} from '@ant-design/icons';
 
 /**
  * DayByDayCalendar

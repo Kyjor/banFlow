@@ -120,7 +120,7 @@ class Dashboard extends Component {
       }
     });
     return listData || [];
-  }
+  };
 
   updateSelectedProject = (projectName) => {
     if (projectName) {

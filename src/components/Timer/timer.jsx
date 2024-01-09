@@ -30,7 +30,7 @@ function showBreakOverNotification() {
 }
 
 // The callback will be called every 1000 milliseconds.
-const Timer = (props) => {
+function Timer(props) {
   function reducer(prev, next) {
     return { ...prev, ...next };
   }
@@ -194,132 +194,130 @@ const Timer = (props) => {
     event.isActive && !event.isBetweenRounds
       ? toggle()
       : event.isBetweenRounds
-      ? cycleTomatoTimer()
-      : toggle();
+        ? cycleTomatoTimer()
+        : toggle();
   }
 
   const hoverContent = (
-    <>
+    <div
+      style={{
+        display: `flex`,
+        flexDirection: `row`,
+      }}
+    >
       <div
         style={{
-          display: `flex`,
-          flexDirection: `row`,
+          width: `60%`,
         }}
       >
-        <div
-          style={{
-            width: `60%`,
-          }}
-        >
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
-            <div style={{ width: '55%' }}>Time:</div>
-            {event.timerPreferences && (
-              <EditableTextArea
-                defaultValue={event.timerPreferences.time}
-                style={{ width: '30%', resize: 'none', height: '15px' }}
-                maxLength={3}
-                autoSize={{ maxRows: 1 }}
-                updateText={(value) => {
-                  props.updateTimerPreferenceProperty(`time`, value);
-                  updateEvent({
-                    timerPreferences: {
-                      ...event.timerPreferences,
-                      time: value,
-                    },
-                  });
-                }}
-              />
-            )}
-          </div>
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
-            <div style={{ width: '55%' }}>Short Break:</div>
-            {event.timerPreferences && (
-              <EditableTextArea
-                defaultValue={event.timerPreferences.shortBreak}
-                style={{ width: '30%', resize: 'none', height: '10px' }}
-                // showCount={this.state.textSelected}
-                maxLength={3}
-                autoSize={{ maxRows: 1 }}
-                updateText={(value) => {
-                  props.updateTimerPreferenceProperty(`shortBreak`, value);
-                  updateEvent({
-                    timerPreferences: {
-                      ...event.timerPreferences,
-                      shortBreak: value,
-                    },
-                  });
-                }}
-              />
-            )}
-          </div>
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
-            <div style={{ width: '55%' }}>Long Break:</div>
-            {event.timerPreferences && (
-              <EditableTextArea
-                defaultValue={event.timerPreferences.longBreak}
-                style={{ width: '30%', resize: 'none', height: '15px' }}
-                // showCount={this.state.textSelected}
-                maxLength={3}
-                autoSize={{ maxRows: 1 }}
-                value={0}
-                updateText={(value) => {
-                  props.updateTimerPreferenceProperty(`longBreak`, value);
-                  updateEvent({
-                    timerPreferences: {
-                      ...event.timerPreferences,
-                      longBreak: value,
-                    },
-                  });
-                }}
-              />
-            )}
-          </div>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
+          <div style={{ width: '55%' }}>Time:</div>
+          {event.timerPreferences && (
+            <EditableTextArea
+              defaultValue={event.timerPreferences.time}
+              style={{ width: '30%', resize: 'none', height: '15px' }}
+              maxLength={3}
+              autoSize={{ maxRows: 1 }}
+              updateText={(value) => {
+                props.updateTimerPreferenceProperty(`time`, value);
+                updateEvent({
+                  timerPreferences: {
+                    ...event.timerPreferences,
+                    time: value,
+                  },
+                });
+              }}
+            />
+          )}
         </div>
-        <div
-          style={{
-            width: `40%`,
-          }}
-        >
-          <div>
-            <div>Auto Cycle:</div>
-            <div>
-              {event.timerPreferences && (
-                <Checkbox
-                  defaultChecked={event.timerPreferences.autoCycle}
-                  onChange={(e) => {
-                    props.updateTimerPreferenceProperty(
-                      `autoCycle`,
-                      e.target.checked
-                    );
-                    updateEvent({
-                      timerPreferences: {
-                        ...event.timerPreferences,
-                        autoCycle: e.target.checked,
-                      },
-                    });
-                  }}
-                />
-              )}
-            </div>
-          </div>
-          <Button
-            onClick={handleTomatoTimerButtonClick}
-            style={{
-              backgroundColor: '#ec8e8e',
-              color: 'black',
-              marginTop: '30px',
-            }}
-          >
-            {(event.isOnBreak ||
-              event.isBetweenRounds ||
-              event.isTomatoTimerActive) &&
-            event.isActive
-              ? `Stop`
-              : `Start`}
-          </Button>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
+          <div style={{ width: '55%' }}>Short Break:</div>
+          {event.timerPreferences && (
+            <EditableTextArea
+              defaultValue={event.timerPreferences.shortBreak}
+              style={{ width: '30%', resize: 'none', height: '10px' }}
+              // showCount={this.state.textSelected}
+              maxLength={3}
+              autoSize={{ maxRows: 1 }}
+              updateText={(value) => {
+                props.updateTimerPreferenceProperty(`shortBreak`, value);
+                updateEvent({
+                  timerPreferences: {
+                    ...event.timerPreferences,
+                    shortBreak: value,
+                  },
+                });
+              }}
+            />
+          )}
+        </div>
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
+          <div style={{ width: '55%' }}>Long Break:</div>
+          {event.timerPreferences && (
+            <EditableTextArea
+              defaultValue={event.timerPreferences.longBreak}
+              style={{ width: '30%', resize: 'none', height: '15px' }}
+              // showCount={this.state.textSelected}
+              maxLength={3}
+              autoSize={{ maxRows: 1 }}
+              value={0}
+              updateText={(value) => {
+                props.updateTimerPreferenceProperty(`longBreak`, value);
+                updateEvent({
+                  timerPreferences: {
+                    ...event.timerPreferences,
+                    longBreak: value,
+                  },
+                });
+              }}
+            />
+          )}
         </div>
       </div>
-    </>
+      <div
+        style={{
+          width: `40%`,
+        }}
+      >
+        <div>
+          <div>Auto Cycle:</div>
+          <div>
+            {event.timerPreferences && (
+              <Checkbox
+                defaultChecked={event.timerPreferences.autoCycle}
+                onChange={(e) => {
+                  props.updateTimerPreferenceProperty(
+                    `autoCycle`,
+                    e.target.checked,
+                  );
+                  updateEvent({
+                    timerPreferences: {
+                      ...event.timerPreferences,
+                      autoCycle: e.target.checked,
+                    },
+                  });
+                }}
+              />
+            )}
+          </div>
+        </div>
+        <Button
+          onClick={handleTomatoTimerButtonClick}
+          style={{
+            backgroundColor: '#ec8e8e',
+            color: 'black',
+            marginTop: '30px',
+          }}
+        >
+          {(event.isOnBreak ||
+            event.isBetweenRounds ||
+            event.isTomatoTimerActive) &&
+          event.isActive
+            ? `Stop`
+            : `Start`}
+        </Button>
+      </div>
+    </div>
   );
 
   return (
@@ -361,10 +359,10 @@ const Timer = (props) => {
                 event.isTomatoTimerActive
                   ? event.tomatoSeconds
                   : event.isOnBreak && !event.isBetweenRounds
-                  ? event.breakSeconds
-                  : event.isActive
-                  ? event.betweenRoundSeconds
-                  : 0) * 1000
+                    ? event.breakSeconds
+                    : event.isActive
+                      ? event.betweenRoundSeconds
+                      : 0) * 1000,
               )
                 .toISOString()
                 .substr(11, 8)}
@@ -428,7 +426,7 @@ const Timer = (props) => {
       </div>
     </>
   );
-};
+}
 
 export default Timer;
 

@@ -51,7 +51,7 @@ class NodeModal extends React.Component {
       `estimatedDate`,
       this.node.id,
       dateToSave,
-      true
+      true,
     );
   };
 
@@ -60,7 +60,7 @@ class NodeModal extends React.Component {
       `isLocked`,
       this.node.id,
       e.target.checked,
-      true
+      true,
     );
   };
 
@@ -69,13 +69,13 @@ class NodeModal extends React.Component {
       `isComplete`,
       this.node.id,
       e.target.checked,
-      true
+      true,
     );
     this.props.updateNodeProperty(
       `completedDate`,
       this.node.id,
       e.target.checked ? ISO8601ServiceInstance.getISO8601Time() : ``,
-      true
+      true,
     );
   };
 
@@ -126,7 +126,7 @@ class NodeModal extends React.Component {
                   `title`,
                   this.node.id,
                   value,
-                  true
+                  true,
                 );
               }}
             />
@@ -139,11 +139,12 @@ class NodeModal extends React.Component {
           <Button key="back" onClick={this.props.handleCancel}>
             Return
           </Button>,
-          this.props.parents && this.props.parents[this.node.parent].isTimed && (
-            <Button key="submit" type="primary" onClick={this.props.handleOk}>
-              Start Working
-            </Button>
-          ),
+          this.props.parents &&
+            this.props.parents[this.node.parent].isTimed && (
+              <Button key="submit" type="primary" onClick={this.props.handleOk}>
+                Start Working
+              </Button>
+            ),
         ]}
       >
         <Tabs defaultActiveKey="1">
@@ -173,7 +174,7 @@ class NodeModal extends React.Component {
                   `description`,
                   this.node.id,
                   value,
-                  true
+                  true,
                 );
               }}
             />
@@ -192,7 +193,7 @@ class NodeModal extends React.Component {
                   `notes`,
                   this.node.id,
                   value,
-                  true
+                  true,
                 );
               }}
             />
@@ -289,7 +290,7 @@ class NodeModal extends React.Component {
                   showTime
                   defaultValue={moment(
                     `${dateFormat(this.node.created, 'yyyy-mm-dd HH:MM')}`,
-                    'YYYY-MM-DD HH:mm'
+                    'YYYY-MM-DD HH:mm',
                   )}
                   format="YYYY-MM-DD HH:mm"
                 />
@@ -304,7 +305,7 @@ class NodeModal extends React.Component {
                             .toISOString()
                             .substr(11, 8)
                         : `00:00:00`
-                    }`
+                    }`,
                   )}
                   allowClear
                   format={format}
@@ -317,7 +318,7 @@ class NodeModal extends React.Component {
                             .substr(11, 8)
                         : `00:00:00`
                     }`,
-                    'HH:mm:ss'
+                    'HH:mm:ss',
                   )}
                 />
               </div>
@@ -329,7 +330,7 @@ class NodeModal extends React.Component {
                     `${new Date((this.node.timeSpent ?? 0) * 1000)
                       .toISOString()
                       .substr(11, 8)}`,
-                    'HH:mm:ss'
+                    'HH:mm:ss',
                   )}
                 />
               </div>
@@ -342,18 +343,18 @@ class NodeModal extends React.Component {
                       ? moment(
                           `${dateFormat(
                             this.node.estimatedDate,
-                            'yyyy-mm-dd HH:MM'
+                            'yyyy-mm-dd HH:MM',
                           )}`,
-                          'YYYY-MM-DD HH:mm'
+                          'YYYY-MM-DD HH:mm',
                         )
                       : null
                   }
                   defaultOpenValue={moment(
                     `${dateFormat(
                       this.node.estimatedDate,
-                      'yyyy-mm-dd HH:MM'
+                      'yyyy-mm-dd HH:MM',
                     )}`,
-                    'YYYY-MM-DD HH:mm'
+                    'YYYY-MM-DD HH:mm',
                   )}
                   showTime
                   size="default"
@@ -371,18 +372,18 @@ class NodeModal extends React.Component {
                       ? moment(
                           `${dateFormat(
                             this.node.completedDate,
-                            'yyyy-mm-dd HH:MM'
+                            'yyyy-mm-dd HH:MM',
                           )}`,
-                          'YYYY-MM-DD HH:mm'
+                          'YYYY-MM-DD HH:mm',
                         )
                       : null
                   }
                   defaultOpenValue={moment(
                     `${dateFormat(
                       this.node.completedDate,
-                      'yyyy-mm-dd HH:MM'
+                      'yyyy-mm-dd HH:MM',
                     )}`,
-                    'YYYY-MM-DD HH:mm'
+                    'YYYY-MM-DD HH:mm',
                   )}
                   showTime
                   size="default"

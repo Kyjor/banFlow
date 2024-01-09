@@ -48,7 +48,7 @@ class ProjectService {
     // } else
     fs.renameSync(
       `../banFlowProjects/${oldName}.json`,
-      `../banFlowProjects/${newName}.json`
+      `../banFlowProjects/${newName}.json`,
     );
   };
 

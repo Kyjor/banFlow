@@ -7,7 +7,7 @@ import { CaretRightOutlined, DeleteTwoTone } from '@ant-design/icons';
 
 const { Paragraph } = Typography;
 
-const ProjectList = (props) => {
+function ProjectList(props) {
   const [items, setItems] = useState([]);
 
   const createTasks = (item) => {
@@ -92,7 +92,7 @@ const ProjectList = (props) => {
       )}
     />
   );
-};
+}
 
 ProjectList.propTypes = {
   deleteProject: PropTypes.func.isRequired,

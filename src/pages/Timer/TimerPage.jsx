@@ -16,7 +16,7 @@ import {
 } from '../../stores/shared';
 
 const sharedIndividualProjectState = createSharedStore(
-  initialIndividualProjectState
+  initialIndividualProjectState,
 );
 const sharedTimerPrefs = createSharedStore(defaultTimerPreferences);
 
@@ -62,7 +62,7 @@ class TimerPage extends Component {
       nodeController.updateNodeProperty(
         'timeSpent',
         self.state.currentNodeSelectedInTimer,
-        self.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent
+        self.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
       );
     });
   }
@@ -87,7 +87,7 @@ class TimerPage extends Component {
       nodeController.updateNodeProperty(
         'timeSpent',
         this.state.currentNodeSelectedInTimer,
-        this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent
+        this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
       );
     }
     const { nodes } = this.state;
@@ -101,14 +101,14 @@ class TimerPage extends Component {
     nodeController.updateNodeProperty(
       'timeSpent',
       this.state.currentNodeSelectedInTimer,
-      this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent
+      this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
     );
   };
 
   endSession = (_seconds) => {
     // add a new session to node session history
     const nodeHistory = nodeController.getNode(
-      this.state.currentNodeSelectedInTimer
+      this.state.currentNodeSelectedInTimer,
     ).sessionHistory;
     nodeHistory[nodeHistory.length - 1] = {
       ...nodeHistory[nodeHistory.length - 1],
@@ -119,12 +119,12 @@ class TimerPage extends Component {
     nodeController.updateNodeProperty(
       `sessionHistory`,
       this.state.currentNodeSelectedInTimer,
-      nodeHistory
+      nodeHistory,
     );
     nodeController.updateNodeProperty(
       `timeSpent`,
       this.state.currentNodeSelectedInTimer,
-      this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent
+      this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
     );
 
     sharedIndividualProjectState.setState((state) => {
@@ -150,7 +150,7 @@ class TimerPage extends Component {
     nodeController.updateNodeProperty(
       `sessionHistory`,
       this.state.currentNodeSelectedInTimer,
-      nodeHistory
+      nodeHistory,
     );
 
     sharedIndividualProjectState.setState((state) => {

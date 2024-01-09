@@ -5,9 +5,9 @@ import Check from '../Check/Check';
 import EditableTextArea from '../EditableTextArea/EditableTextArea';
 
 // The callback will be called every 1000 milliseconds.
-const Checklist = (props) => {
+function Checklist(props) {
   const [checks, setChecks] = useState(
-    props.checklist.checks ? props.checklist.checks : []
+    props.checklist.checks ? props.checklist.checks : [],
   );
   const [checklist, setChecklist] = useState(props.checklist ?? {});
 
@@ -79,7 +79,7 @@ const Checklist = (props) => {
             `checklist`,
             props.nodeId,
             { ...checklist, title: value },
-            true
+            true,
           );
         }}
       />
@@ -100,7 +100,7 @@ const Checklist = (props) => {
       <Button onClick={handleNewCheck}>+ New Check</Button>
     </div>
   );
-};
+}
 
 Checklist.propTypes = {
   check: PropTypes.object,

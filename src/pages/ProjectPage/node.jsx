@@ -14,7 +14,7 @@ import NodeQuickActions from '../../components/NodeQuickActions/NodeQuickActions
 
 const { Meta } = AntCard;
 
-const Node = (props) => {
+function Node(props) {
   const [isEditing, setIsEditing] = useState(false);
   const [isFirstEdit, setIsFirstEdit] = useState(false);
   const [isRecordingTime, setIsRecordingTime] = useState(false);
@@ -124,9 +124,9 @@ const Node = (props) => {
       )}
     </Draggable>
   );
-};
+}
 
-const ItemRender = (props) => {
+function ItemRender(props) {
   const [isHovering, setIsHovering] = useState(false);
 
   function handleHover() {}
@@ -149,7 +149,7 @@ const ItemRender = (props) => {
       />
     </div>
   );
-};
+}
 
 Node.propTypes = {
   node: PropTypes.object,

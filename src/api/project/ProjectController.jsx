@@ -53,7 +53,7 @@ class ProjectController {
     return projectService.updateProjectProperty(
       propertyToUpdate,
       projectId,
-      newValue
+      newValue,
     );
   };
 }

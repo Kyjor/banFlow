@@ -26,7 +26,7 @@ class ParentModal extends React.Component {
       () => this.parent.isTimed,
       this.parent.id,
       e.target.checked,
-      true
+      true,
     );
   };
 
@@ -56,7 +56,7 @@ class ParentModal extends React.Component {
                   () => this.parent.title,
                   this.parent.id,
                   value,
-                  true
+                  true,
                 );
               }}
             />

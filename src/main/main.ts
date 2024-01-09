@@ -21,39 +21,8 @@ import {
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import * as remoteMain from '@electron/remote/main';
-import { createSharedStore } from 'electron-shared-state';
 import MenuBuilder from './menu';
 import { pathCreator } from './util';
-
-const {
-  controllers,
-  defaultTimerPreferences,
-  initialIndividualProjectState,
-  lokiService,
-} = require('../stores/shared');
-
-const sharedIndividualProjectState = createSharedStore(
-  initialIndividualProjectState
-);
-const sharedControllers = createSharedStore(controllers);
-const sharedTimerPrefs = createSharedStore(defaultTimerPreferences);
-const sharedLokiService = createSharedStore(lokiService);
-
-sharedIndividualProjectState.subscribe((state) => {
-  // console.log(state);
-});
-
-sharedControllers.subscribe((state) => {
-  // console.log(state);
-});
-
-sharedTimerPrefs.subscribe((state) => {
-  // console.log(state);
-});
-
-sharedLokiService.subscribe((state) => {
-  // console.log(state);
-});
 
 remoteMain.initialize();
 
@@ -92,7 +61,7 @@ const installExtensions = async () => {
   return installer
     .default(
       extensions.map((name) => installer[name]),
-      forceDownload
+      forceDownload,
     )
     .catch(console.log);
 };
@@ -206,14 +175,14 @@ ipcMain.on(
     stateInit,
     lokiService,
     timerPrefs,
-    controllers
+    controllers,
   ) => {
     mainWindow.webContents.send(
       'MSG_FROM_RENDERER',
-      '(event,node, projectName, stateInit, lokiService, timerPrefs, controllers)'
+      '(event,node, projectName, stateInit, lokiService, timerPrefs, controllers)',
     );
     createTimerWindow(node, projectName, stateInit, timerPrefs);
-  }
+  },
 );
 
 ipcMain.on('SaveNodeTime', (event, nodeId, seconds) => {

@@ -10,7 +10,7 @@ import parentController from '../../api/parent/ParentController';
 class KanbanBoard extends Component {
   onDragStart = (start, provided) => {
     provided.announce(
-      `You have lifted the node in the position ${start.source.index + 1}`
+      `You have lifted the node in the position ${start.source.index + 1}`,
     );
     document.body.style.transition = 'background-color 0.2s ease';
   };
@@ -74,7 +74,7 @@ class KanbanBoard extends Component {
         parentController.updateParentProperty(
           'nodeIds',
           newParent.id,
-          newParent.nodeIds
+          newParent.nodeIds,
         );
       });
 
@@ -147,7 +147,7 @@ class KanbanBoard extends Component {
                             `timeSpent`,
                             nodeId,
                             seconds,
-                            false
+                            false,
                           );
                         }}
                         showModal={this.props.showModal}
