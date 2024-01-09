@@ -28,6 +28,8 @@ class ProjectListContainer extends Component {
 
   componentDidMount() {
     this.getProjects();
+    const self = this;
+
     ipcRenderer.on('ReturnProjectFile', function (e, fileName) {
       if (!fileName) return;
       // if filename contains slashes either forward or backward, replace them @ symbols
