@@ -3,9 +3,9 @@ import { useTimer } from 'react-use-precision-timer';
 import PropTypes from 'prop-types';
 
 // The callback will be called every 1000 milliseconds.
-const StopWatch = (props) => {
+function StopWatch(props) {
   const [seconds, setSeconds] = useState(
-    props.startingSeconds ? props.startingSeconds : 0
+    props.startingSeconds ? props.startingSeconds : 0,
   );
   const [isActive, setIsActive] = useState(false);
 
@@ -63,7 +63,7 @@ const StopWatch = (props) => {
       {new Date((seconds ?? 0) * 1000).toISOString().substr(11, 8)}
     </div>
   );
-};
+}
 
 export default StopWatch;
 

@@ -41,7 +41,7 @@ export default class TimedItemHistory extends React.Component {
     this.setState({
       loading: true,
       list: this.state.data.concat(
-        [...new Array(count)].map(() => ({ loading: true, name: {} }))
+        [...new Array(count)].map(() => ({ loading: true, name: {} })),
       ),
     });
     this.getData((res) => {
@@ -57,7 +57,7 @@ export default class TimedItemHistory extends React.Component {
           // In real scene, you can using public method of react-virtualized:
           // https://stackoverflow.com/questions/46700726/how-to-use-public-method-updateposition-of-react-virtualized
           window.dispatchEvent(new Event('resize'));
-        }
+        },
       );
     });
   };
@@ -73,15 +73,15 @@ export default class TimedItemHistory extends React.Component {
           length: new Date(session.length * 1000).toISOString().substr(11, 8),
           started: session.startDateTime,
           finished: `${`${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getDate()}-${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getMonth()}-${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getFullYear()} ${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getHours()}:${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getMinutes()}:${new Date(session.finishDateTime).getSeconds()}`}`,
           comment: session.comment,
         });
@@ -98,15 +98,15 @@ export default class TimedItemHistory extends React.Component {
           length: new Date(session.length * 1000).toISOString().substr(11, 8),
           started: session.startDateTime,
           finished: `${`${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getDate()}-${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getMonth()}-${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getFullYear()} ${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getHours()}:${new Date(
-            session.finishDateTime
+            session.finishDateTime,
           ).getMinutes()}:${new Date(session.finishDateTime).getSeconds()}`}`,
           comment: session.comment,
         });

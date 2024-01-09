@@ -16,7 +16,7 @@ class TimerController {
   updateTimerPreferenceProperty = (propertyToUpdate, newValue) => {
     return timerService.updateTimerPreferenceProperty(
       propertyToUpdate,
-      newValue
+      newValue,
     );
   };
 }

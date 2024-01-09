@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 
 const { Item } = Menu;
 
-const Content = (props) => {
+function Content(props) {
   return (
     <Menu>
       <Item key="0">
@@ -23,7 +23,7 @@ const Content = (props) => {
       <Item key="3">Attach File(Coming soon)</Item>
     </Menu>
   );
-};
+}
 
 Content.propTypes = {
   deleteNode: PropTypes.func.isRequired,

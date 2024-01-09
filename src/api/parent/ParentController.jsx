@@ -49,7 +49,7 @@ class ParentController {
     return parentService.updateParentProperty(
       propertyToUpdate,
       parentId,
-      newValue
+      newValue,
     );
   };
 
@@ -60,12 +60,12 @@ class ParentController {
   updateNodesInParents = (
     updatedOriginParent,
     updatedDestinationParent,
-    nodeId
+    nodeId,
   ) => {
     parentService.updateNodesInParents(
       updatedOriginParent,
       updatedDestinationParent,
-      nodeId
+      nodeId,
     );
   };
 }

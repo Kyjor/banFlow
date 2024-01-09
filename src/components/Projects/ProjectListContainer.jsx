@@ -26,7 +26,7 @@ class ProjectListContainer extends Component {
     });
   }
 
-  componentDidMount = () => {
+  componentDidMount() {
     this.getProjects();
     ipcRenderer.on('ReturnProjectFile', function (e, fileName) {
       if (!fileName) return;
@@ -35,7 +35,7 @@ class ProjectListContainer extends Component {
       self.props.history.push(`/projectpage/${fileName}`);
       console.log(fileName);
     });
-  };
+  }
 
   getProjects = (isDev) => {
     const items = ProjectController.getProjects(isDev);
@@ -86,25 +86,24 @@ class ProjectListContainer extends Component {
 
   render() {
     return (
-      <>
-        <div className="todoListMain">
-          <div className="header">
-            <form onSubmit={this.addProject}>
-              <input
-                ref={(a) => (this._inputElement = a)}
-                placeholder="Create new project"
-              />
-              <button type="submit">+</button>
-              <button onClick={this.openProjectFile}>Open File</button>
-            </form>
-          </div>
-          <ProjectList
-            items={this.state.items}
-            deleteProject={this.deleteProject}
-            renameProject={this.renameProject}
-          />
+      <div className="todoListMain">
+        <div className="header">
+          <form onSubmit={this.addProject}>
+            <input
+              ref={(a) => (this._inputElement = a)}
+              placeholder="Create new project"
+            />
+            <button type="submit">+</button>
+            <button onClick={this.openProjectFile}>Open File</button>
+          </form>
         </div>
-      </>
+        <ProjectList
+          items={this.state.items}
+          deleteProject={this.deleteProject}
+          renameProject={this.renameProject}
+          openProjectDetails={this.props.openProjectDetails}
+        />
+      </div>
     );
   }
 }

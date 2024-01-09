@@ -7,7 +7,7 @@ import { CaretRightOutlined, DeleteTwoTone } from '@ant-design/icons';
 
 const { Paragraph } = Typography;
 
-const ProjectList = (props) => {
+function ProjectList(props) {
   const [items, setItems] = useState([]);
 
   const createTasks = (item) => {
@@ -53,6 +53,15 @@ const ProjectList = (props) => {
       renderItem={(item) => (
         <List.Item key={item.name}>
           <List.Item.Meta title={item.jsx} />
+          <Button
+            type="text"
+            icon={
+              <CaretRightOutlined
+                onClick={() => props.openProjectDetails(item.name)}
+                style={{ fontSize: '16px', color: 'green' }}
+              />
+            }
+          />
           <Link to={`/projectPage/${item.name}`}>
             <Button
               type="text"
@@ -83,12 +92,13 @@ const ProjectList = (props) => {
       )}
     />
   );
-};
+}
 
 ProjectList.propTypes = {
   deleteProject: PropTypes.func.isRequired,
   items: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.object])).isRequired,
   renameProject: PropTypes.func.isRequired,
+  openProjectDetails: PropTypes.func.isRequired,
 };
 
 export default ProjectList;

@@ -19,27 +19,11 @@ import {
 } from '../../stores/shared';
 
 const sharedIndividualProjectState = createSharedStore(
-  initialIndividualProjectState
+  initialIndividualProjectState,
 );
 const sharedControllers = createSharedStore(controllers);
 const sharedTimerPrefs = createSharedStore(defaultTimerPreferences);
 const sharedLokiService = createSharedStore(lokiService);
-
-sharedIndividualProjectState.subscribe((state) => {
-  // console.log(state);
-});
-
-sharedControllers.subscribe((state) => {
-  // console.log(state);
-});
-
-sharedTimerPrefs.subscribe((state) => {
-  // console.log(state);
-});
-
-sharedLokiService.subscribe((state) => {
-  // console.log(state);
-});
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -271,7 +255,7 @@ class ProjectPage extends Component {
       this.state.modalNode,
       this.projectName,
       sharedIndividualProjectState.getState(),
-      sharedTimerPrefs.getState()
+      sharedTimerPrefs.getState(),
     );
     // TODO: don't persist this
     sharedIndividualProjectState.setState((state) => {
@@ -303,14 +287,14 @@ class ProjectPage extends Component {
     propertyToUpdate,
     parentId,
     newValue,
-    isFromModal
+    isFromModal,
   ) => {
     const newParent = sharedControllers
       .getState()
       .parentController.updateParentProperty(
         propertyToUpdate,
         parentId,
-        newValue
+        newValue,
       );
 
     sharedIndividualProjectState.setState((state) => {
@@ -342,59 +326,57 @@ class ProjectPage extends Component {
 
   render() {
     return this.state.lokiLoaded ? (
-      <>
-        <Layout>
-          <div>{this.projectName}</div>
-          <div>
-            {this.state.modalNode && (
-              <NodeModal
-                addTagToNode={this.addTagToNode}
-                node={this.state.modalNode}
-                parents={this.state.parents}
-                saveMetadataValue={this.saveMetadataValue}
-                createGlobalTag={this.createGlobalTag}
-                updateNodeEnum={this.updateNodeEnum}
-                handleOk={this.handleOk}
-                handleCancel={this.handleCancel}
-                tags={this.state.tags}
-                nodeTypes={this.state.nodeTypes}
-                nodeStates={this.state.nodeStates}
-                updateNodeProperty={this.updateNodeProperty}
-                visible={this.state.nodeModalVisible}
-              />
-            )}
-          </div>
-          <div>
-            {this.state.modalParent && (
-              <ParentModal
-                parent={this.state.modalParent}
-                deleteParent={this.deleteParent}
-                handleCancel={this.handleCancel}
-                updateParentProperty={this.updateParentProperty}
-                visible={this.state.parentModalVisible}
-              />
-            )}
-          </div>
-          <KanbanBoard
-            createNewNode={this.createNewNode}
-            deleteNode={this.deleteNode}
-            handleAddParent={() => this.createNewParent('New Parent')}
-            isTimerRunning={this.state.isTimerRunning}
-            mustFocusNodeTitle={this.state.mustFocusNodeTitle}
-            mustFocusParentTitle={this.state.mustFocusParentTitle}
-            nodes={this.state.nodes}
-            parentOrder={this.state.parentOrder}
-            parents={this.state.parents}
-            saveTime={this.updateNodeProperty}
-            state={this.state}
-            showModal={this.showModal}
-            showParentModal={this.showParentModal}
-            updateNodeTitle={this.updateNodeTitle}
-            updateParentProperty={this.updateParentProperty}
-            updateParents={this.updateParents}
-          />
-        </Layout>
-      </>
+      <Layout>
+        <div>{this.projectName}</div>
+        <div>
+          {this.state.modalNode && (
+            <NodeModal
+              addTagToNode={this.addTagToNode}
+              node={this.state.modalNode}
+              parents={this.state.parents}
+              saveMetadataValue={this.saveMetadataValue}
+              createGlobalTag={this.createGlobalTag}
+              updateNodeEnum={this.updateNodeEnum}
+              handleOk={this.handleOk}
+              handleCancel={this.handleCancel}
+              tags={this.state.tags}
+              nodeTypes={this.state.nodeTypes}
+              nodeStates={this.state.nodeStates}
+              updateNodeProperty={this.updateNodeProperty}
+              visible={this.state.nodeModalVisible}
+            />
+          )}
+        </div>
+        <div>
+          {this.state.modalParent && (
+            <ParentModal
+              parent={this.state.modalParent}
+              deleteParent={this.deleteParent}
+              handleCancel={this.handleCancel}
+              updateParentProperty={this.updateParentProperty}
+              visible={this.state.parentModalVisible}
+            />
+          )}
+        </div>
+        <KanbanBoard
+          createNewNode={this.createNewNode}
+          deleteNode={this.deleteNode}
+          handleAddParent={() => this.createNewParent('New Parent')}
+          isTimerRunning={this.state.isTimerRunning}
+          mustFocusNodeTitle={this.state.mustFocusNodeTitle}
+          mustFocusParentTitle={this.state.mustFocusParentTitle}
+          nodes={this.state.nodes}
+          parentOrder={this.state.parentOrder}
+          parents={this.state.parents}
+          saveTime={this.updateNodeProperty}
+          state={this.state}
+          showModal={this.showModal}
+          showParentModal={this.showParentModal}
+          updateNodeTitle={this.updateNodeTitle}
+          updateParentProperty={this.updateParentProperty}
+          updateParents={this.updateParents}
+        />
+      </Layout>
     ) : (
       <div>Loading...</div>
     );

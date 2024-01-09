@@ -20,6 +20,10 @@ class NodeController {
     return nodeService.getNode(nodeId);
   };
 
+  getNodesWithQuery = (query) => {
+    return nodeService.getNodesWithQuery(query);
+  };
+
   /**
    * @function createNode
    * @desc creates a new Node with a set of given properties

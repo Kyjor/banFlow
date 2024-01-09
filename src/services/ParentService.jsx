@@ -118,7 +118,7 @@ class ParentService {
   updateNodesInParents = (
     updatedOriginParent,
     updatedDestinationParent,
-    nodeId
+    nodeId,
   ) => {
     const { nodes, parents } = lokiService;
     parents

@@ -34,6 +34,10 @@ class NodeService {
     return lokiService.nodes.find({ id: nodeId })[0];
   };
 
+  getNodesWithQuery = (query) => {
+    return lokiService.nodes.find(query);
+  };
+
   /**
    * @function createNode
    * @desc creates a new Node with a set of given properties

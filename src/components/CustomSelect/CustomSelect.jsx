@@ -7,11 +7,7 @@ const { Option } = Select;
 function CustomSelectOption(props) {
   const { item } = props;
 
-  return (
-    <>
-      <span style={{ whiteSpace: 'normal' }}>{item}</span>
-    </>
-  );
+  return <span style={{ whiteSpace: 'normal' }}>{item}</span>;
 }
 
 CustomSelectOption.propTypes = { item: PropTypes.string };
