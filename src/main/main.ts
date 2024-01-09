@@ -207,13 +207,13 @@ function createTimerWindow(node, projectName, stateInit, timerPrefs) {
   Menu.setApplicationMenu(null);
   // Create the browser window.
   timerWindow = new BrowserWindow({
-    width: 275,
-    height: 175,
+    width: 350,
+    height: 250,
     titleBarStyle: 'customButtonsOnHover',
     frame: true,
     alwaysOnTop: true,
     show: false,
-    // resizable: false,
+    resizable: true,
     transparent: true,
 
     // You need to activate `nativeWindowOpen`
