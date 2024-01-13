@@ -190,7 +190,7 @@ class ProjectPage extends Component {
   updateNodeTitle = (newTitle, nodeId, isModalNode = true) => {
     this.updateNodeProperty(`title`, nodeId, newTitle, isModalNode);
     sharedIndividualProjectState.setState((state) => {
-      state.mustFocusNodeTitle = true;
+      state.mustFocusNodeTitle = false;
     });
   };
 
