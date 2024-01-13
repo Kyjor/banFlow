@@ -5,7 +5,7 @@ import ISO8601ServiceInstance from './ISO8601Service';
  * @class NodeService
  * @desc creates a new Node with a set of given properties
  */
-class NodeService {
+const NodeService = {
   /**
    * @function getNodes
    * @desc gets all nodes
@@ -13,7 +13,7 @@ class NodeService {
    * @returns {array} node - all nodes
    * @permission {Read}
    */
-  getNodes = () => {
+  getNodes() {
     const nodes = lokiService.nodes.find({ Id: { $ne: null } });
 
     let response = {};
@@ -28,15 +28,15 @@ class NodeService {
     });
 
     return response;
-  };
+  },
 
-  getNode = (nodeId) => {
+  getNode(nodeId) {
     return lokiService.nodes.find({ id: nodeId })[0];
-  };
+  },
 
-  getNodesWithQuery = (query) => {
+  getNodesWithQuery(query) {
     return lokiService.nodes.find(query);
-  };
+  },
 
   /**
    * @function createNode
@@ -48,7 +48,7 @@ class NodeService {
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode = (nodeType, nodeTitle, parentId = ``) => {
+  createNode(nodeType, nodeTitle, parentId = ``) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
     const nextId = nodes.data.length
@@ -84,7 +84,7 @@ class NodeService {
       estimatedTime: 0, // estimated time, in seconds
       estimatedDate: ``,
       completedDate: ``,
-      isLocked: false, // whether or not the node can be moved from the parent
+      isLocked: false, // whether the node can be moved from the parent
       isArchived: false,
       iteration: null, //
     });
@@ -97,9 +97,9 @@ class NodeService {
 
     lokiService.saveDB();
     return newNode;
-  };
+  },
 
-  deleteNode = (nodeId, parentId) => {
+  deleteNode(nodeId, parentId) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
 
@@ -114,12 +114,14 @@ class NodeService {
     nodes.chain().find({ id: nodeId }).remove();
 
     lokiService.saveDB();
-  };
+  },
 
-  updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
+  updateNodeProperty(propertyToUpdate, nodeId, newValue) {
     // If debug, print out the property to update and the new value
     if (process.env.NODE_ENV === `development`) {
-      console.log(`Updating ${propertyToUpdate} to ${newValue}`);
+      console.log(
+        `Updating node with id ${nodeId}. ${propertyToUpdate} to ${newValue}`,
+      );
     }
 
     if (newValue == null) {
@@ -137,10 +139,16 @@ class NodeService {
       });
 
     lokiService.saveDB();
-    return nodeToReturn;
-  };
-}
+    // If debug, print out the property to update and the new value
+    if (process.env.NODE_ENV === `development`) {
+      console.log(
+        `Node with id ${nodeId} and name ${nodeToReturn.title} updated successfully.`,
+      );
+    }
 
-// create one instance of the class to export so everyone can share it
-const nodeService = new NodeService();
-export default nodeService;
+    // eslint-disable-next-line consistent-return
+    return nodeToReturn;
+  },
+};
+
+export default NodeService;

@@ -49,14 +49,15 @@ function Timer(props) {
   });
 
   function toggle() {
+    const { endSession, seconds, selectedNode, startSession } = props;
     if (timer.isRunning()) {
       timer.stop();
-      if (props.selectedNode) {
-        props.endSession(props.seconds);
+      if (selectedNode) {
+        endSession(seconds);
       }
     } else {
-      if (props.selectedNode) {
-        props.startSession(props.seconds);
+      if (selectedNode) {
+        startSession(seconds);
       }
       timer.start();
     }
@@ -147,9 +148,10 @@ function Timer(props) {
   const timer = useTimer({
     delay: 1000,
     callback: () => {
-      if (props.seconds % 10 === 0 && props.seconds !== 0) {
-        if (props.selectedNode) {
-          props.saveTime();
+      const { saveTime, seconds, selectedNode, updateSeconds } = props;
+      if (seconds % 10 === 0 && seconds !== 0) {
+        if (selectedNode) {
+          saveTime();
         }
       }
       if (event.betweenRoundSeconds <= 0 && event.isBetweenRounds) {
@@ -174,10 +176,11 @@ function Timer(props) {
         updateEvent({ betweenRoundSeconds: event.betweenRoundSeconds - 1 });
       }
       if (!event.isOnBreak && !event.isBetweenRounds) {
-        props.updateSeconds(props.seconds + 1);
+        updateSeconds(seconds + 1);
       }
     },
   });
+
   useEffect(() => {
     timer.stop();
     updateEvent({ isActive: false });
@@ -431,11 +434,12 @@ function Timer(props) {
 export default Timer;
 
 Timer.propTypes = {
-  endSession: PropTypes.func,
-  seconds: PropTypes.number,
+  endSession: PropTypes.func.isRequired,
+  saveTime: PropTypes.func.isRequired,
+  seconds: PropTypes.number.isRequired,
   selectedNode: PropTypes.object,
-  startSession: PropTypes.func,
+  startSession: PropTypes.func.isRequired,
   timerPreferences: PropTypes.object,
-  updateSeconds: PropTypes.func,
-  updateTimerPreferenceProperty: PropTypes.func,
+  updateSeconds: PropTypes.func.isRequired,
+  updateTimerPreferenceProperty: PropTypes.func.isRequired,
 };

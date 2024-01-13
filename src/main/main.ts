@@ -21,6 +21,9 @@ import {
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import * as remoteMain from '@electron/remote/main';
+import installExtension, {
+  REACT_DEVELOPER_TOOLS,
+} from 'electron-devtools-installer';
 import MenuBuilder from './menu';
 import { pathCreator } from './util';
 
@@ -113,12 +116,13 @@ const createWindow = async () => {
   });
 
   mainWindow.on('close', function (e) {
-    const choice = require('electron').dialog.showMessageBox(mainWindow, {
+    const choice = dialog.showMessageBoxSync(mainWindow, {
       type: 'question',
       buttons: ['Yes', 'No'],
       title: 'Confirm',
       message: 'Are you sure you want to quit?',
     });
+
     if (choice === 1) {
       e.preventDefault();
     }
@@ -157,6 +161,9 @@ app.on('window-all-closed', () => {
 app
   .whenReady()
   .then(() => {
+    installExtension(REACT_DEVELOPER_TOOLS)
+      .then((name) => console.log(`Added Extension:  ${name}`))
+      .catch((err) => console.log('An error occurred: ', err));
     createWindow();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the

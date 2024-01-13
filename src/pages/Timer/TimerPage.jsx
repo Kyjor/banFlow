@@ -1,4 +1,4 @@
-import React, { Component, useEffect, useState } from 'react';
+import React, { Component, useEffect } from 'react';
 import { ipcRenderer } from 'electron';
 import { createSharedStore } from 'electron-shared-state'; // or wherever the above file is stored
 import AntTreeSelect from '../../components/TreeSelect/AntTreeSelect';
@@ -10,15 +10,11 @@ import nodeController from '../../api/nodes/NodeController';
 import timerController from '../../api/timer/TimerController';
 import ISO8601ServiceInstance from '../../services/ISO8601Service';
 
-import {
-  defaultTimerPreferences,
-  initialIndividualProjectState,
-} from '../../stores/shared';
+import { initialIndividualProjectState } from '../../stores/shared';
 
 const sharedIndividualProjectState = createSharedStore(
   initialIndividualProjectState,
 );
-const sharedTimerPrefs = createSharedStore(defaultTimerPreferences);
 
 const titleBarStyle = {
   WebkitAppRegion: 'drag',
@@ -42,7 +38,6 @@ class TimerPage extends Component {
       if (!self.state.lokiLoaded) {
         projectController.setCurrentProjectName(projectName);
         lokiService.init(() => {
-          // this.lokiServiceLoadedCallback();
           sharedIndividualProjectState.setState((state) => {
             state.lokiLoaded = true;
           });
@@ -51,64 +46,44 @@ class TimerPage extends Component {
     });
     ipcRenderer.on('RetrieveProjectState', function (e, state) {
       sharedIndividualProjectState.setState((currentState) => {
+        // eslint-disable-next-line no-restricted-syntax
         for (const property in state) {
-          if (property == 'lokiLoaded') continue;
+          // eslint-disable-next-line no-continue
+          if (property === 'lokiLoaded') continue;
           currentState[property] = state[property];
         }
       });
     });
     ipcRenderer.on('RetrieveTimerPrefs', function (e, prefs) {});
     ipcRenderer.on('SaveBeforeClose', function () {
-      nodeController.updateNodeProperty(
-        'timeSpent',
-        self.state.currentNodeSelectedInTimer,
-        self.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
-      );
+      self.saveCurrentSelectedNodeTime();
     });
   }
 
-  updateTimerPreferenceProperty = (propertyToUpdate, newValue) => {
-    timerController.updateTimerPreferenceProperty(propertyToUpdate, newValue);
-  };
-
   updateSeconds = (seconds) => {
+    const { currentNodeSelectedInTimer } = this.state;
+
     sharedIndividualProjectState.setState((state) => {
-      state.nodes[this.state.currentNodeSelectedInTimer].timeSpent = seconds;
+      state.nodes[currentNodeSelectedInTimer].timeSpent = seconds;
     });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   updateSelectedNode = (selectedNode) => {
     if (!selectedNode) {
       return;
     }
 
-    // save current node time
-    if (this.state.currentNodeSelectedInTimer) {
-      nodeController.updateNodeProperty(
-        'timeSpent',
-        this.state.currentNodeSelectedInTimer,
-        this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
-      );
-    }
-    const { nodes } = this.state;
-    const { timeSpent } = nodes[selectedNode];
-
-    this.setState({ currentNodeSelectedInTimer: selectedNode });
-    this.updateSeconds(timeSpent);
-  };
-
-  saveTime = () => {
-    nodeController.updateNodeProperty(
-      'timeSpent',
-      this.state.currentNodeSelectedInTimer,
-      this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
-    );
+    sharedIndividualProjectState.setState((state) => {
+      state.currentNodeSelectedInTimer = selectedNode;
+    });
   };
 
   endSession = (_seconds) => {
+    const { currentNodeSelectedInTimer } = this.state;
     // add a new session to node session history
     const nodeHistory = nodeController.getNode(
-      this.state.currentNodeSelectedInTimer,
+      currentNodeSelectedInTimer,
     ).sessionHistory;
     nodeHistory[nodeHistory.length - 1] = {
       ...nodeHistory[nodeHistory.length - 1],
@@ -118,23 +93,20 @@ class TimerPage extends Component {
 
     nodeController.updateNodeProperty(
       `sessionHistory`,
-      this.state.currentNodeSelectedInTimer,
+      currentNodeSelectedInTimer,
       nodeHistory,
     );
-    nodeController.updateNodeProperty(
-      `timeSpent`,
-      this.state.currentNodeSelectedInTimer,
-      this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
-    );
+    this.saveCurrentSelectedNodeTime();
 
     sharedIndividualProjectState.setState((state) => {
       state.isTimerRunning = false;
     });
   };
 
-  startSession = (_seconds) => {
+  startSession = () => {
+    const { currentNodeSelectedInTimer, nodes } = this.state;
     // add a new session to node session history
-    const node = nodeController.getNode(this.state.currentNodeSelectedInTimer);
+    const node = nodeController.getNode(currentNodeSelectedInTimer);
     const nodeHistory = node.sessionHistory;
     nodeHistory.push({
       comment: '',
@@ -143,13 +115,12 @@ class TimerPage extends Component {
       finishDateTime: '',
       length: 0,
       startDateTime: ISO8601ServiceInstance.getISO8601Time(),
-      startingSeconds:
-        this.state.nodes[this.state.currentNodeSelectedInTimer].timeSpent,
+      startingSeconds: nodes[currentNodeSelectedInTimer].timeSpent,
     });
 
     nodeController.updateNodeProperty(
       `sessionHistory`,
-      this.state.currentNodeSelectedInTimer,
+      currentNodeSelectedInTimer,
       nodeHistory,
     );
 
@@ -158,11 +129,24 @@ class TimerPage extends Component {
     });
   };
 
+  saveCurrentSelectedNodeTime = () => {
+    const { currentNodeSelectedInTimer, nodes } = this.state;
+
+    // save current node time
+    if (currentNodeSelectedInTimer) {
+      nodeController.updateNodeProperty(
+        'timeSpent',
+        currentNodeSelectedInTimer,
+        nodes[currentNodeSelectedInTimer].timeSpent,
+      );
+    }
+  };
+
   buildTreeData = () => {
     const parentAndNodeInformation = [];
 
     const { parents } = this.state;
-    Object.entries(parents).forEach(([key, parent]) => {
+    Object.entries(parents).forEach(([, parent]) => {
       if (!parent.isTimed) {
         return;
       }
@@ -178,7 +162,7 @@ class TimerPage extends Component {
     });
     parentAndNodeInformation.forEach((parent) => {
       const { nodes } = this.state;
-      Object.entries(nodes).forEach(([key, node]) => {
+      Object.entries(nodes).forEach(([, node]) => {
         const nodeInfo = {
           title: node.title,
           value: node.id,
@@ -194,6 +178,13 @@ class TimerPage extends Component {
   };
 
   render() {
+    const {
+      currentNodeSelectedInTimer,
+      isTimerRunning,
+      nodes,
+      lokiLoaded,
+      timerPreferences,
+    } = this.state;
     return (
       <div className="app" style={{ overflow: 'hidden' }}>
         <div style={titleBarStyle} />
@@ -202,28 +193,32 @@ class TimerPage extends Component {
             margin: '10px',
           }}
         />
-        {this.state.currentNodeSelectedInTimer &&
-        this.state.nodes &&
-        this.state.lokiLoaded ? (
+        {currentNodeSelectedInTimer && nodes && lokiLoaded ? (
           <>
+            {console.log(
+              `current node selected in timer: ${currentNodeSelectedInTimer} `,
+            )}
+            {/* eslint-disable-next-line no-use-before-define */}
             <TreeDisplay
               nodes={this.buildTreeData()}
               updateSelectedNode={this.updateSelectedNode}
-              currentNode={this.state.currentNodeSelectedInTimer}
-              isTimerRunning={this.state.isTimerRunning}
+              currentNode={currentNodeSelectedInTimer}
+              isTimerRunning={isTimerRunning}
             />
             <Timer
               endSession={this.endSession}
-              saveTime={this.saveTime}
-              selectedNode={this.state.currentNodeSelectedInTimer}
-              seconds={
-                this.state.nodes[this.state.currentNodeSelectedInTimer]
-                  .timeSpent
-              }
+              saveTime={this.saveCurrentSelectedNodeTime}
+              selectedNode={currentNodeSelectedInTimer}
+              seconds={nodes[currentNodeSelectedInTimer].timeSpent}
               startSession={this.startSession}
-              timerPreferences={this.state.timerPreferences}
+              timerPreferences={timerPreferences}
               updateSeconds={this.updateSeconds}
-              updateTimerPreferenceProperty={this.updateTimerPreferenceProperty}
+              updateTimerPreferenceProperty={(propertyToUpdate, newValue) => {
+                timerController.updateTimerPreferenceProperty(
+                  propertyToUpdate,
+                  newValue,
+                );
+              }}
             />
           </>
         ) : (
@@ -241,25 +236,27 @@ class TimerPage extends Component {
 }
 
 function TreeDisplay(props) {
-  const [currentNode, setCurrentNode] = useState(null);
-  const [nodes, setNodes] = useState(null);
-  useEffect(() => {
-    setCurrentNode(props.currentNode);
-    props.updateSelectedNode(props.currentNode);
-  }, [props.currentNode]);
-  useEffect(() => {
-    setNodes(props.nodes);
-  }, [props.nodes]);
+  // eslint-disable-next-line react/prop-types
+  const { currentNode, isTimerRunning, nodes, updateSelectedNode } = props;
+
+  useEffect(() => {}, [currentNode]);
+  useEffect(() => {}, [nodes]);
   return (
-    <AntTreeSelect
-      allowClear
-      disabled={props.isTimerRunning}
-      nodes={nodes}
-      onSelect={(selectedNode, evt) => {
-        props.updateSelectedNode(selectedNode);
-      }}
-      value={currentNode}
-    />
+    <>
+      {console.log(`tree display node: ${currentNode}`)}
+      <AntTreeSelect
+        allowClear
+        disabled={isTimerRunning}
+        nodes={nodes}
+        onSelect={(selectedNode) => {
+          if (process.env.NODE_ENV === `development`) {
+            console.log(`Switching to node ${selectedNode} in timer page`);
+          }
+          updateSelectedNode(selectedNode);
+        }}
+        value={currentNode}
+      />
+    </>
   );
 }
 
