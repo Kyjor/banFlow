@@ -3,6 +3,7 @@ import { Layout, Menu } from 'antd';
 import React, { useState } from 'react';
 // Styles
 import './App.scss';
+import './tailwind-output.css';
 // Components
 import PropTypes from 'prop-types';
 import Header from '../components/@shared/Header';
