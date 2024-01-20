@@ -68,6 +68,15 @@ class ProjectListContainer extends Component {
   };
 
   isProjectNameValid = (projectName) => {
+    if (!projectName) {
+      return false;
+    }
+
+    const invalidRegex = new RegExp('\\\\+|\/+');
+    if (invalidRegex.test(projectName)) {
+      return false;
+    }
+
     const { items } = this.state;
     let isDuplicateProject = false;
     items.forEach((item) => {
@@ -75,10 +84,8 @@ class ProjectListContainer extends Component {
         isDuplicateProject = true;
       }
     });
-    if (isDuplicateProject || !projectName) {
-      return false;
-    }
-    return true;
+
+    return !isDuplicateProject;
   };
 
   deleteProject = (name) => {
