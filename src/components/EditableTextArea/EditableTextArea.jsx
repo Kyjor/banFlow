@@ -29,6 +29,7 @@ class EditableTextArea extends React.Component {
   render() {
     const {
       autoSize,
+      defaultValue,
       maxLength,
       onChange,
       onMouseDown,
@@ -43,7 +44,7 @@ class EditableTextArea extends React.Component {
           this.textInput = input;
         }}
         // style={{border:"none"}}
-        defaultValue={this.props.defaultValue}
+        defaultValue={defaultValue}
         onClick={(e) => {
           e.preventDefault();
         }}
