@@ -26,12 +26,6 @@ function getFileName(str) {
 }
 
 class PictureWall extends Component {
-  // eslint-disable-next-line react/destructuring-assignment
-  setCoverImage = this.props.setCoverImage;
-
-  // eslint-disable-next-line react/destructuring-assignment
-  addImageToNode = this.props.addImageToNode;
-
   constructor() {
     super();
     this.state = {
@@ -107,7 +101,7 @@ class PictureWall extends Component {
   };
 
   render() {
-    const { node } = this.props;
+    const { node, setCoverImage } = this.props;
     const { previewVisible, previewImage, fileList, previewTitle } = this.state;
     const uploadButton = (
       <div>
@@ -134,7 +128,7 @@ class PictureWall extends Component {
           footer={[
             <Button
               key="setCover"
-              onClick={() => this.setCoverImage(previewImage)}
+              onClick={() => setCoverImage(previewImage)}
             >
               Set As Cover
             </Button>,

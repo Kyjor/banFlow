@@ -13,7 +13,7 @@ function Header() {
         defaultSelectedKeys={['1']}
         className={styles.menu}
       >
-        <Menu.Item key="2">
+        <Menu.Item key="1">
           <Link to="/dashboard">Dashboard</Link>
         </Menu.Item>
       </Menu>

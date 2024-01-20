@@ -11,7 +11,7 @@ import {
   Checkbox,
   Descriptions,
   List,
-  PageHeader,
+  PageHeader, Tabs,
 } from 'antd';
 import dateFormat from 'dateformat';
 import {ipcRenderer} from 'electron';
@@ -26,6 +26,7 @@ import {
   initialIndividualProjectState,
   lokiService,
 } from '../../stores/shared';
+import TabPane from "antd/lib/tabs/TabPane";
 
 const sharedIndividualProjectState = createSharedStore(
   initialIndividualProjectState,
@@ -194,50 +195,58 @@ class Dashboard extends Component {
     return (
       <Layout>
         <div className="home">
-          <Path/>
+          <div>
+            <Path/>
+          </div>
           <div className="flex">
             <ProjectListContainer
               openProjectDetails={this.updateSelectedProject}
             />
             {this.state.selectedProject && (
-              <div>
-                <PageHeader
-                  ghost={false}
-                  title={
-                    <Link to={`/projectPage/${this.state.selectedProject}`}>
-                      {this.state.selectedProject}
-                    </Link>
-                  }
-                >
-                  {this.state.selectedProject && (
-                    <div
-                      style={{
-                        display: 'flex',
-                      }}
-                    >
-                      <div style={{width: '50%'}}>
-                        <Descriptions size="small" column={3}>
-                          <Descriptions.Item label="Created by">
-                            You
-                          </Descriptions.Item>
-                          <Descriptions.Item label="Time Spent">
-                            {new Date(this.getProjectTotalTimeSpent() * 1000)
-                              .toISOString()
-                              .substr(11, 8)}
-                          </Descriptions.Item>
-                        </Descriptions>
+              <Tabs
+                defaultActiveKey="1"
+              >
+                <TabPane tab="Daily" key="1">
+                  <PageHeader
+                    ghost={false}
+                    title={
+                      <Link to={`/projectPage/${this.state.selectedProject}`}>
+                        {this.state.selectedProject}
+                      </Link>
+                    }
+                  >
+                    {this.state.selectedProject && (
+                      <div
+                        style={{
+                          display: 'flex',
+                        }}
+                      >
+                        <div style={{width: '50%'}}>
+                          <Descriptions size="small" column={3}>
+                            <Descriptions.Item label="Created by">
+                              You
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Time Spent">
+                              {new Date(this.getProjectTotalTimeSpent() * 1000)
+                                .toISOString()
+                                .substr(11, 8)}
+                            </Descriptions.Item>
+                          </Descriptions>
+                        </div>
+                        <div style={{width: '50%'}}>
+                          <DayByDayCalendar dayCellRender={this.dayCellRender}/>
+                        </div>
                       </div>
-                      <div style={{width: '50%'}}>
-                        <DayByDayCalendar dayCellRender={this.dayCellRender}/>
-                      </div>
-                    </div>
-                  )}
-                </PageHeader>
+                    )}
+                  </PageHeader>
+                </TabPane>
 
-                <div>
-                  <Calendar dateCellRender={this.dateCellRender}/>,
-                </div>
-              </div>
+                <TabPane tab="Monthly" key="2">
+                  <div>
+                    <Calendar dateCellRender={this.dateCellRender}/>,
+                  </div>
+                </TabPane>
+              </Tabs>
             )}
           </div>
         </div>

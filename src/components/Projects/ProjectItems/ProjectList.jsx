@@ -3,7 +3,7 @@ import {Link} from 'react-router-dom';
 import PropTypes from 'prop-types';
 import {Button, Card, List, Popconfirm, Typography} from 'antd';
 import '../ProjectListContainer.scss';
-import {CaretRightOutlined, DeleteTwoTone} from '@ant-design/icons';
+import {CalendarOutlined, CaretRightOutlined, DeleteTwoTone, InfoCircleOutlined} from '@ant-design/icons';
 
 const {Paragraph} = Typography;
 
@@ -53,20 +53,21 @@ function ProjectList(props) {
       itemLayout="vertical"
       size="large"
       dataSource={items}
-      bordered
-      className="mt-4"
+      bordered={true}
       pagination={{
         pageSize: 3,
       }}
       renderItem={(item) => (
         <List.Item key={item.name}>
-          <Card title={item.jsx}>
+          <Card
+            title={item.jsx}
+            hoverable={true}
+          >
             <Button
               type="text"
               icon={
-                <CaretRightOutlined
+                <CalendarOutlined
                   onClick={() => openProjectDetails(item.name)}
-                  style={{fontSize: '16px', color: 'green'}}
                 />
               }
             />
@@ -74,7 +75,7 @@ function ProjectList(props) {
               <Button
                 type="text"
                 icon={
-                  <CaretRightOutlined
+                  <InfoCircleOutlined
                     style={{fontSize: '16px', color: 'green'}}
                   />
                 }

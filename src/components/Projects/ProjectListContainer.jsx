@@ -45,20 +45,6 @@ class ProjectListContainer extends Component {
     this.setState({items});
   };
 
-
-  addProject = (e) => {
-    e.preventDefault();
-    // eslint-disable-next-line no-underscore-dangle
-    const projectName = this._inputElement.value;
-    // eslint-disable-next-line no-underscore-dangle
-    this._inputElement.value = '';
-
-    if (!this.isProjectNameValid(projectName)) return;
-
-    ProjectController.createProject(projectName);
-    this.getProjects();
-  };
-
   renameProject = (oldName, newName) => {
     if (!this.isProjectNameValid(newName)) {
       return;
@@ -99,13 +85,8 @@ class ProjectListContainer extends Component {
     ipcRenderer.send('GetProjectFile');
   };
 
-  render() {
-    const {items} = this.state;
-    const {openProjectDetails} = this.props;
-
-    return (
-      <div className="todoListMain flex-none mr-8">
-        <div className="header">
+  /*
+  <div className="header">
           <form onSubmit={this.addProject}>
             <input
               ref={(a) => (this._inputElement = a)}
@@ -115,6 +96,13 @@ class ProjectListContainer extends Component {
             <button onClick={this.openProjectFile}>Open File</button>
           </form>
         </div>
+   */
+  render() {
+    const {items} = this.state;
+    const {openProjectDetails} = this.props;
+
+    return (
+      <div className="todoListMain flex-none mr-8">
         <ProjectList
           items={items}
           deleteProject={this.deleteProject}
