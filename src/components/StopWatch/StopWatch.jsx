@@ -4,58 +4,58 @@ import PropTypes from 'prop-types';
 
 // The callback will be called every 1000 milliseconds.
 function StopWatch(props) {
-  const [seconds, setSeconds] = useState(
-    props.startingSeconds ? props.startingSeconds : 0,
-  );
+  const { clickToToggle, nodeId, onToggle, saveTime, startingSeconds } = props;
+  const [seconds, setSeconds] = useState(startingSeconds || 0);
   const [isActive, setIsActive] = useState(false);
-
-  function toggle() {
-    if (timer.isRunning() && props.saveTime) {
-      timer.stop();
-      // props.saveTime(seconds, props.nodeId);
-      if (props.nodeId) {
-        // Todo: end session
-      }
-    } else {
-      timer.start();
-      if (props.nodeId) {
-        // Todo: start session
-      }
-    }
-
-    setIsActive(!isActive);
-    if (props.onToggle) {
-      props.onToggle();
-    }
-  }
 
   const timer = useTimer({
     delay: 1000,
     callback: () => {
-      if (seconds < props.startingSeconds) {
-        setSeconds(props.startingSeconds);
+      if (seconds < startingSeconds) {
+        setSeconds(startingSeconds);
       }
-      if (seconds % 10 === 0 && seconds !== 0 && props.saveTime) {
-        props.saveTime(seconds, props.nodeId);
+      if (seconds % 10 === 0 && seconds !== 0 && saveTime) {
+        saveTime(seconds, nodeId);
       }
 
       setSeconds(seconds + 1);
     },
   });
+
+  function toggle() {
+    if (timer.isRunning() && saveTime) {
+      timer.stop();
+      // props.saveTime(seconds, props.nodeId);
+      if (nodeId) {
+        // Todo: end session
+      }
+    } else {
+      timer.start();
+      if (nodeId) {
+        // Todo: start session
+      }
+    }
+
+    setIsActive(!isActive);
+    if (onToggle) {
+      onToggle();
+    }
+  }
+
   useEffect(() => {
-    if (!props.clickToToggle) {
+    if (!clickToToggle) {
       toggle();
     }
   }, []);
   useEffect(() => {
-    setSeconds(props.startingSeconds);
-  }, [props.startingSeconds]);
+    setSeconds(startingSeconds);
+  }, [startingSeconds]);
   return (
     <div
       className="time"
       style={{ fontSize: '100%' }}
-      onClick={(e) => {
-        if (props.clickToToggle) {
+      onClick={() => {
+        if (clickToToggle) {
           toggle();
         }
       }}

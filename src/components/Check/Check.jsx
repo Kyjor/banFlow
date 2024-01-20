@@ -12,7 +12,7 @@ function Check(props) {
     check.isChecked ? check.isChecked : false,
   );
   const [checkTitle, setCheckTitle] = useState(check.title ?? '');
-  const [checkTimeSpent, setCheckTimeSpent] = useState(check.timeSpent ?? 0);
+  const [checkTimeSpent] = useState(check.timeSpent ?? 0);
   const [isHoveringContainer, setIsHoveringContainer] = useState(false);
   const [isHoveringClose, setIsHoveringClose] = useState(false);
 
@@ -40,6 +40,12 @@ function Check(props) {
       }}
       onMouseOut={() => {
         setIsHoveringContainer(false);
+      }}
+      onFocus={() => {
+        console.log('todo: blur ally');
+      }}
+      onBlur={() => {
+        console.log('todo: blur ally');
       }}
     >
       <Checkbox
@@ -94,9 +100,11 @@ function Check(props) {
 }
 
 Check.propTypes = {
+  // eslint-disable-next-line react/forbid-prop-types
   check: PropTypes.object.isRequired,
   deleteCheck: PropTypes.func.isRequired,
   index: PropTypes.number.isRequired,
+  updateCheck: PropTypes.func.isRequired,
 };
 
 export default Check;

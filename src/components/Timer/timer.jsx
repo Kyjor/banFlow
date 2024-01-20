@@ -200,6 +200,7 @@ function Timer(props) {
         ? cycleTomatoTimer()
         : toggle();
   }
+  const { seconds, updateTimerPreferenceProperty } = props;
 
   const hoverContent = (
     <div
@@ -222,7 +223,7 @@ function Timer(props) {
               maxLength={3}
               autoSize={{ maxRows: 1 }}
               updateText={(value) => {
-                props.updateTimerPreferenceProperty(`time`, value);
+                updateTimerPreferenceProperty(`time`, value);
                 updateEvent({
                   timerPreferences: {
                     ...event.timerPreferences,
@@ -243,7 +244,7 @@ function Timer(props) {
               maxLength={3}
               autoSize={{ maxRows: 1 }}
               updateText={(value) => {
-                props.updateTimerPreferenceProperty(`shortBreak`, value);
+                updateTimerPreferenceProperty(`shortBreak`, value);
                 updateEvent({
                   timerPreferences: {
                     ...event.timerPreferences,
@@ -265,7 +266,7 @@ function Timer(props) {
               autoSize={{ maxRows: 1 }}
               value={0}
               updateText={(value) => {
-                props.updateTimerPreferenceProperty(`longBreak`, value);
+                updateTimerPreferenceProperty(`longBreak`, value);
                 updateEvent({
                   timerPreferences: {
                     ...event.timerPreferences,
@@ -289,10 +290,7 @@ function Timer(props) {
               <Checkbox
                 defaultChecked={event.timerPreferences.autoCycle}
                 onChange={(e) => {
-                  props.updateTimerPreferenceProperty(
-                    `autoCycle`,
-                    e.target.checked,
-                  );
+                  updateTimerPreferenceProperty(`autoCycle`, e.target.checked);
                   updateEvent({
                     timerPreferences: {
                       ...event.timerPreferences,
@@ -389,7 +387,7 @@ function Timer(props) {
           }`,
         }}
       >
-        {new Date((props.seconds ?? 0) * 1000).toISOString().substr(11, 8)}
+        {new Date((seconds ?? 0) * 1000).toISOString().substr(11, 8)}
       </div>
       <div
         className="row"
@@ -437,9 +435,11 @@ Timer.propTypes = {
   endSession: PropTypes.func.isRequired,
   saveTime: PropTypes.func.isRequired,
   seconds: PropTypes.number.isRequired,
-  selectedNode: PropTypes.object,
+  // eslint-disable-next-line react/forbid-prop-types
+  selectedNode: PropTypes.object.isRequired,
   startSession: PropTypes.func.isRequired,
-  timerPreferences: PropTypes.object,
+  // eslint-disable-next-line react/forbid-prop-types
+  timerPreferences: PropTypes.object.isRequired,
   updateSeconds: PropTypes.func.isRequired,
   updateTimerPreferenceProperty: PropTypes.func.isRequired,
 };

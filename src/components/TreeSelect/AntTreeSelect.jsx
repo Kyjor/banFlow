@@ -3,14 +3,6 @@ import PropTypes from 'prop-types';
 import { TreeSelect } from 'antd';
 
 class AntTreeSelect extends React.Component {
-  state = {
-    value: undefined,
-  };
-
-  onChange = (value) => {
-    this.setState({ value });
-  };
-
   render() {
     const { nodes } = this.props;
     const { onSelect } = this.props;
@@ -47,9 +39,10 @@ class AntTreeSelect extends React.Component {
 export default AntTreeSelect;
 
 AntTreeSelect.propTypes = {
-  defaultValue: PropTypes.string,
-  disabled: PropTypes.bool,
-  nodes: PropTypes.array,
-  onSelect: PropTypes.func,
-  value: PropTypes.string,
+  defaultValue: PropTypes.string.isRequired,
+  disabled: PropTypes.bool.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  nodes: PropTypes.array.isRequired,
+  onSelect: PropTypes.func.isRequired,
+  value: PropTypes.string.isRequired,
 };

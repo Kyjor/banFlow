@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 // import TrelloClient from 'react-trello-client'
 import { TrelloClient } from 'trello.js';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const TRELLO_API_KEY = 'nothing';
 // const  trelloClient = new TrelloClient({
 //   apiKey: 'nothing',
@@ -25,6 +26,7 @@ async function main() {
     apiKey: 'nothing',
     apiToken: 'nothing',
   });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const createdBoard = await trelloClient.boards.createBoard({
     name: 'My first board',
     desc: 'From trello.js with love',

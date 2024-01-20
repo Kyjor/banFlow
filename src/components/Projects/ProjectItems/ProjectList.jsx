@@ -10,6 +10,11 @@ const { Paragraph } = Typography;
 function ProjectList(props) {
   const [items, setItems] = useState([]);
 
+  const onChange = (lastStr, currentStr) => {
+    const { renameProject } = props;
+    renameProject(lastStr, currentStr);
+  };
+
   const createTasks = (item) => {
     const projectName = item.text.includes('.json')
       ? item.text.slice(0, item.text.indexOf('.'))
@@ -29,18 +34,19 @@ function ProjectList(props) {
     return listItem;
   };
 
-  const onChange = (lastStr, currentStr) => {
-    props.renameProject(lastStr, currentStr);
-  };
   useEffect(() => {
-    if (!props.items) return;
-    const items = props.items
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    const { items } = props;
+    if (!items) return;
+    const items1 = items
       .filter((item) => {
-        return item.text != '.json' && !item.text.includes('.json~');
+        return item.text !== '.json' && !item.text.includes('.json~');
       })
       .map(createTasks);
-    setItems(items);
+    setItems(items1);
   }, [props.items]);
+
+  const { deleteProject, openProjectDetails } = props;
 
   return (
     <List
@@ -57,7 +63,7 @@ function ProjectList(props) {
             type="text"
             icon={
               <CaretRightOutlined
-                onClick={() => props.openProjectDetails(item.name)}
+                onClick={() => openProjectDetails(item.name)}
                 style={{ fontSize: '16px', color: 'green' }}
               />
             }
@@ -74,7 +80,7 @@ function ProjectList(props) {
           </Link>
           <Popconfirm
             title="Are you sure delete this project?"
-            onConfirm={() => props.deleteProject(item.name)}
+            onConfirm={() => deleteProject(item.name)}
             okText="Yes"
             cancelText="No"
           >

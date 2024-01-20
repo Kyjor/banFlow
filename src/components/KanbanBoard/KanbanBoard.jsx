@@ -8,6 +8,7 @@ import BoardInnerList from '../../pages/ProjectPage/BoardInnerList';
 import parentController from '../../api/parent/ParentController';
 
 class KanbanBoard extends Component {
+  // eslint-disable-next-line class-methods-use-this
   onDragStart = (start, provided) => {
     provided.announce(
       `You have lifted the node in the position ${start.source.index + 1}`,
@@ -15,18 +16,20 @@ class KanbanBoard extends Component {
     document.body.style.transition = 'background-color 0.2s ease';
   };
 
+  // eslint-disable-next-line class-methods-use-this
   onDragUpdate = (update, provided) => {
     const message = update.destination
       ? `You have moved the node to position ${update.destination.index + 1}`
       : `You are currently not over a droppable area`;
     provided.announce(message);
-    const { destination } = update;
-    const opacity = destination
-      ? destination.index / Object.keys(this.props.nodes).length
-      : 0;
+    // const { destination } = update;
+    // const opacity = destination
+    //   ? destination.index / Object.keys(this.props.nodes).length
+    //   : 0;
   };
 
   onDragEnd = (result, provided) => {
+    const { parentOrder, parents, updateParents } = this.props;
     const message = result.destination
       ? `You have moved the node from position ${result.source.index + 1} to ${
           result.destination.index + 1
@@ -49,17 +52,17 @@ class KanbanBoard extends Component {
       return;
     }
     if (type === 'parent') {
-      const newParentOrder = Array.from(this.props.parentOrder);
+      const newParentOrder = Array.from(parentOrder);
       newParentOrder.splice(source.index, 1);
       newParentOrder.splice(destination.index, 0, draggableId);
-      this.props.updateParents(() => {
+      updateParents(() => {
         parentController.updateParentOrder(newParentOrder);
       });
 
       return;
     }
-    const start = this.props.parents[source.droppableId];
-    const finish = this.props.parents[destination.droppableId];
+    const start = parents[source.droppableId];
+    const finish = parents[destination.droppableId];
 
     if (start === finish) {
       const newNodeIds = Array.from(start.nodeIds);
@@ -70,7 +73,7 @@ class KanbanBoard extends Component {
         nodeIds: newNodeIds,
       };
 
-      this.props.updateParents(() => {
+      updateParents(() => {
         parentController.updateParentProperty(
           'nodeIds',
           newParent.id,
@@ -101,6 +104,22 @@ class KanbanBoard extends Component {
   };
 
   render() {
+    const {
+      createNewNode,
+      deleteNode,
+      handleAddParent,
+      isTimerRunning,
+      mustFocusNodeTitle,
+      mustFocusParentTitle,
+      nodes,
+      parentOrder,
+      parents,
+      saveTime,
+      showModal,
+      showParentModal,
+      updateParentProperty,
+      updateNodeTitle,
+    } = this.props;
     return (
       <DragDropContext
         onDragEnd={this.onDragEnd}
@@ -127,33 +146,28 @@ class KanbanBoard extends Component {
                 className={styles.container}
                 ref={provided.innerRef}
               >
-                {this.props.parentOrder.map((parentId, index) => {
-                  const parent = this.props.parents[parentId];
+                {parentOrder.map((parentId, index) => {
+                  const parent = parents[parentId];
                   return (
                     parent && (
                       <BoardInnerList
                         className="ignoreParent"
-                        createNewNode={this.props.createNewNode}
-                        deleteNode={this.props.deleteNode}
+                        createNewNode={createNewNode}
+                        deleteNode={deleteNode}
                         index={index}
-                        isTimerRunning={this.props.isTimerRunning}
+                        isTimerRunning={isTimerRunning}
                         key={parent.id}
-                        mustFocusNodeTitle={this.props.mustFocusNodeTitle}
-                        mustFocusParentTitle={this.props.mustFocusParentTitle}
-                        nodeMap={this.props.nodes}
+                        mustFocusNodeTitle={mustFocusNodeTitle}
+                        mustFocusParentTitle={mustFocusParentTitle}
+                        nodeMap={nodes}
                         parent={parent}
                         saveTime={(seconds, nodeId) => {
-                          this.props.saveTime(
-                            `timeSpent`,
-                            nodeId,
-                            seconds,
-                            false,
-                          );
+                          saveTime(`timeSpent`, nodeId, seconds, false);
                         }}
-                        showModal={this.props.showModal}
-                        showParentModal={this.props.showParentModal}
-                        updateNodeTitle={this.props.updateNodeTitle}
-                        updateParentProperty={this.props.updateParentProperty}
+                        showModal={showModal}
+                        showParentModal={showParentModal}
+                        updateNodeTitle={updateNodeTitle}
+                        updateParentProperty={updateParentProperty}
                       />
                     )
                   );
@@ -162,7 +176,7 @@ class KanbanBoard extends Component {
                 <Button
                   type="primary"
                   block
-                  onClick={this.props.handleAddParent}
+                  onClick={handleAddParent}
                   style={{
                     width: `265px`,
                     marginTop: `10px`,
@@ -183,17 +197,22 @@ class KanbanBoard extends Component {
 export default KanbanBoard;
 
 KanbanBoard.propTypes = {
-  createNewNode: PropTypes.func,
-  deleteNode: PropTypes.func,
-  handleAddParent: PropTypes.func,
-  mustFocusNodeTitle: PropTypes.bool,
-  nodes: PropTypes.array,
-  parentOrder: PropTypes.array,
-  parents: PropTypes.array,
-  saveTime: PropTypes.func,
-  showModal: PropTypes.bool,
-  showParentModal: PropTypes.bool,
-  updateNodeTitle: PropTypes.func,
-  updateParentProperty: PropTypes.func,
-  updateParents: PropTypes.func,
+  createNewNode: PropTypes.func.isRequired,
+  deleteNode: PropTypes.func.isRequired,
+  handleAddParent: PropTypes.func.isRequired,
+  isTimerRunning: PropTypes.bool.isRequired,
+  mustFocusNodeTitle: PropTypes.bool.isRequired,
+  mustFocusParentTitle: PropTypes.bool.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  nodes: PropTypes.array.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  parentOrder: PropTypes.array.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  parents: PropTypes.array.isRequired,
+  saveTime: PropTypes.func.isRequired,
+  showModal: PropTypes.bool.isRequired,
+  showParentModal: PropTypes.bool.isRequired,
+  updateNodeTitle: PropTypes.func.isRequired,
+  updateParentProperty: PropTypes.func.isRequired,
+  updateParents: PropTypes.func.isRequired,
 };

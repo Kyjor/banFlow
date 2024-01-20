@@ -21,7 +21,7 @@ class ProjectListContainer extends Component {
     };
 
     const self = this;
-    ipcRenderer.on('IsDev', function (event, isDev) {
+    ipcRenderer.on('IsDev', function () {
       self.getProjects();
     });
   }
@@ -33,6 +33,7 @@ class ProjectListContainer extends Component {
     ipcRenderer.on('ReturnProjectFile', function (e, fileName) {
       if (!fileName) return;
       // if filename contains slashes either forward or backward, replace them @ symbols
+      // eslint-disable-next-line no-param-reassign
       fileName = fileName.toString().replace(/[/\\]/g, '@');
       self.props.history.push(`/projectpage/${fileName}`);
       console.log(fileName);
@@ -46,7 +47,9 @@ class ProjectListContainer extends Component {
 
   addProject = (e) => {
     e.preventDefault();
+    // eslint-disable-next-line no-underscore-dangle
     const projectName = this._inputElement.value;
+    // eslint-disable-next-line no-underscore-dangle
     this._inputElement.value = '';
 
     if (!this.isProjectNameValid(projectName)) return;
@@ -65,9 +68,10 @@ class ProjectListContainer extends Component {
   };
 
   isProjectNameValid = (projectName) => {
+    const { items } = this.state;
     let isDuplicateProject = false;
-    this.state.items.forEach((item) => {
-      if (`${projectName}.json` == item.text || projectName == item.text) {
+    items.forEach((item) => {
+      if (`${projectName}.json` === item.text || projectName === item.text) {
         isDuplicateProject = true;
       }
     });
@@ -82,11 +86,15 @@ class ProjectListContainer extends Component {
     this.getProjects();
   };
 
+  // eslint-disable-next-line class-methods-use-this
   openProjectFile = () => {
     ipcRenderer.send('GetProjectFile');
   };
 
   render() {
+    const { items } = this.state;
+    const { openProjectDetails } = this.props;
+
     return (
       <div className="todoListMain">
         <div className="header">
@@ -100,10 +108,10 @@ class ProjectListContainer extends Component {
           </form>
         </div>
         <ProjectList
-          items={this.state.items}
+          items={items}
           deleteProject={this.deleteProject}
           renameProject={this.renameProject}
-          openProjectDetails={this.props.openProjectDetails}
+          openProjectDetails={openProjectDetails}
         />
       </div>
     );

@@ -1,5 +1,5 @@
 // Libs
-import React, { Component } from 'react';
+import React from 'react';
 import { Breadcrumb } from 'antd';
 import './Path.scss';
 

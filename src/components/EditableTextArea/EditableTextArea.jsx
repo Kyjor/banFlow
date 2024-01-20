@@ -5,23 +5,18 @@ import * as PropTypes from 'prop-types';
 const { TextArea } = Input;
 
 class EditableTextArea extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      textSelected: false,
-    };
-  }
-
   componentDidMount() {
     this.focus();
   }
 
   focus = () => {
-    if (this.props.editing) {
+    const { editing } = this.props;
+    if (editing) {
       this.textInput.focus();
     }
   };
 
+  // eslint-disable-next-line class-methods-use-this
   handleOnFocus = (event) => {
     if (
       event.target.value === `New Node` ||
@@ -32,6 +27,16 @@ class EditableTextArea extends React.Component {
   };
 
   render() {
+    const {
+      autoSize,
+      maxLength,
+      onChange,
+      onMouseDown,
+      placeholder,
+      style,
+      updateText,
+    } = this.props;
+
     return (
       <TextArea
         ref={(input) => {
@@ -41,26 +46,20 @@ class EditableTextArea extends React.Component {
         defaultValue={this.props.defaultValue}
         onClick={(e) => {
           e.preventDefault();
-          this.setState({
-            textSelected: true,
-          });
         }}
-        onBlur={(evt) => (
-          this.setState({ textSelected: false }),
-          this.props.updateText(evt.currentTarget.value)
-        )}
+        onBlur={(evt) => updateText(evt.currentTarget.value)}
         // showCount={this.state.modalDescriptionSelected}
         onFocus={this.handleOnFocus}
-        onChange={this.props.onChange}
-        onMouseDown={this.props.onMouseDown}
-        maxLength={this.props.maxLength}
-        autoSize={this.props.autoSize}
-        style={this.props.style}
-        placeholder={this.props.placeholder}
+        onChange={onChange}
+        onMouseDown={onMouseDown}
+        maxLength={maxLength}
+        autoSize={autoSize}
+        style={style}
+        placeholder={placeholder}
         onPressEnter={(evt) => {
-          evt.keyCode == 13 && !evt.shiftKey
-            ? (evt.currentTarget.blur(),
-              this.props.updateText(evt.currentTarget.value))
+          // eslint-disable-next-line no-unused-expressions
+          evt.keyCode === 13 && !evt.shiftKey
+            ? (evt.currentTarget.blur(), updateText(evt.currentTarget.value))
             : console.log(`newline`);
         }}
       />
@@ -71,13 +70,14 @@ class EditableTextArea extends React.Component {
 export default EditableTextArea;
 
 EditableTextArea.propTypes = {
-  autoSize: PropTypes.bool,
-  defaultValue: PropTypes.string,
-  editing: PropTypes.bool,
-  maxLength: PropTypes.number,
-  onChange: PropTypes.func,
-  onMouseDown: PropTypes.func,
-  placeholder: PropTypes.string,
-  style: PropTypes.object,
-  updateText: PropTypes.func,
+  autoSize: PropTypes.bool.isRequired,
+  defaultValue: PropTypes.string.isRequired,
+  editing: PropTypes.bool.isRequired,
+  maxLength: PropTypes.number.isRequired,
+  onChange: PropTypes.func.isRequired,
+  onMouseDown: PropTypes.func.isRequired,
+  placeholder: PropTypes.string.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  style: PropTypes.object.isRequired,
+  updateText: PropTypes.func.isRequired,
 };

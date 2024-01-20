@@ -9,20 +9,24 @@ const { TabPane } = Tabs;
 class ParentModal extends React.Component {
   constructor(props) {
     super(props);
-    this.parent = this.props.parent;
+    const { parent } = props;
+
+    this.parent = parent;
   }
 
-  handleConfirmParentDelete = (e) => {
+  handleConfirmParentDelete = () => {
+    const { deleteParent } = this.props;
     if (this.parent.nodeIds.length > 0) {
       message.error('Empty Parent before deleting');
       return;
     }
-    this.props.deleteParent(this.parent.id);
+    deleteParent(this.parent.id);
     message.success('Deleted parent');
   };
 
   handleTimedCheckboxChange = (e) => {
-    this.props.updateParentProperty(
+    const { updateParentProperty } = this.props;
+    updateParentProperty(
       () => this.parent.isTimed,
       this.parent.id,
       e.target.checked,
@@ -30,11 +34,13 @@ class ParentModal extends React.Component {
     );
   };
 
-  handleCancelParentDelete = (e) => {
+  // eslint-disable-next-line class-methods-use-this
+  handleCancelParentDelete = () => {
     message.error('Parent not deleted');
   };
 
   render() {
+    const { handleCancel, updateParentProperty, visible } = this.props;
     return (
       <Modal
         title={
@@ -52,7 +58,7 @@ class ParentModal extends React.Component {
               maxLength={70}
               autoSize={{ maxRows: 1 }}
               updateText={(value) => {
-                this.props.updateParentProperty(
+                updateParentProperty(
                   () => this.parent.title,
                   this.parent.id,
                   value,
@@ -62,10 +68,10 @@ class ParentModal extends React.Component {
             />
           </div>
         }
-        visible={this.props.visible}
-        onCancel={this.props.handleCancel}
+        visible={visible}
+        onCancel={handleCancel}
         footer={[
-          <Button key="back" onClick={this.props.handleCancel}>
+          <Button key="back" onClick={handleCancel}>
             Return
           </Button>,
         ]}
@@ -111,9 +117,10 @@ class ParentModal extends React.Component {
 export default ParentModal;
 
 ParentModal.propTypes = {
-  deleteParent: PropTypes.func,
-  handleCancel: PropTypes.func,
-  parent: PropTypes.object,
-  updateParentProperty: PropTypes.func,
-  visible: PropTypes.bool,
+  deleteParent: PropTypes.func.isRequired,
+  handleCancel: PropTypes.func.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  parent: PropTypes.object.isRequired,
+  updateParentProperty: PropTypes.func.isRequired,
+  visible: PropTypes.bool.isRequired,
 };
