@@ -4,7 +4,7 @@ import nodeService from '../../services/NodeService';
  * @class NodeController
  * @desc creates a new Node with a set of given properties
  */
-class NodeController {
+const NodeController = {
   /**
    * @function getNodes
    * @desc gets all nodes
@@ -12,17 +12,17 @@ class NodeController {
    * @returns {array} node - all nodes
    * @permission {Read}
    */
-  getNodes = () => {
+  getNodes() {
     return nodeService.getNodes();
-  };
+  },
 
-  getNode = (nodeId) => {
+  getNode(nodeId) {
     return nodeService.getNode(nodeId);
-  };
+  },
 
-  getNodesWithQuery = (query) => {
+  getNodesWithQuery(query) {
     return nodeService.getNodesWithQuery(query);
-  };
+  },
 
   /**
    * @function createNode
@@ -34,19 +34,17 @@ class NodeController {
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode = (nodeType, nodeTitle, parentId = ``) => {
+  createNode(nodeType, nodeTitle, parentId = ``) {
     return nodeService.createNode(nodeType, nodeTitle, parentId);
-  };
+  },
 
-  deleteNode = (nodeId, parentId) => {
+  deleteNode(nodeId, parentId) {
     nodeService.deleteNode(nodeId, parentId);
-  };
+  },
 
-  updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
+  updateNodeProperty(propertyToUpdate, nodeId, newValue) {
     return nodeService.updateNodeProperty(propertyToUpdate, nodeId, newValue);
-  };
-}
+  },
+};
 
-// create one instance of the class to export so everyone can share it
-const nodeController = new NodeController();
-export default nodeController;
+export default NodeController;

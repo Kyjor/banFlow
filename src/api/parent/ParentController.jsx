@@ -4,7 +4,7 @@ import parentService from '../../services/ParentService';
  * @class ParentController
  * @desc creates a new Parent with a set of given properties
  */
-class ParentController {
+const ParentController = {
   /**
    * @function getParents
    * @desc gets all parents
@@ -12,9 +12,9 @@ class ParentController {
    * @returns {array} parent - all parents
    * @permission {Read}
    */
-  getParents = () => {
+  getParents() {
     return parentService.getParents();
-  };
+  },
 
   /**
    * @function getParentOrder
@@ -23,9 +23,9 @@ class ParentController {
    * @returns {array} string - the order of parents represented by id
    * @permission {Read}
    */
-  getParentOrder = () => {
+  getParentOrder() {
     return parentService.getParentOrder();
-  };
+  },
 
   /**
    * @function createParent
@@ -37,39 +37,33 @@ class ParentController {
    * @returns {object} parent - the newly created parent
    * @permission {Modification}
    */
-  createParent = (parentTitle) => {
+  createParent(parentTitle) {
     return parentService.createParent(parentTitle);
-  };
+  },
 
-  deleteParent = (parentId) => {
+  deleteParent(parentId) {
     parentService.deleteParent(parentId);
-  };
+  },
 
-  updateParentProperty = (propertyToUpdate, parentId, newValue) => {
+  updateParentProperty(propertyToUpdate, parentId, newValue) {
     return parentService.updateParentProperty(
       propertyToUpdate,
       parentId,
       newValue,
     );
-  };
+  },
 
-  updateParentOrder = (parentOrder) => {
+  updateParentOrder(parentOrder) {
     parentService.updateParentOrder(parentOrder);
-  };
+  },
 
-  updateNodesInParents = (
-    updatedOriginParent,
-    updatedDestinationParent,
-    nodeId,
-  ) => {
+  updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {
     parentService.updateNodesInParents(
       updatedOriginParent,
       updatedDestinationParent,
       nodeId,
     );
-  };
-}
+  },
+};
 
-// create one instance of the class to export so everyone can share it
-const parentController = new ParentController();
-export default parentController;
+export default ParentController;

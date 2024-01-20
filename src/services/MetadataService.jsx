@@ -4,8 +4,8 @@ import lokiService from './LokiService';
  * @class MetadataService
  * @desc creates a new Metadata with a set of given properties
  */
-class MetadataService {
-  saveMetadataValue = (enumValueTitle, parentEnum) => {
+const MetadataService = {
+  saveMetadataValue(enumValueTitle, parentEnum) {
     let selectedEnum = null;
     switch (parentEnum) {
       case 'nodeType':
@@ -29,9 +29,7 @@ class MetadataService {
     lokiService.saveDB();
 
     return newEnumValue;
-  };
-}
+  },
+};
 
-// create one instance of the class to export so everyone can share it
-const metadataService = new MetadataService();
-export default metadataService;
+export default MetadataService;

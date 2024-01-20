@@ -224,7 +224,7 @@ class ProjectPage extends Component {
     });
   };
 
-  deleteParent = (parentId) => {
+  deleteParent = () => {
     sharedControllers
       .getState()
       .parentController.deleteParent(this.state.modalParent.id);
