@@ -1,7 +1,7 @@
-const loki = require('lokijs');
+const Loki = require('lokijs');
 
 class LokiService {
-  constructor(props) {
+  constructor() {
     this.db = null;
     this.nodes = null;
     this.parents = null;
@@ -13,7 +13,6 @@ class LokiService {
     this.projectName = '';
     this.isSelectedFromDialog = false;
     this.isDev = null;
-    const self = this;
   }
 
   /**
@@ -93,7 +92,7 @@ class LokiService {
         ? this.projectName
         : `../banFlowProjects/${this.projectName}.json`;
 
-    this.db = new loki(path, {
+    this.db = new Loki(path, {
       // options
       autoload: true,
       autosave: true,

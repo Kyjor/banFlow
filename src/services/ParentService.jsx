@@ -4,7 +4,7 @@ import lokiService from './LokiService';
  * @class ParentService
  * @desc creates a new Parent with a set of given properties
  */
-class ParentService {
+const ParentService = {
   /**
    * @function getParents
    * @desc gets all parents
@@ -12,7 +12,7 @@ class ParentService {
    * @returns {array} parent - all parents
    * @permission {Read}
    */
-  getParents = () => {
+  getParents() {
     const parents = lokiService.parents.find({ Id: { $ne: null } });
 
     let response = {};
@@ -27,7 +27,7 @@ class ParentService {
     });
 
     return response;
-  };
+  },
 
   /**
    * @function getParentOrder
@@ -36,7 +36,7 @@ class ParentService {
    * @returns {array} string - the order of parents represented by id
    * @permission {Read}
    */
-  getParentOrder = () => {
+  getParentOrder() {
     const parentOrder = lokiService.parentOrder.find({ Id: { $ne: null } });
 
     const response = [];
@@ -46,9 +46,9 @@ class ParentService {
     });
 
     return response;
-  };
+  },
 
-  createParent = (parentTitle) => {
+  createParent(parentTitle) {
     const { parents } = lokiService;
 
     const nextId = parents.data.length
@@ -67,23 +67,23 @@ class ParentService {
     lokiService.saveDB();
 
     return newParent;
-  };
+  },
 
-  addParentToOrder = (newParentId) => {
+  addParentToOrder(newParentId) {
     lokiService.parentOrder.insert({ parentId: newParentId });
     lokiService.saveDB();
-  };
+  },
 
-  deleteParent = (parentId) => {
+  deleteParent(parentId) {
     const { parents, parentOrder } = lokiService;
 
     parentOrder.chain().find({ parentId }).remove();
     parents.chain().find({ id: parentId }).find({ id: parentId }).remove();
 
     lokiService.saveDB();
-  };
+  },
 
-  updateParentProperty = (propertyToUpdate, parentId, newValue) => {
+  updateParentProperty(propertyToUpdate, parentId, newValue) {
     let parentToReturn = null;
     lokiService.parents
       .chain()
@@ -95,9 +95,9 @@ class ParentService {
 
     lokiService.saveDB();
     return parentToReturn;
-  };
+  },
 
-  updateParentOrder = (parentOrder) => {
+  updateParentOrder(parentOrder) {
     let x = 1;
     const currentParentOrder = lokiService.parentOrder;
 
@@ -113,13 +113,9 @@ class ParentService {
     });
 
     lokiService.saveDB();
-  };
+  },
 
-  updateNodesInParents = (
-    updatedOriginParent,
-    updatedDestinationParent,
-    nodeId,
-  ) => {
+  updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {
     const { nodes, parents } = lokiService;
     parents
       .chain()
@@ -140,9 +136,7 @@ class ParentService {
         node.parent = updatedDestinationParent.id;
       });
     lokiService.saveDB();
-  };
-}
+  },
+};
 
-// create one instance of the class to export so everyone can share it
-const parentService = new ParentService();
-export default parentService;
+export default ParentService;

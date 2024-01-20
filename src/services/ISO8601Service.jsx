@@ -1,5 +1,5 @@
-class ISO8601Service {
-  getISO8601Time = () => {
+const ISO8601Service = {
+  getISO8601Time() {
     const today = new Date();
     const month = today.getMonth() + 1;
     const day = today.getDate();
@@ -14,9 +14,7 @@ class ISO8601Service {
       minutes < 10 ? `0${minutes}` : minutes
     }:${seconds < 10 ? `0${seconds}` : seconds}`;
     return `${date}T${time}`;
-  };
-}
+  },
+};
 
-const ISO8601ServiceInstance = new ISO8601Service();
-
-export default ISO8601ServiceInstance;
+export default ISO8601Service;

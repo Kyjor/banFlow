@@ -4,7 +4,7 @@ import projectService from '../../services/ProjectService';
  * @class ProjectController
  * @desc creates a new Project with a set of given properties
  */
-class ProjectController {
+const ProjectController = {
   /**
    * @function getProjects
    * @desc gets all projects
@@ -12,9 +12,9 @@ class ProjectController {
    * @returns {array} project - all projects
    * @permission {Read}
    */
-  getProjects = (isDev) => {
+  getProjects(isDev) {
     return projectService.getProjects(isDev);
-  };
+  },
 
   /**
    * @function createProject
@@ -26,9 +26,9 @@ class ProjectController {
    * @returns {object} project - the newly created project
    * @permission {Modification}
    */
-  createProject = (projectName) => {
+  createProject(projectName) {
     return projectService.createProject(projectName);
-  };
+  },
 
   /**
    * @function setCurrentProjectName
@@ -37,27 +37,25 @@ class ProjectController {
    * @param {string} projectType - the type of project to create.
    * @permission {Modification}
    */
-  setCurrentProjectName = (projectName) => {
+  setCurrentProjectName(projectName) {
     return projectService.setCurrentProjectName(projectName);
-  };
+  },
 
-  renameProject = (oldName, newName) => {
+  renameProject(oldName, newName) {
     projectService.renameProject(oldName, newName);
-  };
+  },
 
-  deleteProject = (projectName) => {
+  deleteProject(projectName) {
     projectService.deleteProject(projectName);
-  };
+  },
 
-  updateProjectProperty = (propertyToUpdate, projectId, newValue) => {
+  updateProjectProperty(propertyToUpdate, projectId, newValue) {
     return projectService.updateProjectProperty(
       propertyToUpdate,
       projectId,
       newValue,
     );
-  };
-}
+  },
+};
 
-// create one instance of the class to export so everyone can share it
-const projectController = new ProjectController();
-export default projectController;
+export default ProjectController;

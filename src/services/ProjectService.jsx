@@ -5,12 +5,7 @@ import lokiService from './LokiService';
  * @class ProjectService
  * @desc creates a new Project with a set of given properties
  */
-class ProjectService {
-  constructor() {
-    this.isDev = null;
-    const self = this;
-  }
-
+const ProjectService = {
   /**
    * @function getProjects
    * @desc gets all projects
@@ -19,7 +14,7 @@ class ProjectService {
    * @permission {Read}
    */
 
-  getProjects = () => {
+  getProjects() {
     const fileList = [];
     const projectFolder = '../banFlowProjects'; // this.isDev ?
     // : './projects';
@@ -40,9 +35,9 @@ class ProjectService {
       }
     });
     return fileList;
-  };
+  },
 
-  renameProject = (oldName, newName) => {
+  renameProject(oldName, newName) {
     // if (!this.isDev) {
     //   fs.renameSync(`./projects/${oldName}.json`, `./projects/${newName}.json`);
     // } else
@@ -50,13 +45,13 @@ class ProjectService {
       `../banFlowProjects/${oldName}.json`,
       `../banFlowProjects/${newName}.json`,
     );
-  };
+  },
 
-  setCurrentProjectName = (projectName) => {
+  setCurrentProjectName(projectName) {
     lokiService.projectName = projectName;
-  };
+  },
 
-  createProject = (projectName) => {
+  createProject(projectName) {
     try {
       // if (!this.isDev) {
       //   if (!fs.existsSync('./projects')) {
@@ -71,9 +66,9 @@ class ProjectService {
       console.log(e);
       alert('Failed to save the file !');
     }
-  };
+  },
 
-  deleteProject = (name) => {
+  deleteProject(name) {
     try {
       // if (!this.isDev) {
       // fs.unlinkSync(`./projects/${name}.json`);
@@ -90,9 +85,7 @@ class ProjectService {
     } catch (err) {
       console.error(err);
     }
-  };
-}
+  },
+};
 
-// create one instance of the class to export so everyone can share it
-const projectService = new ProjectService();
-export default projectService;
+export default ProjectService;
