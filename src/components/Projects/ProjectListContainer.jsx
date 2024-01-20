@@ -1,7 +1,7 @@
 // Libs
-import React, {Component} from 'react';
-import {ipcRenderer} from 'electron';
-import {withRouter} from 'react-router-dom';
+import React, { Component } from 'react';
+import { ipcRenderer } from 'electron';
+import { withRouter } from 'react-router-dom';
 
 import ProjectList from './ProjectItems/ProjectList';
 import './ProjectListContainer.scss';
@@ -21,7 +21,7 @@ class ProjectListContainer extends Component {
     };
 
     const self = this;
-    ipcRenderer.on('IsDev', function () {
+    ipcRenderer.on('IsDev', () => {
       self.getProjects();
     });
   }
@@ -30,7 +30,7 @@ class ProjectListContainer extends Component {
     this.getProjects();
     const self = this;
 
-    ipcRenderer.on('ReturnProjectFile', function (e, fileName) {
+    ipcRenderer.on('ReturnProjectFile', (e, fileName) => {
       if (!fileName) return;
       // if filename contains slashes either forward or backward, replace them @ symbols
       // eslint-disable-next-line no-param-reassign
@@ -40,39 +40,14 @@ class ProjectListContainer extends Component {
     });
   }
 
-  getProjects = (isDev) => {
-    const items = ProjectController.getProjects(isDev);
-    this.setState({items});
+  getProjects = () => {
+    const items = ProjectController.getProjects();
+    this.setState({ items });
   };
 
   renameProject = (oldName, newName) => {
-    if (!this.isProjectNameValid(newName)) {
-      return;
-    }
-
     ProjectController.renameProject(oldName, newName);
     this.getProjects();
-  };
-
-  isProjectNameValid = (projectName) => {
-    if (!projectName) {
-      return false;
-    }
-
-    const invalidRegex = new RegExp('\\\\+|\/+');
-    if (invalidRegex.test(projectName)) {
-      return false;
-    }
-
-    const {items} = this.state;
-    let isDuplicateProject = false;
-    items.forEach((item) => {
-      if (`${projectName}.json` === item.text || projectName === item.text) {
-        isDuplicateProject = true;
-      }
-    });
-
-    return !isDuplicateProject;
   };
 
   deleteProject = (name) => {
@@ -98,8 +73,8 @@ class ProjectListContainer extends Component {
         </div>
    */
   render() {
-    const {items} = this.state;
-    const {openProjectDetails} = this.props;
+    const { items } = this.state;
+    const { openProjectDetails } = this.props;
 
     return (
       <div className="todoListMain flex-none mr-8">

@@ -1,16 +1,9 @@
 import React from 'react';
-import {Button, message, Modal} from 'antd';
-import PropTypes from "prop-types";
-import ProjectController from "../../api/project/ProjectController";
+import { Button, Modal } from 'antd';
+import PropTypes from 'prop-types';
+import ProjectController from '../../api/project/ProjectController';
 
 class AddProject extends React.Component {
-  constructor(props) {
-    super(props);
-    const {parent} = props;
-
-    this.parent = parent;
-  }
-
   addProject = (e) => {
     e.preventDefault();
     // eslint-disable-next-line no-underscore-dangle
@@ -21,31 +14,17 @@ class AddProject extends React.Component {
     const created = ProjectController.createProject(projectName);
     console.log(created);
     if (created) {
-      this.props.handleCancel();
+      const { handleCancel } = this.props;
+      handleCancel();
     }
-  };
-
-  handleConfirmParentDelete = () => {
-    const {deleteParent} = this.props;
-    if (this.parent.nodeIds.length > 0) {
-      message.error('Empty Parent before deleting');
-      return;
-    }
-    deleteParent(this.parent.id);
-    message.success('Deleted parent');
-  };
-
-  // eslint-disable-next-line class-methods-use-this
-  handleCancelParentDelete = () => {
-    message.error('Parent not deleted');
   };
 
   render() {
-    const {handleCancel, visible} = this.props;
+    const { handleCancel, visible } = this.props;
     return (
       <Modal
         title={
-          <div style={{display: 'flex', marginBottom: '15px'}}>
+          <div style={{ display: 'flex', marginBottom: '15px' }}>
             Create New Project
           </div>
         }
@@ -54,7 +33,7 @@ class AddProject extends React.Component {
         footer={[
           <Button key="back" onClick={handleCancel}>
             Cancel
-          </Button>
+          </Button>,
         ]}
       >
         <div className="header">
@@ -65,7 +44,9 @@ class AddProject extends React.Component {
                 placeholder="Project Name"
                 className="border-2"
               />
-              <button type="submit" className="ant-btn">Create</button>
+              <button type="submit" className="ant-btn">
+                Create
+              </button>
             </div>
           </form>
         </div>

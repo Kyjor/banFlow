@@ -126,10 +126,7 @@ class PictureWall extends Component {
           visible={previewVisible}
           title={previewTitle}
           footer={[
-            <Button
-              key="setCover"
-              onClick={() => setCoverImage(previewImage)}
-            >
+            <Button key="setCover" onClick={() => setCoverImage(previewImage)}>
               Set As Cover
             </Button>,
             <Button key="back" onClick={this.handleCancel}>

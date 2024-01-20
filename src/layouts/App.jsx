@@ -1,23 +1,21 @@
-import {DesktopOutlined, PlusSquareFilled} from '@ant-design/icons';
-import {Button, Layout, Menu} from 'antd';
-import React, {useState} from 'react';
+import { DesktopOutlined, PlusSquareFilled } from '@ant-design/icons';
+import { Layout, Menu } from 'antd';
+import React, { useState } from 'react';
 // Styles
 import './App.scss';
 import './tailwind-output.css';
 // Components
 import PropTypes from 'prop-types';
-import Header from '../components/@shared/Header';
+import { Link } from 'react-router-dom';
 import Footer from '../components/@shared/Footer';
-import {Link} from "react-router-dom";
-import AddProject from "../components/Projects/AddProject";
-import ParentModal from "../components/ParentModal/ParentModal";
+import AddProject from '../components/Projects/AddProject';
 
-const {Content, Sider} = Layout;
+const { Content, Sider } = Layout;
 
 function App(props) {
   const [collapsed, setCollapsed] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const {children} = props;
+  const { children } = props;
 
   return (
     <Layout
@@ -31,18 +29,20 @@ function App(props) {
           collapsed={collapsed}
           onCollapse={(value) => setCollapsed(value)}
         >
-          <div className="logo"/>
-          <Menu
-            theme="dark"
-            defaultSelectedKeys={['1']}
-            mode="inline"
-          >
-            <Menu.Item icon={<DesktopOutlined/>} title="Dashboard" key="1">
-              <Link to="/dashboard"/>
+          <div className="logo" />
+          <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
+            <Menu.Item icon={<DesktopOutlined />} title="Dashboard" key="1">
+              <Link to="/dashboard" />
               Dashboard
             </Menu.Item>
-            <Menu.Item icon={<PlusSquareFilled />} title="Add New Project" key="2"
-                       onClick={() => {setShowModal(true)}}>
+            <Menu.Item
+              icon={<PlusSquareFilled />}
+              title="Add New Project"
+              key="2"
+              onClick={() => {
+                setShowModal(true);
+              }}
+            >
               Add New Project
             </Menu.Item>
           </Menu>
@@ -60,16 +60,17 @@ function App(props) {
             }}
           >
             <AddProject
-              handleCancel={()=> {
+              handleCancel={() => {
                 setShowModal(false);
                 window.location.reload();
               }}
-              visible={showModal}/>
+              visible={showModal}
+            />
             {children}
           </div>
         </Content>
       </Layout>
-      <Footer/>
+      <Footer />
     </Layout>
   );
 }

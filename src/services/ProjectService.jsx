@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import lokiService from './LokiService';
-import {ValidateProjectName} from "../validators/Validator";
+// eslint-disable-next-line import/no-cycle
+import { ValidateProjectName } from '../validators/Validator';
 
 /**
  * @class ProjectService

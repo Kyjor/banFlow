@@ -600,14 +600,6 @@ video {
   display: none;
 }
 
-.h-4 {
-  height: 1rem;
-}
-
-.w-8 {
-  width: 2rem;
-}
-
 .flex-none {
   flex: none;
 }
@@ -622,16 +614,6 @@ video {
 
 .border-2 {
   border-width: 2px;
-}
-
-.border-black {
-  --tw-border-opacity: 1;
-  border-color: rgb(0 0 0 / var(--tw-border-opacity));
-}
-
-.px-4 {
-  padding-left: 1rem;
-  padding-right: 1rem;
 }
 
 .text-xl {
