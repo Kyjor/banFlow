@@ -1,5 +1,5 @@
 // Libs
-import React, { Component } from 'react';
+import React from 'react';
 // Layouts
 import Layout from '../../layouts/App';
 // Components

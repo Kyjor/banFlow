@@ -1,7 +1,7 @@
 // Libs
-import React, {Component} from 'react';
-import {ipcRenderer} from 'electron';
-import {withRouter} from 'react-router-dom';
+import React, { Component } from 'react';
+import { ipcRenderer } from 'electron';
+import { withRouter } from 'react-router-dom';
 
 import ProjectList from './ProjectItems/ProjectList';
 import './ProjectListContainer.scss';
@@ -42,9 +42,8 @@ class ProjectListContainer extends Component {
 
   getProjects = (isDev) => {
     const items = ProjectController.getProjects(isDev);
-    this.setState({items});
+    this.setState({ items });
   };
-
 
   addProject = (e) => {
     e.preventDefault();
@@ -73,12 +72,12 @@ class ProjectListContainer extends Component {
       return false;
     }
 
-    const invalidRegex = new RegExp('\\\\+|\/+');
+    const invalidRegex = new RegExp('\\\\+|/+');
     if (invalidRegex.test(projectName)) {
       return false;
     }
 
-    const {items} = this.state;
+    const { items } = this.state;
     let isDuplicateProject = false;
     items.forEach((item) => {
       if (`${projectName}.json` === item.text || projectName === item.text) {
@@ -100,8 +99,8 @@ class ProjectListContainer extends Component {
   };
 
   render() {
-    const {items} = this.state;
-    const {openProjectDetails} = this.props;
+    const { items } = this.state;
+    const { openProjectDetails } = this.props;
 
     return (
       <div className="todoListMain flex-none mr-8">
