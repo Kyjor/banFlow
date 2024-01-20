@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {Link} from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { Button, List, Popconfirm, Typography } from 'antd';
+import {Button, Card, List, Popconfirm, Typography} from 'antd';
 import '../ProjectListContainer.scss';
-import { CaretRightOutlined, DeleteTwoTone } from '@ant-design/icons';
+import {CaretRightOutlined, DeleteTwoTone} from '@ant-design/icons';
 
-const { Paragraph } = Typography;
+const {Paragraph} = Typography;
 
 function ProjectList(props) {
   const [items, setItems] = useState([]);
 
   const onChange = (lastStr, currentStr) => {
-    const { renameProject } = props;
+    const {renameProject} = props;
     renameProject(lastStr, currentStr);
   };
 
@@ -23,7 +23,7 @@ function ProjectList(props) {
       jsx: (
         <Paragraph
           key={item.key}
-          editable={{ onChange: (str) => onChange(projectName, str) }}
+          editable={{onChange: (str) => onChange(projectName, str)}}
         >
           {projectName}
         </Paragraph>
@@ -36,7 +36,7 @@ function ProjectList(props) {
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-shadow
-    const { items } = props;
+    const {items} = props;
     if (!items) return;
     const items1 = items
       .filter((item) => {
@@ -46,54 +46,57 @@ function ProjectList(props) {
     setItems(items1);
   }, [props.items]);
 
-  const { deleteProject, openProjectDetails } = props;
+  const {deleteProject, openProjectDetails} = props;
 
   return (
     <List
       itemLayout="vertical"
       size="large"
       dataSource={items}
+      bordered
+      className="mt-4"
       pagination={{
         pageSize: 3,
       }}
       renderItem={(item) => (
         <List.Item key={item.name}>
-          <List.Item.Meta title={item.jsx} />
-          <Button
-            type="text"
-            icon={
-              <CaretRightOutlined
-                onClick={() => openProjectDetails(item.name)}
-                style={{ fontSize: '16px', color: 'green' }}
-              />
-            }
-          />
-          <Link to={`/projectPage/${item.name}`}>
+          <Card title={item.jsx}>
             <Button
               type="text"
               icon={
                 <CaretRightOutlined
-                  style={{ fontSize: '16px', color: 'green' }}
+                  onClick={() => openProjectDetails(item.name)}
+                  style={{fontSize: '16px', color: 'green'}}
                 />
               }
             />
-          </Link>
-          <Popconfirm
-            title="Are you sure delete this project?"
-            onConfirm={() => deleteProject(item.name)}
-            okText="Yes"
-            cancelText="No"
-          >
-            <Button
-              type="text"
-              icon={
-                <DeleteTwoTone
-                  twoToneColor="#eb2f96"
-                  style={{ fontSize: '16px' }}
-                />
-              }
-            />
-          </Popconfirm>
+            <Link to={`/projectPage/${item.name}`}>
+              <Button
+                type="text"
+                icon={
+                  <CaretRightOutlined
+                    style={{fontSize: '16px', color: 'green'}}
+                  />
+                }
+              />
+            </Link>
+            <Popconfirm
+              title="Are you sure delete this project?"
+              onConfirm={() => deleteProject(item.name)}
+              okText="Yes"
+              cancelText="No"
+            >
+              <Button
+                type="text"
+                icon={
+                  <DeleteTwoTone
+                    twoToneColor="#eb2f96"
+                    style={{fontSize: '16px'}}
+                  />
+                }
+              />
+            </Popconfirm>
+          </Card>
         </List.Item>
       )}
     />
