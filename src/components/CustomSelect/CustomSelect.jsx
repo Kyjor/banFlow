@@ -10,37 +10,14 @@ function CustomSelectOption(props) {
   return <span style={{ whiteSpace: 'normal' }}>{item}</span>;
 }
 
-CustomSelectOption.propTypes = { item: PropTypes.string };
+CustomSelectOption.propTypes = { item: PropTypes.string.isRequired };
 
 export default class CustomSelect extends React.Component {
-  state = {
-    items: this.props.items,
-    isOpen: false,
-    value: this.props.currentValue,
-  };
-
-  addItem = (newItem) => {
-    const { items } = this.state;
-    const newItems = [...items, `${newItem}`];
-    this.setState({
-      items: newItems,
-      value: newItem,
-    });
-    this.props.saveMetadataValue(newItem, this.props.parentEnum);
-    this.props.updateNodeEnum(newItem, this.props.parentEnum, this.props.node);
-  };
-
-  updateOption = () => {
-    this.setState({ mustFocusOption: false });
-  };
-
-  onChange = (value) => {
-    console.log(`selected ${value}`);
-    if (this.state.items.includes(value)) {
-      this.setState({ value });
-      this.props.updateNodeEnum(value, this.props.parentEnum, this.props.node);
-    }
-  };
+  constructor(props) {
+    super();
+    const { currentValue, items } = props;
+    this.state = { items, value: currentValue };
+  }
 
   onKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -48,12 +25,6 @@ export default class CustomSelect extends React.Component {
       this.addItem(e.target.value);
     }
   };
-
-  onBlur = () => {};
-
-  onFocus = () => {};
-
-  onSearch = (val) => {};
 
   onDelete(val) {
     console.log('delete:', val);
@@ -65,26 +36,38 @@ export default class CustomSelect extends React.Component {
     });
   }
 
+  addItem = (newItem) => {
+    const { node, parentEnum, saveMetadataValue, updateNodeEnum } = this.props;
+    const { items } = this.state;
+    const newItems = [...items, `${newItem}`];
+    this.setState({
+      items: newItems,
+      value: newItem,
+    });
+    saveMetadataValue(newItem, parentEnum);
+    updateNodeEnum(newItem, parentEnum, node);
+  };
+
   render() {
+    const { items, value } = this.state;
+    const { node } = this.props;
     return (
       <Select
         showSearch
-        defaultValue={this.props.node.nodeType}
+        defaultValue={node.nodeType}
         ref={(select) => {
+          // eslint-disable-next-line react/no-unused-class-component-methods
           this.select = select;
         }}
         style={{ width: 200 }}
         placeholder="Add an item"
-        onChange={this.onChange}
-        onFocus={this.onFocus}
-        onBlur={this.onBlur}
         onInputKeyDown={this.onKeyDown}
         onSearch={this.onSearch}
-        value={this.state.value}
-        filterOption={(input, option) => true}
+        value={value}
+        // filterOption={(input, option) => true}
       >
-        {this.state.items &&
-          this.state.items.map((item) => (
+        {items &&
+          items.map((item) => (
             <Option style={{ width: '100%' }} key={item}>
               <CustomSelectOption item={item} onDelete={this.onDelete} />
             </Option>
@@ -94,8 +77,12 @@ export default class CustomSelect extends React.Component {
   }
 }
 CustomSelect.propTypes = {
-  currentValue: PropTypes.string,
+  currentValue: PropTypes.string.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types,react/require-default-props
   items: PropTypes.array,
-  node: PropTypes.object,
-  parentEnum: PropTypes.string,
+  // eslint-disable-next-line react/forbid-prop-types
+  node: PropTypes.object.isRequired,
+  parentEnum: PropTypes.string.isRequired,
+  saveMetadataValue: PropTypes.func.isRequired,
+  updateNodeEnum: PropTypes.func.isRequired,
 };

@@ -68,6 +68,7 @@ function App(props) {
 }
 
 App.propTypes = {
+  // eslint-disable-next-line react/forbid-prop-types
   children: PropTypes.array.isRequired,
 };
 

@@ -4,37 +4,44 @@ import { PlusOutlined } from '@ant-design/icons';
 import * as PropTypes from 'prop-types';
 
 export default class EditableTagGroup extends React.Component {
-  state = {
-    tags: this.props.node.tags,
-    inputVisible: false,
-    inputValue: '',
-    dataSource: this.props.tags,
-  };
-
-  onSelect(value) {
-    console.log('onSelect', value);
-    if (this.state.tags.includes(value)) {
-      return;
-    }
-    this.props.addTagToNode([...this.state.tags, value], this.props.node.id);
-
-    this.setState({ tags: [...this.state.tags, value] });
+  constructor(props) {
+    super();
+    const { node, tags } = props;
+    this.state = {
+      tags: node.tags,
+      inputVisible: false,
+      inputValue: '',
+      dataSource: tags,
+    };
   }
 
-  handleSearch = (value) => {
+  onSelect(value) {
+    const { tags } = this.state;
+    const { addTagToNode, node } = this.props;
+
+    console.log('onSelect', value);
+    if (tags.includes(value)) {
+      return;
+    }
+    addTagToNode([...tags, value], node.id);
+
+    this.setState({ tags: [...tags, value] });
+  }
+
+  handleSearch = () => {
     this.setState({
       // dataSource: !value ? [] : [value, value + value, value + value + value],
     });
   };
 
-  handleKeyPress = (ev) => {
-    console.log('handleKeyPress', ev);
-  };
+  // handleKeyPress = (ev) => {
+  //   console.log('handleKeyPress', ev);
+  // };
 
   handleClose = (removedTag) => {
-    const tags = this.state.tags.filter((tag) => tag !== removedTag);
-    console.log(tags);
-    this.setState({ tags });
+    const { tags } = this.state;
+    const tags1 = tags.filter((tag) => tag !== removedTag);
+    this.setState({ tags: tags1 });
   };
 
   showInput = () => {
@@ -46,15 +53,16 @@ export default class EditableTagGroup extends React.Component {
   };
 
   handleInputConfirm = () => {
-    const { inputValue } = this.state;
+    const { addTagToNode, createGlobalTag, node } = this.props;
+    const { dataSource, inputValue } = this.state;
     let { tags } = this.state;
     if (inputValue && tags.indexOf(inputValue) === -1) {
       tags = [...tags, inputValue];
       // add tag to node's tags
-      this.props.addTagToNode(tags, this.props.node.id);
+      addTagToNode(tags, node.id);
       // update global tags
-      if (!this.state.dataSource.includes(inputValue)) {
-        this.props.createGlobalTag(inputValue);
+      if (!dataSource.includes(inputValue)) {
+        createGlobalTag(inputValue);
       }
     }
     console.log(tags);
@@ -65,6 +73,7 @@ export default class EditableTagGroup extends React.Component {
     });
   };
 
+  // eslint-disable-next-line no-return-assign
   saveInputRef = (input) => (this.input = input);
 
   render() {
@@ -95,13 +104,13 @@ export default class EditableTagGroup extends React.Component {
           <AutoComplete
             dataSource={dataSource}
             style={{ width: 200 }}
-            onSelect={this.onSelect.bind(this)}
-            onChange={this.handleInputChange.bind(this)}
-            onSearch={this.handleSearch.bind(this)}
-            filterOption={(inputValue, option) =>
+            onSelect={this.onSelect}
+            onChange={this.handleInputChange}
+            onSearch={this.handleSearch}
+            filterOption={(inputValue1, option) =>
               option.props.children
                 .toUpperCase()
-                .indexOf(inputValue.toUpperCase()) !== -1
+                .indexOf(inputValue1.toUpperCase()) !== -1
             }
           >
             <Input
@@ -111,13 +120,13 @@ export default class EditableTagGroup extends React.Component {
               style={{ width: 78 }}
               value={inputValue}
               // onBlur={this.handleInputConfirm.bind(this)}
-              onPressEnter={this.handleInputConfirm.bind(this)}
+              onPressEnter={this.handleInputConfirm}
             />
           </AutoComplete>
         )}
         {!inputVisible && (
           <Tag
-            onClick={this.showInput.bind(this)}
+            onClick={this.showInput}
             style={{
               // background: '#fff',
               borderStyle: 'dashed',
@@ -132,8 +141,10 @@ export default class EditableTagGroup extends React.Component {
 }
 
 EditableTagGroup.propTypes = {
-  addTagToNode: PropTypes.func,
-  createGlobalTag: PropTypes.func,
-  node: PropTypes.object,
-  tags: PropTypes.array,
+  addTagToNode: PropTypes.func.isRequired,
+  createGlobalTag: PropTypes.func.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  node: PropTypes.object.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  tags: PropTypes.array.isRequired,
 };

@@ -5,14 +5,19 @@ import PropTypes from 'prop-types';
 const count = 3;
 
 export default class TimedItemHistory extends React.Component {
-  state = {
-    initLoading: true,
-    loading: false,
-    data: [],
-    list: [],
-  };
+  constructor() {
+    super();
+    this.state = {
+      initLoading: true,
+      loading: false,
+      data: [],
+      list: [],
+    };
+  }
 
-  getData = (callback) => {
+  // eslint-disable-next-line class-methods-use-this
+  getData = () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const res = {
       results: [
         {
@@ -38,18 +43,19 @@ export default class TimedItemHistory extends React.Component {
   };
 
   onLoadMore = () => {
+    const { data } = this.state;
     this.setState({
       loading: true,
-      list: this.state.data.concat(
+      list: data.concat(
         [...new Array(count)].map(() => ({ loading: true, name: {} })),
       ),
     });
     this.getData((res) => {
-      const data = this.state.data.concat(res.results);
+      const data1 = data.concat(res.results);
       this.setState(
         {
           data,
-          list: data,
+          list: data1,
           loading: false,
         },
         () => {
@@ -63,12 +69,13 @@ export default class TimedItemHistory extends React.Component {
   };
 
   render() {
+    const { node, parent } = this.props;
     const dataSource = () => {
       const sessions = [];
-      this.props.node.sessionHistory.forEach((session) => {
+      node.sessionHistory.forEach((session) => {
         sessions.push({
-          key: this.props.node.sessionHistory.indexOf(session),
-          id: this.props.node.sessionHistory.indexOf(session),
+          key: node.sessionHistory.indexOf(session),
+          id: node.sessionHistory.indexOf(session),
           item: session.item,
           length: new Date(session.length * 1000).toISOString().substr(11, 8),
           started: session.startDateTime,
@@ -90,9 +97,9 @@ export default class TimedItemHistory extends React.Component {
     };
     const parentDataSource = () => {
       const sessions = [];
-      this.props.parent.sessionHistory.forEach((session) => {
+      parent.sessionHistory.forEach((session) => {
         sessions.push({
-          key: this.props.parent.sessionHistory.indexOf(session),
+          key: parent.sessionHistory.indexOf(session),
           id: session.nodeId,
           item: session.item,
           length: new Date(session.length * 1000).toISOString().substr(11, 8),
@@ -177,7 +184,8 @@ export default class TimedItemHistory extends React.Component {
         key: 'length',
       },
     ];
-    const { initLoading, loading, list } = this.state;
+    const { initLoading, loading } = this.state;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const loadMore =
       !initLoading && !loading ? (
         <div
@@ -194,14 +202,16 @@ export default class TimedItemHistory extends React.Component {
 
     return (
       <Table
-        dataSource={this.props.node ? dataSource() : parentDataSource()}
-        parents={this.props.node ? parents : parentParents}
+        dataSource={node ? dataSource() : parentDataSource()}
+        parents={node ? parents : parentParents}
       />
     );
   }
 }
 
 TimedItemHistory.propTypes = {
-  node: PropTypes.object,
-  parent: PropTypes.object,
+  // eslint-disable-next-line react/forbid-prop-types
+  node: PropTypes.object.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  parent: PropTypes.object.isRequired,
 };

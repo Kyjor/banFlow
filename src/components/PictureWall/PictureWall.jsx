@@ -13,6 +13,7 @@ function getBase64(file) {
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getCurrentFilenames() {
   console.log('\nCurrent filenames:');
   fs.readdirSync(__dirname).forEach((file) => {
@@ -25,16 +26,21 @@ function getFileName(str) {
 }
 
 class PictureWall extends Component {
+  // eslint-disable-next-line react/destructuring-assignment
   setCoverImage = this.props.setCoverImage;
 
+  // eslint-disable-next-line react/destructuring-assignment
   addImageToNode = this.props.addImageToNode;
 
-  state = {
-    previewVisible: false,
-    previewImage: '',
-    previewTitle: '',
-    fileList: [],
-  };
+  constructor() {
+    super();
+    this.state = {
+      previewVisible: false,
+      previewImage: '',
+      previewTitle: '',
+      fileList: [],
+    };
+  }
 
   handleCancel = () => this.setState({ previewVisible: false });
 
@@ -52,26 +58,28 @@ class PictureWall extends Component {
   };
 
   handleChange = ({ file, fileList }) => {
+    const { newFile } = this.state;
     if (file.status === `removed`) {
       return;
     }
     fileList.splice(fileList.length - 1, 1);
-    const newFile = {
-      uid: getFileName(this.state.newFile).split(`.`)[0],
-      name: getFileName(this.state.newFile),
+    const newFile1 = {
+      uid: getFileName(newFile).split(`.`)[0],
+      name: getFileName(newFile),
       status: 'done',
-      url: `file:///images/${getFileName(this.state.newFile)}`,
+      url: `file:///images/${getFileName(newFile)}`,
     };
-    fileList.push(newFile);
-    this.addImageToNode(newFile);
+    fileList.push(newFile1);
+    this.addImageToNode(newFile1);
     this.setState({ fileList });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   handleRemove = (file) => {
     console.log(file);
   };
 
-  handleBeforeUpload = (file, fileList) => {
+  handleBeforeUpload = (file) => {
     const imageUpload = `./images/${getFileName(file.path)}`;
     fs.copyFile(file.path, imageUpload, (err) => {
       if (err) {
@@ -86,6 +94,7 @@ class PictureWall extends Component {
     this.setState({ newFile: imageUpload });
   };
 
+  // eslint-disable-next-line class-methods-use-this,react/no-unused-class-component-methods
   convert = async (url) => {
     const data = await fetch(url);
     const blob = await data.blob();
@@ -147,7 +156,8 @@ class PictureWall extends Component {
 export default PictureWall;
 
 PictureWall.propTypes = {
-  addImageToNode: PropTypes.func,
-  node: PropTypes.object,
-  setCoverImage: PropTypes.func,
+  addImageToNode: PropTypes.func.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  node: PropTypes.object.isRequired,
+  setCoverImage: PropTypes.func.isRequired,
 };

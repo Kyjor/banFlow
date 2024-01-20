@@ -5,12 +5,13 @@ import PropTypes from 'prop-types';
 const { Item } = Menu;
 
 function Content(props) {
+  const { deleteNode, node } = props;
   return (
     <Menu>
       <Item key="0">
         <Popconfirm
           title="Are you sure delete this node?"
-          onConfirm={() => props.deleteNode(props.node.id, props.node.parent)}
+          onConfirm={() => deleteNode(node.id, node.parent)}
           onCancel={() => console.log('confirm')}
           okText="Yes"
           cancelText="No"
@@ -27,7 +28,8 @@ function Content(props) {
 
 Content.propTypes = {
   deleteNode: PropTypes.func.isRequired,
-  node: PropTypes.object,
+  // eslint-disable-next-line react/forbid-prop-types
+  node: PropTypes.object.isRequired,
 };
 
 export default function NodeQuickActions(props) {
@@ -43,7 +45,9 @@ export default function NodeQuickActions(props) {
 }
 
 NodeQuickActions.propTypes = {
-  button: PropTypes.any,
+  // eslint-disable-next-line react/forbid-prop-types
+  button: PropTypes.any.isRequired,
   deleteNode: PropTypes.func.isRequired,
-  node: PropTypes.object,
+  // eslint-disable-next-line react/forbid-prop-types
+  node: PropTypes.object.isRequired,
 };

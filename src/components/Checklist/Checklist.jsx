@@ -6,13 +6,14 @@ import EditableTextArea from '../EditableTextArea/EditableTextArea';
 
 // The callback will be called every 1000 milliseconds.
 function Checklist(props) {
+  const { checklist, nodeId, updateNodeProperty } = props;
   const [checks, setChecks] = useState(
-    props.checklist.checks ? props.checklist.checks : [],
+    checklist.checks ? checklist.checks : [],
   );
-  const [checklist, setChecklist] = useState(props.checklist ?? {});
+  const [checklist_, setChecklist] = useState(checklist ?? {});
 
   useEffect(() => {}, []);
-  useEffect(() => {}, [props.checklist]);
+  useEffect(() => {}, [checklist]);
 
   function handleNewCheck() {
     const newCheck = {
@@ -21,26 +22,26 @@ function Checklist(props) {
       timeSpent: 0,
     };
     const newChecklist = {
-      ...checklist,
+      ...checklist_,
       checks: [...checks, newCheck],
     };
     setChecks([...checks, newCheck]);
     setChecklist(newChecklist);
 
-    props.updateNodeProperty(`checklist`, props.nodeId, newChecklist, true);
+    updateNodeProperty(`checklist`, nodeId, newChecklist, true);
   }
 
   function deleteCheck(index) {
     const newChecks = [...checks];
     newChecks.splice(index, 1);
     const newChecklist = {
-      ...checklist,
+      ...checklist_,
       checks: newChecks,
     };
     setChecks(newChecks);
     setChecklist(newChecklist);
 
-    props.updateNodeProperty(`checklist`, props.nodeId, newChecklist, true);
+    updateNodeProperty(`checklist`, nodeId, newChecklist, true);
   }
 
   function updateCheck(index, isChecked, title, timeSpent) {
@@ -52,19 +53,19 @@ function Checklist(props) {
     const newChecks = [...checks];
     newChecks[index] = newCheck;
     const newChecklist = {
-      ...checklist,
+      ...checklist_,
       checks: newChecks,
     };
     setChecks(newChecks);
     setChecklist(newChecklist);
 
-    props.updateNodeProperty(`checklist`, props.nodeId, newChecklist, true);
+    updateNodeProperty(`checklist`, nodeId, newChecklist, true);
   }
 
   return (
     <div>
       <EditableTextArea
-        defaultValue={props.checklist.title}
+        defaultValue={checklist.title}
         style={{
           width: '100%',
           resize: 'none',
@@ -75,10 +76,10 @@ function Checklist(props) {
         maxLength={70}
         autoSize={{ maxRows: 1 }}
         updateText={(value) => {
-          props.updateNodeProperty(
+          updateNodeProperty(
             `checklist`,
-            props.nodeId,
-            { ...checklist, title: value },
+            nodeId,
+            { ...checklist_, title: value },
             true,
           );
         }}
@@ -97,13 +98,16 @@ function Checklist(props) {
           );
         })}
       </div>
+      {/* eslint-disable-next-line react/jsx-no-bind */}
       <Button onClick={handleNewCheck}>+ New Check</Button>
     </div>
   );
 }
 
 Checklist.propTypes = {
-  check: PropTypes.object,
+  // eslint-disable-next-line react/forbid-prop-types,react/no-unused-prop-types
+  check: PropTypes.object.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
   checklist: PropTypes.object.isRequired,
   nodeId: PropTypes.number.isRequired,
   updateNodeProperty: PropTypes.func.isRequired,

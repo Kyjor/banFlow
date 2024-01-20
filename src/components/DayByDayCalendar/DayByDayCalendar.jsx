@@ -2,7 +2,6 @@
 import React, { Component } from 'react';
 // Styles
 import PropTypes from 'prop-types';
-import { Icon } from 'antd';
 import {
   DoubleLeftOutlined,
   DoubleRightOutlined,
@@ -33,6 +32,7 @@ class DayByDayCalendar extends Component {
   }
 
   header = () => {
+    const { currentDate, today, tomorrow, yesterday } = this.state;
     return (
       <div
         style={{
@@ -62,19 +62,19 @@ class DayByDayCalendar extends Component {
             cursor: 'pointer',
           }}
         >
-          {this.state.currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
-            this.state.yesterday.toJSON().slice(0, 10).replace(/-/g, '/') && (
+          {currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
+            yesterday.toJSON().slice(0, 10).replace(/-/g, '/') && (
             <span>Yesterday, </span>
           )}
-          {this.state.currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
-            this.state.today.toJSON().slice(0, 10).replace(/-/g, '/') && (
+          {currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
+            today.toJSON().slice(0, 10).replace(/-/g, '/') && (
             <span>Today, </span>
           )}
-          {this.state.currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
-            this.state.tomorrow.toJSON().slice(0, 10).replace(/-/g, '/') && (
+          {currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
+            tomorrow.toJSON().slice(0, 10).replace(/-/g, '/') && (
             <span>Tomorrow, </span>
           )}
-          {this.state.currentDate.toJSON().slice(0, 10).replace(/-/g, '/')}
+          {currentDate.toJSON().slice(0, 10).replace(/-/g, '/')}
         </div>
         <RightOutlined
           style={{
@@ -104,19 +104,19 @@ class DayByDayCalendar extends Component {
   };
 
   render() {
+    const { currentDate } = this.state;
+    const { dayCellRender } = this.props;
+
     return (
       <div style={{ height: '400px' }}>
         <div style={{ height: '100%' }}>
-          {this.props.dayCellRender(
-            { _d: this.state.currentDate },
-            this.header,
-          )}
+          {dayCellRender({ _d: currentDate }, this.header)}
         </div>
       </div>
     );
   }
 }
 DayByDayCalendar.propTypes = {
-  dayCellRender: PropTypes.func,
+  dayCellRender: PropTypes.func.isRequired,
 };
 export default DayByDayCalendar;

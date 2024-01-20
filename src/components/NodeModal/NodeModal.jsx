@@ -39,39 +39,31 @@ class NodeModal extends React.Component {
   }
 
   handleEstimatedTimeChange = (time, timeString) => {
+    const { updateNodeProperty } = this.props;
     const seconds = this.hmsToSecondsOnly(timeString);
-    this.props.updateNodeProperty(`estimatedTime`, this.node.id, seconds, true);
+    updateNodeProperty(`estimatedTime`, this.node.id, seconds, true);
   };
 
   handleEstimatedDateChange = (date, dateString) => {
+    const { updateNodeProperty } = this.props;
+
     const dateToSave = `${`${dateString.split(` `)[0]}T${
       dateString.split(` `)[1]
     }:00`}`;
-    this.props.updateNodeProperty(
-      `estimatedDate`,
-      this.node.id,
-      dateToSave,
-      true,
-    );
+    updateNodeProperty(`estimatedDate`, this.node.id, dateToSave, true);
   };
 
   handleLockCheckboxChange = (e) => {
-    this.props.updateNodeProperty(
-      `isLocked`,
-      this.node.id,
-      e.target.checked,
-      true,
-    );
+    const { updateNodeProperty } = this.props;
+
+    updateNodeProperty(`isLocked`, this.node.id, e.target.checked, true);
   };
 
   handleCompleteCheckboxChange = (e) => {
-    this.props.updateNodeProperty(
-      `isComplete`,
-      this.node.id,
-      e.target.checked,
-      true,
-    );
-    this.props.updateNodeProperty(
+    const { updateNodeProperty } = this.props;
+
+    updateNodeProperty(`isComplete`, this.node.id, e.target.checked, true);
+    updateNodeProperty(
       `completedDate`,
       this.node.id,
       e.target.checked ? ISO8601ServiceInstance.getISO8601Time() : ``,
@@ -80,15 +72,20 @@ class NodeModal extends React.Component {
   };
 
   setCoverImage = (imagePath) => {
-    this.props.updateNodeProperty(`coverImage`, this.node.id, imagePath, true);
+    const { updateNodeProperty } = this.props;
+
+    updateNodeProperty(`coverImage`, this.node.id, imagePath, true);
   };
 
   addImageToNode = (image) => {
+    const { updateNodeProperty } = this.props;
+
     const newImages = this.node.images;
     newImages.push(image);
-    this.props.updateNodeProperty(`images`, this.node.id, newImages, true);
+    updateNodeProperty(`images`, this.node.id, newImages, true);
   };
 
+  // eslint-disable-next-line class-methods-use-this
   hmsToSecondsOnly = (str) => {
     const p = str.split(':');
     let s = 0;
@@ -103,6 +100,9 @@ class NodeModal extends React.Component {
   };
 
   render() {
+    const { handleCancel, handleOk, parents, updateNodeProperty, visible } =
+      this.props;
+
     const format = 'HH:mm:ss';
 
     return (
@@ -122,29 +122,23 @@ class NodeModal extends React.Component {
               maxLength={70}
               autoSize={{ maxRows: 1 }}
               updateText={(value) => {
-                this.props.updateNodeProperty(
-                  `title`,
-                  this.node.id,
-                  value,
-                  true,
-                );
+                updateNodeProperty(`title`, this.node.id, value, true);
               }}
             />
           </div>
         }
-        visible={this.props.visible}
-        onOk={this.props.handleOk}
-        onCancel={this.props.handleCancel}
+        visible={visible}
+        onOk={handleOk}
+        onCancel={handleCancel}
         footer={[
-          <Button key="back" onClick={this.props.handleCancel}>
+          <Button key="back" onClick={handleCancel}>
             Return
           </Button>,
-          this.props.parents &&
-            this.props.parents[this.node.parent].isTimed && (
-              <Button key="submit" type="primary" onClick={this.props.handleOk}>
-                Start Working
-              </Button>
-            ),
+          parents && parents[this.node.parent].isTimed && (
+            <Button key="submit" type="primary" onClick={handleOk}>
+              Start Working
+            </Button>
+          ),
         ]}
       >
         <Tabs defaultActiveKey="1">
@@ -170,12 +164,7 @@ class NodeModal extends React.Component {
               }}
               placeholder="Add a more detailed description here..."
               updateText={(value) => {
-                this.props.updateNodeProperty(
-                  `description`,
-                  this.node.id,
-                  value,
-                  true,
-                );
+                updateNodeProperty(`description`, this.node.id, value, true);
               }}
             />
             <div>Notes</div>
@@ -189,12 +178,7 @@ class NodeModal extends React.Component {
               }}
               placeholder="Take some notes here..."
               updateText={(value) => {
-                this.props.updateNodeProperty(
-                  `notes`,
-                  this.node.id,
-                  value,
-                  true,
-                );
+                updateNodeProperty(`notes`, this.node.id, value, true);
               }}
             />
             <div>Comments</div>
@@ -430,7 +414,7 @@ class NodeModal extends React.Component {
           >
             <Checklist
               nodeId={this.node.id}
-              updateNodeProperty={this.props.updateNodeProperty}
+              updateNodeProperty={updateNodeProperty}
               checklist={this.node.checklist}
             />
           </TabPane>
@@ -443,17 +427,22 @@ class NodeModal extends React.Component {
 export default NodeModal;
 
 NodeModal.propTypes = {
-  addTagToNode: PropTypes.func,
-  createGlobalTag: PropTypes.func,
-  handleCancel: PropTypes.func,
-  handleOk: PropTypes.func,
-  node: PropTypes.object,
-  nodeStates: PropTypes.array,
-  nodeTypes: PropTypes.array,
-  parents: PropTypes.array,
-  saveMetadataValue: PropTypes.func,
-  tags: PropTypes.array,
-  updateNodeEnum: PropTypes.func,
-  updateNodeProperty: PropTypes.func,
-  visible: PropTypes.bool,
+  addTagToNode: PropTypes.func.isRequired,
+  createGlobalTag: PropTypes.func.isRequired,
+  handleCancel: PropTypes.func.isRequired,
+  handleOk: PropTypes.func.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  node: PropTypes.object.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  nodeStates: PropTypes.array.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  nodeTypes: PropTypes.array.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  parents: PropTypes.array.isRequired,
+  saveMetadataValue: PropTypes.func.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  tags: PropTypes.array.isRequired,
+  updateNodeEnum: PropTypes.func.isRequired,
+  updateNodeProperty: PropTypes.func.isRequired,
+  visible: PropTypes.bool.isRequired,
 };
