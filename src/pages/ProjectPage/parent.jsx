@@ -196,7 +196,9 @@ Parent.propTypes = {
   index: PropTypes.number.isRequired,
   mustFocusNodeTitle: PropTypes.bool.isRequired,
   mustFocusParentTitle: PropTypes.bool.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
   nodes: PropTypes.any.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
   parent: PropTypes.any.isRequired,
   saveTime: PropTypes.func.isRequired,
   showParentModal: PropTypes.func.isRequired,

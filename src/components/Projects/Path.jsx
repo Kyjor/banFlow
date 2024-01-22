@@ -1,7 +1,6 @@
 // Libs
 import React from 'react';
 import { Breadcrumb } from 'antd';
-import './Path.scss';
 
 // Styles
 
@@ -13,7 +12,7 @@ import './Path.scss';
  */
 function Path() {
   return (
-    <Breadcrumb className="path">
+    <Breadcrumb className="path mb-4 text-xl">
       <Breadcrumb.Item>Projects</Breadcrumb.Item>
     </Breadcrumb>
   );

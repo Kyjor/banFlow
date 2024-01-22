@@ -576,16 +576,8 @@ video {
   position: static;
 }
 
-.mt-12 {
-  margin-top: 3rem;
-}
-
-.mt-8 {
-  margin-top: 2rem;
-}
-
-.mt-4 {
-  margin-top: 1rem;
+.mb-4 {
+  margin-bottom: 1rem;
 }
 
 .mr-8 {
@@ -604,20 +596,12 @@ video {
   display: flex;
 }
 
-.grid {
-  display: grid;
-}
-
 .hidden {
   display: none;
 }
 
 .flex-none {
   flex: none;
-}
-
-.basis-1\/4 {
-  flex-basis: 25%;
 }
 
 .resize {
@@ -628,8 +612,13 @@ video {
   border-width: 1px;
 }
 
-.pt-12 {
-  padding-top: 3rem;
+.border-2 {
+  border-width: 2px;
+}
+
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
 }
 
 .blur {

@@ -12,8 +12,8 @@ const ProjectController = {
    * @returns {array} project - all projects
    * @permission {Read}
    */
-  getProjects(isDev) {
-    return projectService.getProjects(isDev);
+  getProjects() {
+    return projectService.getProjects();
   },
 
   /**

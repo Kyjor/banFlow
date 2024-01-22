@@ -1,4 +1,4 @@
-import { PieChartOutlined } from '@ant-design/icons';
+import { DesktopOutlined, PlusSquareFilled } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import React, { useState } from 'react';
 // Styles
@@ -6,24 +6,15 @@ import './App.scss';
 import './tailwind-output.css';
 // Components
 import PropTypes from 'prop-types';
-import Header from '../components/@shared/Header';
+import { Link } from 'react-router-dom';
 import Footer from '../components/@shared/Footer';
+import AddProject from '../components/Projects/AddProject';
 
 const { Content, Sider } = Layout;
 
-function getItem(label, key, icon, children) {
-  return {
-    key,
-    icon,
-    children,
-    label,
-  };
-}
-
-const items = [getItem('Option 1', '1', <PieChartOutlined />)];
-
 function App(props) {
   const [collapsed, setCollapsed] = useState(true);
+  const [showModal, setShowModal] = useState(false);
   const { children } = props;
 
   return (
@@ -32,7 +23,6 @@ function App(props) {
         minHeight: '100vh',
       }}
     >
-      <Header />
       <Layout className="site-layout">
         <Sider
           collapsible
@@ -40,12 +30,22 @@ function App(props) {
           onCollapse={(value) => setCollapsed(value)}
         >
           <div className="logo" />
-          <Menu
-            theme="dark"
-            defaultSelectedKeys={['1']}
-            mode="inline"
-            items={items}
-          />
+          <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
+            <Menu.Item icon={<DesktopOutlined />} title="Dashboard" key="1">
+              <Link to="/dashboard" />
+              Dashboard
+            </Menu.Item>
+            <Menu.Item
+              icon={<PlusSquareFilled />}
+              title="Add New Project"
+              key="2"
+              onClick={() => {
+                setShowModal(true);
+              }}
+            >
+              Add New Project
+            </Menu.Item>
+          </Menu>
         </Sider>
         <Content
           style={{
@@ -59,6 +59,13 @@ function App(props) {
               minHeight: 360,
             }}
           >
+            <AddProject
+              handleCancel={() => {
+                setShowModal(false);
+                window.location.reload();
+              }}
+              visible={showModal}
+            />
             {children}
           </div>
         </Content>

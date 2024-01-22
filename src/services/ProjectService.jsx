@@ -1,5 +1,7 @@
 import * as fs from 'fs';
 import lokiService from './LokiService';
+// eslint-disable-next-line import/no-cycle
+import { ValidateProjectName } from '../validators/Validator';
 
 /**
  * @class ProjectService
@@ -38,9 +40,10 @@ const ProjectService = {
   },
 
   renameProject(oldName, newName) {
-    // if (!this.isDev) {
-    //   fs.renameSync(`./projects/${oldName}.json`, `./projects/${newName}.json`);
-    // } else
+    if (!ValidateProjectName(newName)) {
+      // TODO: some notification/popup to indicate why this failed
+      return;
+    }
     fs.renameSync(
       `../banFlowProjects/${oldName}.json`,
       `../banFlowProjects/${newName}.json`,
@@ -48,39 +51,36 @@ const ProjectService = {
   },
 
   setCurrentProjectName(projectName) {
+    if (!ValidateProjectName(projectName)) {
+      // TODO: some notification/popup to indicate why this failed
+      return;
+    }
     lokiService.projectName = projectName;
   },
 
   createProject(projectName) {
+    if (!ValidateProjectName(projectName)) {
+      // TODO: some notification/popup to indicate why this failed
+      return false;
+    }
     try {
-      // if (!this.isDev) {
-      //   if (!fs.existsSync('./projects')) {
-      //     fs.mkdirSync('./projects');
-      //   }
-      //   fs.writeFileSync(`./projects/${projectName}.json`, '', 'utf-8');
-      // } else {
       console.log('creating file dev');
       fs.writeFileSync(`../banFlowProjects/${projectName}.json`, '', 'utf-8');
-      // }
     } catch (e) {
       console.log(e);
       alert('Failed to save the file !');
+      return false;
     }
+    return true;
   },
 
   deleteProject(name) {
     try {
-      // if (!this.isDev) {
-      // fs.unlinkSync(`./projects/${name}.json`);
-      // } else
       fs.unlinkSync(`../banFlowProjects/${name}.json`);
     } catch (err) {
       console.error(err);
     }
     try {
-      // if (!this.isDev) {
-      //   fs.unlinkSync(`./projects/${name}.json~`);
-      // } else
       fs.unlinkSync(`../banFlowProjects/${name}.json~`);
     } catch (err) {
       console.error(err);

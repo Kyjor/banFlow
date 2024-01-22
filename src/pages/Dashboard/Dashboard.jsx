@@ -11,9 +11,11 @@ import {
   Descriptions,
   List,
   PageHeader,
+  Tabs,
 } from 'antd';
 import dateFormat from 'dateformat';
 import { ipcRenderer } from 'electron';
+import TabPane from 'antd/lib/tabs/TabPane';
 import Layout from '../../layouts/App';
 // Components
 import Path from '../../components/Projects/Path';
@@ -112,7 +114,7 @@ class Dashboard extends Component {
       .getState()
       .nodeController.getNodesWithQuery({ estimatedDate: { $ne: '' } });
     dueItems.forEach((item) => {
-      if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') == cellDate) {
+      if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
         console.log(cellDate);
         listData.push({ type: 'success', content: item.title });
       }
@@ -130,7 +132,8 @@ class Dashboard extends Component {
         sharedIndividualProjectState.setState((state) => {
           state.lokiLoaded = true;
         });
-        if (this.state.selectedProject === projectName) {
+        const { selectedProject } = this.state;
+        if (selectedProject === projectName) {
           this.setState({ selectedProject: null });
         } else {
           this.setState({ selectedProject: projectName });
@@ -159,7 +162,7 @@ class Dashboard extends Component {
       .getState()
       .nodeController.getNodesWithQuery({ estimatedDate: { $ne: '' } });
     dueItems.forEach((item) => {
-      if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') == cellDate) {
+      if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
         console.log(cellDate);
         listData.push({
           type: 'success',
@@ -189,53 +192,62 @@ class Dashboard extends Component {
   };
 
   render() {
+    const { selectedProject } = this.state;
     return (
       <Layout>
         <div className="home">
-          <Path />
+          <div>
+            <Path />
+          </div>
           <div className="flex">
             <ProjectListContainer
               openProjectDetails={this.updateSelectedProject}
             />
-            {this.state.selectedProject && (
-              <div>
-                <PageHeader
-                  ghost={false}
-                  title={
-                    <Link to={`/projectPage/${this.state.selectedProject}`}>
-                      {this.state.selectedProject}
-                    </Link>
-                  }
-                >
-                  {this.state.selectedProject && (
-                    <div
-                      style={{
-                        display: 'flex',
-                      }}
-                    >
-                      <div style={{ width: '50%' }}>
-                        <Descriptions size="small" column={3}>
-                          <Descriptions.Item label="Created by">
-                            You
-                          </Descriptions.Item>
-                          <Descriptions.Item label="Time Spent">
-                            {new Date(this.getProjectTotalTimeSpent() * 1000)
-                              .toISOString()
-                              .substr(11, 8)}
-                          </Descriptions.Item>
-                        </Descriptions>
+            {selectedProject && (
+              <Tabs defaultActiveKey="1">
+                <TabPane tab="Daily" key="1">
+                  <PageHeader
+                    ghost={false}
+                    title={
+                      <Link to={`/projectPage/${selectedProject}`}>
+                        {selectedProject}
+                      </Link>
+                    }
+                  >
+                    {selectedProject && (
+                      <div
+                        style={{
+                          display: 'flex',
+                        }}
+                      >
+                        <div style={{ width: '50%' }}>
+                          <Descriptions size="small" column={3}>
+                            <Descriptions.Item label="Created by">
+                              You
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Time Spent">
+                              {new Date(this.getProjectTotalTimeSpent() * 1000)
+                                .toISOString()
+                                .substr(11, 8)}
+                            </Descriptions.Item>
+                          </Descriptions>
+                        </div>
+                        <div style={{ width: '50%' }}>
+                          <DayByDayCalendar
+                            dayCellRender={this.dayCellRender}
+                          />
+                        </div>
                       </div>
-                      <div style={{ width: '50%' }}>
-                        <DayByDayCalendar dayCellRender={this.dayCellRender} />
-                      </div>
-                    </div>
-                  )}
-                </PageHeader>
+                    )}
+                  </PageHeader>
+                </TabPane>
 
-                <div>
-                  <Calendar dateCellRender={this.dateCellRender} />,
-                </div>
-              </div>
+                <TabPane tab="Monthly" key="2">
+                  <div>
+                    <Calendar dateCellRender={this.dateCellRender} />,
+                  </div>
+                </TabPane>
+              </Tabs>
             )}
           </div>
         </div>
