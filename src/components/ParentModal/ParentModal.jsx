@@ -68,7 +68,7 @@ class ParentModal extends React.Component {
             />
           </div>
         }
-        visible={visible}
+        open={visible}
         onCancel={handleCancel}
         footer={[
           <Button key="back" onClick={handleCancel}>

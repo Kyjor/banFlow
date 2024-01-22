@@ -12,7 +12,6 @@ class AddProject extends React.Component {
     this._inputElement.value = '';
 
     const created = ProjectController.createProject(projectName);
-    console.log(created);
     if (created) {
       const { handleCancel } = this.props;
       handleCancel();

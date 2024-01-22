@@ -1,17 +1,6 @@
 import lokiService from './LokiService';
 
-/**
- * @class ParentService
- * @desc creates a new Parent with a set of given properties
- */
 const ParentService = {
-  /**
-   * @function getParents
-   * @desc gets all parents
-   * @route Parent
-   * @returns {array} parent - all parents
-   * @permission {Read}
-   */
   getParents() {
     const parents = lokiService.parents.find({ Id: { $ne: null } });
 
@@ -29,13 +18,6 @@ const ParentService = {
     return response;
   },
 
-  /**
-   * @function getParentOrder
-   * @desc gets the order of all parents
-   * @route Parent/Order
-   * @returns {array} string - the order of parents represented by id
-   * @permission {Read}
-   */
   getParentOrder() {
     const parentOrder = lokiService.parentOrder.find({ Id: { $ne: null } });
 
@@ -88,7 +70,7 @@ const ParentService = {
     lokiService.parents
       .chain()
       .find({ id: parentId })
-      .update(function (parent) {
+      .update((parent) => {
         parent[propertyToUpdate] = newValue;
         parentToReturn = parent;
       });
@@ -106,7 +88,7 @@ const ParentService = {
       currentParentOrder
         .chain()
         .find({ $loki: x })
-        .update(function (index) {
+        .update((index) => {
           index.parentId = parentId;
         });
       x++;
@@ -120,19 +102,19 @@ const ParentService = {
     parents
       .chain()
       .find({ id: updatedOriginParent.id })
-      .update(function (parent) {
+      .update((parent) => {
         parent.nodeIds = updatedOriginParent.nodeIds;
       });
     parents
       .chain()
       .find({ id: updatedDestinationParent.id })
-      .update(function (parent) {
+      .update((parent) => {
         parent.nodeIds = updatedDestinationParent.nodeIds;
       });
     nodes
       .chain()
       .find({ id: nodeId })
-      .update(function (node) {
+      .update((node) => {
         node.parent = updatedDestinationParent.id;
       });
     lokiService.saveDB();

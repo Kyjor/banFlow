@@ -17,7 +17,6 @@ function Check(props) {
   const [isHoveringClose, setIsHoveringClose] = useState(false);
 
   function handleDeleteCheck() {
-    console.log('delete check');
     deleteCheck(index);
   }
 
@@ -41,12 +40,8 @@ function Check(props) {
       onMouseOut={() => {
         setIsHoveringContainer(false);
       }}
-      onFocus={() => {
-        console.log('todo: blur ally');
-      }}
-      onBlur={() => {
-        console.log('todo: blur ally');
-      }}
+      onFocus={() => {}}
+      onBlur={() => {}}
     >
       <Checkbox
         defaultChecked={isChecked}

@@ -1,9 +1,5 @@
 import lokiService from './LokiService';
 
-/**
- * @class TagService
- * @desc creates a new Tag with a set of given properties
- */
 const TagService = {
   addTag(tagTitle) {
     const { tags } = lokiService;

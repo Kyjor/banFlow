@@ -12,7 +12,7 @@ function Content(props) {
         <Popconfirm
           title="Are you sure delete this node?"
           onConfirm={() => deleteNode(node.id, node.parent)}
-          onCancel={() => console.log('confirm')}
+          onCancel={() => {}}
           okText="Yes"
           cancelText="No"
         >

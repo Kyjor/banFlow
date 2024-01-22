@@ -19,7 +19,6 @@ export default class EditableTagGroup extends React.Component {
     const { tags } = this.state;
     const { addTagToNode, node } = this.props;
 
-    console.log('onSelect', value);
     if (tags.includes(value)) {
       return;
     }
@@ -33,10 +32,6 @@ export default class EditableTagGroup extends React.Component {
       // dataSource: !value ? [] : [value, value + value, value + value + value],
     });
   };
-
-  // handleKeyPress = (ev) => {
-  //   console.log('handleKeyPress', ev);
-  // };
 
   handleClose = (removedTag) => {
     const { tags } = this.state;
@@ -65,7 +60,6 @@ export default class EditableTagGroup extends React.Component {
         createGlobalTag(inputValue);
       }
     }
-    console.log(tags);
     this.setState({
       tags,
       inputVisible: false,

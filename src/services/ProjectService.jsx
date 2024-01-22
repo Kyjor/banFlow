@@ -3,23 +3,10 @@ import lokiService from './LokiService';
 // eslint-disable-next-line import/no-cycle
 import { ValidateProjectName } from '../validators/Validator';
 
-/**
- * @class ProjectService
- * @desc creates a new Project with a set of given properties
- */
 const ProjectService = {
-  /**
-   * @function getProjects
-   * @desc gets all projects
-   * @route Project
-   * @returns {array} project - all projects
-   * @permission {Read}
-   */
-
   getProjects() {
     const fileList = [];
-    const projectFolder = '../banFlowProjects'; // this.isDev ?
-    // : './projects';
+    const projectFolder = '../banFlowProjects';
 
     if (!fs.existsSync(projectFolder)) {
       fs.mkdirSync(projectFolder, {
@@ -64,10 +51,8 @@ const ProjectService = {
       return false;
     }
     try {
-      console.log('creating file dev');
       fs.writeFileSync(`../banFlowProjects/${projectName}.json`, '', 'utf-8');
     } catch (e) {
-      console.log(e);
       alert('Failed to save the file !');
       return false;
     }
@@ -78,12 +63,12 @@ const ProjectService = {
     try {
       fs.unlinkSync(`../banFlowProjects/${name}.json`);
     } catch (err) {
-      console.error(err);
+      /* empty */
     }
     try {
       fs.unlinkSync(`../banFlowProjects/${name}.json~`);
     } catch (err) {
-      console.error(err);
+      /* empty */
     }
   },
 };

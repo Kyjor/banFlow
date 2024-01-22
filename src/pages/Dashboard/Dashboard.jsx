@@ -115,7 +115,6 @@ class Dashboard extends Component {
       .nodeController.getNodesWithQuery({ estimatedDate: { $ne: '' } });
     dueItems.forEach((item) => {
       if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
-        console.log(cellDate);
         listData.push({ type: 'success', content: item.title });
       }
     });

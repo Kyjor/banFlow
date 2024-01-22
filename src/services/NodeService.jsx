@@ -1,18 +1,7 @@
 import lokiService from './LokiService';
 import ISO8601ServiceInstance from './ISO8601Service';
 
-/**
- * @class NodeService
- * @desc creates a new Node with a set of given properties
- */
 const NodeService = {
-  /**
-   * @function getNodes
-   * @desc gets all nodes
-   * @route Nodes
-   * @returns {array} node - all nodes
-   * @permission {Read}
-   */
   getNodes() {
     const nodes = lokiService.nodes.find({ Id: { $ne: null } });
 
@@ -91,7 +80,7 @@ const NodeService = {
     parents
       .chain()
       .find({ id: parentId })
-      .update(function (parent) {
+      .update((parent) => {
         parent.nodeIds = [...parent.nodeIds, `node-${nextId}`];
       });
 
@@ -106,7 +95,7 @@ const NodeService = {
     parents
       .chain()
       .find({ id: parentId })
-      .update(function (parent) {
+      .update((parent) => {
         const newNodeIds = parent.nodeIds;
         newNodeIds.splice(newNodeIds.indexOf(nodeId), 1);
         parent.nodeIds = newNodeIds;
@@ -125,15 +114,13 @@ const NodeService = {
     }
 
     if (newValue == null) {
-      // print error to console
-      console.error(`You must pass a value to updateNodeProperty`);
       return;
     }
     let nodeToReturn = null;
     lokiService.nodes
       .chain()
       .find({ id: nodeId })
-      .update(function (node) {
+      .update((node) => {
         node[propertyToUpdate] = newValue;
         nodeToReturn = node;
       });

@@ -13,14 +13,6 @@ function getBase64(file) {
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getCurrentFilenames() {
-  console.log('\nCurrent filenames:');
-  fs.readdirSync(__dirname).forEach((file) => {
-    console.log(file);
-  });
-}
-
 function getFileName(str) {
   return str.split('\\').pop().split('/').pop();
 }
@@ -75,16 +67,7 @@ class PictureWall extends Component {
 
   handleBeforeUpload = (file) => {
     const imageUpload = `./images/${getFileName(file.path)}`;
-    fs.copyFile(file.path, imageUpload, (err) => {
-      if (err) {
-        console.log('Error Found:', err);
-      } else {
-        // Get the current filenames
-        // after the function
-        // console.log("\nFile Contents of copied_file:",
-        //   fs.readFileSync(imageUpload));
-      }
-    });
+    fs.copyFile(file.path, imageUpload, () => {});
     this.setState({ newFile: imageUpload });
   };
 
@@ -123,7 +106,7 @@ class PictureWall extends Component {
           {fileList.length >= 8 ? null : uploadButton}
         </Upload>
         <Modal
-          visible={previewVisible}
+          open={previewVisible}
           title={previewTitle}
           footer={[
             <Button key="setCover" onClick={() => setCoverImage(previewImage)}>
@@ -136,8 +119,6 @@ class PictureWall extends Component {
           onCancel={this.handleCancel}
         >
           <img alt="example" style={{ width: '100%' }} src={previewImage} />
-
-          {/* <img id="image-1" data-path="../images/Block.png" /> */}
         </Modal>
       </>
     );
