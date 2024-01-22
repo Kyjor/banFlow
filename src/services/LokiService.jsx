@@ -106,7 +106,13 @@ class LokiService {
   };
 
   saveDB = () => {
-    this.db.saveDatabase(() => {});
+    this.db.saveDatabase((err) => {
+      if (err) {
+        console.log(`error : ${err}`);
+      } else {
+        console.log('database saved.');
+      }
+    });
   };
 
   createDefaultTimerPreferences = () => {

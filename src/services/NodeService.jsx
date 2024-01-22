@@ -2,6 +2,13 @@ import lokiService from './LokiService';
 import ISO8601ServiceInstance from './ISO8601Service';
 
 const NodeService = {
+  /**
+   * @function getNodes
+   * @desc gets all nodes
+   * @route Nodes
+   * @returns {array} node - all nodes
+   * @permission {Read}
+   */
   getNodes() {
     const nodes = lokiService.nodes.find({ Id: { $ne: null } });
 
@@ -114,6 +121,7 @@ const NodeService = {
     }
 
     if (newValue == null) {
+      console.error(`You must pass a value to updateNodeProperty`);
       return;
     }
     let nodeToReturn = null;

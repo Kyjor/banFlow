@@ -4,6 +4,13 @@ import lokiService from './LokiService';
 import { ValidateProjectName } from '../validators/Validator';
 
 const ProjectService = {
+  /**
+   * @function getProjects
+   * @desc gets all projects
+   * @route Project
+   * @returns {array} project - all projects
+   * @permission {Read}
+   */
   getProjects() {
     const fileList = [];
     const projectFolder = '../banFlowProjects';
@@ -52,7 +59,8 @@ const ProjectService = {
     }
     try {
       fs.writeFileSync(`../banFlowProjects/${projectName}.json`, '', 'utf-8');
-    } catch (e) {
+    } catch (err) {
+      console.error(err);
       alert('Failed to save the file !');
       return false;
     }
@@ -63,12 +71,12 @@ const ProjectService = {
     try {
       fs.unlinkSync(`../banFlowProjects/${name}.json`);
     } catch (err) {
-      /* empty */
+      console.error(err);
     }
     try {
       fs.unlinkSync(`../banFlowProjects/${name}.json~`);
     } catch (err) {
-      /* empty */
+      console.error(err);
     }
   },
 };

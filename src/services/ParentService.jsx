@@ -1,6 +1,13 @@
 import lokiService from './LokiService';
 
 const ParentService = {
+  /**
+   * @function getParents
+   * @desc gets all parents
+   * @route Parent
+   * @returns {array} parent - all parents
+   * @permission {Read}
+   */
   getParents() {
     const parents = lokiService.parents.find({ Id: { $ne: null } });
 
@@ -18,6 +25,13 @@ const ParentService = {
     return response;
   },
 
+  /**
+   * @function getParentOrder
+   * @desc gets the order of all parents
+   * @route Parent/Order
+   * @returns {array} string - the order of parents represented by id
+   * @permission {Read}
+   */
   getParentOrder() {
     const parentOrder = lokiService.parentOrder.find({ Id: { $ne: null } });
 
