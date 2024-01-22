@@ -6,7 +6,6 @@ import {Link} from 'react-router-dom';
 import {createSharedStore} from 'electron-shared-state';
 import {
   Badge,
-  Button,
   Calendar,
   Checkbox,
   Descriptions,
@@ -22,7 +21,6 @@ import ProjectListContainer from '../../components/Projects/ProjectListContainer
 import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar';
 import {
   controllers,
-  defaultTimerPreferences,
   initialIndividualProjectState,
   lokiService,
 } from '../../stores/shared';

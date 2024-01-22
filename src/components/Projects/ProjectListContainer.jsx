@@ -59,7 +59,7 @@ class ProjectListContainer extends Component {
       return false;
     }
 
-    const invalidRegex = new RegExp('\\\\+|\/+');
+    const invalidRegex = new RegExp('\\\\+|/+');
     if (invalidRegex.test(projectName)) {
       return false;
     }
@@ -85,18 +85,6 @@ class ProjectListContainer extends Component {
     ipcRenderer.send('GetProjectFile');
   };
 
-  /*
-  <div className="header">
-          <form onSubmit={this.addProject}>
-            <input
-              ref={(a) => (this._inputElement = a)}
-              placeholder="Create new project"
-            />
-            <button type="submit">+</button>
-            <button onClick={this.openProjectFile}>Open File</button>
-          </form>
-        </div>
-   */
   render() {
     const {items} = this.state;
     const {openProjectDetails} = this.props;

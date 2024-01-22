@@ -26,21 +26,14 @@ class ViewManager extends Component {
   }
 
   render() {
-    const { name } = this.props;
-
     return (
       <Router>
         <div>
-          {/* <Route path="/" component={this.GetView(name)} /> */}
           <Route path="/" component={ViewManager.View} />
         </div>
       </Router>
     );
   }
 }
-
-// ViewManager.propTypes = {
-//   name: PropTypes.string.isRequired,
-// };
 
 export default ViewManager;
