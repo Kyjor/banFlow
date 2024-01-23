@@ -22,8 +22,11 @@ import Path from '../../components/Projects/Path';
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
 import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar';
 import {
+  // eslint-disable-next-line import/named
   controllers,
+  // eslint-disable-next-line import/named
   initialIndividualProjectState,
+  // eslint-disable-next-line import/named
   lokiService,
 } from '../../stores/shared';
 
@@ -96,6 +99,7 @@ class Dashboard extends Component {
     });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   getProjectTotalTimeSpent = () => {
     let totalTime = 0;
     const cardList = sharedControllers
@@ -107,8 +111,10 @@ class Dashboard extends Component {
     return totalTime;
   };
 
+  // eslint-disable-next-line class-methods-use-this
   getListData = (value) => {
     const listData = [];
+    // eslint-disable-next-line no-underscore-dangle
     const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
     const dueItems = sharedControllers
       .getState()

@@ -11,7 +11,6 @@ export default class TimedItemHistory extends React.Component {
       initLoading: true,
       loading: false,
       data: [],
-      list: [],
     };
   }
 
@@ -46,16 +45,11 @@ export default class TimedItemHistory extends React.Component {
     const { data } = this.state;
     this.setState({
       loading: true,
-      list: data.concat(
-        [...new Array(count)].map(() => ({ loading: true, name: {} })),
-      ),
     });
     this.getData((res) => {
-      const data1 = data.concat(res.results);
       this.setState(
         {
           data,
-          list: data1,
           loading: false,
         },
         () => {

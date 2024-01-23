@@ -190,7 +190,28 @@ function Timer(props) {
   }, [props.timerPreferences]);
 
   function handleTomatoTimerButtonClick() {
+    // eslint-disable-next-line no-unused-expressions
     !event.isActive ? (toggle(), toggleTomatoTimer()) : toggleTomatoTimer();
+  }
+
+  function getTimeLeft(event) {
+    let secondsLeft = 0;
+
+    if (
+      event.isActive &&
+      !event.isOnBreak &&
+      !event.isBetweenRounds &&
+      event.isTomatoTimerActive
+    ) {
+      secondsLeft = event.tomatoSeconds;
+    } else if (event.isOnBreak && !event.isBetweenRounds) {
+      secondsLeft = event.breakSeconds;
+    } else if (event.isActive) {
+      secondsLeft = event.betweenRoundSeconds;
+    }
+
+    const timeLeft = new Date(secondsLeft * 1000).toISOString().substr(11, 8);
+    return timeLeft;
   }
 
   function handlePlayButtonClick() {
@@ -353,20 +374,7 @@ function Timer(props) {
             </div>
             <div>
               Time Left:
-              {new Date(
-                (event.isActive &&
-                !event.isOnBreak &&
-                !event.isBetweenRounds &&
-                event.isTomatoTimerActive
-                  ? event.tomatoSeconds
-                  : event.isOnBreak && !event.isBetweenRounds
-                    ? event.breakSeconds
-                    : event.isActive
-                      ? event.betweenRoundSeconds
-                      : 0) * 1000,
-              )
-                .toISOString()
-                .substr(11, 8)}
+              {getTimeLeft(event)}
             </div>
           </div>
         )}

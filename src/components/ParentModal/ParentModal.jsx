@@ -54,7 +54,6 @@ class ParentModal extends React.Component {
                 height: '22px',
                 border: 'none',
               }}
-              // showCount={this.state.textSelected}
               maxLength={70}
               autoSize={{ maxRows: 1 }}
               updateText={(value) => {
@@ -77,15 +76,7 @@ class ParentModal extends React.Component {
         ]}
       >
         <Tabs defaultActiveKey="1">
-          <TabPane
-            tab={
-              <span>
-                {/* <FileTextOutlined /> */}
-                Tab 1
-              </span>
-            }
-            key="1"
-          >
+          <TabPane tab={<span>Tab 1</span>} key="1">
             <Popconfirm
               title="Are you sure delete this parent?"
               onConfirm={this.handleConfirmParentDelete}

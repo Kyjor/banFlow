@@ -2,7 +2,7 @@
 import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
 import { withRouter } from 'react-router-dom';
-
+import PropTypes from 'prop-types';
 import ProjectList from './ProjectItems/ProjectList';
 import './ProjectListContainer.scss';
 import ProjectController from '../../api/project/ProjectController';
@@ -55,23 +55,6 @@ class ProjectListContainer extends Component {
     this.getProjects();
   };
 
-  // eslint-disable-next-line class-methods-use-this
-  openProjectFile = () => {
-    ipcRenderer.send('GetProjectFile');
-  };
-
-  /*
-  <div className="header">
-          <form onSubmit={this.addProject}>
-            <input
-              ref={(a) => (this._inputElement = a)}
-              placeholder="Create new project"
-            />
-            <button type="submit">+</button>
-            <button onClick={this.openProjectFile}>Open File</button>
-          </form>
-        </div>
-   */
   render() {
     const { items } = this.state;
     const { openProjectDetails } = this.props;
@@ -88,5 +71,9 @@ class ProjectListContainer extends Component {
     );
   }
 }
+
+ProjectListContainer.propTypes = {
+  openProjectDetails: PropTypes.func.isRequired,
+};
 
 export default withRouter(ProjectListContainer);

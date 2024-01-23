@@ -26,7 +26,6 @@ class AntTreeSelect extends React.Component {
           treeData={nodes}
           placeholder="Please select"
           disabled={disabled}
-          // treeDefaultExpandAll
           onChange={this.onChange}
           onSelect={onSelect}
           treeNodeFilterProp="title"

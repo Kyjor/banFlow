@@ -100,8 +100,18 @@ class NodeModal extends React.Component {
   };
 
   render() {
-    const { handleCancel, handleOk, parents, updateNodeProperty, visible } =
-      this.props;
+    const {
+      addTagToNode,
+      createGlobalTag,
+      handleCancel,
+      handleOk,
+      parents,
+      saveMetadataValue,
+      tags,
+      updateNodeEnum,
+      updateNodeProperty,
+      visible,
+    } = this.props;
 
     const format = 'HH:mm:ss';
 
@@ -181,23 +191,6 @@ class NodeModal extends React.Component {
                 updateNodeProperty(`notes`, this.node.id, value, true);
               }}
             />
-            <div>Comments</div>
-            <Comment
-              actions={[<span key="comment-nested-reply-to">Reply to</span>]}
-              author={<a>Han Solo</a>}
-              avatar={
-                <Avatar
-                  src="https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png"
-                  alt="Han Solo"
-                />
-              }
-              content={
-                <p>
-                  We supply a series of design principles, practical patterns
-                  and high quality design resources (Sketch and Axure).
-                </p>
-              }
-            />
           </TabPane>
 
           <TabPane
@@ -213,17 +206,17 @@ class NodeModal extends React.Component {
             <div>
               <div>Tags</div>
               <EditableTagGroup
-                addTagToNode={this.props.addTagToNode}
-                createGlobalTag={this.props.createGlobalTag}
+                addTagToNode={addTagToNode}
+                createGlobalTag={createGlobalTag}
                 node={this.node}
-                tags={this.props.tags}
+                tags={tags}
               />
               <div>Task Type</div>
               <CustomSelect
                 parentEnum="nodeType"
                 items={this.nodeTypes}
-                saveMetadataValue={this.props.saveMetadataValue}
-                updateNodeEnum={this.props.updateNodeEnum}
+                saveMetadataValue={saveMetadataValue}
+                updateNodeEnum={updateNodeEnum}
                 node={this.node}
                 currentValue={this.node.nodeType}
               />
@@ -231,8 +224,8 @@ class NodeModal extends React.Component {
               <CustomSelect
                 parentEnum="nodeState"
                 items={this.nodeStates}
-                saveMetadataValue={this.props.saveMetadataValue}
-                updateNodeEnum={this.props.updateNodeEnum}
+                saveMetadataValue={saveMetadataValue}
+                updateNodeEnum={updateNodeEnum}
                 node={this.node}
                 currentValue={this.node.nodeState}
               />
