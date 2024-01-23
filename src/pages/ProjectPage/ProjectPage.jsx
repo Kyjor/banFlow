@@ -104,6 +104,7 @@ class ProjectPage extends Component {
       state.lokiLoaded = false;
     });
 
+    console.log('unmounting');
     // todo: close timer window
   }
 

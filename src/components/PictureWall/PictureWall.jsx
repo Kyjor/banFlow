@@ -45,6 +45,8 @@ class PictureWall extends Component {
 
   handleChange = ({ file, fileList }) => {
     const { newFile } = this.state;
+    const { addImageToNode } = this.props;
+
     if (file.status === `removed`) {
       return;
     }
@@ -56,7 +58,7 @@ class PictureWall extends Component {
       url: `file:///images/${getFileName(newFile)}`,
     };
     fileList.push(newFile1);
-    this.addImageToNode(newFile1);
+    addImageToNode(newFile1);
     this.setState({ fileList });
   };
 
@@ -95,7 +97,6 @@ class PictureWall extends Component {
     return (
       <>
         <Upload
-          // action="https://www.mocky.io/v2/5cc8019d300000980a055e76"
           listType="picture-node"
           fileList={node.images}
           onPreview={this.handlePreview}

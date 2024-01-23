@@ -18,6 +18,9 @@ class AddProject extends React.Component {
     }
   };
 
+  // eslint-disable-next-line no-return-assign,no-underscore-dangle
+  getInputElementRef = (a) => (this._inputElement = a);
+
   render() {
     const { handleCancel, visible } = this.props;
     return (
@@ -39,7 +42,7 @@ class AddProject extends React.Component {
           <form onSubmit={this.addProject}>
             <div>
               <input
-                ref={(a) => (this._inputElement = a)}
+                ref={this.getInputElementRef}
                 placeholder="Project Name"
                 className="border-2"
               />

@@ -25,7 +25,6 @@ function StopWatch(props) {
   function toggle() {
     if (timer.isRunning() && saveTime) {
       timer.stop();
-      // props.saveTime(seconds, props.nodeId);
       if (nodeId) {
         // Todo: end session
       }
@@ -51,17 +50,20 @@ function StopWatch(props) {
     setSeconds(startingSeconds);
   }, [startingSeconds]);
   return (
-    <div
-      className="time"
-      style={{ fontSize: '100%' }}
-      onClick={() => {
-        if (clickToToggle) {
-          toggle();
-        }
-      }}
-    >
-      {new Date((seconds ?? 0) * 1000).toISOString().substr(11, 8)}
-    </div>
+    <>
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions */}
+      <div
+        className="time"
+        style={{ fontSize: '100%' }}
+        onClick={() => {
+          if (clickToToggle) {
+            toggle();
+          }
+        }}
+      >
+        {new Date((seconds ?? 0) * 1000).toISOString().substr(11, 8)}
+      </div>
+    </>
   );
 }
 

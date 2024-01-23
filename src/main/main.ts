@@ -193,6 +193,7 @@ ipcMain.on(
 );
 
 ipcMain.on('SaveNodeTime', (event, nodeId, seconds) => {
+  // @ts-ignore
   mainWindow.webContents.send('SaveNodeTime', nodeId, seconds);
 });
 
@@ -200,12 +201,18 @@ ipcMain.on('GetProjectFile', () => {
   const fileName = dialog.showOpenDialogSync({
     properties: ['openFile'],
   });
+  // @ts-ignore
   mainWindow.webContents.send('ReturnProjectFile', fileName);
 });
 
-let timerWindow;
+let timerWindow: BrowserWindow | Electron.PopupOptions | null | undefined;
 
-function createTimerWindow(node, projectName, stateInit, timerPrefs) {
+function createTimerWindow(
+  node: any,
+  projectName: any,
+  stateInit: any,
+  timerPrefs: any,
+) {
   if (timerWindow) {
     // TODO: add an event that sends an alert to the main window telling the user the below message
     console.log('There is already a timer window open. Please close it first.');
@@ -238,14 +245,20 @@ function createTimerWindow(node, projectName, stateInit, timerPrefs) {
 
   // Don't show until we are ready and loaded
   timerWindow.once('ready-to-show', () => {
+    // @ts-ignore
     timerWindow.show();
+    // @ts-ignore
     timerWindow.webContents.send('DefaultNode', node);
+    // @ts-ignore
     timerWindow.webContents.send('RetrieveProjectName', projectName);
+    // @ts-ignore
     timerWindow.webContents.send('RetrieveProjectState', stateInit);
+    // @ts-ignore
     timerWindow.webContents.send('RetrieveTimerPrefs', timerPrefs);
 
     // Open the DevTools automatically if developing
     if (isDebug) {
+      // @ts-ignore
       timerWindow.webContents.on('context-menu', (e, props) => {
         const { x, y } = props;
 
@@ -253,18 +266,21 @@ function createTimerWindow(node, projectName, stateInit, timerPrefs) {
           {
             label: 'Inspect element',
             click: () => {
+              // @ts-ignore
               timerWindow.inspectElement(x, y);
             },
           },
           {
             label: 'Reload',
             click: () => {
+              // @ts-ignore
               timerWindow.reload();
             },
           },
           {
             label: 'Back',
             click: () => {
+              // @ts-ignore
               timerWindow.webContents.goBack();
             },
           },
@@ -273,6 +289,7 @@ function createTimerWindow(node, projectName, stateInit, timerPrefs) {
     }
   });
   timerWindow.on('close', function (e) {
+    // @ts-ignore
     timerWindow.webContents.send('SaveBeforeClose');
   });
 

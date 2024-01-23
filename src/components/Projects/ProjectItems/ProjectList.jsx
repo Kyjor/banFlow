@@ -12,7 +12,8 @@ import {
 const { Paragraph } = Typography;
 
 function ProjectList(props) {
-  const [items, setItems] = useState([]);
+  const { items } = props;
+  const [listItemsWithoutFileExtension, setListItems] = useState([]);
 
   const onChange = (lastStr, currentStr) => {
     const { renameProject } = props;
@@ -40,15 +41,14 @@ function ProjectList(props) {
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-shadow
-    const { items } = props;
-    if (!items) return;
+    if (!listItemsWithoutFileExtension) return;
     const items1 = items
       .filter((item) => {
         return item.text !== '.json' && !item.text.includes('.json~');
       })
       .map(createTasks);
-    setItems(items1);
-  }, [props.items]);
+    setListItems(items1);
+  }, [items]);
 
   const { deleteProject, openProjectDetails } = props;
 
@@ -56,7 +56,7 @@ function ProjectList(props) {
     <List
       itemLayout="vertical"
       size="large"
-      dataSource={items}
+      dataSource={listItemsWithoutFileExtension}
       bordered
       pagination={{
         pageSize: 3,
