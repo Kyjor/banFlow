@@ -39,7 +39,7 @@ class LokiService {
       this.nodes
         .chain()
         .find({ Id: { $ne: null } })
-        .update(function (node) {
+        .update((node) => {
           if (!node.checklist) {
             node.checklist = {
               title: `Checklist`,
@@ -75,7 +75,6 @@ class LokiService {
     }
 
     if (mustSaveDatabase) {
-      console.log('save db');
       this.saveDB();
     }
   };
@@ -107,7 +106,7 @@ class LokiService {
   };
 
   saveDB = () => {
-    this.db.saveDatabase(function (err) {
+    this.db.saveDatabase((err) => {
       if (err) {
         console.log(`error : ${err}`);
       } else {

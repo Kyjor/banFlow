@@ -1,5 +1,5 @@
 // Libs
-import React, { Component } from 'react';
+import React from 'react';
 // Styles
 import PropTypes from 'prop-types';
 import {
@@ -9,13 +9,7 @@ import {
   RightOutlined,
 } from '@ant-design/icons';
 
-/**
- * DayByDayCalendar
- *
- * @class DayByDayCalendar
- * @extends {Component}
- */
-class DayByDayCalendar extends Component {
+class DayByDayCalendar extends React.Component {
   constructor(props) {
     super(props);
     const today = new Date();

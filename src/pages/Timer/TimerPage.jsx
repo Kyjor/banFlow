@@ -3,7 +3,6 @@ import { ipcRenderer } from 'electron';
 import { createSharedStore } from 'electron-shared-state'; // or wherever the above file is stored
 import AntTreeSelect from '../../components/TreeSelect/AntTreeSelect';
 import Timer from '../../components/Timer/timer';
-import './TimerPage.scss';
 import projectController from '../../api/project/ProjectController';
 import lokiService from '../../services/LokiService';
 import nodeController from '../../api/nodes/NodeController';
@@ -195,9 +194,6 @@ class TimerPage extends Component {
         />
         {currentNodeSelectedInTimer && nodes && lokiLoaded ? (
           <>
-            {console.log(
-              `current node selected in timer: ${currentNodeSelectedInTimer} `,
-            )}
             {/* eslint-disable-next-line no-use-before-define */}
             <TreeDisplay
               nodes={this.buildTreeData()}
@@ -242,21 +238,18 @@ function TreeDisplay(props) {
   useEffect(() => {}, [currentNode]);
   useEffect(() => {}, [nodes]);
   return (
-    <>
-      {console.log(`tree display node: ${currentNode}`)}
-      <AntTreeSelect
-        allowClear
-        disabled={isTimerRunning}
-        nodes={nodes}
-        onSelect={(selectedNode) => {
-          if (process.env.NODE_ENV === `development`) {
-            console.log(`Switching to node ${selectedNode} in timer page`);
-          }
-          updateSelectedNode(selectedNode);
-        }}
-        value={currentNode}
-      />
-    </>
+    <AntTreeSelect
+      allowClear
+      disabled={isTimerRunning}
+      nodes={nodes}
+      onSelect={(selectedNode) => {
+        if (process.env.NODE_ENV === `development`) {
+          console.log(`Switching to node ${selectedNode} in timer page`);
+        }
+        updateSelectedNode(selectedNode);
+      }}
+      value={currentNode}
+    />
   );
 }
 

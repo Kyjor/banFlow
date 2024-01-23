@@ -1,9 +1,5 @@
 import lokiService from './LokiService';
 
-/**
- * @class MetadataService
- * @desc creates a new Metadata with a set of given properties
- */
 const MetadataService = {
   saveMetadataValue(enumValueTitle, parentEnum) {
     let selectedEnum = null;
@@ -15,7 +11,6 @@ const MetadataService = {
         selectedEnum = lokiService.nodeStates;
         break;
       default:
-        console.log('Enum does not exist');
         break;
     }
     const nextId = selectedEnum.length

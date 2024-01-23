@@ -1,9 +1,5 @@
 import lokiService from './LokiService';
 
-/**
- * @class TimerService
- * @desc creates a new Timer with a set of given properties
- */
 const TimerService = {
   getTimerPreferences() {
     const { timerPreferences } = lokiService;
@@ -16,7 +12,7 @@ const TimerService = {
     timerPreferences
       .chain()
       .find({ $loki: 1 })
-      .update(function (preference) {
+      .update((preference) => {
         preference[propertyToUpdate] = newValue;
       });
 

@@ -1,9 +1,5 @@
 import lokiService from './LokiService';
 
-/**
- * @class ParentService
- * @desc creates a new Parent with a set of given properties
- */
 const ParentService = {
   /**
    * @function getParents
@@ -88,7 +84,7 @@ const ParentService = {
     lokiService.parents
       .chain()
       .find({ id: parentId })
-      .update(function (parent) {
+      .update((parent) => {
         parent[propertyToUpdate] = newValue;
         parentToReturn = parent;
       });
@@ -106,7 +102,7 @@ const ParentService = {
       currentParentOrder
         .chain()
         .find({ $loki: x })
-        .update(function (index) {
+        .update((index) => {
           index.parentId = parentId;
         });
       x++;
@@ -120,19 +116,19 @@ const ParentService = {
     parents
       .chain()
       .find({ id: updatedOriginParent.id })
-      .update(function (parent) {
+      .update((parent) => {
         parent.nodeIds = updatedOriginParent.nodeIds;
       });
     parents
       .chain()
       .find({ id: updatedDestinationParent.id })
-      .update(function (parent) {
+      .update((parent) => {
         parent.nodeIds = updatedDestinationParent.nodeIds;
       });
     nodes
       .chain()
       .find({ id: nodeId })
-      .update(function (node) {
+      .update((node) => {
         node.parent = updatedDestinationParent.id;
       });
     lokiService.saveDB();

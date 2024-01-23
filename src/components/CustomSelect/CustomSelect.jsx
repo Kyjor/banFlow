@@ -21,13 +21,11 @@ export default class CustomSelect extends React.Component {
 
   onKeyDown = (e) => {
     if (e.key === 'Enter') {
-      console.log(`add ${e.target.value}`);
       this.addItem(e.target.value);
     }
   };
 
   onDelete(val) {
-    console.log('delete:', val);
     const { items } = this.state;
     items.splice(items.indexOf(val), 1);
     this.setState({

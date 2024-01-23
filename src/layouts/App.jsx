@@ -2,7 +2,6 @@ import { DesktopOutlined, PlusSquareFilled } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import React, { useState } from 'react';
 // Styles
-import './App.scss';
 import './tailwind-output.css';
 // Components
 import PropTypes from 'prop-types';
