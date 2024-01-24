@@ -12,9 +12,13 @@ import ParentModal from '../../components/ParentModal/ParentModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 
 import {
+  // eslint-disable-next-line import/named
   controllers,
+  // eslint-disable-next-line import/named
   defaultTimerPreferences,
+  // eslint-disable-next-line import/named
   initialIndividualProjectState,
+  // eslint-disable-next-line import/named
   lokiService,
 } from '../../stores/shared';
 
@@ -29,7 +33,9 @@ class ProjectPage extends Component {
   constructor(props) {
     super(props);
 
-    this.projectName = this.props.match.params.name;
+    const { match } = this.props;
+
+    this.projectName = match.params.name;
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
 
@@ -40,6 +46,31 @@ class ProjectPage extends Component {
     sharedIndividualProjectState.subscribe((state) => {
       this.setState(state);
     });
+  }
+
+  componentDidMount() {
+    const { lokiLoaded } = this.state;
+
+    if (!lokiLoaded) {
+      sharedControllers
+        .getState()
+        .projectController.setCurrentProjectName(this.projectName);
+      sharedLokiService.getState().lokiService.init(() => {
+        this.lokiServiceLoadedCallback();
+        sharedIndividualProjectState.setState((state) => {
+          state.lokiLoaded = true;
+        });
+      });
+    }
+  }
+
+  componentWillUnmount() {
+    sharedIndividualProjectState.setState((state) => {
+      state.lokiLoaded = false;
+    });
+
+    console.log('unmounting');
+    // todo: close timer window
   }
 
   lokiServiceLoadedCallback = () => {
@@ -79,34 +110,12 @@ class ProjectPage extends Component {
     };
 
     sharedIndividualProjectState.setState((state) => {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
       }
     });
   };
-
-  componentDidMount() {
-    if (!this.state.lokiLoaded) {
-      sharedControllers
-        .getState()
-        .projectController.setCurrentProjectName(this.projectName);
-      sharedLokiService.getState().lokiService.init(() => {
-        this.lokiServiceLoadedCallback();
-        sharedIndividualProjectState.setState((state) => {
-          state.lokiLoaded = true;
-        });
-      });
-    }
-  }
-
-  componentWillUnmount() {
-    sharedIndividualProjectState.setState((state) => {
-      state.lokiLoaded = false;
-    });
-
-    console.log('unmounting');
-    // todo: close timer window
-  }
 
   createNewParent = (parentTitle) => {
     sharedControllers.getState().parentController.createParent(parentTitle);
@@ -120,6 +129,7 @@ class ProjectPage extends Component {
       mustFocusParentTitle: true,
     };
     sharedIndividualProjectState.setState((state) => {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
       }
@@ -139,6 +149,7 @@ class ProjectPage extends Component {
       mustFocusNodeTitle: true,
     };
     sharedIndividualProjectState.setState((state) => {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
       }
@@ -146,6 +157,8 @@ class ProjectPage extends Component {
   };
 
   saveMetadataValue = (newValue, parentEnum) => {
+    const { nodeTypes, nodeStates } = this.state;
+
     let newState = {};
     const newEnumObj = sharedControllers
       .getState()
@@ -154,18 +167,21 @@ class ProjectPage extends Component {
       case 'nodeType':
         newState = {
           ...this.state,
-          nodeTypes: [...this.state.nodeTypes, newEnumObj.title],
+          nodeTypes: [...nodeTypes, newEnumObj.title],
         };
         break;
       case 'nodeState':
         newState = {
           ...this.state,
-          nodeStates: [...this.state.nodeStates, newEnumObj.title],
+          nodeStates: [...nodeStates, newEnumObj.title],
         };
+        break;
+      default:
         break;
     }
 
     sharedIndividualProjectState.setState((state) => {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
       }
@@ -181,8 +197,9 @@ class ProjectPage extends Component {
   };
 
   createGlobalTag = (tag) => {
+    const { tags } = this.state;
     const newTag = sharedControllers.getState().tagController.addTag(tag);
-    const newTags = [...this.state.tags, newTag.title];
+    const newTags = [...tags, newTag.title];
     sharedIndividualProjectState.setState((state) => {
       state.tags = newTags;
     });
@@ -195,6 +212,7 @@ class ProjectPage extends Component {
     });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   showParentModal = (parent) => {
     sharedIndividualProjectState.setState((state) => {
       state.parentModalVisible = true;
@@ -202,6 +220,7 @@ class ProjectPage extends Component {
     });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   showModal = (node) => {
     sharedIndividualProjectState.setState((state) => {
       state.nodeModalVisible = true;
@@ -219,6 +238,7 @@ class ProjectPage extends Component {
     };
 
     sharedIndividualProjectState.setState((state) => {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
       }
@@ -226,9 +246,9 @@ class ProjectPage extends Component {
   };
 
   deleteParent = () => {
-    sharedControllers
-      .getState()
-      .parentController.deleteParent(this.state.modalParent.id);
+    const { modalParent } = this.state;
+
+    sharedControllers.getState().parentController.deleteParent(modalParent.id);
 
     const newState = {
       ...this.state,
@@ -241,19 +261,22 @@ class ProjectPage extends Component {
     };
 
     sharedIndividualProjectState.setState((state) => {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
       }
     });
   };
 
-  handleOk = (e) => {
+  handleOk = () => {
+    const { modalNode } = this.state;
+
     sharedIndividualProjectState.setState((state) => {
-      state.currentNodeSelectedInTimer = this.state.modalNode.id;
+      state.currentNodeSelectedInTimer = modalNode.id;
     });
     ipcRenderer.send(
       'MSG_FROM_RENDERER',
-      this.state.modalNode,
+      modalNode,
       this.projectName,
       sharedIndividualProjectState.getState(),
       sharedTimerPrefs.getState(),
@@ -264,7 +287,8 @@ class ProjectPage extends Component {
     });
   };
 
-  handleCancel = (e) => {
+  // eslint-disable-next-line class-methods-use-this
+  handleCancel = () => {
     sharedIndividualProjectState.setState((state) => {
       state.parentModalVisible = false;
       state.nodeModalVisible = false;
@@ -273,6 +297,7 @@ class ProjectPage extends Component {
     });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   updateNodeProperty = (propertyToUpdate, nodeId, newValue, isFromModal) => {
     const newNode = sharedControllers
       .getState()
@@ -284,6 +309,7 @@ class ProjectPage extends Component {
     });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   updateParentProperty = (
     propertyToUpdate,
     parentId,
@@ -319,6 +345,7 @@ class ProjectPage extends Component {
     };
 
     sharedIndividualProjectState.setState((state) => {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
       }
@@ -326,36 +353,53 @@ class ProjectPage extends Component {
   };
 
   render() {
-    return this.state.lokiLoaded ? (
+    const {
+      isTimerRunning,
+      lokiLoaded,
+      modalNode,
+      modalParent,
+      mustFocusNodeTitle,
+      mustFocusParentTitle,
+      nodeModalVisible,
+      nodes,
+      nodeStates,
+      nodeTypes,
+      parentModalVisible,
+      parentOrder,
+      parents,
+      tags,
+    } = this.state;
+
+    return lokiLoaded ? (
       <Layout>
         <div>{this.projectName}</div>
         <div>
-          {this.state.modalNode && (
+          {modalNode && (
             <NodeModal
               addTagToNode={this.addTagToNode}
-              node={this.state.modalNode}
-              parents={this.state.parents}
+              node={modalNode}
+              parents={parents}
               saveMetadataValue={this.saveMetadataValue}
               createGlobalTag={this.createGlobalTag}
               updateNodeEnum={this.updateNodeEnum}
               handleOk={this.handleOk}
               handleCancel={this.handleCancel}
-              tags={this.state.tags}
-              nodeTypes={this.state.nodeTypes}
-              nodeStates={this.state.nodeStates}
+              tags={tags}
+              nodeTypes={nodeTypes}
+              nodeStates={nodeStates}
               updateNodeProperty={this.updateNodeProperty}
-              visible={this.state.nodeModalVisible}
+              visible={nodeModalVisible}
             />
           )}
         </div>
         <div>
-          {this.state.modalParent && (
+          {modalParent && (
             <ParentModal
-              parent={this.state.modalParent}
+              parent={modalParent}
               deleteParent={this.deleteParent}
               handleCancel={this.handleCancel}
               updateParentProperty={this.updateParentProperty}
-              visible={this.state.parentModalVisible}
+              visible={parentModalVisible}
             />
           )}
         </div>
@@ -363,12 +407,12 @@ class ProjectPage extends Component {
           createNewNode={this.createNewNode}
           deleteNode={this.deleteNode}
           handleAddParent={() => this.createNewParent('New Parent')}
-          isTimerRunning={this.state.isTimerRunning}
-          mustFocusNodeTitle={this.state.mustFocusNodeTitle}
-          mustFocusParentTitle={this.state.mustFocusParentTitle}
-          nodes={this.state.nodes}
-          parentOrder={this.state.parentOrder}
-          parents={this.state.parents}
+          isTimerRunning={isTimerRunning}
+          mustFocusNodeTitle={mustFocusNodeTitle}
+          mustFocusParentTitle={mustFocusParentTitle}
+          nodes={nodes}
+          parentOrder={parentOrder}
+          parents={parents}
           saveTime={this.updateNodeProperty}
           state={this.state}
           showModal={this.showModal}
@@ -387,5 +431,6 @@ class ProjectPage extends Component {
 export default withRouter(ProjectPage);
 
 ProjectPage.propTypes = {
+  // eslint-disable-next-line react/forbid-prop-types
   match: PropTypes.any.isRequired,
 };

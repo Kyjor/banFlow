@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Button,
-  Checkbox,
-  DatePicker,
-  Modal,
-  Tabs,
-  TimePicker,
-} from 'antd';
+import { Button, Checkbox, DatePicker, Modal, Tabs, TimePicker } from 'antd';
 import moment from 'moment';
 import dateFormat from 'dateformat';
 import {

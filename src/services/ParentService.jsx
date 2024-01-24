@@ -105,7 +105,7 @@ const ParentService = {
         .update((index) => {
           index.parentId = parentId;
         });
-      x++;
+      x += 1;
     });
 
     lokiService.saveDB();

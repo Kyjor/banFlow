@@ -87,9 +87,11 @@ function Checklist(props) {
       {/* List of checks */}
       <div>
         {checks.map((check, index) => {
+          const key = `${index}`;
+
           return (
             <Check
-              key={index}
+              key={key}
               deleteCheck={deleteCheck}
               index={index}
               updateCheck={updateCheck}

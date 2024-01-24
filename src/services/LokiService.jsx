@@ -100,7 +100,9 @@ class LokiService {
       autosaveInterval: 600000,
       autoloadCallback: () => {
         this.dbInitialized();
-        !!cb && cb();
+        if (cb) {
+          cb();
+        }
       },
     });
   };

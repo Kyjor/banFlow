@@ -34,38 +34,37 @@ const parentSettingsButtonStyle = {
 };
 
 class ParentInnerList extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      editing: false,
-    };
-  }
-
   shouldComponentUpdate(nextProps) {
-    if (nextProps.nodes === this.props.nodes) {
-      return false;
-    }
-    return true;
+    const { nodes } = this.props;
+
+    return nextProps.nodes !== nodes;
   }
 
   render() {
-    const { nodes = {}, ...rest } = this.props;
+    const { nodes = {}, isTimerRunning, saveTime, ...rest } = this.props;
     return nodes.map((node, index) => (
-      <>
+      <div>
         {node && (
           <Node
-            isTimerRunning={this.props.isTimerRunning}
+            isTimerRunning={isTimerRunning}
             key={node.id}
             node={node}
             index={index}
-            saveTime={this.props.saveTime}
+            saveTime={saveTime}
             {...rest}
           />
         )}
-      </>
+      </div>
     ));
   }
 }
+
+ParentInnerList.propTypes = {
+  // eslint-disable-next-line react/forbid-prop-types
+  nodes: PropTypes.arrayOf(PropTypes.object).isRequired,
+  saveTime: PropTypes.func.isRequired,
+  isTimerRunning: PropTypes.bool.isRequired,
+};
 
 function Parent(props) {
   const [isEditing, setIsEditing] = useState(false);
@@ -77,8 +76,10 @@ function Parent(props) {
     createNewNode,
     deleteNode,
     index,
+    isTimerRunning,
     mustFocusNodeTitle,
     mustFocusParentTitle,
+    saveTime,
     showParentModal,
     showModal,
     updateNodeTitle,
@@ -140,19 +141,17 @@ function Parent(props) {
                 </span>
               )}
             </h3>
+            {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
             <button
               style={parentSettingsButtonStyle}
               onClick={() => showParentModal(parent)}
+              type="button"
             >
               <EllipsisOutlined style={{ fontSize: '20px' }} />
             </button>
           </div>
-          <Droppable
-            droppableId={parent.id}
-            // type={parent.id === 'parent-3' ? 'done' : 'active'}
-            type="node"
-            // isDropDisabled={ props.isDropDisabled }
-          >
+          <Droppable droppableId={parent.id} type="node">
+            {/* eslint-disable-next-line @typescript-eslint/no-shadow */}
             {(provided, snapshot) => (
               <div style={{ width: '300px', margin: `inherit` }}>
                 <div
@@ -161,13 +160,13 @@ function Parent(props) {
                   {...provided.droppableProps}
                 >
                   <ParentInnerList
-                    isTimerRunning={props.isTimerRunning}
+                    isTimerRunning={isTimerRunning}
                     nodes={nodes}
                     mustFocusNodeTitle={mustFocusNodeTitle}
                     updateNodeTitle={updateNodeTitle}
                     showModal={showModal}
                     deleteNode={deleteNode}
-                    saveTime={props.saveTime}
+                    saveTime={saveTime}
                   />
                   {provided.placeholder}
                 </div>
@@ -194,6 +193,7 @@ Parent.propTypes = {
   createNewNode: PropTypes.func.isRequired,
   deleteNode: PropTypes.func.isRequired,
   index: PropTypes.number.isRequired,
+  isTimerRunning: PropTypes.bool.isRequired,
   mustFocusNodeTitle: PropTypes.bool.isRequired,
   mustFocusParentTitle: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types

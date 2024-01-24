@@ -12,6 +12,7 @@ class BoardInnerList extends React.PureComponent {
       createNewNode,
       deleteNode,
       isTimerRunning,
+      saveTime,
       showParentModal,
       showModal,
       updateNodeTitle,
@@ -25,7 +26,7 @@ class BoardInnerList extends React.PureComponent {
         createNewNode={createNewNode}
         isTimerRunning={isTimerRunning}
         mustFocusNodeTitle={mustFocusNodeTitle}
-        saveTime={this.props.saveTime}
+        saveTime={saveTime}
         mustFocusParentTitle={mustFocusParentTitle}
         showParentModal={showParentModal}
         showModal={showModal}
@@ -39,13 +40,17 @@ class BoardInnerList extends React.PureComponent {
 
 BoardInnerList.propTypes = {
   createNewNode: PropTypes.func.isRequired,
-  deleteNode: PropTypes.func,
+  // eslint-disable-next-line react/require-default-props
+  deleteNode: PropTypes.func.isRequired,
   index: PropTypes.func.isRequired,
+  isTimerRunning: PropTypes.bool.isRequired,
   mustFocusNodeTitle: PropTypes.bool.isRequired,
   mustFocusParentTitle: PropTypes.bool.isRequired,
-  nodeMap: PropTypes.array,
+  // eslint-disable-next-line react/forbid-prop-types
+  nodeMap: PropTypes.array.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
   parent: PropTypes.object.isRequired,
-  saveTime: PropTypes.func,
+  saveTime: PropTypes.func.isRequired,
   showModal: PropTypes.func.isRequired,
   showParentModal: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,

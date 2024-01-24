@@ -48,42 +48,6 @@ function Timer(props) {
     betweenRoundSeconds: 5,
   });
 
-  function toggle() {
-    const { endSession, seconds, selectedNode, startSession } = props;
-    if (timer.isRunning()) {
-      timer.stop();
-      if (selectedNode) {
-        endSession(seconds);
-      }
-    } else {
-      if (selectedNode) {
-        startSession(seconds);
-      }
-      timer.start();
-    }
-
-    updateEvent({ isActive: !event.isActive });
-  }
-
-  function toggleTomatoTimer() {
-    if (
-      (event.isOnBreak || event.isBetweenRounds || event.isTomatoTimerActive) &&
-      event.isActive
-    ) {
-      updateEvent({
-        isTomatoTimerActive: false,
-        isOnBreak: false,
-        isBetweenRounds: false,
-      });
-      return;
-    }
-    updateEvent({
-      isTomatoTimerActive: true,
-      tomatoTimerRound: 1,
-      tomatoSeconds: event.timerPreferences.time * 60,
-    });
-  }
-
   function cycleTomatoTimer() {
     if (!event.isActive) {
       return;
@@ -142,9 +106,6 @@ function Timer(props) {
     }
   }
 
-  const handleHoverChange = (visible) => {
-    updateEvent({ isHovered: visible });
-  };
   const timer = useTimer({
     delay: 1000,
     callback: () => {
@@ -180,6 +141,46 @@ function Timer(props) {
       }
     },
   });
+
+  function toggle() {
+    const { endSession, seconds, selectedNode, startSession } = props;
+    if (timer.isRunning()) {
+      timer.stop();
+      if (selectedNode) {
+        endSession(seconds);
+      }
+    } else {
+      if (selectedNode) {
+        startSession(seconds);
+      }
+      timer.start();
+    }
+
+    updateEvent({ isActive: !event.isActive });
+  }
+
+  function toggleTomatoTimer() {
+    if (
+      (event.isOnBreak || event.isBetweenRounds || event.isTomatoTimerActive) &&
+      event.isActive
+    ) {
+      updateEvent({
+        isTomatoTimerActive: false,
+        isOnBreak: false,
+        isBetweenRounds: false,
+      });
+      return;
+    }
+    updateEvent({
+      isTomatoTimerActive: true,
+      tomatoTimerRound: 1,
+      tomatoSeconds: event.timerPreferences.time * 60,
+    });
+  }
+
+  const handleHoverChange = (visible) => {
+    updateEvent({ isHovered: visible });
+  };
 
   useEffect(() => {
     timer.stop();

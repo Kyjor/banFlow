@@ -9,6 +9,7 @@ import nodeController from '../../api/nodes/NodeController';
 import timerController from '../../api/timer/TimerController';
 import ISO8601ServiceInstance from '../../services/ISO8601Service';
 
+// eslint-disable-next-line import/named
 import { initialIndividualProjectState } from '../../stores/shared';
 
 const sharedIndividualProjectState = createSharedStore(
@@ -53,7 +54,6 @@ class TimerPage extends Component {
         }
       });
     });
-    ipcRenderer.on('RetrieveTimerPrefs', function (e, prefs) {});
     ipcRenderer.on('SaveBeforeClose', function () {
       self.saveCurrentSelectedNodeTime();
     });
