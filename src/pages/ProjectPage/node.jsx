@@ -2,11 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { Card as AntCard } from 'antd';
 import PropTypes from 'prop-types';
-import {
-  EllipsisOutlined,
-  PlayCircleOutlined,
-  SettingOutlined,
-} from '@ant-design/icons';
+import { EllipsisOutlined, SettingOutlined } from '@ant-design/icons';
 import styles from './node.module.scss';
 import EditableTextArea from '../../components/EditableTextArea/EditableTextArea';
 import StopWatch from '../../components/StopWatch/StopWatch';

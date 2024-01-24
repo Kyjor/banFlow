@@ -33,7 +33,9 @@ class ProjectPage extends Component {
   constructor(props) {
     super(props);
 
-    this.projectName = this.props.match.params.name;
+    const { match } = this.props;
+
+    this.projectName = match.params.name;
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
 
@@ -244,9 +246,9 @@ class ProjectPage extends Component {
   };
 
   deleteParent = () => {
-    sharedControllers
-      .getState()
-      .parentController.deleteParent(this.state.modalParent.id);
+    const { modalParent } = this.state;
+
+    sharedControllers.getState().parentController.deleteParent(modalParent.id);
 
     const newState = {
       ...this.state,

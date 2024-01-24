@@ -2,8 +2,6 @@ import React from 'react';
 import { Button, Table } from 'antd';
 import PropTypes from 'prop-types';
 
-const count = 3;
-
 export default class TimedItemHistory extends React.Component {
   constructor() {
     super();
@@ -46,7 +44,7 @@ export default class TimedItemHistory extends React.Component {
     this.setState({
       loading: true,
     });
-    this.getData((res) => {
+    this.getData(() => {
       this.setState(
         {
           data,
@@ -115,11 +113,6 @@ export default class TimedItemHistory extends React.Component {
       return sessions;
     };
     const parents = [
-      // {
-      //   title: 'Id',
-      //   dataIndex: 'id',
-      //   key: 'id',
-      // },
       {
         title: 'Date',
         dataIndex: 'finished',
@@ -130,11 +123,6 @@ export default class TimedItemHistory extends React.Component {
         dataIndex: 'item',
         key: 'item',
       },
-      // {
-      //   title: 'Started',
-      //   dataIndex: 'started',
-      //   key: 'started',
-      // },
       {
         title: 'Comment',
         dataIndex: 'comment',
@@ -162,11 +150,6 @@ export default class TimedItemHistory extends React.Component {
         dataIndex: 'item',
         key: 'item',
       },
-      // {
-      //   title: 'Started',
-      //   dataIndex: 'started',
-      //   key: 'started',
-      // },
       {
         title: 'Comment',
         dataIndex: 'comment',

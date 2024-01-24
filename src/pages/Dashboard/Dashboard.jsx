@@ -93,6 +93,7 @@ class Dashboard extends Component {
     };
 
     sharedIndividualProjectState.setState((state) => {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
       }
@@ -160,8 +161,10 @@ class Dashboard extends Component {
     );
   };
 
+  // eslint-disable-next-line class-methods-use-this
   dayCellRender = (value, header) => {
     const listData = [];
+    // eslint-disable-next-line no-underscore-dangle
     const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
     const dueItems = sharedControllers
       .getState()

@@ -205,6 +205,7 @@ ipcMain.on('GetProjectFile', () => {
   mainWindow.webContents.send('ReturnProjectFile', fileName);
 });
 
+// eslint-disable-next-line no-undef
 let timerWindow: BrowserWindow | Electron.PopupOptions | null | undefined;
 
 function createTimerWindow(
@@ -288,13 +289,13 @@ function createTimerWindow(
       });
     }
   });
-  timerWindow.on('close', function (e) {
+  timerWindow.on('close', function () {
     // @ts-ignore
     timerWindow.webContents.send('SaveBeforeClose');
   });
 
   // Emitted when the window is closed.
-  timerWindow.on('closed', function (e) {
+  timerWindow.on('closed', function () {
     // Dereference the window object, usually you would store windows
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
