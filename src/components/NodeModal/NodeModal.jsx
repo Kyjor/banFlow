@@ -1,9 +1,7 @@
 import React from 'react';
 import {
-  Avatar,
   Button,
   Checkbox,
-  Comment,
   DatePicker,
   Modal,
   Tabs,
