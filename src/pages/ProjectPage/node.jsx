@@ -14,45 +14,68 @@ import NodeQuickActions from '../../components/NodeQuickActions/NodeQuickActions
 
 const { Meta } = AntCard;
 
+function ItemRender(props) {
+  const { nodeId, saveTime, startingSeconds } = props;
+
+  return (
+    <StopWatch
+      clickToToggle
+      nodeId={nodeId}
+      onToggle={() => {}}
+      saveTime={saveTime}
+      startingSeconds={startingSeconds}
+    />
+  );
+}
+
+ItemRender.propTypes = {
+  nodeId: PropTypes.number.isRequired,
+  saveTime: PropTypes.func.isRequired,
+  startingSeconds: PropTypes.number.isRequired,
+};
+
 function Node(props) {
   const [isEditing, setIsEditing] = useState(false);
   const [isFirstEdit, setIsFirstEdit] = useState(false);
-  const [isRecordingTime, setIsRecordingTime] = useState(false);
+  const {
+    deleteNode,
+    index,
+    isTimerRunning,
+    mustFocusNodeTitle,
+    node,
+    saveTime,
+    showModal,
+    updateNodeTitle,
+  } = props;
 
   const handleOpen = (NodeTitle) => {
-    props.showModal(NodeTitle);
+    showModal(NodeTitle);
   };
   const handleDelete = (nodeId, parentId) => {
-    props.deleteNode(nodeId, parentId);
+    deleteNode(nodeId, parentId);
   };
-  const handleEdit = () => {
-    setIsEditing(!isEditing);
-  };
-  const handleToggle = () => {
-    setIsRecordingTime(!isRecordingTime);
-  };
+
   useEffect(() => {
-    if (props.mustFocusNodeTitle) {
+    if (mustFocusNodeTitle) {
       setIsFirstEdit(true);
     }
   }, []);
 
   useEffect(() => {
-    if (!props.mustFocusNodeTitle && isFirstEdit) {
+    if (!mustFocusNodeTitle && isFirstEdit) {
       setIsFirstEdit(false);
     }
-  }, [props.mustFocusNodeTitle]);
+  }, [mustFocusNodeTitle]);
 
-  const isDragDisabled = props.node.isLocked;
-  const { node } = props;
+  const isDragDisabled = node.isLocked;
 
   return (
     <Draggable
       draggableId={node.id}
-      index={props.index}
-      isDragDisabled={isDragDisabled || props.isTimerRunning}
+      index={index}
+      isDragDisabled={isDragDisabled || isTimerRunning}
     >
-      {(provided, snapshot) => (
+      {(provided) => (
         <div
           {...provided.draggableProps}
           {...provided.dragHandleProps}
@@ -62,7 +85,6 @@ function Node(props) {
             className={styles.container}
             bodyStyle={{ whiteSpace: 'inherit', display: `flex` }}
             hoverable
-            // style={{ width: "290px" }}
             cover={
               node.coverImage && <img alt="example" src={node.coverImage} />
             }
@@ -71,9 +93,8 @@ function Node(props) {
               <SettingOutlined onClick={() => handleOpen(node)} />,
               <ItemRender
                 key="time"
-                // onToggle={handleToggle}
                 startingSeconds={node.timeSpent}
-                saveTime={props.saveTime}
+                saveTime={saveTime}
                 nodeId={node.id}
               />,
               // edit title
@@ -85,31 +106,25 @@ function Node(props) {
               />,
             ]}
           >
-            {isRecordingTime ? (
-              <PlayCircleOutlined
-                style={{ marginRight: `5px`, color: 'red' }}
-              />
-            ) : null}
             <Meta
-              // avatar={<Avatar src="https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png" />}
               title={
                 isEditing || isFirstEdit ? (
                   <EditableTextArea
                     editing={isEditing || isFirstEdit}
                     defaultValue={node.title}
-                    // showCount={this.state.modalNotesSelected}
                     maxLength={100}
                     autoSize={{ minRows: 3 }}
                     style={{
                       marginBottom: '10px',
-                      // backgroundColor: this.node.notes ? `transparent` : `#eeeeee`,
-                      // backgroundColor: `#eeeeee`,
                     }}
                     placeholder="Add node title here..."
-                    updateText={(value) => (
-                      setIsEditing(false),
-                      props.updateNodeTitle(value, node.id, false)
-                    )}
+                    updateText={(value) =>
+                      (
+                        // eslint-disable-next-line no-sequences
+                        setIsEditing(false),
+                        updateNodeTitle(value, node.id, false)
+                      )
+                    }
                   />
                 ) : (
                   <span style={{ whiteSpace: 'normal', pointerEvents: 'none' }}>
@@ -126,35 +141,18 @@ function Node(props) {
   );
 }
 
-function ItemRender(props) {
-  const [isHovering, setIsHovering] = useState(false);
-
-  function handleHover() {}
-
-  return (
-    <div
-      onMouseOver={(e) => {
-        setIsHovering(true);
-      }}
-      onMouseLeave={(e) => {
-        setIsHovering(false);
-      }}
-    >
-      <StopWatch
-        clickToToggle
-        onToggle={props.onToggle}
-        startingSeconds={props.startingSeconds}
-        saveTime={props.saveTime}
-        nodeId={props.nodeId}
-      />
-    </div>
-  );
-}
-
 Node.propTypes = {
-  node: PropTypes.object,
-  onToggle: PropTypes.bool,
-  startingSeconds: PropTypes.number,
+  deleteNode: PropTypes.func.isRequired,
+  index: PropTypes.number.isRequired,
+  isTimerRunning: PropTypes.bool.isRequired,
+  mustFocusNodeTitle: PropTypes.bool.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
+  node: PropTypes.object.isRequired,
+  onToggle: PropTypes.bool.isRequired,
+  saveTime: PropTypes.func.isRequired,
+  showModal: PropTypes.bool.isRequired,
+  startingSeconds: PropTypes.number.isRequired,
+  updateNodeTitle: PropTypes.func.isRequired,
 };
 
 export default Node;
