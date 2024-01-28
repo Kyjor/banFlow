@@ -1,5 +1,6 @@
 import lokiService from './LokiService';
 import ISO8601ServiceInstance from './ISO8601Service';
+import { ipcRenderer } from 'electron';
 
 const NodeService = {
   /**
@@ -10,7 +11,11 @@ const NodeService = {
    * @permission {Read}
    */
   getNodes() {
-    const nodes = lokiService.nodes.find({ Id: { $ne: null } });
+    console.log("Get nodes");
+
+    const nodes = ipcRenderer.invoke('api:getNodes');
+    return;
+    //lokiService.nodes.find({ Id: { $ne: null } });
 
     let response = {};
 

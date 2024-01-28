@@ -1,9 +1,11 @@
 import lokiService from './LokiService';
+import { ipcRenderer } from 'electron';
 
 const TimerService = {
   getTimerPreferences() {
-    const { timerPreferences } = lokiService;
-    return timerPreferences.data[0];
+    // const { timerPreferences } = lokiService;
+    // return timerPreferences.data[0];
+    return ipcRenderer.invoke('api:getTimerPreferences');
   },
 
   updateTimerPreferenceProperty(propertyToUpdate, newValue) {

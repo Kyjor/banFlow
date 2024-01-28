@@ -1,5 +1,3 @@
-import { ipcMain, ipcRenderer } from 'electron';
-
 const Loki = require('lokijs');
 
 export default class LokiService {

@@ -24,14 +24,12 @@ import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar
 import ProjectController from '../../api/project/ProjectController';
 import {
   // eslint-disable-next-line import/named
-  individualProjectState,
-  // eslint-disable-next-line import/named
   lokiService,
 } from '../../stores/shared';
+import NodeController from '../../api/nodes/NodeController';
+import ParentController from '../../api/parent/ParentController';
+import TimerController from '../../api/timer/TimerController';
 
-const sharedIndividualProjectState = createSharedStore(individualProjectState, {
-  name: 'individualProjectState',
-});
 const sharedLokiService = createSharedStore(lokiService, {
   name: 'lokiService',
 });
@@ -50,6 +48,14 @@ class Dashboard extends Component {
       selectedProject: '',
       isLokiLoaded: false,
     };
+
+    const self = this;
+    ipcRenderer.on('UpdateCurrentProject', function (e, newProjectNodes) {
+      self.lokiServiceLoadedCallback();
+      const { selectedProject } = this.state;
+      console.log('loaded ');
+      self.setState({ lokiLoaded: true, selectedProject: 'julia-test' });
+    });
   }
 
   componentWillUnmount() {
@@ -57,14 +63,16 @@ class Dashboard extends Component {
   }
 
   lokiServiceLoadedCallback = () => {
-    const { nodeStates, nodeTypes, tags } =
-      sharedLokiService.getState().lokiService;
+    // const { nodeStates, nodeTypes, tags } = this.state;
 
-    const nodeTypeList = nodeTypes.find({ Id: { $ne: null } });
+    const nodeTypeList = ipcRenderer.invoke('api:getNodeTypes');
+      // nodeTypes.find({ Id: { $ne: null } });
     const nodeTypeArray = [];
-    const nodeStateList = nodeStates.find({ Id: { $ne: null } });
+    const nodeStateList = ipcRenderer.invoke('api:getNodeStates');
+    // nodeStates.find({ Id: { $ne: null } });
     const nodeStateArray = [];
-    const tagList = tags.find({ Id: { $ne: null } });
+    const tagList = ipcRenderer.invoke('api:getTags');
+      // tags.find({ Id: { $ne: null } });
     const tagArray = [];
 
     nodeTypeList.forEach((thisNodeType) => {
@@ -79,20 +87,17 @@ class Dashboard extends Component {
 
     const newState = {
       ...this.state,
-      nodes: sharedControllers.getState().nodeController.getNodes(),
-      parents: sharedControllers.getState().parentController.getParents(),
-      parentOrder: sharedControllers
-        .getState()
-        .parentController.getParentOrder(),
-      nodeTypes: nodeTypeArray,
+      nodes: NodeController.getNodes(),
+      parents: ParentController.getParents(),
+      parentOrder: ParentController.getParentOrder(),
+      nodeTypes: [],
+      // nodeTypes: nodeTypeArray,
       nodeStates: nodeStateArray,
       tags: tagArray,
-      timerPreferences: sharedControllers
-        .getState()
-        .timerController.getTimerPreferences(),
+      timerPreferences: TimerController.getTimerPreferences(),
     };
 
-    sharedIndividualProjectState.setState((state) => {
+    this.setState((state) => {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       for (const property in newState) {
         state[property] = newState[property];
@@ -128,22 +133,11 @@ class Dashboard extends Component {
     return listData || [];
   };
 
+  // eslint-disable-next-line class-methods-use-this
   updateSelectedProject = (projectName) => {
     if (projectName) {
+      console.log("Update selected")
       ProjectController.openProject(projectName);
-      return;
-      sharedLokiService.getState().lokiService.init(() => {
-        this.lokiServiceLoadedCallback();
-        sharedIndividualProjectState.setState((state) => {
-          state.lokiLoaded = true;
-        });
-        const { selectedProject } = this.state;
-        if (selectedProject === projectName) {
-          this.setState({ selectedProject: null });
-        } else {
-          this.setState({ selectedProject: projectName });
-        }
-      });
     }
   };
 

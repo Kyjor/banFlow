@@ -4,13 +4,13 @@ import lokiService from './LokiService';
 // eslint-disable-next-line import/no-cycle
 import { ValidateProjectName } from '../validators/Validator';
 
-let currentProject = null;
+let currentProjectNodes = null;
 
-ipcRenderer.on('UpdateCurrentProject', function (e, newProject) {
+ipcRenderer.on('UpdateCurrentProject', function (e, newProjectNodes) {
   // if (self.state === newState) return;
-  console.log('updating current project');
-  console.log(newProject);
-  currentProject = newProject;
+  console.log('updating current project nodes');
+  console.log(newProjectNodes);
+  currentProjectNodes = newProjectNodes;
 });
 
 const ProjectService = {
@@ -44,7 +44,7 @@ const ProjectService = {
   },
 
   openProject(projectName) {
-    ipcRenderer.send('InitializeLokiProject', projectName);
+    ipcRenderer.sendSync('InitializeLokiProject', projectName);
   },
 
   renameProject(oldName, newName) {

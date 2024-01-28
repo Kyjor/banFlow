@@ -197,6 +197,14 @@ app
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
+    ipcMain.handle('api:getNodes', getNodes);
+    ipcMain.handle('api:getParents', getParents);
+    ipcMain.handle('api:getParentOrder', getParentOrder);
+    ipcMain.handle('api:getTimerPreferences', getTimerPreferences);
+    ipcMain.handle('api:getNodeTypes', getNodeTypes);
+    ipcMain.handle('api:getNodeStates', getNodeStates);
+    ipcMain.handle('api:getTags', getTags);
+
   })
   .catch(console.log);
 
@@ -351,16 +359,54 @@ ipcMain.on('InitializeLokiProject', (event, projectName) => {
   //     currentLokiService.nodes,
   //   );
   // }
+  event.returnValue = 'test';
 });
 
-const lokiLoadedCallback = (loki) => {
-  console.log('lokiLoadedCallback');
-  console.log(currentLokiService.nodes.data);
+const lokiLoadedCallback = () => {
+  console.log('loki loaded');
+  if (mainWindow) {
+    mainWindow.webContents.send('UpdateCurrentProject', true);
+  }
 };
 
 ipcMain.on('InitializedLokiService', (event, lokiService) => {
-  console.log('InitializedLokiService', lokiService);
   currentLokiService = lokiService;
   // add currentLokiService to lokiServices
   lokiServices.push(currentLokiService);
+
 });
+
+const getNodes = () => {
+  console.log('current loki');
+  return currentLokiService.nodes.find({ Id: { $ne: null } });
+};
+
+const getParents = () => {
+  console.log('current loki');
+  return currentLokiService.parents.find({ Id: { $ne: null } });
+};
+
+const getParentOrder = () => {
+  console.log('current loki');
+  return currentLokiService.parentOrder.find({ Id: { $ne: null } });
+};
+
+const getNodeTypes = () => {
+  console.log('current loki');
+  return currentLokiService.nodeTypes.find({ Id: { $ne: null } });
+};
+
+const getNodeStates = () => {
+  console.log('current loki');
+  return currentLokiService.nodeStates.find({ Id: { $ne: null } });
+};
+
+const getTags = () => {
+  console.log('current loki');
+  return currentLokiService.tags.find({ Id: { $ne: null } });
+};
+
+const getTimerPreferences = () => {
+  console.log('current loki');
+  return currentLokiService.timerPreferences.data[0];
+};
