@@ -3,7 +3,6 @@ import React, { Component } from 'react';
 // Styles
 // Layouts
 import { Link } from 'react-router-dom';
-import { createSharedStore } from 'electron-shared-state';
 import {
   Badge,
   Calendar,
@@ -16,25 +15,26 @@ import {
 import dateFormat from 'dateformat';
 import { ipcRenderer } from 'electron';
 import TabPane from 'antd/lib/tabs/TabPane';
+import { createSharedStore } from '../../stores';
 import Layout from '../../layouts/App';
 // Components
 import Path from '../../components/Projects/Path';
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
 import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar';
+import ProjectController from '../../api/project/ProjectController';
 import {
   // eslint-disable-next-line import/named
-  controllers,
-  // eslint-disable-next-line import/named
-  initialIndividualProjectState,
+  individualProjectState,
   // eslint-disable-next-line import/named
   lokiService,
 } from '../../stores/shared';
 
-const sharedIndividualProjectState = createSharedStore(
-  initialIndividualProjectState,
-);
-const sharedControllers = createSharedStore(controllers);
-const sharedLokiService = createSharedStore(lokiService);
+const sharedIndividualProjectState = createSharedStore(individualProjectState, {
+  name: 'individualProjectState',
+});
+const sharedLokiService = createSharedStore(lokiService, {
+  name: 'lokiService',
+});
 
 /**
  * Home
@@ -130,9 +130,8 @@ class Dashboard extends Component {
 
   updateSelectedProject = (projectName) => {
     if (projectName) {
-      sharedControllers
-        .getState()
-        .projectController.setCurrentProjectName(projectName);
+      ProjectController.openProject(projectName);
+      return;
       sharedLokiService.getState().lokiService.init(() => {
         this.lokiServiceLoadedCallback();
         sharedIndividualProjectState.setState((state) => {

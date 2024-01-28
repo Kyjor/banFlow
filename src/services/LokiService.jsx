@@ -1,7 +1,9 @@
+import { ipcMain, ipcRenderer } from 'electron';
+
 const Loki = require('lokijs');
 
-class LokiService {
-  constructor() {
+export default class LokiService {
+  constructor(projectName) {
     this.db = null;
     this.nodes = null;
     this.parents = null;
@@ -10,7 +12,7 @@ class LokiService {
     this.nodeStates = null;
     this.nodeTypes = null;
     this.timerPreferences = null;
-    this.projectName = '';
+    this.projectName = projectName;
     this.isSelectedFromDialog = false;
     this.isDev = null;
   }
@@ -77,6 +79,8 @@ class LokiService {
     if (mustSaveDatabase) {
       this.saveDB();
     }
+
+    console.log(this.nodes.data);
   };
 
   /**
@@ -105,6 +109,8 @@ class LokiService {
         }
       },
     });
+
+    return this;
   };
 
   saveDB = () => {
@@ -130,7 +136,3 @@ class LokiService {
     return newPreferences;
   };
 }
-
-// create one instance of the class to export so everyone can share it
-const lokiService = new LokiService();
-export default lokiService;

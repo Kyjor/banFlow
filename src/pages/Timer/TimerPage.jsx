@@ -1,6 +1,6 @@
 import React, { Component, useEffect } from 'react';
 import { ipcRenderer } from 'electron';
-import { createSharedStore } from 'electron-shared-state'; // or wherever the above file is stored
+import { createSharedStore } from '../../stores'; // or wherever the above file is stored
 import AntTreeSelect from '../../components/TreeSelect/AntTreeSelect';
 import Timer from '../../components/Timer/timer';
 import projectController from '../../api/project/ProjectController';
@@ -8,13 +8,12 @@ import lokiService from '../../services/LokiService';
 import nodeController from '../../api/nodes/NodeController';
 import timerController from '../../api/timer/TimerController';
 import ISO8601ServiceInstance from '../../services/ISO8601Service';
-
 // eslint-disable-next-line import/named
-import { initialIndividualProjectState } from '../../stores/shared';
+import { individualProjectState } from '../../stores/shared';
 
-const sharedIndividualProjectState = createSharedStore(
-  initialIndividualProjectState,
-);
+const sharedIndividualProjectState = createSharedStore(individualProjectState, {
+  name: 'individualProjectState',
+});
 
 const titleBarStyle = {
   WebkitAppRegion: 'drag',

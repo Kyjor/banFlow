@@ -24,10 +24,38 @@ import * as remoteMain from '@electron/remote/main';
 import installExtension, {
   REACT_DEVELOPER_TOOLS,
 } from 'electron-devtools-installer';
+import { createSharedStore } from '../stores';
 import MenuBuilder from './menu';
 import { pathCreator } from './util';
+import LokiService from '../services/LokiService';
+
+import {
+  controllers,
+  defaultTimerPreferences,
+  individualProjectState,
+} from '../stores/shared';
+import any = jasmine.any;
 
 remoteMain.initialize();
+let mainWindow: BrowserWindow | null = null;
+
+const sharedIndividualProjectState = createSharedStore(individualProjectState, {
+  name: 'individualProjectState',
+});
+const sharedControllers = createSharedStore(controllers, {
+  name: 'controllers',
+});
+
+sharedIndividualProjectState.subscribe((state) => {
+  if (mainWindow) {
+    console.log("Sending 'UpdateState' to renderer");
+    mainWindow.webContents.send('UpdateState', state);
+  }
+});
+
+sharedControllers.subscribe((state) => {
+  // console.log(state);
+});
 
 export default class AppUpdater {
   constructor() {
@@ -37,7 +65,6 @@ export default class AppUpdater {
   }
 }
 
-let mainWindow: BrowserWindow | null = null;
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
@@ -302,3 +329,38 @@ function createTimerWindow(
     timerWindow = null;
   });
 }
+let currentLokiService: any;
+const lokiServices: any = [];
+ipcMain.on('InitializeLokiProject', (event, projectName) => {
+  console.log('InitializeLokiProject', projectName);
+  // set currentLokiService to the lokiService with the matching projectName
+  currentLokiService = lokiServices.find(
+    (lokiService: any) => lokiService.projectName === projectName,
+  );
+  if (!currentLokiService) {
+    currentLokiService = new LokiService(projectName);
+    currentLokiService.init(lokiLoadedCallback);
+  }
+  // add currentLokiService to lokiServices
+  lokiServices.push(currentLokiService);
+  // console.log(currentLokiService.nodes.data);
+  // if (mainWindow) {
+  //   console.log(currentLokiService);
+  //   mainWindow.webContents.send(
+  //     'UpdateCurrentProject',
+  //     currentLokiService.nodes,
+  //   );
+  // }
+});
+
+const lokiLoadedCallback = (loki) => {
+  console.log('lokiLoadedCallback');
+  console.log(currentLokiService.nodes.data);
+};
+
+ipcMain.on('InitializedLokiService', (event, lokiService) => {
+  console.log('InitializedLokiService', lokiService);
+  currentLokiService = lokiService;
+  // add currentLokiService to lokiServices
+  lokiServices.push(currentLokiService);
+});

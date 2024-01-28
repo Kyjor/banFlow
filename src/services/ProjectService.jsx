@@ -1,7 +1,17 @@
 import * as fs from 'fs';
+import { ipcRenderer } from 'electron';
 import lokiService from './LokiService';
 // eslint-disable-next-line import/no-cycle
 import { ValidateProjectName } from '../validators/Validator';
+
+let currentProject = null;
+
+ipcRenderer.on('UpdateCurrentProject', function (e, newProject) {
+  // if (self.state === newState) return;
+  console.log('updating current project');
+  console.log(newProject);
+  currentProject = newProject;
+});
 
 const ProjectService = {
   /**
@@ -31,6 +41,10 @@ const ProjectService = {
       }
     });
     return fileList;
+  },
+
+  openProject(projectName) {
+    ipcRenderer.send('InitializeLokiProject', projectName);
   },
 
   renameProject(oldName, newName) {

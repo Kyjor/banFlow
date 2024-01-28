@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
 import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { createSharedStore } from 'electron-shared-state';
+import { createSharedStore } from '../../stores';
 import Layout from '../../layouts/App';
 // Components
 import NodeModal from '../../components/NodeModal/NodeModal';
@@ -13,21 +13,32 @@ import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 
 import {
   // eslint-disable-next-line import/named
-  controllers,
-  // eslint-disable-next-line import/named
   defaultTimerPreferences,
   // eslint-disable-next-line import/named
-  initialIndividualProjectState,
+  individualProjectState,
   // eslint-disable-next-line import/named
   lokiService,
 } from '../../stores/shared';
 
-const sharedIndividualProjectState = createSharedStore(
-  initialIndividualProjectState,
-);
-const sharedControllers = createSharedStore(controllers);
+const sharedIndividualProjectState = createSharedStore(individualProjectState, {
+  name: 'individualProjectState',
+});
+
 const sharedTimerPrefs = createSharedStore(defaultTimerPreferences);
 const sharedLokiService = createSharedStore(lokiService);
+
+sharedIndividualProjectState.subscribe((state) => {
+  console.log(state);
+  // console.log(state);
+});
+
+sharedTimerPrefs.subscribe((state) => {
+  // console.log(state);
+});
+
+sharedLokiService.subscribe((state) => {
+  // console.log(state);
+});
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -43,8 +54,19 @@ class ProjectPage extends Component {
       ...sharedIndividualProjectState.getState(),
       currentProjectName: this.projectName,
     };
+
     sharedIndividualProjectState.subscribe((state) => {
+      console.log(state);
       this.setState(state);
+    });
+
+    const self = this;
+    ipcRenderer.on('UpdateState', function (e, newState) {
+      // if (self.state === newState) return;
+      console.log('updating state');
+      console.log(newState);
+      console.log(self.state);
+      self.setState(newState);
     });
   }
 
@@ -58,6 +80,7 @@ class ProjectPage extends Component {
       sharedLokiService.getState().lokiService.init(() => {
         this.lokiServiceLoadedCallback();
         sharedIndividualProjectState.setState((state) => {
+          console.log("loki's loaded");
           state.lokiLoaded = true;
         });
       });
