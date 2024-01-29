@@ -1,5 +1,3 @@
-import { ipcRenderer } from 'electron';
-import lokiService from './LokiService';
 import ISO8601ServiceInstance from './ISO8601Service';
 
 const NodeService = {
@@ -10,17 +8,29 @@ const NodeService = {
    * @returns {array} node - all nodes
    * @permission {Read}
    */
-  getNodes() {
-    return this.getNodesWithQuery({ Id: { $ne: null } });
+  getNodes(lokiService) {
+    const nodes = lokiService.nodes.find({ Id: { $ne: null } });
+
+    let response = {};
+
+    nodes.forEach((node) => {
+      response = {
+        ...response,
+        [node.id]: {
+          ...node,
+        },
+      };
+    });
+
+    return response;
   },
 
-  getNode(nodeId) {
-    const nodes = this.getNodesWithQuery({ Id: { $eq: nodeId } });
-    return nodes[0];
+  getNode(lokiService, nodeId) {
+    return lokiService.nodes.find({ id: nodeId })[0];
   },
 
-  getNodesWithQuery(query) {
-    return ipcRenderer.sendSync('api:getNodesWithQuery1', query);
+  getNodesWithQuery(lokiService, query) {
+    return lokiService.nodes.find(query);
   },
 
   /**
@@ -33,7 +43,7 @@ const NodeService = {
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode(nodeType, nodeTitle, parentId = ``) {
+  createNode(lokiService, nodeType, nodeTitle, parentId = ``) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
     const nextId = nodes.data.length
@@ -84,7 +94,7 @@ const NodeService = {
     return newNode;
   },
 
-  deleteNode(nodeId, parentId) {
+  deleteNode(lokiService, nodeId, parentId) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
 
@@ -101,13 +111,37 @@ const NodeService = {
     lokiService.saveDB();
   },
 
-  updateNodeProperty(propertyToUpdate, nodeId, newValue) {
-    return ipcRenderer.invoke(
-      'api:updateNodeProperty',
-      propertyToUpdate,
-      nodeId,
-      newValue,
-    );
+  updateNodeProperty(lokiService, propertyToUpdate, nodeId, newValue) {
+    // If debug, print out the property to update and the new value
+    if (process.env.NODE_ENV === `development`) {
+      console.log(
+        `Updating node with id ${nodeId}. ${propertyToUpdate} to ${newValue}`,
+      );
+    }
+
+    if (newValue == null) {
+      console.error(`You must pass a value to updateNodeProperty`);
+      return;
+    }
+    let nodeToReturn = null;
+    lokiService.nodes
+      .chain()
+      .find({ id: nodeId })
+      .update((node) => {
+        node[propertyToUpdate] = newValue;
+        nodeToReturn = node;
+      });
+
+    lokiService.saveDB();
+    // If debug, print out the property to update and the new value
+    if (process.env.NODE_ENV === `development`) {
+      console.log(
+        `Node with id ${nodeId} and name ${nodeToReturn.title} updated successfully.`,
+      );
+    }
+
+    // eslint-disable-next-line consistent-return
+    return nodeToReturn;
   },
 };
 

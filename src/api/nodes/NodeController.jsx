@@ -1,3 +1,4 @@
+import { ipcRenderer } from 'electron';
 import nodeService from '../../services/NodeService';
 
 /**
@@ -13,15 +14,15 @@ const NodeController = {
    * @permission {Read}
    */
   getNodes() {
-    return nodeService.getNodes();
+    return ipcRenderer.sendSync('api:getNodes');
   },
 
   getNode(nodeId) {
-    return nodeService.getNode(nodeId);
+    return ipcRenderer.sendSync('api:getNode', nodeId);
   },
 
   getNodesWithQuery(query) {
-    return nodeService.getNodesWithQuery(query);
+    return ipcRenderer.sendSync('api:getNodesWithQuery', query);
   },
 
   /**

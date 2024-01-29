@@ -28,6 +28,7 @@ import { individualProjectState } from '../stores/shared';
 import MenuBuilder from './menu';
 import { pathCreator } from './util';
 import LokiService from '../services/LokiService';
+import NodeService from '../services/NodeService';
 
 remoteMain.initialize();
 let mainWindow: BrowserWindow | null = null;
@@ -175,7 +176,6 @@ app
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
-    ipcMain.handle('api:getNodesWithQuery', getNodesWithQuery);
     ipcMain.handle('api:getParents', getParents);
     ipcMain.handle('api:getParentOrder', getParentOrder);
     ipcMain.handle('api:getTimerPreferences', getTimerPreferences);
@@ -347,21 +347,17 @@ ipcMain.on('InitializedLokiService', (event, lokiService) => {
   lokiServices.push(currentLokiService);
 });
 
-ipcMain.on('api:getNodesWithQuery1', (event, query) => {
-  const nodes = currentLokiService.nodes.find(query);
+// Todo: Consolidate these gets into one function
+ipcMain.on('api:getNodesWithQuery', (event, query) => {
+  event.returnValue = NodeService.getNodesWithQuery(currentLokiService, query);
+});
 
-  let response = {};
+ipcMain.on('api:getNodes', (event) => {
+  event.returnValue = NodeService.getNodes(currentLokiService);
+});
 
-  nodes.forEach((node: { id: number }) => {
-    response = {
-      ...response,
-      [node.id]: {
-        ...node,
-      },
-    };
-  });
-
-  event.returnValue = response;
+ipcMain.on('api:getNode', (event, nodeId) => {
+  event.returnValue = NodeService.getNodesWithQuery(currentLokiService, nodeId);
 });
 
 const getNodesWithQuery = (query: any) => {
