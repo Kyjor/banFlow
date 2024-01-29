@@ -77,8 +77,6 @@ export default class LokiService {
     if (mustSaveDatabase) {
       this.saveDB();
     }
-
-    console.log(this.nodes.data);
   };
 
   /**

@@ -10,17 +10,17 @@ const NodeService = {
    * @returns {array} node - all nodes
    * @permission {Read}
    */
-  async getNodes() {
+  getNodes() {
     return this.getNodesWithQuery({ Id: { $ne: null } });
   },
 
-  async getNode(nodeId) {
-    const nodes = await this.getNodesWithQuery({ Id: { $eq: nodeId } });
+  getNode(nodeId) {
+    const nodes = this.getNodesWithQuery({ Id: { $eq: nodeId } });
     return nodes[0];
   },
 
-  async getNodesWithQuery(query) {
-    return ipcRenderer.invoke('api:getNodesWithQuery', query);
+  getNodesWithQuery(query) {
+    return ipcRenderer.sendSync('api:getNodesWithQuery1', query);
   },
 
   /**

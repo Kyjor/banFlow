@@ -12,15 +12,15 @@ const NodeController = {
    * @returns {array} node - all nodes
    * @permission {Read}
    */
-  async getNodes() {
+  getNodes() {
     return nodeService.getNodes();
   },
 
-  async getNode(nodeId) {
+  getNode(nodeId) {
     return nodeService.getNode(nodeId);
   },
 
-  async getNodesWithQuery(query) {
+  getNodesWithQuery(query) {
     return nodeService.getNodesWithQuery(query);
   },
 

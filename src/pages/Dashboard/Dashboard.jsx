@@ -41,10 +41,9 @@ class Dashboard extends Component {
     };
 
     const self = this;
-    ipcRenderer.on('UpdateCurrentProject', function (e, newProjectNodes) {
+    ipcRenderer.on('UpdateCurrentProject', function (e, projectName) {
       self.lokiServiceLoadedCallback();
-      console.log('loaded ');
-      self.setState({ lokiLoaded: true, selectedProject: 'julia-test' });
+      self.setState({ lokiLoaded: true, selectedProject: projectName });
     });
   }
 
@@ -96,14 +95,17 @@ class Dashboard extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  getProjectTotalTimeSpent = async () => {
+  getProjectTotalTimeSpent = () => {
     let totalTime = 0;
-    const cardList = await NodeController.getNodesWithQuery({
+    const cardList = NodeController.getNodesWithQuery({
       timeSpent: { $gte: 1 },
     });
-    cardList.forEach((card) => {
+
+    console.log(cardList);
+    Object.values(cardList).forEach((card) => {
       totalTime += card.timeSpent;
     });
+    this.setState({ totalTime });
     return totalTime;
   };
 
@@ -126,7 +128,6 @@ class Dashboard extends Component {
   // eslint-disable-next-line class-methods-use-this
   updateSelectedProject = (projectName) => {
     if (projectName) {
-      console.log('Update selected');
       ProjectController.openProject(projectName);
     }
   };
@@ -145,13 +146,15 @@ class Dashboard extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  dayCellRender = async (value, header) => {
+  dayCellRender = (value, header) => {
     const listData = [];
     // eslint-disable-next-line no-underscore-dangle
     const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-    const dueItems = await NodeController.getNodesWithQuery({
+    const dueItems = NodeController.getNodesWithQuery({
       estimatedDate: { $ne: '' },
     });
+    console.log(dueItems);
+
     dueItems.forEach((item) => {
       if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
         console.log(cellDate);
@@ -217,23 +220,24 @@ class Dashboard extends Component {
                               You
                             </Descriptions.Item>
                             <Descriptions.Item label="Time Spent">
-                              {new Date(1 * 1000).toISOString().substr(11, 8)}
+                              {new Date(this.getProjectTotalTimeSpent() * 1000)
+                                .toISOString()
+                                .substr(11, 8)}
                             </Descriptions.Item>
                           </Descriptions>
                         </div>
                         <div style={{ width: '50%' }}>
-                          {/* <DayByDayCalendar */}
-                          {/*  dayCellRender={this.dayCellRender} */}
-                          {/* /> */}
+                          <DayByDayCalendar
+                            dayCellRender={this.dayCellRender}
+                          />
                         </div>
                       </div>
                     )}
                   </PageHeader>
                 </TabPane>
-
                 <TabPane tab="Monthly" key="2">
                   <div>
-                    {/* <Calendar dateCellRender={this.dateCellRender} />, */}
+                    <Calendar dateCellRender={this.dateCellRender} />,
                   </div>
                 </TabPane>
               </Tabs>

@@ -34,6 +34,7 @@ class ProjectPage extends Component {
 
     const self = this;
     ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
+      console.log('updating project page state ', newState);
       self.setState(newState);
     });
   }

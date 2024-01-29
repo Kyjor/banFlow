@@ -75,7 +75,7 @@ class TimerPage extends Component {
 
     ipcRenderer.invoke('api:setProjectState', {
       ...this.state,
-      stateisTimerRunning: false,
+      isTimerRunning: false,
     });
   };
 

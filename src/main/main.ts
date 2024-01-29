@@ -318,7 +318,6 @@ function createTimerWindow(
 let currentLokiService: any;
 const lokiServices: any = [];
 ipcMain.on('InitializeLokiProject', (event, projectName) => {
-  console.log('InitializeLokiProject', projectName);
   // set currentLokiService to the lokiService with the matching projectName
   currentLokiService = lokiServices.find(
     (lokiService: any) => lokiService.projectName === projectName,
@@ -329,21 +328,16 @@ ipcMain.on('InitializeLokiProject', (event, projectName) => {
   }
   // add currentLokiService to lokiServices
   lokiServices.push(currentLokiService);
-  // console.log(currentLokiService.nodes.data);
-  // if (mainWindow) {
-  //   console.log(currentLokiService);
-  //   mainWindow.webContents.send(
-  //     'UpdateCurrentProject',
-  //     currentLokiService.nodes,
-  //   );
-  // }
-  event.returnValue = 'test';
+
+  event.returnValue = projectName;
 });
 
 const lokiLoadedCallback = () => {
-  console.log('loki loaded');
   if (mainWindow) {
-    mainWindow.webContents.send('UpdateCurrentProject', true);
+    mainWindow.webContents.send(
+      'UpdateCurrentProject',
+      individualProjectStateValue.projectName,
+    );
   }
 };
 
@@ -351,6 +345,23 @@ ipcMain.on('InitializedLokiService', (event, lokiService) => {
   currentLokiService = lokiService;
   // add currentLokiService to lokiServices
   lokiServices.push(currentLokiService);
+});
+
+ipcMain.on('api:getNodesWithQuery1', (event, query) => {
+  const nodes = currentLokiService.nodes.find(query);
+
+  let response = {};
+
+  nodes.forEach((node: { id: number }) => {
+    response = {
+      ...response,
+      [node.id]: {
+        ...node,
+      },
+    };
+  });
+
+  event.returnValue = response;
 });
 
 const getNodesWithQuery = (query: any) => {
