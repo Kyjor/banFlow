@@ -1,7 +1,7 @@
 import timerService from '../../services/TimerService';
 
 const TimerController = {
-  getTimerPreferences() {
+  async getTimerPreferences() {
     return timerService.getTimerPreferences();
   },
 

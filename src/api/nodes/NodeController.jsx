@@ -12,7 +12,7 @@ const NodeController = {
    * @returns {array} node - all nodes
    * @permission {Read}
    */
-  getNodes() {
+  async getNodes() {
     return nodeService.getNodes();
   },
 
@@ -20,7 +20,7 @@ const NodeController = {
     return nodeService.getNode(nodeId);
   },
 
-  getNodesWithQuery(query) {
+  async getNodesWithQuery(query) {
     return nodeService.getNodesWithQuery(query);
   },
 

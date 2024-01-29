@@ -1,8 +1,8 @@
-import lokiService from './LokiService';
 import { ipcRenderer } from 'electron';
+import lokiService from './LokiService';
 
 const TimerService = {
-  getTimerPreferences() {
+  async getTimerPreferences() {
     // const { timerPreferences } = lokiService;
     // return timerPreferences.data[0];
     return ipcRenderer.invoke('api:getTimerPreferences');

@@ -15,24 +15,15 @@ import {
 import dateFormat from 'dateformat';
 import { ipcRenderer } from 'electron';
 import TabPane from 'antd/lib/tabs/TabPane';
-import { createSharedStore } from '../../stores';
 import Layout from '../../layouts/App';
 // Components
 import Path from '../../components/Projects/Path';
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
 import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar';
 import ProjectController from '../../api/project/ProjectController';
-import {
-  // eslint-disable-next-line import/named
-  lokiService,
-} from '../../stores/shared';
 import NodeController from '../../api/nodes/NodeController';
 import ParentController from '../../api/parent/ParentController';
 import TimerController from '../../api/timer/TimerController';
-
-const sharedLokiService = createSharedStore(lokiService, {
-  name: 'lokiService',
-});
 
 /**
  * Home
@@ -52,7 +43,6 @@ class Dashboard extends Component {
     const self = this;
     ipcRenderer.on('UpdateCurrentProject', function (e, newProjectNodes) {
       self.lokiServiceLoadedCallback();
-      const { selectedProject } = this.state;
       console.log('loaded ');
       self.setState({ lokiLoaded: true, selectedProject: 'julia-test' });
     });
@@ -62,19 +52,20 @@ class Dashboard extends Component {
     ipcRenderer.removeAllListeners();
   }
 
-  lokiServiceLoadedCallback = () => {
+  lokiServiceLoadedCallback = async () => {
     // const { nodeStates, nodeTypes, tags } = this.state;
 
-    const nodeTypeList = ipcRenderer.invoke('api:getNodeTypes');
-      // nodeTypes.find({ Id: { $ne: null } });
+    const nodeTypeList = await ipcRenderer.invoke('api:getNodeTypes');
+    // nodeTypes.find({ Id: { $ne: null } });
     const nodeTypeArray = [];
-    const nodeStateList = ipcRenderer.invoke('api:getNodeStates');
+    const nodeStateList = await ipcRenderer.invoke('api:getNodeStates');
     // nodeStates.find({ Id: { $ne: null } });
     const nodeStateArray = [];
-    const tagList = ipcRenderer.invoke('api:getTags');
-      // tags.find({ Id: { $ne: null } });
+    const tagList = await ipcRenderer.invoke('api:getTags');
+    // tags.find({ Id: { $ne: null } });
     const tagArray = [];
 
+    console.log(nodeTypeList);
     nodeTypeList.forEach((thisNodeType) => {
       nodeTypeArray.push(thisNodeType.title);
     });
@@ -106,11 +97,11 @@ class Dashboard extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  getProjectTotalTimeSpent = () => {
+  getProjectTotalTimeSpent = async () => {
     let totalTime = 0;
-    const cardList = sharedControllers
-      .getState()
-      .nodeController.getNodesWithQuery({ timeSpent: { $gte: 1 } });
+    const cardList = await NodeController.getNodesWithQuery({
+      timeSpent: { $gte: 1 },
+    });
     cardList.forEach((card) => {
       totalTime += card.timeSpent;
     });
@@ -118,13 +109,13 @@ class Dashboard extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  getListData = (value) => {
+  getListData = async (value) => {
     const listData = [];
     // eslint-disable-next-line no-underscore-dangle
     const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-    const dueItems = sharedControllers
-      .getState()
-      .nodeController.getNodesWithQuery({ estimatedDate: { $ne: '' } });
+    const dueItems = await NodeController.getNodesWithQuery({
+      estimatedDate: { $ne: '' },
+    });
     dueItems.forEach((item) => {
       if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
         listData.push({ type: 'success', content: item.title });
@@ -136,7 +127,7 @@ class Dashboard extends Component {
   // eslint-disable-next-line class-methods-use-this
   updateSelectedProject = (projectName) => {
     if (projectName) {
-      console.log("Update selected")
+      console.log('Update selected');
       ProjectController.openProject(projectName);
     }
   };
@@ -155,13 +146,13 @@ class Dashboard extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  dayCellRender = (value, header) => {
+  dayCellRender = async (value, header) => {
     const listData = [];
     // eslint-disable-next-line no-underscore-dangle
     const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-    const dueItems = sharedControllers
-      .getState()
-      .nodeController.getNodesWithQuery({ estimatedDate: { $ne: '' } });
+    const dueItems = await NodeController.getNodesWithQuery({
+      estimatedDate: { $ne: '' },
+    });
     dueItems.forEach((item) => {
       if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
         console.log(cellDate);
@@ -227,16 +218,14 @@ class Dashboard extends Component {
                               You
                             </Descriptions.Item>
                             <Descriptions.Item label="Time Spent">
-                              {new Date(this.getProjectTotalTimeSpent() * 1000)
-                                .toISOString()
-                                .substr(11, 8)}
+                              {new Date(1 * 1000).toISOString().substr(11, 8)}
                             </Descriptions.Item>
                           </Descriptions>
                         </div>
                         <div style={{ width: '50%' }}>
-                          <DayByDayCalendar
-                            dayCellRender={this.dayCellRender}
-                          />
+                          {/* <DayByDayCalendar */}
+                          {/*  dayCellRender={this.dayCellRender} */}
+                          {/* /> */}
                         </div>
                       </div>
                     )}
@@ -245,7 +234,7 @@ class Dashboard extends Component {
 
                 <TabPane tab="Monthly" key="2">
                   <div>
-                    <Calendar dateCellRender={this.dateCellRender} />,
+                    {/* <Calendar dateCellRender={this.dateCellRender} />, */}
                   </div>
                 </TabPane>
               </Tabs>

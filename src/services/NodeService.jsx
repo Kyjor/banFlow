@@ -1,6 +1,6 @@
+import { ipcRenderer } from 'electron';
 import lokiService from './LokiService';
 import ISO8601ServiceInstance from './ISO8601Service';
-import { ipcRenderer } from 'electron';
 
 const NodeService = {
   /**
@@ -10,25 +10,8 @@ const NodeService = {
    * @returns {array} node - all nodes
    * @permission {Read}
    */
-  getNodes() {
-    console.log("Get nodes");
-
-    const nodes = ipcRenderer.invoke('api:getNodes');
-    return;
-    //lokiService.nodes.find({ Id: { $ne: null } });
-
-    let response = {};
-
-    nodes.forEach((node) => {
-      response = {
-        ...response,
-        [node.id]: {
-          ...node,
-        },
-      };
-    });
-
-    return response;
+  async getNodes() {
+    return ipcRenderer.invoke('api:getNodes');
   },
 
   getNode(nodeId) {
@@ -36,7 +19,7 @@ const NodeService = {
   },
 
   getNodesWithQuery(query) {
-    return lokiService.nodes.find(query);
+    return ipcRenderer.invoke('api:getNodesWithQuery', query);
   },
 
   /**

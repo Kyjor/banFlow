@@ -12,7 +12,7 @@ const ParentController = {
    * @returns {array} parent - all parents
    * @permission {Read}
    */
-  getParents() {
+  async getParents() {
     return parentService.getParents();
   },
 
@@ -23,7 +23,7 @@ const ParentController = {
    * @returns {array} string - the order of parents represented by id
    * @permission {Read}
    */
-  getParentOrder() {
+  async getParentOrder() {
     return parentService.getParentOrder();
   },
 

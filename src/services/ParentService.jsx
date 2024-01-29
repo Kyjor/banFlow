@@ -1,5 +1,5 @@
-import lokiService from './LokiService';
 import { ipcRenderer } from 'electron';
+import lokiService from './LokiService';
 
 const ParentService = {
   /**
@@ -9,22 +9,8 @@ const ParentService = {
    * @returns {array} parent - all parents
    * @permission {Read}
    */
-  getParents() {
-    const parents = ipcRenderer.invoke('api:getParents');
-      //lokiService.parents.find({ Id: { $ne: null } });
-
-    let response = {};
-
-    parents.forEach((parent) => {
-      response = {
-        ...response,
-        [parent.id]: {
-          ...parent,
-        },
-      };
-    });
-
-    return response;
+  async getParents() {
+    return ipcRenderer.invoke('api:getParents');
   },
 
   /**
@@ -34,17 +20,8 @@ const ParentService = {
    * @returns {array} string - the order of parents represented by id
    * @permission {Read}
    */
-  getParentOrder() {
-    const parentOrder = ipcRenderer.invoke('api:getParentOrder');
-      // lokiService.parentOrder.find({ Id: { $ne: null } });
-
-    const response = [];
-
-    parentOrder.forEach((obj) => {
-      response.push(obj.parentId);
-    });
-
-    return response;
+  async getParentOrder() {
+    return ipcRenderer.invoke('api:getParentOrder');
   },
 
   createParent(parentTitle) {

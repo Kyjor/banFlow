@@ -24,38 +24,16 @@ import * as remoteMain from '@electron/remote/main';
 import installExtension, {
   REACT_DEVELOPER_TOOLS,
 } from 'electron-devtools-installer';
-import { createSharedStore } from '../stores';
+import { individualProjectState } from '../stores/shared';
 import MenuBuilder from './menu';
 import { pathCreator } from './util';
 import LokiService from '../services/LokiService';
 
-import {
-  controllers,
-  defaultTimerPreferences,
-  individualProjectState,
-} from '../stores/shared';
-import any = jasmine.any;
-
 remoteMain.initialize();
 let mainWindow: BrowserWindow | null = null;
-
-const sharedIndividualProjectState = createSharedStore(individualProjectState, {
-  name: 'individualProjectState',
-});
-const sharedControllers = createSharedStore(controllers, {
-  name: 'controllers',
-});
-
-sharedIndividualProjectState.subscribe((state) => {
-  if (mainWindow) {
-    console.log("Sending 'UpdateState' to renderer");
-    mainWindow.webContents.send('UpdateState', state);
-  }
-});
-
-sharedControllers.subscribe((state) => {
-  // console.log(state);
-});
+// eslint-disable-next-line no-undef
+let timerWindow: BrowserWindow | Electron.PopupOptions | null | undefined;
+let individualProjectStateValue: any = individualProjectState;
 
 export default class AppUpdater {
   constructor() {
@@ -198,13 +176,16 @@ app
       if (mainWindow === null) createWindow();
     });
     ipcMain.handle('api:getNodes', getNodes);
+    ipcMain.handle('api:getNodesWithQuery', getNodesWithQuery);
     ipcMain.handle('api:getParents', getParents);
     ipcMain.handle('api:getParentOrder', getParentOrder);
     ipcMain.handle('api:getTimerPreferences', getTimerPreferences);
     ipcMain.handle('api:getNodeTypes', getNodeTypes);
     ipcMain.handle('api:getNodeStates', getNodeStates);
     ipcMain.handle('api:getTags', getTags);
-
+    ipcMain.handle('api:getProjectState', getProjectState);
+    ipcMain.handle('api:initializeProjectState', initializeProjectState);
+    ipcMain.handle('api:setProjectState', setProjectState);
   })
   .catch(console.log);
 
@@ -239,9 +220,6 @@ ipcMain.on('GetProjectFile', () => {
   // @ts-ignore
   mainWindow.webContents.send('ReturnProjectFile', fileName);
 });
-
-// eslint-disable-next-line no-undef
-let timerWindow: BrowserWindow | Electron.PopupOptions | null | undefined;
 
 function createTimerWindow(
   node: any,
@@ -373,22 +351,60 @@ ipcMain.on('InitializedLokiService', (event, lokiService) => {
   currentLokiService = lokiService;
   // add currentLokiService to lokiServices
   lokiServices.push(currentLokiService);
-
 });
 
 const getNodes = () => {
   console.log('current loki');
-  return currentLokiService.nodes.find({ Id: { $ne: null } });
+  const nodes = currentLokiService.nodes.find({ Id: { $ne: null } });
+
+  let response = {};
+
+  nodes.forEach((node: { id: number }) => {
+    response = {
+      ...response,
+      [node.id]: {
+        ...node,
+      },
+    };
+  });
+
+  return response;
+};
+
+const getNodesWithQuery = (query: any) => {
+  console.log('current loki');
+  return currentLokiService.nodes.find(query);
 };
 
 const getParents = () => {
-  console.log('current loki');
-  return currentLokiService.parents.find({ Id: { $ne: null } });
+  const parents = currentLokiService.parents.find({ Id: { $ne: null } });
+
+  let response = {};
+
+  parents.forEach((parent: { id: any }) => {
+    response = {
+      ...response,
+      [parent.id]: {
+        ...parent,
+      },
+    };
+  });
+
+  return response;
 };
 
 const getParentOrder = () => {
-  console.log('current loki');
-  return currentLokiService.parentOrder.find({ Id: { $ne: null } });
+  const parentOrder = currentLokiService.parentOrder.find({
+    Id: { $ne: null },
+  });
+
+  const response: any[] = [];
+
+  parentOrder.forEach((obj: { parentId: any }) => {
+    response.push(obj.parentId);
+  });
+
+  return response;
 };
 
 const getNodeTypes = () => {
@@ -409,4 +425,47 @@ const getTags = () => {
 const getTimerPreferences = () => {
   console.log('current loki');
   return currentLokiService.timerPreferences.data[0];
+};
+
+const initializeProjectState = (event, projectName: any) => {
+  individualProjectStateValue.nodes = getNodes();
+  individualProjectStateValue.parents = getParents();
+  individualProjectStateValue.parentOrder = getParentOrder();
+  individualProjectStateValue.lokiLoaded = true;
+  individualProjectStateValue.projectName = projectName;
+
+  console.log(individualProjectStateValue);
+
+  if (mainWindow) {
+    mainWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
+    );
+  }
+};
+
+const setProjectState = (event, values: any) => {
+  individualProjectStateValue = { ...individualProjectStateValue, ...values };
+
+  if (mainWindow) {
+    mainWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
+    );
+  }
+  if (timerWindow) {
+    timerWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
+    );
+  }
+};
+
+const getProjectState = (event) => {
+  if (timerWindow) {
+    timerWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
+    );
+  }
 };

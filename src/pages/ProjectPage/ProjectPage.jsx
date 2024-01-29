@@ -4,41 +4,15 @@ import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
 import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { createSharedStore } from '../../stores';
 import Layout from '../../layouts/App';
 // Components
 import NodeModal from '../../components/NodeModal/NodeModal';
 import ParentModal from '../../components/ParentModal/ParentModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
-
-import {
-  // eslint-disable-next-line import/named
-  defaultTimerPreferences,
-  // eslint-disable-next-line import/named
-  individualProjectState,
-  // eslint-disable-next-line import/named
-  lokiService,
-} from '../../stores/shared';
-
-const sharedIndividualProjectState = createSharedStore(individualProjectState, {
-  name: 'individualProjectState',
-});
-
-const sharedTimerPrefs = createSharedStore(defaultTimerPreferences);
-const sharedLokiService = createSharedStore(lokiService);
-
-sharedIndividualProjectState.subscribe((state) => {
-  console.log(state);
-  // console.log(state);
-});
-
-sharedTimerPrefs.subscribe((state) => {
-  // console.log(state);
-});
-
-sharedLokiService.subscribe((state) => {
-  // console.log(state);
-});
+import ParentController from '../../api/parent/ParentController';
+import NodeController from '../../api/nodes/NodeController';
+import MetadataController from '../../api/metadata/MetadataController';
+import TagController from '../../api/tag/TagController';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -51,131 +25,52 @@ class ProjectPage extends Component {
     this.projectName = this.projectName.replace(/[@]/g, '/');
 
     this.state = {
-      ...sharedIndividualProjectState.getState(),
       currentProjectName: this.projectName,
     };
+  }
 
-    sharedIndividualProjectState.subscribe((state) => {
-      console.log(state);
-      this.setState(state);
-    });
+  componentDidMount() {
+    ipcRenderer.invoke('api:initializeProjectState', this.projectName);
 
     const self = this;
-    ipcRenderer.on('UpdateState', function (e, newState) {
-      // if (self.state === newState) return;
-      console.log('updating state');
-      console.log(newState);
-      console.log(self.state);
+    ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
       self.setState(newState);
     });
   }
 
-  componentDidMount() {
-    const { lokiLoaded } = this.state;
-
-    if (!lokiLoaded) {
-      sharedControllers
-        .getState()
-        .projectController.setCurrentProjectName(this.projectName);
-      sharedLokiService.getState().lokiService.init(() => {
-        this.lokiServiceLoadedCallback();
-        sharedIndividualProjectState.setState((state) => {
-          console.log("loki's loaded");
-          state.lokiLoaded = true;
-        });
-      });
-    }
-  }
-
   componentWillUnmount() {
-    sharedIndividualProjectState.setState((state) => {
-      state.lokiLoaded = false;
-    });
-
+    // todo: loki loaded set to false
     console.log('unmounting');
     // todo: close timer window
   }
 
-  lokiServiceLoadedCallback = () => {
-    const { nodeStates, nodeTypes, tags } =
-      sharedLokiService.getState().lokiService;
-
-    const nodeTypeList = nodeTypes.find({ Id: { $ne: null } });
-    const nodeTypeArray = [];
-    const nodeStateList = nodeStates.find({ Id: { $ne: null } });
-    const nodeStateArray = [];
-    const tagList = tags.find({ Id: { $ne: null } });
-    const tagArray = [];
-
-    nodeTypeList.forEach((thisNodeType) => {
-      nodeTypeArray.push(thisNodeType.title);
-    });
-    nodeStateList.forEach((thisNodeState) => {
-      nodeStateArray.push(thisNodeState.title);
-    });
-    tagList.forEach((thisTag) => {
-      tagArray.push(thisTag.title);
-    });
-
-    const newState = {
-      ...this.state,
-      nodes: sharedControllers.getState().nodeController.getNodes(),
-      parents: sharedControllers.getState().parentController.getParents(),
-      parentOrder: sharedControllers
-        .getState()
-        .parentController.getParentOrder(),
-      nodeTypes: nodeTypeArray,
-      nodeStates: nodeStateArray,
-      tags: tagArray,
-      timerPreferences: sharedControllers
-        .getState()
-        .timerController.getTimerPreferences(),
-    };
-
-    sharedIndividualProjectState.setState((state) => {
-      // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
-    });
-  };
-
   createNewParent = (parentTitle) => {
-    sharedControllers.getState().parentController.createParent(parentTitle);
+    ParentController.createParent(parentTitle);
 
     const newState = {
       ...this.state,
-      parents: sharedControllers.getState().parentController.getParents(),
-      parentOrder: sharedControllers
-        .getState()
-        .parentController.getParentOrder(),
+      parents: ParentController.getParents(),
+      parentOrder: ParentController.getParentOrder(),
       mustFocusParentTitle: true,
     };
-    sharedIndividualProjectState.setState((state) => {
-      // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
+    ipcRenderer.invoke('api:setProjectState', {
+      newState,
     });
   };
 
   createNewNode = (parentId) => {
     const newTitle = `New Node`;
-    sharedControllers
-      .getState()
-      .nodeController.createNode('child', newTitle, parentId);
+    NodeController.createNode('child', newTitle, parentId);
 
     const newState = {
       ...this.state,
-      nodes: sharedControllers.getState().nodeController.getNodes(),
-      parents: sharedControllers.getState().parentController.getParents(),
+      nodes: NodeController.getNodes(),
+      parents: ParentController.getParents(),
       mustFocusNodeTitle: true,
     };
-    sharedIndividualProjectState.setState((state) => {
+    ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
+      newState,
     });
   };
 
@@ -183,9 +78,10 @@ class ProjectPage extends Component {
     const { nodeTypes, nodeStates } = this.state;
 
     let newState = {};
-    const newEnumObj = sharedControllers
-      .getState()
-      .metadataController.saveMetadataValue(newValue, parentEnum);
+    const newEnumObj = MetadataController.saveMetadataValue(
+      newValue,
+      parentEnum,
+    );
     switch (parentEnum) {
       case 'nodeType':
         newState = {
@@ -203,11 +99,9 @@ class ProjectPage extends Component {
         break;
     }
 
-    sharedIndividualProjectState.setState((state) => {
+    ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
+      newState,
     });
   };
 
@@ -221,114 +115,109 @@ class ProjectPage extends Component {
 
   createGlobalTag = (tag) => {
     const { tags } = this.state;
-    const newTag = sharedControllers.getState().tagController.addTag(tag);
+    const newTag = TagController.addTag(tag);
     const newTags = [...tags, newTag.title];
-    sharedIndividualProjectState.setState((state) => {
-      state.tags = newTags;
+    ipcRenderer.invoke('api:setProjectState', {
+      tags: newTags,
     });
   };
 
   updateNodeTitle = (newTitle, nodeId, isModalNode = true) => {
     this.updateNodeProperty(`title`, nodeId, newTitle, isModalNode);
-    sharedIndividualProjectState.setState((state) => {
-      state.mustFocusNodeTitle = false;
+    ipcRenderer.invoke('api:setProjectState', {
+      mustFocusNodeTitle: false,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
   showParentModal = (parent) => {
-    sharedIndividualProjectState.setState((state) => {
-      state.parentModalVisible = true;
-      state.modalParent = parent;
+    ipcRenderer.invoke('api:setProjectState', {
+      parentModalVisible: true,
+      modalParent: parent,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
   showModal = (node) => {
-    sharedIndividualProjectState.setState((state) => {
-      state.nodeModalVisible = true;
-      state.modalNode = node;
+    ipcRenderer.invoke('api:setProjectState', {
+      nodeModalVisible: true,
+      modalNode: node,
     });
   };
 
   deleteNode = (nodeId, parentId) => {
-    sharedControllers.getState().nodeController.deleteNode(nodeId, parentId);
+    NodeController.deleteNode(nodeId, parentId);
 
     const newState = {
       ...this.state,
-      nodes: sharedControllers.getState().nodeController.getNodes(),
-      parents: sharedControllers.getState().parentController.getParents(),
+      nodes: NodeController.getNodes(),
+      parents: ParentController.getParents(),
     };
 
-    sharedIndividualProjectState.setState((state) => {
+    ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
+      newState,
     });
   };
 
   deleteParent = () => {
     const { modalParent } = this.state;
 
-    sharedControllers.getState().parentController.deleteParent(modalParent.id);
+    ParentController.deleteParent(modalParent.id);
 
     const newState = {
       ...this.state,
-      parents: sharedControllers.getState().parentController.getParents(),
-      parentOrder: sharedControllers
-        .getState()
-        .parentController.getParentOrder(),
+      parents: ParentController.getParents(),
+      parentOrder: ParentController.getParentOrder(),
       parentModalVisible: false,
       modalParent: null,
     };
 
-    sharedIndividualProjectState.setState((state) => {
-      // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
+    ipcRenderer.invoke('api:setProjectState', {
+      newState,
     });
   };
 
   handleOk = () => {
-    const { modalNode } = this.state;
+    const { modalNode, timerPreferences } = this.state;
 
-    sharedIndividualProjectState.setState((state) => {
-      state.currentNodeSelectedInTimer = modalNode.id;
+    ipcRenderer.invoke('api:setProjectState', {
+      currentNodeSelectedInTimer: modalNode.id,
     });
     ipcRenderer.send(
       'MSG_FROM_RENDERER',
       modalNode,
       this.projectName,
-      sharedIndividualProjectState.getState(),
-      sharedTimerPrefs.getState(),
+      this.state,
+      timerPreferences,
     );
     // TODO: don't persist this
-    sharedIndividualProjectState.setState((state) => {
-      state.nodeModalVisible = false;
+    ipcRenderer.invoke('api:setProjectState', {
+      nodeModalVisible: false,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
   handleCancel = () => {
-    sharedIndividualProjectState.setState((state) => {
-      state.parentModalVisible = false;
-      state.nodeModalVisible = false;
-      state.modalNode = null;
-      state.modalParent = null;
+    ipcRenderer.invoke('api:setProjectState', {
+      parentModalVisible: false,
+      nodeModalVisible: false,
+      modalNode: null,
+      modalParent: null,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
   updateNodeProperty = (propertyToUpdate, nodeId, newValue, isFromModal) => {
-    const newNode = sharedControllers
-      .getState()
-      .nodeController.updateNodeProperty(propertyToUpdate, nodeId, newValue);
+    const newNode = NodeController.updateNodeProperty(
+      propertyToUpdate,
+      nodeId,
+      newValue,
+    );
 
-    sharedIndividualProjectState.setState((state) => {
-      state.nodes = sharedControllers.getState().nodeController.getNodes();
-      state.modalNode = isFromModal ? newNode : null;
+    ipcRenderer.invoke('api:setProjectState', {
+      nodes: NodeController.getNodes(),
+      modalNode: isFromModal ? newNode : null,
     });
   };
 
@@ -339,19 +228,15 @@ class ProjectPage extends Component {
     newValue,
     isFromModal,
   ) => {
-    const newParent = sharedControllers
-      .getState()
-      .parentController.updateParentProperty(
-        propertyToUpdate,
-        parentId,
-        newValue,
-      );
+    const newParent = ParentController.updateParentProperty(
+      propertyToUpdate,
+      parentId,
+      newValue,
+    );
 
-    sharedIndividualProjectState.setState((state) => {
-      state.parents = sharedControllers
-        .getState()
-        .parentController.getParents();
-      state.modalParent = isFromModal ? newParent : null;
+    ipcRenderer.invoke('api:setProjectState', {
+      parents: ParentController.getParents(),
+      modalParent: isFromModal ? newParent : null,
     });
   };
 
@@ -361,17 +246,12 @@ class ProjectPage extends Component {
 
     const newState = {
       ...currentState,
-      parents: sharedControllers.getState().parentController.getParents(),
-      parentOrder: sharedControllers
-        .getState()
-        .parentController.getParentOrder(),
+      parents: ParentController.getParents(),
+      parentOrder: ParentController.getParentOrder(),
     };
 
-    sharedIndividualProjectState.setState((state) => {
-      // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
+    ipcRenderer.invoke('api:setProjectState', {
+      newState,
     });
   };
 

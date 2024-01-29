@@ -1,19 +1,10 @@
 import React, { Component, useEffect } from 'react';
 import { ipcRenderer } from 'electron';
-import { createSharedStore } from '../../stores'; // or wherever the above file is stored
 import AntTreeSelect from '../../components/TreeSelect/AntTreeSelect';
 import Timer from '../../components/Timer/timer';
-import projectController from '../../api/project/ProjectController';
-import lokiService from '../../services/LokiService';
-import nodeController from '../../api/nodes/NodeController';
 import timerController from '../../api/timer/TimerController';
 import ISO8601ServiceInstance from '../../services/ISO8601Service';
-// eslint-disable-next-line import/named
-import { individualProjectState } from '../../stores/shared';
-
-const sharedIndividualProjectState = createSharedStore(individualProjectState, {
-  name: 'individualProjectState',
-});
+import NodeController from '../../api/nodes/NodeController';
 
 const titleBarStyle = {
   WebkitAppRegion: 'drag',
@@ -26,43 +17,30 @@ class TimerPage extends Component {
     super(props);
 
     this.state = {};
-    sharedIndividualProjectState.subscribe((state) => {
-      this.setState(state);
-    });
   }
 
   componentDidMount() {
     const self = this;
-    ipcRenderer.on('RetrieveProjectName', function (e, projectName) {
-      if (!self.state.lokiLoaded) {
-        projectController.setCurrentProjectName(projectName);
-        lokiService.init(() => {
-          sharedIndividualProjectState.setState((state) => {
-            state.lokiLoaded = true;
-          });
-        });
-      }
+    ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
+      self.setState(newState);
     });
-    ipcRenderer.on('RetrieveProjectState', function (e, state) {
-      sharedIndividualProjectState.setState((currentState) => {
-        // eslint-disable-next-line no-restricted-syntax
-        for (const property in state) {
-          // eslint-disable-next-line no-continue
-          if (property === 'lokiLoaded') continue;
-          currentState[property] = state[property];
-        }
-      });
-    });
+
     ipcRenderer.on('SaveBeforeClose', function () {
       self.saveCurrentSelectedNodeTime();
     });
+
+    ipcRenderer.invoke('api:getProjectState');
   }
 
   updateSeconds = (seconds) => {
-    const { currentNodeSelectedInTimer } = this.state;
+    const { currentNodeSelectedInTimer, nodes } = this.state;
 
-    sharedIndividualProjectState.setState((state) => {
-      state.nodes[currentNodeSelectedInTimer].timeSpent = seconds;
+    const updatedNode = nodes[currentNodeSelectedInTimer];
+    updatedNode.timeSpent = seconds;
+
+    ipcRenderer.invoke('api:setProjectState', {
+      ...this.state,
+      nodes: { ...nodes, updatedNode },
     });
   };
 
@@ -72,15 +50,16 @@ class TimerPage extends Component {
       return;
     }
 
-    sharedIndividualProjectState.setState((state) => {
-      state.currentNodeSelectedInTimer = selectedNode;
+    ipcRenderer.invoke('api:setProjectState', {
+      ...this.state,
+      currentNodeSelectedInTimer: selectedNode,
     });
   };
 
   endSession = (_seconds) => {
     const { currentNodeSelectedInTimer } = this.state;
     // add a new session to node session history
-    const nodeHistory = nodeController.getNode(
+    const nodeHistory = NodeController.getNode(
       currentNodeSelectedInTimer,
     ).sessionHistory;
     nodeHistory[nodeHistory.length - 1] = {
@@ -89,22 +68,23 @@ class TimerPage extends Component {
       length: _seconds - nodeHistory[nodeHistory.length - 1].startingSeconds,
     };
 
-    nodeController.updateNodeProperty(
+    NodeController.updateNodeProperty(
       `sessionHistory`,
       currentNodeSelectedInTimer,
       nodeHistory,
     );
     this.saveCurrentSelectedNodeTime();
 
-    sharedIndividualProjectState.setState((state) => {
-      state.isTimerRunning = false;
+    ipcRenderer.invoke('api:setProjectState', {
+      ...this.state,
+      stateisTimerRunning: false,
     });
   };
 
   startSession = () => {
     const { currentNodeSelectedInTimer, nodes } = this.state;
     // add a new session to node session history
-    const node = nodeController.getNode(currentNodeSelectedInTimer);
+    const node = NodeController.getNode(currentNodeSelectedInTimer);
     const nodeHistory = node.sessionHistory;
     nodeHistory.push({
       comment: '',
@@ -116,14 +96,14 @@ class TimerPage extends Component {
       startingSeconds: nodes[currentNodeSelectedInTimer].timeSpent,
     });
 
-    nodeController.updateNodeProperty(
+    NodeController.updateNodeProperty(
       `sessionHistory`,
       currentNodeSelectedInTimer,
       nodeHistory,
     );
 
-    sharedIndividualProjectState.setState((state) => {
-      state.isTimerRunning = true;
+    ipcRenderer.invoke('api:setProjectState', {
+      isTimerRunning: true,
     });
   };
 
@@ -132,7 +112,7 @@ class TimerPage extends Component {
 
     // save current node time
     if (currentNodeSelectedInTimer) {
-      nodeController.updateNodeProperty(
+      NodeController.updateNodeProperty(
         'timeSpent',
         currentNodeSelectedInTimer,
         nodes[currentNodeSelectedInTimer].timeSpent,
