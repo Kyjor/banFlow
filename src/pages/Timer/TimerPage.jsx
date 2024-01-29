@@ -57,11 +57,9 @@ class TimerPage extends Component {
   };
 
   endSession = (_seconds) => {
-    const { currentNodeSelectedInTimer } = this.state;
+    const { currentNodeSelectedInTimer, nodes } = this.state;
     // add a new session to node session history
-    const nodeHistory = NodeController.getNode(
-      currentNodeSelectedInTimer,
-    ).sessionHistory;
+    const nodeHistory = nodes[currentNodeSelectedInTimer].sessionHistory;
     nodeHistory[nodeHistory.length - 1] = {
       ...nodeHistory[nodeHistory.length - 1],
       finishDateTime: ISO8601ServiceInstance.getISO8601Time(),
@@ -84,7 +82,7 @@ class TimerPage extends Component {
   startSession = () => {
     const { currentNodeSelectedInTimer, nodes } = this.state;
     // add a new session to node session history
-    const node = NodeController.getNode(currentNodeSelectedInTimer);
+    const node = nodes[currentNodeSelectedInTimer];
     const nodeHistory = node.sessionHistory;
     nodeHistory.push({
       comment: '',

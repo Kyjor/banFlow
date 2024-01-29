@@ -175,7 +175,6 @@ app
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
-    ipcMain.handle('api:getNodes', getNodes);
     ipcMain.handle('api:getNodesWithQuery', getNodesWithQuery);
     ipcMain.handle('api:getParents', getParents);
     ipcMain.handle('api:getParentOrder', getParentOrder);
@@ -186,6 +185,7 @@ app
     ipcMain.handle('api:getProjectState', getProjectState);
     ipcMain.handle('api:initializeProjectState', initializeProjectState);
     ipcMain.handle('api:setProjectState', setProjectState);
+    ipcMain.handle('api:updateNodeProperty', updateNodeProperty);
   })
   .catch(console.log);
 
@@ -353,9 +353,8 @@ ipcMain.on('InitializedLokiService', (event, lokiService) => {
   lokiServices.push(currentLokiService);
 });
 
-const getNodes = () => {
-  console.log('current loki');
-  const nodes = currentLokiService.nodes.find({ Id: { $ne: null } });
+const getNodesWithQuery = (query: any) => {
+  const nodes = currentLokiService.nodes.find(query);
 
   let response = {};
 
@@ -369,11 +368,6 @@ const getNodes = () => {
   });
 
   return response;
-};
-
-const getNodesWithQuery = (query: any) => {
-  console.log('current loki');
-  return currentLokiService.nodes.find(query);
 };
 
 const getParents = () => {
@@ -428,7 +422,7 @@ const getTimerPreferences = () => {
 };
 
 const initializeProjectState = (event, projectName: any) => {
-  individualProjectStateValue.nodes = getNodes();
+  individualProjectStateValue.nodes = getNodesWithQuery({ Id: { $ne: null } });
   individualProjectStateValue.parents = getParents();
   individualProjectStateValue.parentOrder = getParentOrder();
   individualProjectStateValue.lokiLoaded = true;
@@ -468,4 +462,46 @@ const getProjectState = (event) => {
       individualProjectStateValue,
     );
   }
+};
+
+const updateNodeProperty = (
+  _event: any,
+  propertyToUpdate: string | number,
+  nodeId: any,
+  newValue: null,
+) => {
+  // If debug, print out the property to update and the new value
+  if (process.env.NODE_ENV === `development`) {
+    console.log(
+      `Updating node with id ${nodeId}. ${propertyToUpdate} to ${newValue}`,
+    );
+  }
+
+  if (newValue == null) {
+    console.error(`You must pass a value to updateNodeProperty`);
+    return;
+  }
+  let nodeToReturn = null;
+  currentLokiService.nodes
+    .chain()
+    .find({ id: nodeId })
+    .update((node: { [x: string]: any }) => {
+      node[propertyToUpdate] = newValue;
+      nodeToReturn = node;
+    });
+
+  currentLokiService.saveDB();
+  // If debug, print out the property to update and the new value
+  if (process.env.NODE_ENV === `development`) {
+    console.log(
+      `Node with id ${nodeId} and name ${
+        // @ts-ignore
+        nodeToReturn.title ? nodeToReturn.title : null
+      } updated successfully.`,
+    );
+  }
+  setProjectState(null, {});
+
+  // eslint-disable-next-line consistent-return
+  return nodeToReturn;
 };

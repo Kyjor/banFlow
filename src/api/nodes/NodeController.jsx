@@ -16,7 +16,7 @@ const NodeController = {
     return nodeService.getNodes();
   },
 
-  getNode(nodeId) {
+  async getNode(nodeId) {
     return nodeService.getNode(nodeId);
   },
 

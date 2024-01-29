@@ -142,7 +142,7 @@ function Timer(props) {
     },
   });
 
-  function toggle() {
+  const toggle = async () => {
     const { endSession, seconds, selectedNode, startSession } = props;
     if (timer.isRunning()) {
       timer.stop();
@@ -151,13 +151,13 @@ function Timer(props) {
       }
     } else {
       if (selectedNode) {
-        startSession(seconds);
+        await startSession(seconds);
       }
       timer.start();
     }
 
     updateEvent({ isActive: !event.isActive });
-  }
+  };
 
   function toggleTomatoTimer() {
     if (

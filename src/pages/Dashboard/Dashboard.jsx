@@ -65,7 +65,6 @@ class Dashboard extends Component {
     // tags.find({ Id: { $ne: null } });
     const tagArray = [];
 
-    console.log(nodeTypeList);
     nodeTypeList.forEach((thisNodeType) => {
       nodeTypeArray.push(thisNodeType.title);
     });

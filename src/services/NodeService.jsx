@@ -11,14 +11,15 @@ const NodeService = {
    * @permission {Read}
    */
   async getNodes() {
-    return ipcRenderer.invoke('api:getNodes');
+    return this.getNodesWithQuery({ Id: { $ne: null } });
   },
 
-  getNode(nodeId) {
-    return lokiService.nodes.find({ id: nodeId })[0];
+  async getNode(nodeId) {
+    const nodes = await this.getNodesWithQuery({ Id: { $eq: nodeId } });
+    return nodes[0];
   },
 
-  getNodesWithQuery(query) {
+  async getNodesWithQuery(query) {
     return ipcRenderer.invoke('api:getNodesWithQuery', query);
   },
 
@@ -101,36 +102,12 @@ const NodeService = {
   },
 
   updateNodeProperty(propertyToUpdate, nodeId, newValue) {
-    // If debug, print out the property to update and the new value
-    if (process.env.NODE_ENV === `development`) {
-      console.log(
-        `Updating node with id ${nodeId}. ${propertyToUpdate} to ${newValue}`,
-      );
-    }
-
-    if (newValue == null) {
-      console.error(`You must pass a value to updateNodeProperty`);
-      return;
-    }
-    let nodeToReturn = null;
-    lokiService.nodes
-      .chain()
-      .find({ id: nodeId })
-      .update((node) => {
-        node[propertyToUpdate] = newValue;
-        nodeToReturn = node;
-      });
-
-    lokiService.saveDB();
-    // If debug, print out the property to update and the new value
-    if (process.env.NODE_ENV === `development`) {
-      console.log(
-        `Node with id ${nodeId} and name ${nodeToReturn.title} updated successfully.`,
-      );
-    }
-
-    // eslint-disable-next-line consistent-return
-    return nodeToReturn;
+    return ipcRenderer.invoke(
+      'api:updateNodeProperty',
+      propertyToUpdate,
+      nodeId,
+      newValue,
+    );
   },
 };
 
