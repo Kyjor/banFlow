@@ -1,5 +1,3 @@
-import lokiService from './LokiService';
-
 const ParentService = {
   /**
    * @function getParents
@@ -8,7 +6,7 @@ const ParentService = {
    * @returns {array} parent - all parents
    * @permission {Read}
    */
-  getParents() {
+  getParents(lokiService) {
     const parents = lokiService.parents.find({ Id: { $ne: null } });
 
     let response = {};
@@ -32,7 +30,7 @@ const ParentService = {
    * @returns {array} string - the order of parents represented by id
    * @permission {Read}
    */
-  getParentOrder() {
+  getParentOrder(lokiService) {
     const parentOrder = lokiService.parentOrder.find({ Id: { $ne: null } });
 
     const response = [];
@@ -44,7 +42,7 @@ const ParentService = {
     return response;
   },
 
-  createParent(parentTitle) {
+  createParent(lokiService, parentTitle) {
     const { parents } = lokiService;
 
     const nextId = parents.data.length
@@ -59,18 +57,18 @@ const ParentService = {
       sessionHistory: [],
       nodeIds: [],
     });
-    this.addParentToOrder(`parent-${nextId}`);
+    this.addParentToOrder(lokiService, `parent-${nextId}`);
     lokiService.saveDB();
 
     return newParent;
   },
 
-  addParentToOrder(newParentId) {
+  addParentToOrder(lokiService, newParentId) {
     lokiService.parentOrder.insert({ parentId: newParentId });
     lokiService.saveDB();
   },
 
-  deleteParent(parentId) {
+  deleteParent(lokiService, parentId) {
     const { parents, parentOrder } = lokiService;
 
     parentOrder.chain().find({ parentId }).remove();
@@ -79,7 +77,7 @@ const ParentService = {
     lokiService.saveDB();
   },
 
-  updateParentProperty(propertyToUpdate, parentId, newValue) {
+  updateParentProperty(lokiService, propertyToUpdate, parentId, newValue) {
     let parentToReturn = null;
     lokiService.parents
       .chain()
@@ -93,7 +91,7 @@ const ParentService = {
     return parentToReturn;
   },
 
-  updateParentOrder(parentOrder) {
+  updateParentOrder(lokiService, parentOrder) {
     let x = 1;
     const currentParentOrder = lokiService.parentOrder;
 
@@ -111,7 +109,12 @@ const ParentService = {
     lokiService.saveDB();
   },
 
-  updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {
+  updateNodesInParents(
+    lokiService,
+    updatedOriginParent,
+    updatedDestinationParent,
+    nodeId,
+  ) {
     const { nodes, parents } = lokiService;
     parents
       .chain()

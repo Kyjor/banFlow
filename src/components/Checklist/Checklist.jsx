@@ -92,9 +92,13 @@ function Checklist(props) {
           return (
             <Check
               key={key}
-              deleteCheck={deleteCheck}
+              deleteCheck={() => {
+                deleteCheck();
+              }}
               index={index}
-              updateCheck={updateCheck}
+              updateCheck={() => {
+                updateCheck();
+              }}
               check={check}
             />
           );

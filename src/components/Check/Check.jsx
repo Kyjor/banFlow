@@ -57,9 +57,7 @@ function Check(props) {
           resize: 'none',
           height: '12px',
           border: 'none',
-          // backgroundColor: 'transparent',
         }}
-        // showCount={this.state.textSelected}
         maxLength={70}
         autoSize={{ maxRows: 1 }}
         updateText={(value) => {
@@ -88,7 +86,9 @@ function Check(props) {
         onMouseOut={() => {
           setIsHoveringClose(false);
         }}
-        onClick={handleDeleteCheck}
+        onClick={() => {
+          handleDeleteCheck();
+        }}
       />
     </div>
   );

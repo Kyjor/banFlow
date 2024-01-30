@@ -1,8 +1,9 @@
+// eslint-disable-next-line import/no-cycle
 import projectService from '../../services/ProjectService';
 
 /**
  * @class ProjectController
- * @desc creates a new Project with a set of given properties
+ * @desc Interacts directly with the ProjectService to perform CRUD operations on nodes. This is the interface between the UI and the database.
  */
 const ProjectController = {
   /**
@@ -20,9 +21,7 @@ const ProjectController = {
    * @function createProject
    * @desc creates a new Project with a set of given properties
    * @route Projects
-   * @param {string} projectType - the type of project to create.
-   * @param {string} projectTitle - the title of the project.
-   * @param {string} [parentId=``] - the Id of the parent of the project. Can be null or empty.
+   * @param {string} projectName - the title of the project.
    * @returns {object} project - the newly created project
    * @permission {Modification}
    */
@@ -32,13 +31,23 @@ const ProjectController = {
 
   /**
    * @function setCurrentProjectName
-   * @desc creates a new Project with a set of given properties
+   * @desc sets the current project name
    * @route Projects
-   * @param {string} projectType - the type of project to create.
    * @permission {Modification}
    */
   setCurrentProjectName(projectName) {
     return projectService.setCurrentProjectName(projectName);
+  },
+
+  /**
+   * @function openProject
+   * @desc creates a new instance of lokiservice to access the project
+   * @route Projects
+   * @param {string} projectName - the name of the project to open.
+   * @permission {Read}
+   */
+  openProject(projectName) {
+    return projectService.openProject(projectName);
   },
 
   renameProject(oldName, newName) {

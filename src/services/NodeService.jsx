@@ -1,4 +1,3 @@
-import lokiService from './LokiService';
 import ISO8601ServiceInstance from './ISO8601Service';
 
 const NodeService = {
@@ -9,7 +8,7 @@ const NodeService = {
    * @returns {array} node - all nodes
    * @permission {Read}
    */
-  getNodes() {
+  getNodes(lokiService) {
     const nodes = lokiService.nodes.find({ Id: { $ne: null } });
 
     let response = {};
@@ -26,12 +25,33 @@ const NodeService = {
     return response;
   },
 
-  getNode(nodeId) {
+  getNode(lokiService, nodeId) {
     return lokiService.nodes.find({ id: nodeId })[0];
   },
 
-  getNodesWithQuery(query) {
-    return lokiService.nodes.find(query);
+  getNodesWithQuery(lokiService, query) {
+    const nodes = lokiService.nodes.find(query);
+
+    let response = {};
+
+    nodes.forEach((node) => {
+      response = {
+        ...response,
+        [node.id]: {
+          ...node,
+        },
+      };
+    });
+
+    return response;
+  },
+
+  getNodeTypes(lokiService) {
+    return lokiService.nodeTypes.find({ Id: { $ne: null } });
+  },
+
+  getNodeStates(lokiService) {
+    return lokiService.nodeStates.find({ Id: { $ne: null } });
   },
 
   /**
@@ -44,7 +64,7 @@ const NodeService = {
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode(nodeType, nodeTitle, parentId = ``) {
+  createNode(lokiService, nodeType, nodeTitle, parentId = ``) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
     const nextId = nodes.data.length
@@ -95,7 +115,7 @@ const NodeService = {
     return newNode;
   },
 
-  deleteNode(nodeId, parentId) {
+  deleteNode(lokiService, nodeId, parentId) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
 
@@ -112,7 +132,7 @@ const NodeService = {
     lokiService.saveDB();
   },
 
-  updateNodeProperty(propertyToUpdate, nodeId, newValue) {
+  updateNodeProperty(lokiService, propertyToUpdate, nodeId, newValue) {
     // If debug, print out the property to update and the new value
     if (process.env.NODE_ENV === `development`) {
       console.log(

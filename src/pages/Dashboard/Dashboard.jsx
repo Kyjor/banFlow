@@ -3,7 +3,6 @@ import React, { Component } from 'react';
 // Styles
 // Layouts
 import { Link } from 'react-router-dom';
-import { createSharedStore } from 'electron-shared-state';
 import {
   Badge,
   Calendar,
@@ -21,20 +20,11 @@ import Layout from '../../layouts/App';
 import Path from '../../components/Projects/Path';
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
 import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar';
-import {
-  // eslint-disable-next-line import/named
-  controllers,
-  // eslint-disable-next-line import/named
-  initialIndividualProjectState,
-  // eslint-disable-next-line import/named
-  lokiService,
-} from '../../stores/shared';
-
-const sharedIndividualProjectState = createSharedStore(
-  initialIndividualProjectState,
-);
-const sharedControllers = createSharedStore(controllers);
-const sharedLokiService = createSharedStore(lokiService);
+import ProjectController from '../../api/project/ProjectController';
+import NodeController from '../../api/nodes/NodeController';
+import ParentController from '../../api/parent/ParentController';
+import TimerController from '../../api/timer/TimerController';
+import TagController from '../../api/tag/TagController';
 
 /**
  * Home
@@ -50,21 +40,24 @@ class Dashboard extends Component {
       selectedProject: '',
       isLokiLoaded: false,
     };
+
+    const self = this;
+    ipcRenderer.on('UpdateCurrentProject', function (e, projectName) {
+      self.lokiServiceLoadedCallback(projectName);
+    });
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners();
+    ipcRenderer.removeAllListeners('UpdateCurrentProject');
   }
 
-  lokiServiceLoadedCallback = () => {
-    const { nodeStates, nodeTypes, tags } =
-      sharedLokiService.getState().lokiService;
-
-    const nodeTypeList = nodeTypes.find({ Id: { $ne: null } });
+  // eslint-disable-next-line react/no-unused-class-component-methods
+  lokiServiceLoadedCallback = (projectName) => {
+    const nodeTypeList = NodeController.getNodeTypes();
     const nodeTypeArray = [];
-    const nodeStateList = nodeStates.find({ Id: { $ne: null } });
+    const nodeStateList = NodeController.getNodeStates();
     const nodeStateArray = [];
-    const tagList = tags.find({ Id: { $ne: null } });
+    const tagList = TagController.getTags();
     const tagArray = [];
 
     nodeTypeList.forEach((thisNodeType) => {
@@ -79,36 +72,30 @@ class Dashboard extends Component {
 
     const newState = {
       ...this.state,
-      nodes: sharedControllers.getState().nodeController.getNodes(),
-      parents: sharedControllers.getState().parentController.getParents(),
-      parentOrder: sharedControllers
-        .getState()
-        .parentController.getParentOrder(),
+      nodes: NodeController.getNodes(),
+      parents: ParentController.getParents(),
+      parentOrder: ParentController.getParentOrder(),
       nodeTypes: nodeTypeArray,
       nodeStates: nodeStateArray,
+      selectedProject: projectName,
       tags: tagArray,
-      timerPreferences: sharedControllers
-        .getState()
-        .timerController.getTimerPreferences(),
+      timerPreferences: TimerController.getTimerPreferences(),
     };
 
-    sharedIndividualProjectState.setState((state) => {
-      // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
-    });
+    this.setState(newState);
   };
 
   // eslint-disable-next-line class-methods-use-this
   getProjectTotalTimeSpent = () => {
     let totalTime = 0;
-    const cardList = sharedControllers
-      .getState()
-      .nodeController.getNodesWithQuery({ timeSpent: { $gte: 1 } });
-    cardList.forEach((card) => {
+    const cardList = NodeController.getNodesWithQuery({
+      timeSpent: { $gte: 1 },
+    });
+
+    Object.values(cardList).forEach((card) => {
       totalTime += card.timeSpent;
     });
+
     return totalTime;
   };
 
@@ -117,34 +104,22 @@ class Dashboard extends Component {
     const listData = [];
     // eslint-disable-next-line no-underscore-dangle
     const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-    const dueItems = sharedControllers
-      .getState()
-      .nodeController.getNodesWithQuery({ estimatedDate: { $ne: '' } });
-    dueItems.forEach((item) => {
+    const dueItems = NodeController.getNodesWithQuery({
+      estimatedDate: { $ne: '' },
+    });
+    Object.values(dueItems).forEach((item) => {
       if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
         listData.push({ type: 'success', content: item.title });
       }
     });
+
     return listData || [];
   };
 
+  // eslint-disable-next-line class-methods-use-this
   updateSelectedProject = (projectName) => {
     if (projectName) {
-      sharedControllers
-        .getState()
-        .projectController.setCurrentProjectName(projectName);
-      sharedLokiService.getState().lokiService.init(() => {
-        this.lokiServiceLoadedCallback();
-        sharedIndividualProjectState.setState((state) => {
-          state.lokiLoaded = true;
-        });
-        const { selectedProject } = this.state;
-        if (selectedProject === projectName) {
-          this.setState({ selectedProject: null });
-        } else {
-          this.setState({ selectedProject: projectName });
-        }
-      });
+      ProjectController.openProject(projectName);
     }
   };
 
@@ -166,12 +141,12 @@ class Dashboard extends Component {
     const listData = [];
     // eslint-disable-next-line no-underscore-dangle
     const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-    const dueItems = sharedControllers
-      .getState()
-      .nodeController.getNodesWithQuery({ estimatedDate: { $ne: '' } });
-    dueItems.forEach((item) => {
+    const dueItems = NodeController.getNodesWithQuery({
+      estimatedDate: { $ne: '' },
+    });
+
+    Object.values(dueItems).forEach((item) => {
       if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
-        console.log(cellDate);
         listData.push({
           type: 'success',
           content: item.title,
@@ -179,6 +154,7 @@ class Dashboard extends Component {
         });
       }
     });
+
     return (
       <List
         size="large"
@@ -249,7 +225,6 @@ class Dashboard extends Component {
                     )}
                   </PageHeader>
                 </TabPane>
-
                 <TabPane tab="Monthly" key="2">
                   <div>
                     <Calendar dateCellRender={this.dateCellRender} />,

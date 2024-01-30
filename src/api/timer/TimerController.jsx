@@ -1,12 +1,17 @@
-import timerService from '../../services/TimerService';
+import { ipcRenderer } from 'electron';
 
+/**
+ * @class TimerController
+ * @desc Interacts with the ipcRenderer to perform CRUD operations on timer preferences. This is the interface between the UI and the database.
+ */
 const TimerController = {
   getTimerPreferences() {
-    return timerService.getTimerPreferences();
+    return ipcRenderer.sendSync('api:getTimerPreferences');
   },
 
   updateTimerPreferenceProperty(propertyToUpdate, newValue) {
-    return timerService.updateTimerPreferenceProperty(
+    return ipcRenderer.sendSync(
+      'api:updateTimerPreferenceProperty',
       propertyToUpdate,
       newValue,
     );

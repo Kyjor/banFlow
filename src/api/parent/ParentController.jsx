@@ -1,8 +1,8 @@
-import parentService from '../../services/ParentService';
+import { ipcRenderer } from 'electron';
 
 /**
  * @class ParentController
- * @desc creates a new Parent with a set of given properties
+ * @desc Interacts with the ipcRenderer to perform CRUD operations on nodes. This is the interface between the UI and the database.
  */
 const ParentController = {
   /**
@@ -13,7 +13,7 @@ const ParentController = {
    * @permission {Read}
    */
   getParents() {
-    return parentService.getParents();
+    return ipcRenderer.sendSync('api:getParents');
   },
 
   /**
@@ -24,7 +24,7 @@ const ParentController = {
    * @permission {Read}
    */
   getParentOrder() {
-    return parentService.getParentOrder();
+    return ipcRenderer.sendSync('api:getParentOrder');
   },
 
   /**
@@ -38,15 +38,16 @@ const ParentController = {
    * @permission {Modification}
    */
   createParent(parentTitle) {
-    return parentService.createParent(parentTitle);
+    return ipcRenderer.sendSync('api:createParent', parentTitle);
   },
 
   deleteParent(parentId) {
-    parentService.deleteParent(parentId);
+    ipcRenderer.sendSync('api:deleteParent', parentId);
   },
 
   updateParentProperty(propertyToUpdate, parentId, newValue) {
-    return parentService.updateParentProperty(
+    return ipcRenderer.sendSync(
+      'api:updateParentProperty',
       propertyToUpdate,
       parentId,
       newValue,
@@ -54,11 +55,12 @@ const ParentController = {
   },
 
   updateParentOrder(parentOrder) {
-    parentService.updateParentOrder(parentOrder);
+    ipcRenderer.sendSync('api:updateParentOrder', parentOrder);
   },
 
   updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {
-    parentService.updateNodesInParents(
+    ipcRenderer.sendSync(
+      'api:updateNodesInParents',
       updatedOriginParent,
       updatedDestinationParent,
       nodeId,

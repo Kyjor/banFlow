@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define,@typescript-eslint/no-unused-vars */
 /* eslint global-require: off, no-console: off, promise/always-return: off */
 
 /**
@@ -24,10 +25,21 @@ import * as remoteMain from '@electron/remote/main';
 import installExtension, {
   REACT_DEVELOPER_TOOLS,
 } from 'electron-devtools-installer';
+import { individualProjectState } from '../stores/shared';
 import MenuBuilder from './menu';
 import { pathCreator } from './util';
+import LokiService from '../services/LokiService';
+import NodeService from '../services/NodeService';
+import ParentService from '../services/ParentService';
+import MetadataService from '../services/MetadataService';
+import TagService from '../services/TagService';
+import TimerService from '../services/TimerService';
 
 remoteMain.initialize();
+let mainWindow: BrowserWindow | null = null;
+// eslint-disable-next-line no-undef
+let timerWindow: BrowserWindow | Electron.PopupOptions | null | undefined;
+let individualProjectStateValue: any = individualProjectState;
 
 export default class AppUpdater {
   constructor() {
@@ -37,7 +49,6 @@ export default class AppUpdater {
   }
 }
 
-let mainWindow: BrowserWindow | null = null;
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
@@ -116,15 +127,16 @@ const createWindow = async () => {
   });
 
   mainWindow.on('close', function (e) {
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: 'question',
-      buttons: ['Yes', 'No'],
-      title: 'Confirm',
-      message: 'Are you sure you want to quit?',
-    });
-
-    if (choice === 1) {
-      e.preventDefault();
+    if (mainWindow) {
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: 'question',
+        buttons: ['Yes', 'No'],
+        title: 'Confirm',
+        message: 'Are you sure you want to quit?',
+      });
+      if (choice === 1) {
+        e.preventDefault();
+      }
     }
   });
 
@@ -170,29 +182,25 @@ app
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
+    ipcMain.handle('api:getProjectState', getProjectState);
+    ipcMain.handle('api:setProjectState', setProjectState);
+    ipcMain.handle('api:initializeProjectState', initializeProjectState);
   })
   .catch(console.log);
 
 ipcMain.on(
   'MSG_FROM_RENDERER',
-  (
-    event,
-    node,
-    projectName,
-    stateInit,
-    lokiService,
-    timerPrefs,
-    controllers,
-  ) => {
+  (_event, node, projectName, stateInit, timerPrefs) => {
+    // @ts-ignore
     mainWindow.webContents.send(
       'MSG_FROM_RENDERER',
-      '(event,node, projectName, stateInit, lokiService, timerPrefs, controllers)',
+      '(_event, node, projectName, stateInit, timerPrefs, controllers)',
     );
     createTimerWindow(node, projectName, stateInit, timerPrefs);
   },
 );
 
-ipcMain.on('SaveNodeTime', (event, nodeId, seconds) => {
+ipcMain.on('SaveNodeTime', (_event, nodeId, seconds) => {
   // @ts-ignore
   mainWindow.webContents.send('SaveNodeTime', nodeId, seconds);
 });
@@ -204,9 +212,6 @@ ipcMain.on('GetProjectFile', () => {
   // @ts-ignore
   mainWindow.webContents.send('ReturnProjectFile', fileName);
 });
-
-// eslint-disable-next-line no-undef
-let timerWindow: BrowserWindow | Electron.PopupOptions | null | undefined;
 
 function createTimerWindow(
   node: any,
@@ -221,6 +226,7 @@ function createTimerWindow(
   }
   Menu.setApplicationMenu(null);
   // Create the browser window.
+  // @ts-ignore
   timerWindow = new BrowserWindow({
     width: 350,
     height: 250,
@@ -234,6 +240,7 @@ function createTimerWindow(
     // You need to activate `nativeWindowOpen`
     webPreferences: {
       nodeIntegration: true,
+      // @ts-ignore
       nativeWindowOpen: true,
       enableRemoteModule: true,
       contextIsolation: false,
@@ -263,6 +270,7 @@ function createTimerWindow(
       timerWindow.webContents.on('context-menu', (e, props) => {
         const { x, y } = props;
 
+        // @ts-ignore
         Menu.buildFromTemplate([
           {
             label: 'Inspect element',
@@ -302,3 +310,251 @@ function createTimerWindow(
     timerWindow = null;
   });
 }
+let currentLokiService: any;
+const lokiServices: any = [];
+ipcMain.on('InitializeLokiProject', (event, projectName) => {
+  // set currentLokiService to the lokiService with the matching projectName
+  currentLokiService = lokiServices.find(
+    (lokiService: any) => lokiService.projectName === projectName,
+  );
+  if (!currentLokiService) {
+    console.log('creating new loki service, didnt find one with that name');
+    currentLokiService = new LokiService(projectName);
+    // add currentLokiService to lokiServices
+    lokiServices.push(currentLokiService);
+  }
+
+  individualProjectStateValue.projectName = projectName;
+  currentLokiService.init(lokiLoadedCallback);
+  event.returnValue = projectName;
+});
+
+const lokiLoadedCallback = () => {
+  if (mainWindow) {
+    mainWindow.webContents.send(
+      'UpdateCurrentProject',
+      individualProjectStateValue.projectName,
+    );
+  }
+  if (mainWindow) {
+    mainWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue.projectName,
+    );
+  }
+};
+
+ipcMain.on('InitializedLokiService', (_event, lokiService) => {
+  currentLokiService = lokiService;
+  // add currentLokiService to lokiServices
+  lokiServices.push(currentLokiService);
+});
+
+// Todo: Consolidate these gets into one function
+ipcMain.on('api:getNodesWithQuery', (event, query) => {
+  event.returnValue = NodeService.getNodesWithQuery(currentLokiService, query);
+});
+
+ipcMain.on('api:getNodes', (event) => {
+  event.returnValue = NodeService.getNodes(currentLokiService);
+});
+
+ipcMain.on('api:getNode', (event, nodeId) => {
+  event.returnValue = NodeService.getNodesWithQuery(currentLokiService, nodeId);
+});
+
+ipcMain.on('api:createNode', (event, nodeType, nodeTitle, parentId) => {
+  event.returnValue = NodeService.createNode(
+    currentLokiService,
+    nodeType,
+    nodeTitle,
+    parentId,
+  );
+});
+
+ipcMain.on('api:deleteNode', (event, nodeId, parentId) => {
+  NodeService.deleteNode(currentLokiService, nodeId, parentId);
+  event.returnValue = true;
+});
+
+ipcMain.on(
+  'api:updateNodeProperty',
+  (event, propertyToUpdate, nodeId, newValue) => {
+    event.returnValue = NodeService.updateNodeProperty(
+      currentLokiService,
+      propertyToUpdate,
+      nodeId,
+      newValue,
+    );
+  },
+);
+
+ipcMain.on('api:getParents', (event) => {
+  event.returnValue = ParentService.getParents(currentLokiService);
+});
+
+ipcMain.on('api:getParentOrder', (event) => {
+  event.returnValue = ParentService.getParentOrder(currentLokiService);
+});
+
+ipcMain.on('api:createParent', (event, parentTitle) => {
+  event.returnValue = ParentService.createParent(
+    currentLokiService,
+    parentTitle,
+  );
+});
+
+ipcMain.on('api:deleteParent', (event, parentId) => {
+  ParentService.deleteParent(currentLokiService, parentId);
+  event.returnValue = true;
+});
+
+ipcMain.on(
+  'api:updateParentProperty',
+  (event, propertyToUpdate, parentId, newValue) => {
+    event.returnValue = ParentService.updateParentProperty(
+      currentLokiService,
+      propertyToUpdate,
+      parentId,
+      newValue,
+    );
+  },
+);
+
+ipcMain.on('api:updateParentOrder', (event, parentOrder) => {
+  ParentService.updateParentOrder(currentLokiService, parentOrder);
+  event.returnValue = true;
+});
+
+ipcMain.on(
+  'api:updateNodesInParents',
+  (event, updatedOriginParent, updatedDestinationParent, nodeId) => {
+    ParentService.updateNodesInParents(
+      currentLokiService,
+      updatedOriginParent,
+      updatedDestinationParent,
+      nodeId,
+    );
+    event.returnValue = true;
+  },
+);
+
+ipcMain.on('api:initializeProjectState', (event, projectName: any) => {
+  individualProjectStateValue.nodes = NodeService.getNodesWithQuery(
+    currentLokiService,
+    {
+      Id: { $ne: null },
+    },
+  );
+  individualProjectStateValue.parents =
+    ParentService.getParents(currentLokiService);
+  individualProjectStateValue.parentOrder =
+    ParentService.getParentOrder(currentLokiService);
+  individualProjectStateValue.lokiLoaded = true;
+  individualProjectStateValue.projectName = projectName;
+
+  event.returnValue = individualProjectStateValue;
+});
+
+// Metadata
+ipcMain.on('api:saveMetadataValue', (event, enumValueTitle, parentEnum) => {
+  MetadataService.saveMetadataValue(
+    currentLokiService,
+    enumValueTitle,
+    parentEnum,
+  );
+  event.returnValue = true;
+});
+
+// Tags
+ipcMain.on('api:getTags', (event) => {
+  event.returnValue = TagService.getTags(currentLokiService);
+});
+
+ipcMain.on('api:addTag', (event, tagTitle) => {
+  TagService.addTag(currentLokiService, tagTitle);
+  event.returnValue = true;
+});
+
+// Timer
+ipcMain.on('api:getTimerPreferences', (event) => {
+  TimerService.getTimerPreferences(currentLokiService);
+  event.returnValue = true;
+});
+
+ipcMain.on(
+  'api:updateTimerPreferenceProperty',
+  (event, propertyToUpdate, newValue) => {
+    TimerService.updateTimerPreferenceProperty(
+      currentLokiService,
+      propertyToUpdate,
+      newValue,
+    );
+    event.returnValue = true;
+  },
+);
+
+ipcMain.on('api:getNodeTypes', (event) => {
+  event.returnValue = NodeService.getNodeTypes(currentLokiService);
+});
+
+ipcMain.on('api:getNodeStates', (event) => {
+  event.returnValue = NodeService.getNodeStates(currentLokiService);
+});
+
+const setProjectState = (_event: any, values: any) => {
+  individualProjectStateValue = {
+    ...individualProjectState,
+  };
+  Object.entries(values).forEach(([key, value]) => {
+    individualProjectStateValue = {
+      ...individualProjectStateValue,
+      [key]: value,
+    };
+  });
+
+  if (mainWindow) {
+    mainWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
+    );
+  }
+  if (timerWindow) {
+    timerWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
+    );
+  }
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const getProjectState = () => {
+  if (timerWindow) {
+    timerWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
+    );
+  }
+};
+
+const initializeProjectState = (_event: any, projectName: any) => {
+  individualProjectStateValue.nodes = NodeService.getNodesWithQuery(
+    currentLokiService,
+    {
+      Id: { $ne: null },
+    },
+  );
+  individualProjectStateValue.parents =
+    ParentService.getParents(currentLokiService);
+  individualProjectStateValue.parentOrder =
+    ParentService.getParentOrder(currentLokiService);
+  individualProjectStateValue.lokiLoaded = true;
+  individualProjectStateValue.projectName = projectName;
+
+  if (mainWindow) {
+    mainWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
+    );
+  }
+};

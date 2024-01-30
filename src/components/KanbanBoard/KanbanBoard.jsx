@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-props-no-spreading */
 import React, { Component } from 'react';
 import * as PropTypes from 'prop-types';
 import { DragDropContext, Droppable } from 'react-beautiful-dnd';
@@ -22,10 +23,6 @@ class KanbanBoard extends Component {
       ? `You have moved the node to position ${update.destination.index + 1}`
       : `You are currently not over a droppable area`;
     provided.announce(message);
-    // const { destination } = update;
-    // const opacity = destination
-    //   ? destination.index / Object.keys(this.props.nodes).length
-    //   : 0;
   };
 
   onDragEnd = (result, provided) => {
@@ -98,7 +95,7 @@ class KanbanBoard extends Component {
       nodeIds: finishNodeIds,
     };
 
-    this.props.updateParents(() => {
+    updateParents(() => {
       parentController.updateNodesInParents(newStart, newFinish, draggableId);
     });
   };

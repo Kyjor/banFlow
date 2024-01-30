@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps,react/destructuring-assignment,no-nested-ternary */
 import React, { useEffect, useReducer } from 'react';
 import PropTypes from 'prop-types';
 import { useTimer } from 'react-use-precision-timer';
@@ -142,7 +143,7 @@ function Timer(props) {
     },
   });
 
-  function toggle() {
+  const toggle = async () => {
     const { endSession, seconds, selectedNode, startSession } = props;
     if (timer.isRunning()) {
       timer.stop();
@@ -151,13 +152,13 @@ function Timer(props) {
       }
     } else {
       if (selectedNode) {
-        startSession(seconds);
+        await startSession(seconds);
       }
       timer.start();
     }
 
     updateEvent({ isActive: !event.isActive });
-  }
+  };
 
   function toggleTomatoTimer() {
     if (
@@ -195,6 +196,7 @@ function Timer(props) {
     !event.isActive ? (toggle(), toggleTomatoTimer()) : toggleTomatoTimer();
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   function getTimeLeft(event) {
     let secondsLeft = 0;
 
@@ -216,6 +218,7 @@ function Timer(props) {
   }
 
   function handlePlayButtonClick() {
+    // eslint-disable-next-line no-unused-expressions
     event.isActive && !event.isBetweenRounds
       ? toggle()
       : event.isBetweenRounds
@@ -325,7 +328,9 @@ function Timer(props) {
           </div>
         </div>
         <Button
-          onClick={handleTomatoTimerButtonClick}
+          onClick={() => {
+            handleTomatoTimerButtonClick();
+          }}
           style={{
             backgroundColor: '#ec8e8e',
             color: 'black',
@@ -358,7 +363,6 @@ function Timer(props) {
               display: 'flex',
               flexDirection: 'row',
               justifyContent: 'space-around',
-              // overflow:'hidden',
             }}
           >
             <div>Round: {event.tomatoTimerRound}</div>
@@ -411,7 +415,9 @@ function Timer(props) {
           className={`button button-primary button-primary-${
             event.isActive ? 'active' : 'inactive'
           }`}
-          onClick={handlePlayButtonClick}
+          onClick={() => {
+            handlePlayButtonClick();
+          }}
         >
           {event.isActive && !event.isBetweenRounds ? (
             <PauseOutlined />

@@ -1,12 +1,10 @@
-import lokiService from './LokiService';
-
 const TimerService = {
-  getTimerPreferences() {
+  getTimerPreferences(lokiService) {
     const { timerPreferences } = lokiService;
     return timerPreferences.data[0];
   },
 
-  updateTimerPreferenceProperty(propertyToUpdate, newValue) {
+  updateTimerPreferenceProperty(lokiService, propertyToUpdate, newValue) {
     const { timerPreferences } = lokiService;
 
     timerPreferences
