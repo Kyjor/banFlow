@@ -46,6 +46,14 @@ const NodeService = {
     return response;
   },
 
+  getNodeTypes(lokiService) {
+    return lokiService.nodeTypes.find({ Id: { $ne: null } });
+  },
+
+  getNodeStates(lokiService) {
+    return lokiService.nodeStates.find({ Id: { $ne: null } });
+  },
+
   /**
    * @function createNode
    * @desc creates a new Node with a set of given properties

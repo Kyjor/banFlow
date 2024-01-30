@@ -72,16 +72,6 @@ function ProjectList(props) {
                 />
               }
             />
-            <Link to={`/projectPage/${item.name}`}>
-              <Button
-                type="text"
-                icon={
-                  <InfoCircleOutlined
-                    style={{ fontSize: '16px', color: 'green' }}
-                  />
-                }
-              />
-            </Link>
             <Popconfirm
               title="Are you sure delete this project?"
               onConfirm={() => deleteProject(item.name)}

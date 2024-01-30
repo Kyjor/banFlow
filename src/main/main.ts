@@ -180,9 +180,6 @@ app
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
-    ipcMain.handle('api:getNodeTypes', getNodeTypes);
-    ipcMain.handle('api:getNodeStates', getNodeStates);
-    ipcMain.handle('api:getTags', getTags);
     ipcMain.handle('api:getProjectState', getProjectState);
     ipcMain.handle('api:setProjectState', setProjectState);
     ipcMain.handle('api:initializeProjectState', initializeProjectState);
@@ -323,12 +320,14 @@ ipcMain.on('InitializeLokiProject', (event, projectName) => {
     (lokiService: any) => lokiService.projectName === projectName,
   );
   if (!currentLokiService) {
+    console.log('creating new loki service, didnt find one with that name');
     currentLokiService = new LokiService(projectName);
-    currentLokiService.init(lokiLoadedCallback);
+    // add currentLokiService to lokiServices
+    lokiServices.push(currentLokiService);
   }
-  // add currentLokiService to lokiServices
-  lokiServices.push(currentLokiService);
 
+  individualProjectStateValue.projectName = projectName;
+  currentLokiService.init(lokiLoadedCallback);
   event.returnValue = projectName;
 });
 
@@ -470,6 +469,10 @@ ipcMain.on('api:saveMetadataValue', (event, enumValueTitle, parentEnum) => {
 });
 
 // Tags
+ipcMain.on('api:getTags', (event) => {
+  event.returnValue = TagService.getTags(currentLokiService);
+});
+
 ipcMain.on('api:addTag', (event, tagTitle) => {
   TagService.addTag(currentLokiService, tagTitle);
   event.returnValue = true;
@@ -493,17 +496,13 @@ ipcMain.on(
   },
 );
 
-const getNodeTypes = () => {
-  return currentLokiService.nodeTypes.find({ Id: { $ne: null } });
-};
+ipcMain.on('api:getNodeTypes', (event) => {
+  event.returnValue = NodeService.getNodeTypes(currentLokiService);
+});
 
-const getNodeStates = () => {
-  return currentLokiService.nodeStates.find({ Id: { $ne: null } });
-};
-
-const getTags = () => {
-  return currentLokiService.tags.find({ Id: { $ne: null } });
-};
+ipcMain.on('api:getNodeStates', (event) => {
+  event.returnValue = NodeService.getNodeStates(currentLokiService);
+});
 
 const setProjectState = (event, values: any) => {
   individualProjectStateValue = {

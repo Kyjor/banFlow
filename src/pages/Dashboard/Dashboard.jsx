@@ -24,6 +24,7 @@ import ProjectController from '../../api/project/ProjectController';
 import NodeController from '../../api/nodes/NodeController';
 import ParentController from '../../api/parent/ParentController';
 import TimerController from '../../api/timer/TimerController';
+import TagController from '../../api/tag/TagController';
 
 /**
  * Home
@@ -42,8 +43,7 @@ class Dashboard extends Component {
 
     const self = this;
     ipcRenderer.on('UpdateCurrentProject', function (e, projectName) {
-      self.lokiServiceLoadedCallback();
-      self.setState({ lokiLoaded: true, selectedProject: projectName });
+      self.lokiServiceLoadedCallback(projectName);
     });
   }
 
@@ -51,17 +51,14 @@ class Dashboard extends Component {
     ipcRenderer.removeAllListeners();
   }
 
-  lokiServiceLoadedCallback = async () => {
+  lokiServiceLoadedCallback = (projectName) => {
     // const { nodeStates, nodeTypes, tags } = this.state;
 
-    const nodeTypeList = await ipcRenderer.invoke('api:getNodeTypes');
-    // nodeTypes.find({ Id: { $ne: null } });
+    const nodeTypeList = NodeController.getNodeTypes();
     const nodeTypeArray = [];
-    const nodeStateList = await ipcRenderer.invoke('api:getNodeStates');
-    // nodeStates.find({ Id: { $ne: null } });
+    const nodeStateList = NodeController.getNodeStates();
     const nodeStateArray = [];
-    const tagList = await ipcRenderer.invoke('api:getTags');
-    // tags.find({ Id: { $ne: null } });
+    const tagList = TagController.getTags();
     const tagArray = [];
 
     nodeTypeList.forEach((thisNodeType) => {
@@ -79,19 +76,14 @@ class Dashboard extends Component {
       nodes: NodeController.getNodes(),
       parents: ParentController.getParents(),
       parentOrder: ParentController.getParentOrder(),
-      nodeTypes: [],
-      // nodeTypes: nodeTypeArray,
+      nodeTypes: nodeTypeArray,
       nodeStates: nodeStateArray,
+      selectedProject: projectName,
       tags: tagArray,
       timerPreferences: TimerController.getTimerPreferences(),
     };
 
-    this.setState((state) => {
-      // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      for (const property in newState) {
-        state[property] = newState[property];
-      }
-    });
+    this.setState(newState);
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -101,11 +93,10 @@ class Dashboard extends Component {
       timeSpent: { $gte: 1 },
     });
 
-    console.log(cardList);
     Object.values(cardList).forEach((card) => {
       totalTime += card.timeSpent;
     });
-    this.setState({ totalTime });
+
     return totalTime;
   };
 
@@ -117,11 +108,12 @@ class Dashboard extends Component {
     const dueItems = await NodeController.getNodesWithQuery({
       estimatedDate: { $ne: '' },
     });
-    dueItems.forEach((item) => {
+    Object.values(dueItems).forEach((item) => {
       if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
         listData.push({ type: 'success', content: item.title });
       }
     });
+
     return listData || [];
   };
 
@@ -153,11 +145,9 @@ class Dashboard extends Component {
     const dueItems = NodeController.getNodesWithQuery({
       estimatedDate: { $ne: '' },
     });
-    console.log(dueItems);
 
-    dueItems.forEach((item) => {
+    Object.values(dueItems).forEach((item) => {
       if (dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
-        console.log(cellDate);
         listData.push({
           type: 'success',
           content: item.title,
@@ -165,6 +155,7 @@ class Dashboard extends Component {
         });
       }
     });
+
     return (
       <List
         size="large"
@@ -187,6 +178,7 @@ class Dashboard extends Component {
 
   render() {
     const { selectedProject } = this.state;
+    console.log('selectedProject', selectedProject);
     return (
       <Layout>
         <div className="home">

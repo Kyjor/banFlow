@@ -24,6 +24,14 @@ const NodeController = {
     return ipcRenderer.sendSync('api:getNodesWithQuery', query);
   },
 
+  getNodeTypes() {
+    return ipcRenderer.sendSync('api:getNodeTypes');
+  },
+
+  getNodeStates() {
+    return ipcRenderer.sendSync('api:getNodeStates');
+  },
+
   /**
    * @function createNode
    * @desc creates a new Node with a set of given properties

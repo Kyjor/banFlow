@@ -1,4 +1,9 @@
 const TagService = {
+  getTags(lokiService) {
+    const { tags } = lokiService;
+    return tags.find({ Id: { $ne: null } });
+  },
+
   addTag(lokiService, tagTitle) {
     const { tags } = lokiService;
     const nextId = tags.length
