@@ -128,10 +128,13 @@ function Parent(props) {
                     border: 'none',
                   }}
                   placeholder="Add node title here..."
-                  updateText={(value) => (
-                    setIsEditing(false),
-                    updateParentProperty('title', parent.id, value)
-                  )}
+                  updateText={(value) =>
+                    (
+                      // eslint-disable-next-line no-sequences
+                      setIsEditing(false),
+                      updateParentProperty('title', parent.id, value)
+                    )
+                  }
                 />
               ) : (
                 <span

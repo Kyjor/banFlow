@@ -416,7 +416,7 @@ function Timer(props) {
             event.isActive ? 'active' : 'inactive'
           }`}
           onClick={() => {
-            handlePlayButtonClick;
+            handlePlayButtonClick();
           }}
         >
           {event.isActive && !event.isBetweenRounds ? (

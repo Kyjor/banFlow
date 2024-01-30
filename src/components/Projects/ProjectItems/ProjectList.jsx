@@ -1,14 +1,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { Button, Card, List, Popconfirm, Typography } from 'antd';
 import '../ProjectListContainer.scss';
-import {
-  CalendarOutlined,
-  DeleteTwoTone,
-  InfoCircleOutlined,
-} from '@ant-design/icons';
+import { CalendarOutlined, DeleteTwoTone } from '@ant-design/icons';
 
 const { Paragraph } = Typography;
 

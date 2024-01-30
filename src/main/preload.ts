@@ -25,9 +25,6 @@ const electronHandler = {
   getNodes: () => ipcRenderer.invoke('api:getNodes'),
 };
 
-//contextBridge.exposeInMainWorld('electronAPI', {
-//  getNodes: () => ipcRenderer.invoke('api:getNodes'),
-//});
 contextBridge.exposeInMainWorld('electron', electronHandler);
 
 export type ElectronHandler = typeof electronHandler;
