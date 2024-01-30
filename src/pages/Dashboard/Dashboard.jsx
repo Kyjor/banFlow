@@ -51,9 +51,8 @@ class Dashboard extends Component {
     ipcRenderer.removeAllListeners('UpdateCurrentProject');
   }
 
+  // eslint-disable-next-line react/no-unused-class-component-methods
   lokiServiceLoadedCallback = (projectName) => {
-    // const { nodeStates, nodeTypes, tags } = this.state;
-
     const nodeTypeList = NodeController.getNodeTypes();
     const nodeTypeArray = [];
     const nodeStateList = NodeController.getNodeStates();

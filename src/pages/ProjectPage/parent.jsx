@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-props-no-spreading,react-hooks/exhaustive-deps,jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions */
 import React, { useEffect, useState } from 'react';
 import { Draggable, Droppable } from 'react-beautiful-dnd';
 import { Button } from 'antd';

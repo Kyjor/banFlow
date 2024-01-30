@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from 'react';
 import { useTimer } from 'react-use-precision-timer';
 import PropTypes from 'prop-types';

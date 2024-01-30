@@ -2,7 +2,7 @@ import { ipcRenderer } from 'electron';
 
 /**
  * @class MetadataController
- * @desc creates a new Metadata with a set of given properties
+ * @desc Interacts with the ipcRenderer to perform CRUD operations on metadata. This is the interface between the UI and the database.
  */
 const MetadataController = {
   saveMetadataValue(enumValueTitle, parentEnum) {

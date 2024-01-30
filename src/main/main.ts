@@ -1,3 +1,4 @@
+/* eslint-disable no-use-before-define,@typescript-eslint/no-unused-vars */
 /* eslint global-require: off, no-console: off, promise/always-return: off */
 
 /**
@@ -126,15 +127,16 @@ const createWindow = async () => {
   });
 
   mainWindow.on('close', function (e) {
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: 'question',
-      buttons: ['Yes', 'No'],
-      title: 'Confirm',
-      message: 'Are you sure you want to quit?',
-    });
-
-    if (choice === 1) {
-      e.preventDefault();
+    if (mainWindow) {
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: 'question',
+        buttons: ['Yes', 'No'],
+        title: 'Confirm',
+        message: 'Are you sure you want to quit?',
+      });
+      if (choice === 1) {
+        e.preventDefault();
+      }
     }
   });
 
@@ -188,24 +190,17 @@ app
 
 ipcMain.on(
   'MSG_FROM_RENDERER',
-  (
-    event,
-    node,
-    projectName,
-    stateInit,
-    lokiService,
-    timerPrefs,
-    controllers,
-  ) => {
+  (_event, node, projectName, stateInit, timerPrefs) => {
+    // @ts-ignore
     mainWindow.webContents.send(
       'MSG_FROM_RENDERER',
-      '(event,node, projectName, stateInit, lokiService, timerPrefs, controllers)',
+      '(_event, node, projectName, stateInit, timerPrefs, controllers)',
     );
     createTimerWindow(node, projectName, stateInit, timerPrefs);
   },
 );
 
-ipcMain.on('SaveNodeTime', (event, nodeId, seconds) => {
+ipcMain.on('SaveNodeTime', (_event, nodeId, seconds) => {
   // @ts-ignore
   mainWindow.webContents.send('SaveNodeTime', nodeId, seconds);
 });
@@ -231,6 +226,7 @@ function createTimerWindow(
   }
   Menu.setApplicationMenu(null);
   // Create the browser window.
+  // @ts-ignore
   timerWindow = new BrowserWindow({
     width: 350,
     height: 250,
@@ -244,6 +240,7 @@ function createTimerWindow(
     // You need to activate `nativeWindowOpen`
     webPreferences: {
       nodeIntegration: true,
+      // @ts-ignore
       nativeWindowOpen: true,
       enableRemoteModule: true,
       contextIsolation: false,
@@ -273,6 +270,7 @@ function createTimerWindow(
       timerWindow.webContents.on('context-menu', (e, props) => {
         const { x, y } = props;
 
+        // @ts-ignore
         Menu.buildFromTemplate([
           {
             label: 'Inspect element',
@@ -346,7 +344,7 @@ const lokiLoadedCallback = () => {
   }
 };
 
-ipcMain.on('InitializedLokiService', (event, lokiService) => {
+ipcMain.on('InitializedLokiService', (_event, lokiService) => {
   currentLokiService = lokiService;
   // add currentLokiService to lokiServices
   lokiServices.push(currentLokiService);
@@ -504,7 +502,7 @@ ipcMain.on('api:getNodeStates', (event) => {
   event.returnValue = NodeService.getNodeStates(currentLokiService);
 });
 
-const setProjectState = (event, values: any) => {
+const setProjectState = (_event: any, values: any) => {
   individualProjectStateValue = {
     ...individualProjectState,
   };
@@ -529,7 +527,8 @@ const setProjectState = (event, values: any) => {
   }
 };
 
-const getProjectState = (event) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const getProjectState = () => {
   if (timerWindow) {
     timerWindow.webContents.send(
       'UpdateProjectPageState',
@@ -538,7 +537,7 @@ const getProjectState = (event) => {
   }
 };
 
-const initializeProjectState = (event, projectName: any) => {
+const initializeProjectState = (_event: any, projectName: any) => {
   individualProjectStateValue.nodes = NodeService.getNodesWithQuery(
     currentLokiService,
     {
