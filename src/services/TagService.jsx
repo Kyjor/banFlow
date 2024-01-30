@@ -1,7 +1,5 @@
-import lokiService from './LokiService';
-
 const TagService = {
-  addTag(tagTitle) {
+  addTag(lokiService, tagTitle) {
     const { tags } = lokiService;
     const nextId = tags.length
       ? tags.chain().simplesort('$loki', true).data()[0].$loki + 1

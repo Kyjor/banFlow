@@ -30,6 +30,9 @@ import { pathCreator } from './util';
 import LokiService from '../services/LokiService';
 import NodeService from '../services/NodeService';
 import ParentService from '../services/ParentService';
+import MetadataService from '../services/MetadataService';
+import TagService from '../services/TagService';
+import TimerService from '../services/TimerService';
 
 remoteMain.initialize();
 let mainWindow: BrowserWindow | null = null;
@@ -377,6 +380,7 @@ ipcMain.on('api:deleteNode', (event, nodeId, parentId) => {
   NodeService.deleteNode(currentLokiService, nodeId, parentId);
   event.returnValue = true;
 });
+
 ipcMain.on(
   'api:updateNodeProperty',
   (event, propertyToUpdate, nodeId, newValue) => {
@@ -458,6 +462,40 @@ ipcMain.on('api:initializeProjectState', (event, projectName: any) => {
   event.returnValue = individualProjectStateValue;
 });
 
+// Metadata
+ipcMain.on('api:saveMetadataValue', (event, enumValueTitle, parentEnum) => {
+  MetadataService.saveMetadataValue(
+    currentLokiService,
+    enumValueTitle,
+    parentEnum,
+  );
+  event.returnValue = true;
+});
+
+// Tags
+ipcMain.on('api:addTag', (event, tagTitle) => {
+  TagService.addTag(currentLokiService, tagTitle);
+  event.returnValue = true;
+});
+
+// Timer
+ipcMain.on('api:getTimerPreferences', (event) => {
+  TimerService.getTimerPreferences(currentLokiService);
+  event.returnValue = true;
+});
+
+ipcMain.on(
+  'api:updateTimerPreferenceProperty',
+  (event, propertyToUpdate, newValue) => {
+    TimerService.updateTimerPreferenceProperty(
+      currentLokiService,
+      propertyToUpdate,
+      newValue,
+    );
+    event.returnValue = true;
+  },
+);
+
 const getNodeTypes = () => {
   return currentLokiService.nodeTypes.find({ Id: { $ne: null } });
 };
@@ -472,14 +510,14 @@ const getTags = () => {
 
 const setProjectState = (event, values: any) => {
   individualProjectStateValue = {
-    ...individualProjectStateValue,
-    ...Object.entries(values).reduce((acc, [key, value]) => {
-      if (typeof value === 'object' && value !== null) {
-        return { ...acc, ...value };
-      }
-      return { ...acc, [key]: value };
-    }, {}),
+    ...individualProjectState,
   };
+  Object.entries(values).forEach(([key, value]) => {
+    individualProjectStateValue = {
+      ...individualProjectStateValue,
+      [key]: value,
+    };
+  });
 
   console.log('individualProjectStateValue', individualProjectStateValue);
   if (mainWindow) {

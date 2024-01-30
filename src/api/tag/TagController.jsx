@@ -1,8 +1,8 @@
-import tagService from '../../services/TagService';
+import { ipcRenderer } from 'electron';
 
 const TagController = {
   addTag(tagTitle) {
-    return tagService.addTag(tagTitle);
+    return ipcRenderer.sendSync('api:addTag', tagTitle);
   },
 };
 

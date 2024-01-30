@@ -1,4 +1,4 @@
-import metadataService from '../../services/MetadataService';
+import { ipcRenderer } from 'electron';
 
 /**
  * @class MetadataController
@@ -6,7 +6,11 @@ import metadataService from '../../services/MetadataService';
  */
 const MetadataController = {
   saveMetadataValue(enumValueTitle, parentEnum) {
-    return metadataService.saveMetadataValue(enumValueTitle, parentEnum);
+    return ipcRenderer.sendSync(
+      'api:saveMetadataValue',
+      enumValueTitle,
+      parentEnum,
+    );
   },
 };
 

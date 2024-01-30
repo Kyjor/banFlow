@@ -37,10 +37,13 @@ class TimerPage extends Component {
 
     const updatedNode = nodes[currentNodeSelectedInTimer];
     updatedNode.timeSpent = seconds;
-
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
       ...this.state,
       nodes: { ...nodes, updatedNode },
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
@@ -49,10 +52,13 @@ class TimerPage extends Component {
     if (!selectedNode) {
       return;
     }
-
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
       ...this.state,
       currentNodeSelectedInTimer: selectedNode,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
@@ -72,10 +78,12 @@ class TimerPage extends Component {
       nodeHistory,
     );
     this.saveCurrentSelectedNodeTime();
-
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
       ...this.state,
       isTimerRunning: false,
+    };
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
@@ -100,8 +108,13 @@ class TimerPage extends Component {
       nodeHistory,
     );
 
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
+      ...this.state,
       isTimerRunning: true,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 

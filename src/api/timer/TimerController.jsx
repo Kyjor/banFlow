@@ -1,12 +1,13 @@
-import timerService from '../../services/TimerService';
+import { ipcRenderer } from 'electron';
 
 const TimerController = {
   getTimerPreferences() {
-    return timerService.getTimerPreferences();
+    return ipcRenderer.sendSync('api:getTimerPreferences');
   },
 
   updateTimerPreferenceProperty(propertyToUpdate, newValue) {
-    return timerService.updateTimerPreferenceProperty(
+    return ipcRenderer.sendSync(
+      'api:updateTimerPreferenceProperty',
       propertyToUpdate,
       newValue,
     );

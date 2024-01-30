@@ -55,7 +55,7 @@ class ProjectPage extends Component {
       mustFocusParentTitle: true,
     };
     ipcRenderer.invoke('api:setProjectState', {
-      newState,
+      ...newState,
     });
   };
 
@@ -73,7 +73,7 @@ class ProjectPage extends Component {
     console.log('new state', newState);
     ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      newState,
+      ...newState,
     });
   };
 
@@ -104,7 +104,7 @@ class ProjectPage extends Component {
 
     ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      newState,
+      ...newState,
     });
   };
 
@@ -120,31 +120,46 @@ class ProjectPage extends Component {
     const { tags } = this.state;
     const newTag = TagController.addTag(tag);
     const newTags = [...tags, newTag.title];
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
+      ...this.state,
       tags: newTags,
+    };
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
   updateNodeTitle = (newTitle, nodeId, isModalNode = true) => {
     this.updateNodeProperty(`title`, nodeId, newTitle, isModalNode);
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
+      ...this.state,
       mustFocusNodeTitle: false,
+    };
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
   showParentModal = (parent) => {
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
+      ...this.state,
       parentModalVisible: true,
-      modalParent: parent,
+    };
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
   showModal = (node) => {
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
+      ...this.state,
       nodeModalVisible: true,
       modalNode: node,
+    };
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
@@ -159,7 +174,7 @@ class ProjectPage extends Component {
 
     ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      newState,
+      ...newState,
     });
   };
 
@@ -177,15 +192,18 @@ class ProjectPage extends Component {
     };
 
     ipcRenderer.invoke('api:setProjectState', {
-      newState,
+      ...newState,
     });
   };
 
   handleOk = () => {
     const { modalNode, timerPreferences } = this.state;
-
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState1 = {
+      ...this.state,
       currentNodeSelectedInTimer: modalNode.id,
+    };
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState1,
     });
     ipcRenderer.send(
       'MSG_FROM_RENDERER',
@@ -194,19 +212,28 @@ class ProjectPage extends Component {
       this.state,
       timerPreferences,
     );
+    const newState = {
+      ...this.state,
+      nodeModalVisible: false,
+    };
     // TODO: don't persist this
     ipcRenderer.invoke('api:setProjectState', {
-      nodeModalVisible: false,
+      ...newState,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
   handleCancel = () => {
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
+      ...this.state,
       parentModalVisible: false,
       nodeModalVisible: false,
       modalNode: null,
       modalParent: null,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
@@ -218,9 +245,14 @@ class ProjectPage extends Component {
       newValue,
     );
 
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
+      ...this.state,
       nodes: NodeController.getNodes(),
       modalNode: isFromModal ? newNode : null,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
@@ -237,9 +269,14 @@ class ProjectPage extends Component {
       newValue,
     );
 
-    ipcRenderer.invoke('api:setProjectState', {
+    const newState = {
+      ...this.state,
       parents: ParentController.getParents(),
       modalParent: isFromModal ? newParent : null,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
     });
   };
 
@@ -254,7 +291,7 @@ class ProjectPage extends Component {
     };
 
     ipcRenderer.invoke('api:setProjectState', {
-      newState,
+      ...newState,
     });
   };
 

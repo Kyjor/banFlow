@@ -1,7 +1,5 @@
-import lokiService from './LokiService';
-
 const MetadataService = {
-  saveMetadataValue(enumValueTitle, parentEnum) {
+  saveMetadataValue(lokiService, enumValueTitle, parentEnum) {
     let selectedEnum = null;
     switch (parentEnum) {
       case 'nodeType':
