@@ -30,6 +30,4 @@ jobs:
         run: |
           npm run package
           npm run lint
-# disabled for now
-#          npm exec tsc
           npm test
