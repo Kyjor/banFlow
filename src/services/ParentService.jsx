@@ -57,7 +57,7 @@ const ParentService = {
       sessionHistory: [],
       nodeIds: [],
     });
-    this.addParentToOrder(`parent-${nextId}`);
+    this.addParentToOrder(lokiService, `parent-${nextId}`);
     lokiService.saveDB();
 
     return newParent;

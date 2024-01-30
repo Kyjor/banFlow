@@ -48,7 +48,7 @@ class Dashboard extends Component {
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners();
+    ipcRenderer.removeAllListeners('UpdateCurrentProject');
   }
 
   lokiServiceLoadedCallback = (projectName) => {
@@ -101,11 +101,11 @@ class Dashboard extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  getListData = async (value) => {
+  getListData = (value) => {
     const listData = [];
     // eslint-disable-next-line no-underscore-dangle
     const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-    const dueItems = await NodeController.getNodesWithQuery({
+    const dueItems = NodeController.getNodesWithQuery({
       estimatedDate: { $ne: '' },
     });
     Object.values(dueItems).forEach((item) => {
@@ -178,7 +178,6 @@ class Dashboard extends Component {
 
   render() {
     const { selectedProject } = this.state;
-    console.log('selectedProject', selectedProject);
     return (
       <Layout>
         <div className="home">

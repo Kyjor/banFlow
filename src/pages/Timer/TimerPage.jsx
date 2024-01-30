@@ -33,6 +33,11 @@ class TimerPage extends Component {
     ipcRenderer.invoke('api:getProjectState');
   }
 
+  componentWillUnmount() {
+    ipcRenderer.removeAllListeners('UpdateProjectPageState');
+    ipcRenderer.removeAllListeners('SaveBeforeClose');
+  }
+
   updateSeconds = (seconds) => {
     const { currentNodeSelectedInTimer, nodes } = this.state;
 

@@ -34,14 +34,12 @@ class ProjectPage extends Component {
 
     const self = this;
     ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
-      console.log('updating project page state ', newState);
       self.setState(newState);
     });
   }
 
   componentWillUnmount() {
-    // todo: loki loaded set to false
-    console.log('unmounting');
+    ipcRenderer.removeAllListeners('UpdateProjectPageState');
     // todo: close timer window
   }
 
@@ -70,7 +68,6 @@ class ProjectPage extends Component {
       mustFocusNodeTitle: true,
     };
 
-    console.log('new state', newState);
     ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       ...newState,
@@ -141,7 +138,7 @@ class ProjectPage extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  showParentModal = (parent) => {
+  showParentModal = () => {
     const newState = {
       ...this.state,
       parentModalVisible: true,

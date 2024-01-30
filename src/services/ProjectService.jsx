@@ -4,15 +4,6 @@ import lokiService from './LokiService';
 // eslint-disable-next-line import/no-cycle
 import { ValidateProjectName } from '../validators/Validator';
 
-let currentProjectNodes = null;
-
-ipcRenderer.on('UpdateCurrentProject', function (e, newProjectNodes) {
-  // if (self.state === newState) return;
-  console.log('updating current project nodes');
-  console.log(newProjectNodes);
-  currentProjectNodes = newProjectNodes;
-});
-
 const ProjectService = {
   /**
    * @function getProjects
