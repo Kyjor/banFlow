@@ -30,7 +30,20 @@ const NodeService = {
   },
 
   getNodesWithQuery(lokiService, query) {
-    return lokiService.nodes.find(query);
+    const nodes = lokiService.nodes.find(query);
+
+    let response = {};
+
+    nodes.forEach((node) => {
+      response = {
+        ...response,
+        [node.id]: {
+          ...node,
+        },
+      };
+    });
+
+    return response;
   },
 
   /**

@@ -1,8 +1,8 @@
-import parentService from '../../services/ParentService';
+import { ipcRenderer } from 'electron';
 
 /**
  * @class ParentController
- * @desc creates a new Parent with a set of given properties
+ * @desc Interacts with the ipcRenderer to perform CRUD operations on nodes. This is the interface between the UI and the database.
  */
 const ParentController = {
   /**
@@ -12,8 +12,8 @@ const ParentController = {
    * @returns {array} parent - all parents
    * @permission {Read}
    */
-  async getParents() {
-    return parentService.getParents();
+  getParents() {
+    return ipcRenderer.sendSync('api:getParents');
   },
 
   /**
@@ -23,8 +23,8 @@ const ParentController = {
    * @returns {array} string - the order of parents represented by id
    * @permission {Read}
    */
-  async getParentOrder() {
-    return parentService.getParentOrder();
+  getParentOrder() {
+    return ipcRenderer.sendSync('api:getParentOrder');
   },
 
   /**
@@ -38,15 +38,16 @@ const ParentController = {
    * @permission {Modification}
    */
   createParent(parentTitle) {
-    return parentService.createParent(parentTitle);
+    return ipcRenderer.sendSync('api:createParent', parentTitle);
   },
 
   deleteParent(parentId) {
-    parentService.deleteParent(parentId);
+    ipcRenderer.sendSync('api:deleteParent', parentId);
   },
 
   updateParentProperty(propertyToUpdate, parentId, newValue) {
-    return parentService.updateParentProperty(
+    return ipcRenderer.sendSync(
+      'api:updateParentProperty',
       propertyToUpdate,
       parentId,
       newValue,
@@ -54,11 +55,12 @@ const ParentController = {
   },
 
   updateParentOrder(parentOrder) {
-    parentService.updateParentOrder(parentOrder);
+    ipcRenderer.sendSync('api:updateParentOrder', parentOrder);
   },
 
   updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {
-    parentService.updateNodesInParents(
+    ipcRenderer.sendSync(
+      'api:updateNodesInParents',
       updatedOriginParent,
       updatedDestinationParent,
       nodeId,

@@ -29,6 +29,7 @@ import MenuBuilder from './menu';
 import { pathCreator } from './util';
 import LokiService from '../services/LokiService';
 import NodeService from '../services/NodeService';
+import ParentService from '../services/ParentService';
 
 remoteMain.initialize();
 let mainWindow: BrowserWindow | null = null;
@@ -176,16 +177,12 @@ app
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
-    ipcMain.handle('api:getParents', getParents);
-    ipcMain.handle('api:getParentOrder', getParentOrder);
-    ipcMain.handle('api:getTimerPreferences', getTimerPreferences);
     ipcMain.handle('api:getNodeTypes', getNodeTypes);
     ipcMain.handle('api:getNodeStates', getNodeStates);
     ipcMain.handle('api:getTags', getTags);
     ipcMain.handle('api:getProjectState', getProjectState);
-    ipcMain.handle('api:initializeProjectState', initializeProjectState);
     ipcMain.handle('api:setProjectState', setProjectState);
-    ipcMain.handle('api:updateNodeProperty', updateNodeProperty);
+    ipcMain.handle('api:initializeProjectState', initializeProjectState);
   })
   .catch(console.log);
 
@@ -339,6 +336,13 @@ const lokiLoadedCallback = () => {
       individualProjectStateValue.projectName,
     );
   }
+  if (mainWindow) {
+    console.log('mainWindow');
+    mainWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue.projectName,
+    );
+  }
 };
 
 ipcMain.on('InitializedLokiService', (event, lokiService) => {
@@ -360,94 +364,124 @@ ipcMain.on('api:getNode', (event, nodeId) => {
   event.returnValue = NodeService.getNodesWithQuery(currentLokiService, nodeId);
 });
 
-const getNodesWithQuery = (query: any) => {
-  const nodes = currentLokiService.nodes.find(query);
+ipcMain.on('api:createNode', (event, nodeType, nodeTitle, parentId) => {
+  event.returnValue = NodeService.createNode(
+    currentLokiService,
+    nodeType,
+    nodeTitle,
+    parentId,
+  );
+});
 
-  let response = {};
+ipcMain.on('api:deleteNode', (event, nodeId, parentId) => {
+  NodeService.deleteNode(currentLokiService, nodeId, parentId);
+  event.returnValue = true;
+});
+ipcMain.on(
+  'api:updateNodeProperty',
+  (event, propertyToUpdate, nodeId, newValue) => {
+    event.returnValue = NodeService.updateNodeProperty(
+      currentLokiService,
+      propertyToUpdate,
+      nodeId,
+      newValue,
+    );
+  },
+);
 
-  nodes.forEach((node: { id: number }) => {
-    response = {
-      ...response,
-      [node.id]: {
-        ...node,
-      },
-    };
-  });
+ipcMain.on('api:getParents', (event) => {
+  event.returnValue = ParentService.getParents(currentLokiService);
+});
 
-  return response;
-};
+ipcMain.on('api:getParentOrder', (event) => {
+  event.returnValue = ParentService.getParentOrder(currentLokiService);
+});
 
-const getParents = () => {
-  const parents = currentLokiService.parents.find({ Id: { $ne: null } });
+ipcMain.on('api:createParent', (event, parentTitle) => {
+  event.returnValue = ParentService.createParent(
+    currentLokiService,
+    parentTitle,
+  );
+});
 
-  let response = {};
+ipcMain.on('api:deleteParent', (event, parentId) => {
+  ParentService.deleteParent(currentLokiService, parentId);
+  event.returnValue = true;
+});
 
-  parents.forEach((parent: { id: any }) => {
-    response = {
-      ...response,
-      [parent.id]: {
-        ...parent,
-      },
-    };
-  });
+ipcMain.on(
+  'api:updateParentProperty',
+  (event, propertyToUpdate, parentId, newValue) => {
+    event.returnValue = ParentService.updateParentProperty(
+      currentLokiService,
+      propertyToUpdate,
+      parentId,
+      newValue,
+    );
+  },
+);
 
-  return response;
-};
+ipcMain.on('api:updateParentOrder', (event, parentOrder) => {
+  ParentService.updateParentOrder(currentLokiService, parentOrder);
+  event.returnValue = true;
+});
 
-const getParentOrder = () => {
-  const parentOrder = currentLokiService.parentOrder.find({
-    Id: { $ne: null },
-  });
+ipcMain.on(
+  'api:updateNodesInParents',
+  (event, updatedOriginParent, updatedDestinationParent, nodeId) => {
+    ParentService.updateNodesInParents(
+      currentLokiService,
+      updatedOriginParent,
+      updatedDestinationParent,
+      nodeId,
+    );
+    event.returnValue = true;
+  },
+);
 
-  const response: any[] = [];
+ipcMain.on('api:initializeProjectState', (event, projectName: any) => {
+  console.log('initializeProjectState');
+  individualProjectStateValue.nodes = NodeService.getNodesWithQuery(
+    currentLokiService,
+    {
+      Id: { $ne: null },
+    },
+  );
+  individualProjectStateValue.parents =
+    ParentService.getParents(currentLokiService);
+  individualProjectStateValue.parentOrder =
+    ParentService.getParentOrder(currentLokiService);
+  individualProjectStateValue.lokiLoaded = true;
+  individualProjectStateValue.projectName = projectName;
 
-  parentOrder.forEach((obj: { parentId: any }) => {
-    response.push(obj.parentId);
-  });
-
-  return response;
-};
+  console.log('individualProjectStateValue', individualProjectStateValue);
+  event.returnValue = individualProjectStateValue;
+});
 
 const getNodeTypes = () => {
-  console.log('current loki');
   return currentLokiService.nodeTypes.find({ Id: { $ne: null } });
 };
 
 const getNodeStates = () => {
-  console.log('current loki');
   return currentLokiService.nodeStates.find({ Id: { $ne: null } });
 };
 
 const getTags = () => {
-  console.log('current loki');
   return currentLokiService.tags.find({ Id: { $ne: null } });
 };
 
-const getTimerPreferences = () => {
-  console.log('current loki');
-  return currentLokiService.timerPreferences.data[0];
-};
-
-const initializeProjectState = (event, projectName: any) => {
-  individualProjectStateValue.nodes = getNodesWithQuery({ Id: { $ne: null } });
-  individualProjectStateValue.parents = getParents();
-  individualProjectStateValue.parentOrder = getParentOrder();
-  individualProjectStateValue.lokiLoaded = true;
-  individualProjectStateValue.projectName = projectName;
-
-  console.log(individualProjectStateValue);
-
-  if (mainWindow) {
-    mainWindow.webContents.send(
-      'UpdateProjectPageState',
-      individualProjectStateValue,
-    );
-  }
-};
-
 const setProjectState = (event, values: any) => {
-  individualProjectStateValue = { ...individualProjectStateValue, ...values };
+  individualProjectStateValue = {
+    ...individualProjectStateValue,
+    ...Object.entries(values).reduce((acc, [key, value]) => {
+      if (typeof value === 'object' && value !== null) {
+        return { ...acc, ...value };
+      }
+      return { ...acc, [key]: value };
+    }, {}),
+  };
 
+  console.log('individualProjectStateValue', individualProjectStateValue);
   if (mainWindow) {
     mainWindow.webContents.send(
       'UpdateProjectPageState',
@@ -471,44 +505,24 @@ const getProjectState = (event) => {
   }
 };
 
-const updateNodeProperty = (
-  _event: any,
-  propertyToUpdate: string | number,
-  nodeId: any,
-  newValue: null,
-) => {
-  // If debug, print out the property to update and the new value
-  if (process.env.NODE_ENV === `development`) {
-    console.log(
-      `Updating node with id ${nodeId}. ${propertyToUpdate} to ${newValue}`,
+const initializeProjectState = (event, projectName: any) => {
+  individualProjectStateValue.nodes = NodeService.getNodesWithQuery(
+    currentLokiService,
+    {
+      Id: { $ne: null },
+    },
+  );
+  individualProjectStateValue.parents =
+    ParentService.getParents(currentLokiService);
+  individualProjectStateValue.parentOrder =
+    ParentService.getParentOrder(currentLokiService);
+  individualProjectStateValue.lokiLoaded = true;
+  individualProjectStateValue.projectName = projectName;
+
+  if (mainWindow) {
+    mainWindow.webContents.send(
+      'UpdateProjectPageState',
+      individualProjectStateValue,
     );
   }
-
-  if (newValue == null) {
-    console.error(`You must pass a value to updateNodeProperty`);
-    return;
-  }
-  let nodeToReturn = null;
-  currentLokiService.nodes
-    .chain()
-    .find({ id: nodeId })
-    .update((node: { [x: string]: any }) => {
-      node[propertyToUpdate] = newValue;
-      nodeToReturn = node;
-    });
-
-  currentLokiService.saveDB();
-  // If debug, print out the property to update and the new value
-  if (process.env.NODE_ENV === `development`) {
-    console.log(
-      `Node with id ${nodeId} and name ${
-        // @ts-ignore
-        nodeToReturn.title ? nodeToReturn.title : null
-      } updated successfully.`,
-    );
-  }
-  setProjectState(null, {});
-
-  // eslint-disable-next-line consistent-return
-  return nodeToReturn;
 };

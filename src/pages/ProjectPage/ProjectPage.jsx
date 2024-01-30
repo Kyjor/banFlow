@@ -69,6 +69,8 @@ class ProjectPage extends Component {
       parents: ParentController.getParents(),
       mustFocusNodeTitle: true,
     };
+
+    console.log('new state', newState);
     ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       newState,

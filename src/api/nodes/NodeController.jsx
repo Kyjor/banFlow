@@ -1,9 +1,8 @@
 import { ipcRenderer } from 'electron';
-import nodeService from '../../services/NodeService';
 
 /**
  * @class NodeController
- * @desc creates a new Node with a set of given properties
+ * @desc Interacts with the ipcRenderer to perform CRUD operations on nodes. This is the interface between the UI and the database.
  */
 const NodeController = {
   /**
@@ -36,15 +35,25 @@ const NodeController = {
    * @permission {Modification}
    */
   createNode(nodeType, nodeTitle, parentId = ``) {
-    return nodeService.createNode(nodeType, nodeTitle, parentId);
+    return ipcRenderer.sendSync(
+      'api:createNode',
+      nodeType,
+      nodeTitle,
+      parentId,
+    );
   },
 
   deleteNode(nodeId, parentId) {
-    nodeService.deleteNode(nodeId, parentId);
+    ipcRenderer.sendSync('api:deleteNode', nodeId, parentId);
   },
 
   updateNodeProperty(propertyToUpdate, nodeId, newValue) {
-    return nodeService.updateNodeProperty(propertyToUpdate, nodeId, newValue);
+    return ipcRenderer.sendSync(
+      'api:updateNodeProperty',
+      propertyToUpdate,
+      nodeId,
+      newValue,
+    );
   },
 };
 
