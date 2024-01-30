@@ -340,7 +340,6 @@ const lokiLoadedCallback = () => {
     );
   }
   if (mainWindow) {
-    console.log('mainWindow');
     mainWindow.webContents.send(
       'UpdateProjectPageState',
       individualProjectStateValue.projectName,
@@ -444,7 +443,6 @@ ipcMain.on(
 );
 
 ipcMain.on('api:initializeProjectState', (event, projectName: any) => {
-  console.log('initializeProjectState');
   individualProjectStateValue.nodes = NodeService.getNodesWithQuery(
     currentLokiService,
     {
@@ -458,7 +456,6 @@ ipcMain.on('api:initializeProjectState', (event, projectName: any) => {
   individualProjectStateValue.lokiLoaded = true;
   individualProjectStateValue.projectName = projectName;
 
-  console.log('individualProjectStateValue', individualProjectStateValue);
   event.returnValue = individualProjectStateValue;
 });
 
@@ -519,7 +516,6 @@ const setProjectState = (event, values: any) => {
     };
   });
 
-  console.log('individualProjectStateValue', individualProjectStateValue);
   if (mainWindow) {
     mainWindow.webContents.send(
       'UpdateProjectPageState',

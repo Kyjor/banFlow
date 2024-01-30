@@ -198,13 +198,7 @@ class ProjectPage extends Component {
 
   handleOk = () => {
     const { modalNode, timerPreferences } = this.state;
-    const newState1 = {
-      ...this.state,
-      currentNodeSelectedInTimer: modalNode.id,
-    };
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState1,
-    });
+
     ipcRenderer.send(
       'MSG_FROM_RENDERER',
       modalNode,
@@ -215,6 +209,7 @@ class ProjectPage extends Component {
     const newState = {
       ...this.state,
       nodeModalVisible: false,
+      currentNodeSelectedInTimer: modalNode.id,
     };
     // TODO: don't persist this
     ipcRenderer.invoke('api:setProjectState', {
