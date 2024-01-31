@@ -1,12 +1,12 @@
 {
   "name": "banFlow",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "Kanban and Time Tracking Made Easy",
   "main": "./dist/main/main.js",
   "author": {
     "name": "Kyjor",
     "email": "kyjordev@gmail.com",
-    "url": "https://github.com/Kyjor/banflow"
+    "url": "https://github.com/Kyjor/banFlow"
   },
   "scripts": {
     "electron-rebuild": "node -r ts-node/register ../../.erb/scripts/electron-rebuild.js",
