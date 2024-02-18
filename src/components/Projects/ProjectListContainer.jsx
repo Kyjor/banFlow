@@ -32,11 +32,7 @@ class ProjectListContainer extends Component {
 
     ipcRenderer.on('ReturnProjectFile', (e, fileName) => {
       if (!fileName) return;
-      // if filename contains slashes either forward or backward, replace them @ symbols
-      // eslint-disable-next-line no-param-reassign
-      fileName = fileName.toString().replace(/[/\\]/g, '@');
-      self.props.history.push(`/projectpage/${fileName}`);
-      console.log(fileName);
+      self.props.openProjectDetails(fileName);
     });
   }
 
@@ -55,12 +51,20 @@ class ProjectListContainer extends Component {
     this.getProjects();
   };
 
+  // eslint-disable-next-line class-methods-use-this
+  openProjectFile = () => {
+    ipcRenderer.send('GetProjectFile');
+  };
+
   render() {
     const { items } = this.state;
     const { openProjectDetails } = this.props;
 
     return (
       <div className="todoListMain flex-none mr-8">
+        <button onClick={this.openProjectFile} type="button">
+          Open File
+        </button>
         <ProjectList
           items={items}
           deleteProject={this.deleteProject}
