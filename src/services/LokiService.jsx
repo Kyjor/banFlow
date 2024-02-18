@@ -84,10 +84,14 @@ export default class LokiService {
    * @desc call on startup of app to initialize Loki
    */
   init = (cb) => {
+    // force this.projectName to a string
+    this.projectName = this.projectName.toString();
+
     const path =
       // if projectname contains slashes, use it as the path
       this.projectName.indexOf('/') !== -1 ||
-      this.projectName.indexOf('\\') !== -1
+      this.projectName.indexOf('\\') !== -1 ||
+      this.projectName.indexOf(':') !== -1
         ? this.projectName
         : `../banFlowProjects/${this.projectName}.json`;
 
