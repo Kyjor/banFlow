@@ -4,6 +4,7 @@ import * as PropTypes from 'prop-types';
 import { DragDropContext, Droppable } from 'react-beautiful-dnd';
 import ScrollContainer from 'react-indiana-drag-scroll';
 import { Button } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import styles from '../../pages/ProjectPage/ProjectPage.module.scss';
 import BoardInnerList from '../../pages/ProjectPage/BoardInnerList';
 import parentController from '../../api/parent/ParentController';
@@ -134,7 +135,6 @@ class KanbanBoard extends Component {
               style={{
                 width: `100%`,
                 overflow: `auto`,
-                // backgroundColor: `rgba(125, 132, 152, 0.3)`,
                 minHeight: `500px`,
               }}
             >
@@ -179,7 +179,7 @@ class KanbanBoard extends Component {
                     marginTop: `10px`,
                   }}
                 >
-                  {/* <PlusOutlined /> */}
+                  <PlusOutlined />
                   New Parent
                 </Button>
               </div>

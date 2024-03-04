@@ -106,6 +106,18 @@ class NodeModal extends React.Component {
 
     const format = 'HH:mm:ss';
 
+    const onChangeTimeSpent = (time, timeString) => {
+      if (time === null) {
+        return;
+      }
+
+      updateNodeProperty(
+        `timeSpent`,
+        this.node.id,
+        moment.duration(timeString).asSeconds(),
+      );
+    };
+
     return (
       <Modal
         title={
@@ -119,7 +131,6 @@ class NodeModal extends React.Component {
                 height: '22px',
                 border: 'none',
               }}
-              // showCount={this.state.textSelected}
               maxLength={70}
               autoSize={{ maxRows: 1 }}
               updateText={(value) => {
@@ -293,7 +304,7 @@ class NodeModal extends React.Component {
               <div>
                 Time Spent:{' '}
                 <TimePicker
-                  disabled
+                  onChange={onChangeTimeSpent}
                   value={moment(
                     `${new Date((this.node.timeSpent ?? 0) * 1000)
                       .toISOString()
