@@ -42,7 +42,13 @@ class ParentInnerList extends React.Component {
   }
 
   render() {
-    const { nodes = {}, isTimerRunning, saveTime, ...rest } = this.props;
+    const {
+      nodes = {},
+      isTimerRunning,
+      saveTime,
+      updateNodeTitle,
+      ...rest
+    } = this.props;
     return nodes.map((node, index) => (
       <div>
         {node && (
@@ -52,6 +58,7 @@ class ParentInnerList extends React.Component {
             node={node}
             index={index}
             saveTime={saveTime}
+            updateNodeTitle={updateNodeTitle}
             {...rest}
           />
         )}
@@ -65,6 +72,7 @@ ParentInnerList.propTypes = {
   nodes: PropTypes.arrayOf(PropTypes.object).isRequired,
   saveTime: PropTypes.func.isRequired,
   isTimerRunning: PropTypes.bool.isRequired,
+  updateNodeTitle: PropTypes.func.isRequired,
 };
 
 function Parent(props) {
