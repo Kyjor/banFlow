@@ -130,6 +130,7 @@ class ProjectPage extends Component {
     this.updateNodeProperty(`title`, nodeId, newTitle, isModalNode);
     const newState = {
       ...this.state,
+      nodes: NodeController.getNodes(),
       mustFocusNodeTitle: false,
     };
     ipcRenderer.invoke('api:setProjectState', {
