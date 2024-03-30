@@ -146,11 +146,13 @@ class NodeModal extends React.Component {
           <Button key="back" onClick={handleCancel}>
             Return
           </Button>,
-          parents && parents[this.node.parent].isTimed && (
-            <Button key="submit" type="primary" onClick={handleOk}>
-              Start Working
-            </Button>
-          ),
+          parents &&
+            parents[this.node.parent] &&
+            parents[this.node.parent].isTimed && (
+              <Button key="submit" type="primary" onClick={handleOk}>
+                Start Working
+              </Button>
+            ),
         ]}
       >
         <Tabs defaultActiveKey="1">
