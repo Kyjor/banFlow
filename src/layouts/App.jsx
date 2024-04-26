@@ -6,6 +6,7 @@ import './tailwind-output.css';
 // Components
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
+import { ipcRenderer } from 'electron';
 import Footer from '../components/@shared/Footer';
 import AddProject from '../components/Projects/AddProject';
 
@@ -30,7 +31,14 @@ function App(props) {
         >
           <div className="logo" />
           <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
-            <Menu.Item icon={<DesktopOutlined />} title="Dashboard" key="1">
+            <Menu.Item
+              icon={<DesktopOutlined />}
+              title="Dashboard"
+              key="1"
+              onClick={() => {
+                ipcRenderer.sendSync('utils:closeTimerWindow');
+              }}
+            >
               <Link to="/dashboard" />
               Dashboard
             </Menu.Item>

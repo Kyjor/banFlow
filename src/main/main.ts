@@ -359,6 +359,14 @@ ipcMain.on('api:getNodes', (event) => {
   event.returnValue = NodeService.getNodes(currentLokiService);
 });
 
+ipcMain.on('utils:closeTimerWindow', (event) => {
+  console.log('closing timer window');
+  if (timerWindow) {
+    timerWindow.close();
+  }
+  event.returnValue = null;
+});
+
 ipcMain.on('api:getNode', (event, nodeId) => {
   event.returnValue = NodeService.getNodesWithQuery(currentLokiService, nodeId);
 });
