@@ -13,6 +13,7 @@ import AddProject from '../components/Projects/AddProject';
 
 const { Content, Sider } = Layout;
 
+// eslint-disable-next-line consistent-return
 function loadSidebarComponents(pathname, setShowModal) {
   if (pathname === '/dashboard') {
     return (
