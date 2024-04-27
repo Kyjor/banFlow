@@ -5,17 +5,42 @@ import React, { useState } from 'react';
 import './tailwind-output.css';
 // Components
 import PropTypes from 'prop-types';
-import { Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { ipcRenderer } from 'electron';
+import { Header } from 'antd/es/layout/layout';
 import Footer from '../components/@shared/Footer';
 import AddProject from '../components/Projects/AddProject';
 
 const { Content, Sider } = Layout;
 
+function loadSidebarComponents(pathname, setShowModal) {
+  if (pathname === '/dashboard') {
+    return (
+      <Menu.Item
+        icon={<PlusSquareFilled />}
+        onClick={() => {
+          setShowModal(true);
+        }}
+        title="Add New Project"
+        key="2"
+      >
+        Add New Project
+      </Menu.Item>
+    );
+  }
+}
+
 function App(props) {
   const [collapsed, setCollapsed] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const { children } = props;
+  const location = useLocation();
+  // Get pagename from the current url
+
+  const sidebarComponents = loadSidebarComponents(
+    location.pathname,
+    setShowModal,
+  );
 
   return (
     <Layout
@@ -23,6 +48,21 @@ function App(props) {
         minHeight: '100vh',
       }}
     >
+      <Header>
+        <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
+          <Menu.Item
+            icon={<DesktopOutlined />}
+            title="Dashboard"
+            key="1"
+            onClick={() => {
+              ipcRenderer.sendSync('utils:closeTimerWindow');
+            }}
+          >
+            <Link to="/dashboard" />
+            Dashboard
+          </Menu.Item>
+        </Menu>
+      </Header>
       <Layout className="site-layout">
         <Sider
           collapsible
@@ -31,27 +71,7 @@ function App(props) {
         >
           <div className="logo" />
           <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
-            <Menu.Item
-              icon={<DesktopOutlined />}
-              title="Dashboard"
-              key="1"
-              onClick={() => {
-                ipcRenderer.sendSync('utils:closeTimerWindow');
-              }}
-            >
-              <Link to="/dashboard" />
-              Dashboard
-            </Menu.Item>
-            <Menu.Item
-              icon={<PlusSquareFilled />}
-              title="Add New Project"
-              key="2"
-              onClick={() => {
-                setShowModal(true);
-              }}
-            >
-              Add New Project
-            </Menu.Item>
+            {sidebarComponents}
           </Menu>
         </Sider>
         <Content
