@@ -160,7 +160,7 @@ class NodeModal extends React.Component {
             tab={
               <span>
                 <InfoCircleOutlined />
-                Basic Info
+                Details
               </span>
             }
             key="1"
@@ -197,62 +197,62 @@ class NodeModal extends React.Component {
             />
           </TabPane>
 
-          <TabPane
-            style={{ margin: '0 10px 0 0' }}
-            tab={
-              <span>
-                <TagsOutlined />
-                Tab 2
-              </span>
-            }
-            key="2"
-          >
-            <div>
-              <div>Tags</div>
-              <EditableTagGroup
-                addTagToNode={addTagToNode}
-                createGlobalTag={createGlobalTag}
-                node={this.node}
-                tags={tags}
-              />
-              <div>Task Type</div>
-              <CustomSelect
-                parentEnum="nodeType"
-                items={this.nodeTypes}
-                saveMetadataValue={saveMetadataValue}
-                updateNodeEnum={updateNodeEnum}
-                node={this.node}
-                currentValue={this.node.nodeType}
-              />
-              <div>Item State</div>
-              <CustomSelect
-                parentEnum="nodeState"
-                items={this.nodeStates}
-                saveMetadataValue={saveMetadataValue}
-                updateNodeEnum={updateNodeEnum}
-                node={this.node}
-                currentValue={this.node.nodeState}
-              />
-              <div>Percent Done</div>
-              <div>Priority</div>
-              <div>
-                <Checkbox
-                  onChange={this.handleCompleteCheckboxChange}
-                  defaultChecked={this.node.isComplete}
-                >
-                  Mark as complete
-                </Checkbox>{' '}
-              </div>
-              <div>
-                <Checkbox
-                  onChange={this.handleLockCheckboxChange}
-                  defaultChecked={this.node.isLocked}
-                >
-                  Lock Node
-                </Checkbox>{' '}
-              </div>{' '}
-            </div>
-          </TabPane>
+          {/* <TabPane */}
+          {/*  style={{ margin: '0 10px 0 0' }} */}
+          {/*  tab={ */}
+          {/*    <span> */}
+          {/*      <TagsOutlined /> */}
+          {/*      Tab 2 */}
+          {/*    </span> */}
+          {/*  } */}
+          {/*  key="2" */}
+          {/* > */}
+          {/*  <div> */}
+          {/*    <div>Tags</div> */}
+          {/*    <EditableTagGroup */}
+          {/*      addTagToNode={addTagToNode} */}
+          {/*      createGlobalTag={createGlobalTag} */}
+          {/*      node={this.node} */}
+          {/*      tags={tags} */}
+          {/*    /> */}
+          {/*    <div>Task Type</div> */}
+          {/*    <CustomSelect */}
+          {/*      parentEnum="nodeType" */}
+          {/*      items={this.nodeTypes} */}
+          {/*      saveMetadataValue={saveMetadataValue} */}
+          {/*      updateNodeEnum={updateNodeEnum} */}
+          {/*      node={this.node} */}
+          {/*      currentValue={this.node.nodeType} */}
+          {/*    /> */}
+          {/*    <div>Item State</div> */}
+          {/*    <CustomSelect */}
+          {/*      parentEnum="nodeState" */}
+          {/*      items={this.nodeStates} */}
+          {/*      saveMetadataValue={saveMetadataValue} */}
+          {/*      updateNodeEnum={updateNodeEnum} */}
+          {/*      node={this.node} */}
+          {/*      currentValue={this.node.nodeState} */}
+          {/*    /> */}
+          {/*    <div>Percent Done</div> */}
+          {/*    <div>Priority</div> */}
+          {/*    <div> */}
+          {/*      <Checkbox */}
+          {/*        onChange={this.handleCompleteCheckboxChange} */}
+          {/*        defaultChecked={this.node.isComplete} */}
+          {/*      > */}
+          {/*        Mark as complete */}
+          {/*      </Checkbox>{' '} */}
+          {/*    </div> */}
+          {/*    <div> */}
+          {/*      <Checkbox */}
+          {/*        onChange={this.handleLockCheckboxChange} */}
+          {/*        defaultChecked={this.node.isLocked} */}
+          {/*      > */}
+          {/*        Lock Node */}
+          {/*      </Checkbox>{' '} */}
+          {/*    </div>{' '} */}
+          {/*  </div> */}
+          {/* </TabPane> */}
           <TabPane
             style={{ margin: '0 10px 0 0' }}
             tab={
@@ -276,33 +276,33 @@ class NodeModal extends React.Component {
                   format="YYYY-MM-DD HH:mm"
                 />
               </div>
-              <div>
-                Estimated Time To Complete:{' '}
-                <TimePicker
-                  defaultOpenValue={moment(
-                    `${
-                      this.node.estimatedTime
-                        ? new Date(this.node.estimatedTime * 1000)
-                            .toISOString()
-                            .substr(11, 8)
-                        : `00:00:00`
-                    }`,
-                  )}
-                  allowClear
-                  format={format}
-                  onChange={this.handleEstimatedTimeChange}
-                  defaultValue={moment(
-                    `${
-                      this.node.estimatedTime
-                        ? new Date(this.node.estimatedTime * 1000)
-                            .toISOString()
-                            .substr(11, 8)
-                        : `00:00:00`
-                    }`,
-                    'HH:mm:ss',
-                  )}
-                />
-              </div>
+              {/* <div> */}
+              {/*  Estimated Time To Complete:{' '} */}
+              {/*  <TimePicker */}
+              {/*    defaultOpenValue={moment( */}
+              {/*      `${ */}
+              {/*        this.node.estimatedTime */}
+              {/*          ? new Date(this.node.estimatedTime * 1000) */}
+              {/*              .toISOString() */}
+              {/*              .substr(11, 8) */}
+              {/*          : `00:00:00` */}
+              {/*      }`, */}
+              {/*    )} */}
+              {/*    allowClear */}
+              {/*    format={format} */}
+              {/*    onChange={this.handleEstimatedTimeChange} */}
+              {/*    defaultValue={moment( */}
+              {/*      `${ */}
+              {/*        this.node.estimatedTime */}
+              {/*          ? new Date(this.node.estimatedTime * 1000) */}
+              {/*              .toISOString() */}
+              {/*              .substr(11, 8) */}
+              {/*          : `00:00:00` */}
+              {/*      }`, */}
+              {/*      'HH:mm:ss', */}
+              {/*    )} */}
+              {/*  /> */}
+              {/* </div> */}
               <div>
                 Time Spent:{' '}
                 <TimePicker
@@ -315,106 +315,106 @@ class NodeModal extends React.Component {
                   )}
                 />
               </div>
-              <div>
-                Estimated Date of Completion:{' '}
-                <DatePicker
-                  allowClear
-                  defaultValue={
-                    this.node.estimatedDate
-                      ? moment(
-                          `${dateFormat(
-                            this.node.estimatedDate,
-                            'yyyy-mm-dd HH:MM',
-                          )}`,
-                          'YYYY-MM-DD HH:mm',
-                        )
-                      : null
-                  }
-                  defaultOpenValue={moment(
-                    `${dateFormat(
-                      this.node.estimatedDate,
-                      'yyyy-mm-dd HH:MM',
-                    )}`,
-                    'YYYY-MM-DD HH:mm',
-                  )}
-                  showTime
-                  size="default"
-                  onChange={this.handleEstimatedDateChange}
-                  format="YYYY-MM-DD HH:mm"
-                />
-              </div>
-              <div>
-                Actual Date of Completion
-                <DatePicker
-                  picker="month"
-                  allowClear
-                  defaultValue={
-                    this.node.completedDate
-                      ? moment(
-                          `${dateFormat(
-                            this.node.completedDate,
-                            'yyyy-mm-dd HH:MM',
-                          )}`,
-                          'YYYY-MM-DD HH:mm',
-                        )
-                      : null
-                  }
-                  defaultOpenValue={moment(
-                    `${dateFormat(
-                      this.node.completedDate,
-                      'yyyy-mm-dd HH:MM',
-                    )}`,
-                    'YYYY-MM-DD HH:mm',
-                  )}
-                  showTime
-                  size="default"
-                  format="YYYY-MM-DD HH:mm"
-                />
-              </div>
-              <div
-                style={{
-                  marginTop: '10px',
-                  maxHeight: '350px',
-                  maxWidth: '97%',
-                  overflowY: 'auto',
-                }}
-              >
-                <TimedItemHistory node={this.node} />
-              </div>
+              {/* <div> */}
+              {/*  Estimated Date of Completion:{' '} */}
+              {/*  <DatePicker */}
+              {/*    allowClear */}
+              {/*    defaultValue={ */}
+              {/*      this.node.estimatedDate */}
+              {/*        ? moment( */}
+              {/*            `${dateFormat( */}
+              {/*              this.node.estimatedDate, */}
+              {/*              'yyyy-mm-dd HH:MM', */}
+              {/*            )}`, */}
+              {/*            'YYYY-MM-DD HH:mm', */}
+              {/*          ) */}
+              {/*        : null */}
+              {/*    } */}
+              {/*    defaultOpenValue={moment( */}
+              {/*      `${dateFormat( */}
+              {/*        this.node.estimatedDate, */}
+              {/*        'yyyy-mm-dd HH:MM', */}
+              {/*      )}`, */}
+              {/*      'YYYY-MM-DD HH:mm', */}
+              {/*    )} */}
+              {/*    showTime */}
+              {/*    size="default" */}
+              {/*    onChange={this.handleEstimatedDateChange} */}
+              {/*    format="YYYY-MM-DD HH:mm" */}
+              {/*  /> */}
+              {/* </div> */}
+              {/* <div> */}
+              {/*  Actual Date of Completion */}
+              {/*  <DatePicker */}
+              {/*    picker="month" */}
+              {/*    allowClear */}
+              {/*    defaultValue={ */}
+              {/*      this.node.completedDate */}
+              {/*        ? moment( */}
+              {/*            `${dateFormat( */}
+              {/*              this.node.completedDate, */}
+              {/*              'yyyy-mm-dd HH:MM', */}
+              {/*            )}`, */}
+              {/*            'YYYY-MM-DD HH:mm', */}
+              {/*          ) */}
+              {/*        : null */}
+              {/*    } */}
+              {/*    defaultOpenValue={moment( */}
+              {/*      `${dateFormat( */}
+              {/*        this.node.completedDate, */}
+              {/*        'yyyy-mm-dd HH:MM', */}
+              {/*      )}`, */}
+              {/*      'YYYY-MM-DD HH:mm', */}
+              {/*    )} */}
+              {/*    showTime */}
+              {/*    size="default" */}
+              {/*    format="YYYY-MM-DD HH:mm" */}
+              {/*  /> */}
+              {/* </div> */}
+              {/* <div */}
+              {/*  style={{ */}
+              {/*    marginTop: '10px', */}
+              {/*    maxHeight: '350px', */}
+              {/*    maxWidth: '97%', */}
+              {/*    overflowY: 'auto', */}
+              {/*  }} */}
+              {/* > */}
+              {/*  <TimedItemHistory node={this.node} /> */}
+              {/* </div> */}
             </div>
           </TabPane>
-          <TabPane
-            style={{ margin: '0 10px 0 0' }}
-            tab={
-              <span>
-                <FileAddOutlined />
-                Images
-              </span>
-            }
-            key="4"
-          >
-            <PictureWall
-              node={this.node}
-              setCoverImage={this.setCoverImage}
-              addImageToNode={this.addImageToNode}
-            />
-          </TabPane>
-          <TabPane
-            style={{ margin: '0 10px 0 0' }}
-            tab={
-              <span>
-                <FileAddOutlined />
-                Checklist
-              </span>
-            }
-            key="5"
-          >
-            <Checklist
-              nodeId={this.node.id}
-              updateNodeProperty={updateNodeProperty}
-              checklist={this.node.checklist}
-            />
-          </TabPane>
+          {/* <TabPane */}
+          {/*  style={{ margin: '0 10px 0 0' }} */}
+          {/*  tab={ */}
+          {/*    <span> */}
+          {/*      <FileAddOutlined /> */}
+          {/*      Images */}
+          {/*    </span> */}
+          {/*  } */}
+          {/*  key="4" */}
+          {/* > */}
+          {/*  <PictureWall */}
+          {/*    node={this.node} */}
+          {/*    setCoverImage={this.setCoverImage} */}
+          {/*    addImageToNode={this.addImageToNode} */}
+          {/*  /> */}
+          {/* </TabPane> */}
+          {/* <TabPane */}
+          {/*  style={{ margin: '0 10px 0 0' }} */}
+          {/*  tab={ */}
+          {/*    <span> */}
+          {/*      <FileAddOutlined /> */}
+          {/*      Checklist */}
+          {/*    </span> */}
+          {/*  } */}
+          {/*  key="5" */}
+          {/* > */}
+          {/*  <Checklist */}
+          {/*    nodeId={this.node.id} */}
+          {/*    updateNodeProperty={updateNodeProperty} */}
+          {/*    checklist={this.node.checklist} */}
+          {/*  /> */}
+          {/* </TabPane> */}
         </Tabs>
       </Modal>
     );
