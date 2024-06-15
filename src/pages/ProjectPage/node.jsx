@@ -12,23 +12,21 @@ import NodeQuickActions from '../../components/NodeQuickActions/NodeQuickActions
 const { Meta } = AntCard;
 
 function ItemRender(props) {
-  const { nodeId, saveTime, startingSeconds } = props;
+  const { nodeId, saveTime } = props;
 
   return (
     <StopWatch
       clickToToggle
       nodeId={nodeId}
-      onToggle={() => {}}
       saveTime={saveTime}
-      startingSeconds={startingSeconds}
+      startingSeconds={0}
     />
   );
 }
 
 ItemRender.propTypes = {
-  nodeId: PropTypes.number.isRequired,
+  nodeId: PropTypes.string.isRequired,
   saveTime: PropTypes.func.isRequired,
-  startingSeconds: PropTypes.number.isRequired,
 };
 
 function Node(props) {
@@ -88,12 +86,7 @@ function Node(props) {
             actions={[
               // open modal
               <SettingOutlined onClick={() => handleOpen(node)} />,
-              <ItemRender
-                key="time"
-                startingSeconds={node.timeSpent}
-                saveTime={saveTime}
-                nodeId={node.id}
-              />,
+              <ItemRender key="time" s saveTime={saveTime} nodeId={node.id} />,
               // edit title
               <NodeQuickActions
                 key="actions"
@@ -145,10 +138,8 @@ Node.propTypes = {
   mustFocusNodeTitle: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   node: PropTypes.object.isRequired,
-  onToggle: PropTypes.bool.isRequired,
   saveTime: PropTypes.func.isRequired,
-  showModal: PropTypes.bool.isRequired,
-  startingSeconds: PropTypes.number.isRequired,
+  showModal: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
 };
 

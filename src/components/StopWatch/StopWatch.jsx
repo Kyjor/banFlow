@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 
 // The callback will be called every 1000 milliseconds.
 function StopWatch(props) {
-  const { clickToToggle, nodeId, onToggle, saveTime, startingSeconds } = props;
+  const { clickToToggle, nodeId, saveTime, startingSeconds } = props;
   const [seconds, setSeconds] = useState(startingSeconds || 0);
   const [isActive, setIsActive] = useState(false);
 
@@ -72,8 +72,7 @@ export default StopWatch;
 
 StopWatch.propTypes = {
   clickToToggle: PropTypes.bool.isRequired,
-  nodeId: PropTypes.number.isRequired,
-  onToggle: PropTypes.func.isRequired,
+  nodeId: PropTypes.string.isRequired,
   saveTime: PropTypes.func.isRequired,
   startingSeconds: PropTypes.number.isRequired,
 };
