@@ -26,6 +26,7 @@ class ProjectPage extends Component {
 
     this.state = {
       currentProjectName: this.projectName,
+      isTimerRunning: false,
     };
   }
 

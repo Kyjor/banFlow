@@ -155,7 +155,7 @@ class KanbanBoard extends Component {
                         createNewNode={createNewNode}
                         deleteNode={deleteNode}
                         index={index}
-                        isTimerRunning={isTimerRunning}
+                        isTimerRunning={isTimerRunning || false}
                         key={parent.id}
                         mustFocusNodeTitle={mustFocusNodeTitle}
                         mustFocusParentTitle={mustFocusParentTitle}
@@ -204,14 +204,14 @@ KanbanBoard.propTypes = {
   mustFocusNodeTitle: PropTypes.bool.isRequired,
   mustFocusParentTitle: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
-  nodes: PropTypes.array.isRequired,
+  nodes: PropTypes.object.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   parentOrder: PropTypes.array.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
-  parents: PropTypes.array.isRequired,
+  parents: PropTypes.object.isRequired,
   saveTime: PropTypes.func.isRequired,
-  showModal: PropTypes.bool.isRequired,
-  showParentModal: PropTypes.bool.isRequired,
+  showModal: PropTypes.func.isRequired,
+  showParentModal: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,
   updateParents: PropTypes.func.isRequired,

@@ -42,12 +42,12 @@ BoardInnerList.propTypes = {
   createNewNode: PropTypes.func.isRequired,
   // eslint-disable-next-line react/require-default-props
   deleteNode: PropTypes.func.isRequired,
-  index: PropTypes.func.isRequired,
+  index: PropTypes.number.isRequired,
   isTimerRunning: PropTypes.bool.isRequired,
   mustFocusNodeTitle: PropTypes.bool.isRequired,
   mustFocusParentTitle: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
-  nodeMap: PropTypes.array.isRequired,
+  nodeMap: PropTypes.object.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   parent: PropTypes.object.isRequired,
   saveTime: PropTypes.func.isRequired,

@@ -15,7 +15,8 @@ const { Content, Sider } = Layout;
 
 // eslint-disable-next-line consistent-return
 function loadSidebarComponents(pathname, setShowModal) {
-  if (pathname === '/dashboard') {
+  console.log('Pathname:', pathname);
+  if (pathname === '/dashboard' || pathname === '/') {
     return (
       <Menu.Item
         icon={<PlusSquareFilled />}
