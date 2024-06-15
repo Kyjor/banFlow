@@ -31,7 +31,7 @@ const parentSettingsButtonStyle = {
   alignSelf: 'flex-end',
   border: 'none',
   cursor: 'pointer',
-  // backgroundColor: 'transparent',
+  backgroundColor: 'transparent',
 };
 
 class ParentInnerList extends React.Component {
@@ -154,13 +154,13 @@ function Parent(props) {
               )}
             </h3>
             {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
-            <button
+            <Button
               style={parentSettingsButtonStyle}
               onClick={() => showParentModal(parent)}
               type="button"
             >
               <EllipsisOutlined style={{ fontSize: '20px' }} />
-            </button>
+            </Button>
           </div>
           <Droppable droppableId={parent.id} type="node">
             {/* eslint-disable-next-line @typescript-eslint/no-shadow */}
@@ -185,9 +185,9 @@ function Parent(props) {
                 <Button
                   type="primary"
                   block
-                  icon={<PlusOutlined />}
                   onClick={() => createNewNode(parent.id)}
                 >
+                  <PlusOutlined style={{ position: 'relative', top: '-3px' }} />
                   New Node
                 </Button>
               </div>

@@ -76,8 +76,9 @@ function App(props) {
           </Menu>
         </Sider>
         <Content
+          className="h-screen bg-gradient-to-t from-blue-700 to-gray-200 flex items-center justify-center"
           style={{
-            margin: '0 16px',
+            background: 'linear-gradient(to top, #3a7bd5, #e5e5e5)',
           }}
         >
           <div
@@ -98,7 +99,7 @@ function App(props) {
           </div>
         </Content>
       </Layout>
-      <Footer />
+      {/* <Footer /> */}
     </Layout>
   );
 }

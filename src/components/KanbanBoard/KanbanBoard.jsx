@@ -142,6 +142,9 @@ class KanbanBoard extends Component {
                 {...provided.droppableProps}
                 className={styles.container}
                 ref={provided.innerRef}
+                style={{
+                  background: 'transparent',
+                }}
               >
                 {parentOrder.map((parentId, index) => {
                   const parent = parents[parentId];
@@ -179,7 +182,7 @@ class KanbanBoard extends Component {
                     marginTop: `10px`,
                   }}
                 >
-                  <PlusOutlined />
+                  <PlusOutlined style={{ position: 'relative', top: '-3px' }} />
                   New Parent
                 </Button>
               </div>
