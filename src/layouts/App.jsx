@@ -15,7 +15,6 @@ const { Content, Sider } = Layout;
 
 // eslint-disable-next-line consistent-return
 function loadSidebarComponents(pathname, setShowModal) {
-  console.log('Pathname:', pathname);
   if (pathname === '/dashboard' || pathname === '/') {
     return (
       <Menu.Item
