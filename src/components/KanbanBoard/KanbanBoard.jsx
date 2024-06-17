@@ -180,6 +180,7 @@ class KanbanBoard extends Component {
                   style={{
                     width: `265px`,
                     marginTop: `10px`,
+                    borderRadius: `10px`,
                   }}
                 >
                   <PlusOutlined style={{ position: 'relative', top: '-3px' }} />

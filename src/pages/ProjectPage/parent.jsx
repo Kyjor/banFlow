@@ -186,6 +186,7 @@ function Parent(props) {
                   type="primary"
                   block
                   onClick={() => createNewNode(parent.id)}
+                  style={{ borderRadius: '10px' }}
                 >
                   <PlusOutlined style={{ position: 'relative', top: '-3px' }} />
                   New Node
