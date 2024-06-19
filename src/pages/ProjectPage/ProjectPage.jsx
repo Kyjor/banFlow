@@ -11,8 +11,6 @@ import ParentModal from '../../components/ParentModal/ParentModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
-import MetadataController from '../../api/metadata/MetadataController';
-import TagController from '../../api/tag/TagController';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -71,58 +69,6 @@ class ProjectPage extends Component {
 
     ipcRenderer.invoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      ...newState,
-    });
-  };
-
-  saveMetadataValue = (newValue, parentEnum) => {
-    const { nodeTypes, nodeStates } = this.state;
-
-    let newState = {};
-    const newEnumObj = MetadataController.saveMetadataValue(
-      newValue,
-      parentEnum,
-    );
-    switch (parentEnum) {
-      case 'nodeType':
-        newState = {
-          ...this.state,
-          nodeTypes: [...nodeTypes, newEnumObj.title],
-        };
-        break;
-      case 'nodeState':
-        newState = {
-          ...this.state,
-          nodeStates: [...nodeStates, newEnumObj.title],
-        };
-        break;
-      default:
-        break;
-    }
-
-    ipcRenderer.invoke('api:setProjectState', {
-      // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      ...newState,
-    });
-  };
-
-  updateNodeEnum = (newValue, parentEnum, node) => {
-    this.updateNodeProperty(parentEnum, node.id, newValue, true);
-  };
-
-  addTagToNode = (tags, nodeId) => {
-    this.updateNodeProperty(`tags`, nodeId, tags, true);
-  };
-
-  createGlobalTag = (tag) => {
-    const { tags } = this.state;
-    const newTag = TagController.addTag(tag);
-    const newTags = [...tags, newTag.title];
-    const newState = {
-      ...this.state,
-      tags: newTags,
-    };
-    ipcRenderer.invoke('api:setProjectState', {
       ...newState,
     });
   };
@@ -299,12 +245,9 @@ class ProjectPage extends Component {
       mustFocusParentTitle,
       nodeModalVisible,
       nodes,
-      nodeStates,
-      nodeTypes,
       parentModalVisible,
       parentOrder,
       parents,
-      tags,
     } = this.state;
 
     return lokiLoaded ? (
@@ -313,17 +256,10 @@ class ProjectPage extends Component {
         <div>
           {modalNode && (
             <NodeModal
-              addTagToNode={this.addTagToNode}
+              handleCancel={this.handleCancel}
+              handleOk={this.handleOk}
               node={modalNode}
               parents={parents}
-              saveMetadataValue={this.saveMetadataValue}
-              createGlobalTag={this.createGlobalTag}
-              updateNodeEnum={this.updateNodeEnum}
-              handleOk={this.handleOk}
-              handleCancel={this.handleCancel}
-              tags={tags}
-              nodeTypes={nodeTypes}
-              nodeStates={nodeStates}
               updateNodeProperty={this.updateNodeProperty}
               visible={nodeModalVisible}
             />
