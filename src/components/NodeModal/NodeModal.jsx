@@ -5,6 +5,7 @@ import dateFormat from 'dateformat';
 import { ClockCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import * as PropTypes from 'prop-types';
 import EditableTextArea from '../EditableTextArea/EditableTextArea';
+import './NodeModal.css';
 
 const { TabPane } = Tabs;
 
@@ -45,7 +46,7 @@ class NodeModal extends React.Component {
       <Modal
         title={
           <div style={{ display: 'flex', marginBottom: '15px' }}>
-            <span>#{this.node.$loki}:</span>
+            <span style={{ marginTop: `5px` }}>#{this.node.$loki}:</span>
             <EditableTextArea
               defaultValue={this.node.title}
               style={{
@@ -66,17 +67,27 @@ class NodeModal extends React.Component {
         onOk={handleOk}
         onCancel={handleCancel}
         footer={[
-          <Button key="back" onClick={handleCancel}>
+          <Button
+            key="back"
+            onClick={handleCancel}
+            style={{ borderRadius: `5px` }}
+          >
             Return
           </Button>,
           parents &&
             parents[this.node.parent] &&
             parents[this.node.parent].isTimed && (
-              <Button key="submit" type="primary" onClick={handleOk}>
+              <Button
+                key="submit"
+                type="primary"
+                onClick={handleOk}
+                style={{ borderRadius: `5px` }}
+              >
                 Start Working
               </Button>
             ),
         ]}
+        bodyStyle={{ borderRadius: `20px` }}
       >
         <Tabs defaultActiveKey="1">
           <TabPane
@@ -95,9 +106,10 @@ class NodeModal extends React.Component {
               autoSize={{ minRows: 6 }}
               style={{
                 marginBottom: '10px',
+                borderRadius: `10px`,
                 backgroundColor: this.node.description
                   ? `transparent`
-                  : `#eeeeee`,
+                  : `#ffffff`,
               }}
               placeholder="Add a more detailed description here..."
               updateText={(value) => {
@@ -107,11 +119,11 @@ class NodeModal extends React.Component {
             <div>Notes</div>
             <EditableTextArea
               defaultValue={this.node.notes}
-              // showCount={this.state.modalNotesSelected}
               maxLength={100}
               autoSize={{ minRows: 3 }}
               style={{
                 marginBottom: '10px',
+                borderRadius: `10px`,
               }}
               placeholder="Take some notes here..."
               updateText={(value) => {
@@ -129,59 +141,53 @@ class NodeModal extends React.Component {
             }
             key="3"
           >
-            <div>
-              <div>
-                Creation Date:
-                <DatePicker
-                  disabled
-                  showTime
-                  defaultValue={moment(
-                    `${dateFormat(this.node.created, 'yyyy-mm-dd HH:MM')}`,
-                    'YYYY-MM-DD HH:mm',
-                  )}
-                  format="YYYY-MM-DD HH:mm"
-                />
-              </div>
-              <div>
-                Time Spent:{' '}
-                <TimePicker
-                  onChange={onChangeTimeSpent}
-                  value={moment(
-                    `${new Date((this.node.timeSpent ?? 0) * 1000)
-                      .toISOString()
-                      .substr(11, 8)}`,
-                    'HH:mm:ss',
-                  )}
-                />
-              </div>
-              <div>
-                Due Date:{' '}
-                <DatePicker
-                  allowClear
-                  defaultValue={
-                    this.node.estimatedDate
-                      ? moment(
-                          `${dateFormat(
-                            this.node.estimatedDate,
-                            'yyyy-mm-dd HH:MM',
-                          )}`,
-                          'YYYY-MM-DD HH:mm',
-                        )
-                      : null
-                  }
-                  defaultOpenValue={moment(
-                    `${dateFormat(
-                      this.node.estimatedDate,
-                      'yyyy-mm-dd HH:MM',
-                    )}`,
-                    'YYYY-MM-DD HH:mm',
-                  )}
-                  showTime
-                  size="default"
-                  onChange={this.handleEstimatedDateChange}
-                  format="YYYY-MM-DD HH:mm"
-                />
-              </div>
+            <div style={{ display: `flex`, flexDirection: `column` }}>
+              <div>Creation Date</div>
+              <DatePicker
+                disabled
+                showTime
+                defaultValue={moment(
+                  `${dateFormat(this.node.created, 'yyyy-mm-dd HH:MM')}`,
+                  'YYYY-MM-DD HH:mm',
+                )}
+                style={{ borderRadius: `5px` }}
+                format="YYYY-MM-DD HH:mm"
+              />
+              <div>Time Spent</div>
+              <TimePicker
+                onChange={onChangeTimeSpent}
+                value={moment(
+                  `${new Date((this.node.timeSpent ?? 0) * 1000)
+                    .toISOString()
+                    .substr(11, 8)}`,
+                  'HH:mm:ss',
+                )}
+                style={{ borderRadius: `5px` }}
+              />
+              <div>Due Date</div>
+              <DatePicker
+                allowClear
+                defaultValue={
+                  this.node.estimatedDate
+                    ? moment(
+                        `${dateFormat(
+                          this.node.estimatedDate,
+                          'yyyy-mm-dd HH:MM',
+                        )}`,
+                        'YYYY-MM-DD HH:mm',
+                      )
+                    : null
+                }
+                defaultOpenValue={moment(
+                  `${dateFormat(this.node.estimatedDate, 'yyyy-mm-dd HH:MM')}`,
+                  'YYYY-MM-DD HH:mm',
+                )}
+                showTime
+                size="default"
+                onChange={this.handleEstimatedDateChange}
+                format="YYYY-MM-DD HH:mm"
+                style={{ borderRadius: `5px` }}
+              />
             </div>
           </TabPane>
         </Tabs>

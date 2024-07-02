@@ -7,13 +7,8 @@ import styles from './Header.module.scss';
 function Header() {
   return (
     <Layout.Header className={styles.header}>
-      <Menu
-        theme="dark"
-        mode="horizontal"
-        defaultSelectedKeys={['1']}
-        className={styles.menu}
-      >
-        <Menu.Item key="1">
+      <Menu theme="dark" mode="horizontal" className={styles.menu}>
+        <Menu.Item key="1" style={{ width: `15%` }}>
           <Link to="/dashboard">Dashboard</Link>
         </Menu.Item>
       </Menu>

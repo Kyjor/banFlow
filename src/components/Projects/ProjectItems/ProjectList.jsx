@@ -59,7 +59,7 @@ function ProjectList(props) {
       }}
       renderItem={(item) => (
         <List.Item key={item.name}>
-          <Card title={item.jsx} hoverable>
+          <Card title={item.jsx} hoverable style={{ borderRadius: `20px` }}>
             <Button
               type="text"
               icon={
