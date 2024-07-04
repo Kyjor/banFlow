@@ -12,21 +12,13 @@ import NodeQuickActions from '../../components/NodeQuickActions/NodeQuickActions
 const { Meta } = AntCard;
 
 function ItemRender(props) {
-  const { nodeId, saveTime } = props;
+  const { seconds } = props;
 
-  return (
-    <StopWatch
-      clickToToggle
-      nodeId={nodeId}
-      saveTime={saveTime}
-      startingSeconds={0}
-    />
-  );
+  return <StopWatch clickToToggle startingSeconds={seconds} />;
 }
 
 ItemRender.propTypes = {
-  nodeId: PropTypes.string.isRequired,
-  saveTime: PropTypes.func.isRequired,
+  seconds: PropTypes.number.isRequired,
 };
 
 function Node(props) {
@@ -84,10 +76,8 @@ function Node(props) {
               node.coverImage && <img alt="example" src={node.coverImage} />
             }
             actions={[
-              // open modal
               <SettingOutlined onClick={() => handleOpen(node)} />,
-              <ItemRender key="time" s saveTime={saveTime} nodeId={node.id} />,
-              // edit title
+              <ItemRender key="time" seconds={node.timeSpent} />,
               <NodeQuickActions
                 key="actions"
                 button={<EllipsisOutlined />}
