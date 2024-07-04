@@ -1,6 +1,6 @@
 /* eslint-disable react/jsx-props-no-spreading,react-hooks/exhaustive-deps,jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions */
 import React, { useEffect, useState } from 'react';
-import { Draggable, Droppable } from 'react-beautiful-dnd';
+import { Draggable, Droppable } from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
 import { Button } from 'antd';
 import PropTypes from 'prop-types';
 import { EllipsisOutlined, PlusOutlined } from '@ant-design/icons';

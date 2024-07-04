@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps,react/jsx-props-no-spreading */
 import React, { useEffect, useState } from 'react';
-import { Draggable } from 'react-beautiful-dnd';
+import { Draggable } from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
 import { Card as AntCard } from 'antd';
 import PropTypes from 'prop-types';
 import { EllipsisOutlined, SettingOutlined } from '@ant-design/icons';

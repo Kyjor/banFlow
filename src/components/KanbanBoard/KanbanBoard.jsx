@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { Component } from 'react';
 import * as PropTypes from 'prop-types';
-import { DragDropContext, Droppable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable } from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
 import ScrollContainer from 'react-indiana-drag-scroll';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
