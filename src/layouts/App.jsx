@@ -76,7 +76,7 @@ function App(props) {
           </Menu>
         </Sider>
         <Content
-          className="h-screen bg-gradient-to-t from-blue-700 to-gray-200 flex items-center justify-center"
+          className="h-screen bg-gradient-to-t from-blue-700 to-gray-200 items-center justify-center"
           style={{
             background: 'linear-gradient(to top, #3a7bd5, #e5e5e5)',
           }}
@@ -84,7 +84,6 @@ function App(props) {
           <div
             className="site-layout-background"
             style={{
-              padding: 24,
               minHeight: 360,
             }}
           >
