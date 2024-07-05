@@ -1,6 +1,9 @@
 /* eslint-disable react/jsx-props-no-spreading,react-hooks/exhaustive-deps,jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions */
 import React, { useEffect, useState } from 'react';
-import { Draggable, Droppable } from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
+import {
+  Draggable,
+  Droppable,
+} from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
 import { Button } from 'antd';
 import PropTypes from 'prop-types';
 import { EllipsisOutlined, PlusOutlined } from '@ant-design/icons';
@@ -8,6 +11,7 @@ import { EllipsisOutlined, PlusOutlined } from '@ant-design/icons';
 import Node from './node';
 import EditableTextArea from '../../components/EditableTextArea/EditableTextArea';
 import styles from './parent.module.scss';
+import ParentQuickActions from '../../components/ParentQuickActions/ParentQuickActions';
 
 const titleContainerStyle = {
   display: 'flex',
@@ -27,7 +31,7 @@ const nodeListStyle = (isDraggingOver) => {
 };
 
 const parentSettingsButtonStyle = {
-  padding: '5px',
+  padding: '15px',
   alignSelf: 'flex-end',
   border: 'none',
   cursor: 'pointer',
@@ -80,16 +84,16 @@ function Parent(props) {
   const [isFirstEdit, setIsFirstEdit] = useState(false);
 
   const {
-    nodes,
-    parent,
     createNewNode,
     deleteNode,
+    deleteParent,
     index,
     isTimerRunning,
     mustFocusNodeTitle,
     mustFocusParentTitle,
+    nodes,
+    parent,
     saveTime,
-    showParentModal,
     showModal,
     updateNodeTitle,
     updateParentProperty,
@@ -153,14 +157,12 @@ function Parent(props) {
                 </span>
               )}
             </h3>
-            {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
-            <Button
-              style={parentSettingsButtonStyle}
-              onClick={() => showParentModal(parent)}
-              type="button"
-            >
-              <EllipsisOutlined style={{ fontSize: '20px' }} />
-            </Button>
+            <ParentQuickActions
+              key="actions"
+              button={<EllipsisOutlined style={parentSettingsButtonStyle} />}
+              parent={parent}
+              deleteParent={deleteParent}
+            />
           </div>
           <Droppable droppableId={parent.id} type="node">
             {/* eslint-disable-next-line @typescript-eslint/no-shadow */}
@@ -205,6 +207,7 @@ export default Parent;
 Parent.propTypes = {
   createNewNode: PropTypes.func.isRequired,
   deleteNode: PropTypes.func.isRequired,
+  deleteParent: PropTypes.func.isRequired,
   index: PropTypes.number.isRequired,
   isTimerRunning: PropTypes.bool.isRequired,
   mustFocusNodeTitle: PropTypes.bool.isRequired,
@@ -214,7 +217,6 @@ Parent.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   parent: PropTypes.any.isRequired,
   saveTime: PropTypes.func.isRequired,
-  showParentModal: PropTypes.func.isRequired,
   showModal: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,

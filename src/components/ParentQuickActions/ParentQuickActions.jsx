@@ -5,18 +5,20 @@ import PropTypes from 'prop-types';
 const { Item } = Menu;
 
 function Content(props) {
-  const { deleteNode, node } = props;
+  const { deleteParent, parent } = props;
   return (
     <Menu>
       <Item key="0">
         <Popconfirm
-          title="Are you sure delete this node?"
-          onConfirm={() => deleteNode(node.id, node.parent)}
+          title="Are you sure delete this parent?"
+          onConfirm={() => deleteParent(parent)}
           onCancel={() => {}}
           okText="Yes"
           cancelText="No"
         >
-          <Button style={{ border: 'none', width: '100%' }}>Delete Node</Button>
+          <Button style={{ border: 'none', width: '100%' }}>
+            Delete Parent
+          </Button>
         </Popconfirm>
       </Item>
     </Menu>
@@ -24,27 +26,29 @@ function Content(props) {
 }
 
 Content.propTypes = {
-  deleteNode: PropTypes.func.isRequired,
+  deleteParent: PropTypes.func.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
-  node: PropTypes.object.isRequired,
+  parent: PropTypes.object.isRequired,
 };
 
-export default function NodeQuickActions(props) {
-  const { button, deleteNode, node } = props;
+export default function ParentQuickActions(props) {
+  const { button, deleteParent, parent } = props;
 
   return (
     <div>
-      <Dropdown overlay={<Content node={node} deleteNode={deleteNode} />}>
+      <Dropdown
+        overlay={<Content parent={parent} deleteParent={deleteParent} />}
+      >
         {button}
       </Dropdown>
     </div>
   );
 }
 
-NodeQuickActions.propTypes = {
+ParentQuickActions.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   button: PropTypes.any.isRequired,
-  deleteNode: PropTypes.func.isRequired,
+  deleteParent: PropTypes.func.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
-  node: PropTypes.object.isRequired,
+  parent: PropTypes.object.isRequired,
 };

@@ -30,7 +30,6 @@ function Node(props) {
     isTimerRunning,
     mustFocusNodeTitle,
     node,
-    saveTime,
     showModal,
     updateNodeTitle,
   } = props;

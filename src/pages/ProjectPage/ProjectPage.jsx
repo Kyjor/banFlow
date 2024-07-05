@@ -7,10 +7,10 @@ import PropTypes from 'prop-types';
 import Layout from '../../layouts/App';
 // Components
 import NodeModal from '../../components/NodeModal/NodeModal';
-import ParentModal from '../../components/ParentModal/ParentModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
+import { message } from 'antd';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -86,17 +86,6 @@ class ProjectPage extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  showParentModal = () => {
-    const newState = {
-      ...this.state,
-      parentModalVisible: true,
-    };
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
-    });
-  };
-
-  // eslint-disable-next-line class-methods-use-this
   showModal = (node) => {
     const newState = {
       ...this.state,
@@ -123,22 +112,25 @@ class ProjectPage extends Component {
     });
   };
 
-  deleteParent = () => {
-    const { modalParent } = this.state;
+  deleteParent = (parent) => {
+    if (parent.nodeIds.length > 0) {
+      message.error('Empty parent before deleting');
+      return;
+    }
 
-    ParentController.deleteParent(modalParent.id);
+    ParentController.deleteParent(parent.id);
 
     const newState = {
       ...this.state,
       parents: ParentController.getParents(),
       parentOrder: ParentController.getParentOrder(),
-      parentModalVisible: false,
-      modalParent: null,
     };
 
     ipcRenderer.invoke('api:setProjectState', {
       ...newState,
     });
+
+    message.success('Deleted parent');
   };
 
   handleOk = () => {
@@ -166,10 +158,8 @@ class ProjectPage extends Component {
   handleCancel = () => {
     const newState = {
       ...this.state,
-      parentModalVisible: false,
       nodeModalVisible: false,
       modalNode: null,
-      modalParent: null,
     };
 
     ipcRenderer.invoke('api:setProjectState', {
@@ -197,22 +187,12 @@ class ProjectPage extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  updateParentProperty = (
-    propertyToUpdate,
-    parentId,
-    newValue,
-    isFromModal,
-  ) => {
-    const newParent = ParentController.updateParentProperty(
-      propertyToUpdate,
-      parentId,
-      newValue,
-    );
+  updateParentProperty = (propertyToUpdate, parentId, newValue) => {
+    ParentController.updateParentProperty(propertyToUpdate, parentId, newValue);
 
     const newState = {
       ...this.state,
       parents: ParentController.getParents(),
-      modalParent: isFromModal ? newParent : null,
     };
 
     ipcRenderer.invoke('api:setProjectState', {
@@ -240,12 +220,10 @@ class ProjectPage extends Component {
       isTimerRunning,
       lokiLoaded,
       modalNode,
-      modalParent,
       mustFocusNodeTitle,
       mustFocusParentTitle,
       nodeModalVisible,
       nodes,
-      parentModalVisible,
       parentOrder,
       parents,
     } = this.state;
@@ -265,20 +243,10 @@ class ProjectPage extends Component {
             />
           )}
         </div>
-        <div>
-          {modalParent && (
-            <ParentModal
-              parent={modalParent}
-              deleteParent={this.deleteParent}
-              handleCancel={this.handleCancel}
-              updateParentProperty={this.updateParentProperty}
-              visible={parentModalVisible}
-            />
-          )}
-        </div>
         <KanbanBoard
           createNewNode={this.createNewNode}
           deleteNode={this.deleteNode}
+          deleteParent={this.deleteParent}
           handleAddParent={() => this.createNewParent('New Parent')}
           isTimerRunning={isTimerRunning}
           mustFocusNodeTitle={mustFocusNodeTitle}
@@ -289,7 +257,6 @@ class ProjectPage extends Component {
           saveTime={this.updateNodeProperty}
           state={this.state}
           showModal={this.showModal}
-          showParentModal={this.showParentModal}
           updateNodeTitle={this.updateNodeTitle}
           updateParentProperty={this.updateParentProperty}
           updateParents={this.updateParents}

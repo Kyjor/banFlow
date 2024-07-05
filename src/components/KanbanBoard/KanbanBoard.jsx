@@ -1,7 +1,10 @@
 /* eslint-disable react/jsx-props-no-spreading */
 import React, { Component } from 'react';
 import * as PropTypes from 'prop-types';
-import { DragDropContext, Droppable } from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
+import {
+  DragDropContext,
+  Droppable,
+} from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
 import ScrollContainer from 'react-indiana-drag-scroll';
 import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
@@ -105,6 +108,7 @@ class KanbanBoard extends Component {
     const {
       createNewNode,
       deleteNode,
+      deleteParent,
       handleAddParent,
       isTimerRunning,
       mustFocusNodeTitle,
@@ -114,7 +118,6 @@ class KanbanBoard extends Component {
       parents,
       saveTime,
       showModal,
-      showParentModal,
       updateParentProperty,
       updateNodeTitle,
     } = this.props;
@@ -154,6 +157,7 @@ class KanbanBoard extends Component {
                         className="ignoreParent"
                         createNewNode={createNewNode}
                         deleteNode={deleteNode}
+                        deleteParent={deleteParent}
                         index={index}
                         isTimerRunning={isTimerRunning || false}
                         key={parent.id}
@@ -165,7 +169,6 @@ class KanbanBoard extends Component {
                           saveTime(`timeSpent`, nodeId, seconds, false);
                         }}
                         showModal={showModal}
-                        showParentModal={showParentModal}
                         updateNodeTitle={updateNodeTitle}
                         updateParentProperty={updateParentProperty}
                       />
@@ -200,6 +203,7 @@ export default KanbanBoard;
 KanbanBoard.propTypes = {
   createNewNode: PropTypes.func.isRequired,
   deleteNode: PropTypes.func.isRequired,
+  deleteParent: PropTypes.func.isRequired,
   handleAddParent: PropTypes.func.isRequired,
   isTimerRunning: PropTypes.bool.isRequired,
   mustFocusNodeTitle: PropTypes.bool.isRequired,
@@ -212,7 +216,6 @@ KanbanBoard.propTypes = {
   parents: PropTypes.object.isRequired,
   saveTime: PropTypes.func.isRequired,
   showModal: PropTypes.func.isRequired,
-  showParentModal: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,
   updateParents: PropTypes.func.isRequired,
