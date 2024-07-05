@@ -4,13 +4,13 @@ import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
 import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import { message } from 'antd';
 import Layout from '../../layouts/App';
 // Components
 import NodeModal from '../../components/NodeModal/NodeModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
-import { message } from 'antd';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -230,7 +230,17 @@ class ProjectPage extends Component {
 
     return lokiLoaded ? (
       <Layout>
-        <div>{this.projectName}</div>
+        <div>
+          <span
+            style={{
+              fontWeight: `600`,
+              fontSize: `xx-large`,
+              marginLeft: `10px`,
+            }}
+          >
+            {this.projectName}
+          </span>
+        </div>
         <div>
           {modalNode && (
             <NodeModal
