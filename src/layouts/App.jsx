@@ -8,7 +8,6 @@ import PropTypes from 'prop-types';
 import { useLocation, Link } from 'react-router-dom';
 import { ipcRenderer } from 'electron';
 import { Header } from 'antd/es/layout/layout';
-import Footer from '../components/@shared/Footer';
 import AddProject from '../components/Projects/AddProject';
 
 const { Content, Sider } = Layout;
@@ -36,7 +35,6 @@ function App(props) {
   const [showModal, setShowModal] = useState(false);
   const { children } = props;
   const location = useLocation();
-  // Get pagename from the current url
 
   const sidebarComponents = loadSidebarComponents(
     location.pathname,
@@ -50,7 +48,7 @@ function App(props) {
       }}
     >
       <Header>
-        <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
+        <Menu theme="dark" defaultSelectedKeys={['1']} mode="horizontal">
           <Menu.Item
             icon={<DesktopOutlined />}
             title="Dashboard"
@@ -69,6 +67,7 @@ function App(props) {
           collapsible
           collapsed={collapsed}
           onCollapse={(value) => setCollapsed(value)}
+          style={{ background: `black` }}
         >
           <div className="logo" />
           <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
