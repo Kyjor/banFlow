@@ -233,7 +233,7 @@ function createTimerWindow(
     titleBarStyle: 'customButtonsOnHover',
     frame: true,
     alwaysOnTop: true,
-    show: false,
+    show: true,
     resizable: true,
     transparent: true,
 

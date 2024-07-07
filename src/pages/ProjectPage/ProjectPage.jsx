@@ -73,8 +73,8 @@ class ProjectPage extends Component {
     });
   };
 
-  updateNodeTitle = (newTitle, nodeId, isModalNode = true) => {
-    this.updateNodeProperty(`title`, nodeId, newTitle, isModalNode);
+  updateNodeTitle = (newTitle, nodeId) => {
+    this.updateNodeProperty(`title`, nodeId, newTitle);
     const newState = {
       ...this.state,
       nodes: NodeController.getNodes(),
@@ -90,7 +90,7 @@ class ProjectPage extends Component {
     const newState = {
       ...this.state,
       nodeModalVisible: true,
-      modalNode: node,
+      modalNodeId: node.id,
     };
     ipcRenderer.invoke('api:setProjectState', {
       ...newState,
@@ -98,6 +98,12 @@ class ProjectPage extends Component {
   };
 
   deleteNode = (nodeId, parentId) => {
+    const { isTimerRunning } = this.state;
+    if (isTimerRunning) {
+      message.error('Stop timer before deleting');
+      return;
+    }
+
     NodeController.deleteNode(nodeId, parentId);
 
     const newState = {
@@ -134,11 +140,11 @@ class ProjectPage extends Component {
   };
 
   handleOk = () => {
-    const { modalNode, timerPreferences } = this.state;
+    const { modalNodeId, nodes, timerPreferences } = this.state;
 
     ipcRenderer.send(
       'MSG_FROM_RENDERER',
-      modalNode,
+      nodes[modalNodeId],
       this.projectName,
       this.state,
       timerPreferences,
@@ -146,7 +152,7 @@ class ProjectPage extends Component {
     const newState = {
       ...this.state,
       nodeModalVisible: false,
-      currentNodeSelectedInTimer: modalNode.id,
+      currentNodeSelectedInTimer: modalNodeId,
     };
     // TODO: don't persist this
     ipcRenderer.invoke('api:setProjectState', {
@@ -159,7 +165,7 @@ class ProjectPage extends Component {
     const newState = {
       ...this.state,
       nodeModalVisible: false,
-      modalNode: null,
+      modalNodeId: null,
     };
 
     ipcRenderer.invoke('api:setProjectState', {
@@ -168,17 +174,12 @@ class ProjectPage extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  updateNodeProperty = (propertyToUpdate, nodeId, newValue, isFromModal) => {
-    const newNode = NodeController.updateNodeProperty(
-      propertyToUpdate,
-      nodeId,
-      newValue,
-    );
+  updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
+    NodeController.updateNodeProperty(propertyToUpdate, nodeId, newValue);
 
     const newState = {
       ...this.state,
       nodes: NodeController.getNodes(),
-      modalNode: isFromModal ? newNode : null,
     };
 
     ipcRenderer.invoke('api:setProjectState', {
@@ -219,7 +220,7 @@ class ProjectPage extends Component {
     const {
       isTimerRunning,
       lokiLoaded,
-      modalNode,
+      modalNodeId,
       mustFocusNodeTitle,
       mustFocusParentTitle,
       nodeModalVisible,
@@ -242,11 +243,12 @@ class ProjectPage extends Component {
           </span>
         </div>
         <div>
-          {modalNode && (
+          {modalNodeId && (
             <NodeModal
               handleCancel={this.handleCancel}
               handleOk={this.handleOk}
-              node={modalNode}
+              isTimerRunning={isTimerRunning}
+              node={nodes[modalNodeId]}
               parents={parents}
               updateNodeProperty={this.updateNodeProperty}
               visible={nodeModalVisible}
