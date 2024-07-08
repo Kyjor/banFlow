@@ -196,6 +196,7 @@ export default NodeModal;
 NodeModal.propTypes = {
   handleCancel: PropTypes.func.isRequired,
   handleOk: PropTypes.func.isRequired,
+  isTimerRunning: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   node: PropTypes.object.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
