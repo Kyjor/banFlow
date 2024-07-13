@@ -11,6 +11,7 @@ import NodeModal from '../../components/NodeModal/NodeModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
+import IterationDisplay from '../../components/IterationDisplay/IterationDisplay';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -241,6 +242,7 @@ class ProjectPage extends Component {
           >
             {this.projectName}
           </span>
+          <IterationDisplay createIteration={} iterations={} selectedIteration={} selectIteration={}/>
         </div>
         <div>
           {modalNodeId && (

@@ -58,7 +58,7 @@ export default class IterationDisplay extends React.Component {
           this.select = select;
         }}
         style={{ width: 200 }}
-        placeholder="Add an item"
+        placeholder="Add an iteration by typing..."
         onInputKeyDown={this.onKeyDown}
         onSearch={this.onSearch}
         value={value}

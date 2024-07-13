@@ -34,6 +34,7 @@ import ParentService from '../services/ParentService';
 import MetadataService from '../services/MetadataService';
 import TagService from '../services/TagService';
 import TimerService from '../services/TimerService';
+import IterationService from '../services/IterationService';
 
 remoteMain.initialize();
 let mainWindow: BrowserWindow | null = null;
@@ -509,6 +510,35 @@ ipcMain.on('api:getNodeTypes', (event) => {
 ipcMain.on('api:getNodeStates', (event) => {
   event.returnValue = NodeService.getNodeStates(currentLokiService);
 });
+
+// Iterations
+ipcMain.on('api:getIterations', (event) => {
+  event.returnValue = IterationService.getIterations(currentLokiService);
+});
+
+ipcMain.on('api:createIteration', (event, iterationTitle) => {
+  event.returnValue = IterationService.createIteration(
+    currentLokiService,
+    iterationTitle,
+  );
+});
+
+ipcMain.on('api:deleteIteration', (event, iterationId) => {
+  IterationService.deleteIteration(currentLokiService, iterationId);
+  event.returnValue = true;
+});
+
+ipcMain.on(
+  'api:updateIterationProperty',
+  (event, propertyToUpdate, iterationId, newValue) => {
+    event.returnValue = IterationService.updateIterationProperty(
+      currentLokiService,
+      propertyToUpdate,
+      iterationId,
+      newValue,
+    );
+  },
+);
 
 const setProjectState = (_event: any, values: any) => {
   individualProjectStateValue = {
