@@ -50,12 +50,20 @@ class ParentInnerList extends React.Component {
       nodes = {},
       isTimerRunning,
       saveTime,
+      selectedIteration,
       updateNodeTitle,
       ...rest
     } = this.props;
+
+    function isInCurrentIteration(node, selectedIteration) {
+      if((node.iterationId && node.iterationId == selectedIteration) || (!node.iterationId || node.iterationId == `` )){
+        
+      }
+    }
+
     return nodes.map((node, index) => (
       <div>
-        {node && (
+        {node && isInCurrentIteration(node, selectedIteration) && (
           <Node
             isTimerRunning={isTimerRunning}
             key={node.id}

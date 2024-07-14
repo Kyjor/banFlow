@@ -14,6 +14,7 @@ class BoardInnerList extends React.PureComponent {
       deleteParent,
       isTimerRunning,
       saveTime,
+      selectedIteration,
       showModal,
       updateNodeTitle,
       updateParentProperty,
@@ -30,6 +31,7 @@ class BoardInnerList extends React.PureComponent {
         nodes={nodes}
         parent={parent}
         saveTime={saveTime}
+        selectedIteration={selectedIteration}
         showModal={showModal}
         updateNodeTitle={updateNodeTitle}
         updateParentProperty={updateParentProperty}

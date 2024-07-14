@@ -32,6 +32,10 @@ const IterationController = {
     ipcRenderer.sendSync('api:deleteIteration', iterationId);
   },
 
+  selectIteration(iterationId) {
+    ipcRenderer.sendSync('api:selectIteration', iterationId);
+  },
+
   updateIterationProperty(propertyToUpdate, iterationId, newValue) {
     return ipcRenderer.sendSync(
       'api:updateIterationProperty',

@@ -117,6 +117,7 @@ class KanbanBoard extends Component {
       parentOrder,
       parents,
       saveTime,
+      selectedIteration,
       showModal,
       updateParentProperty,
       updateNodeTitle,
@@ -168,6 +169,7 @@ class KanbanBoard extends Component {
                         saveTime={(seconds, nodeId) => {
                           saveTime(`timeSpent`, nodeId, seconds, false);
                         }}
+                        selectedIteration={selectedIteration}
                         showModal={showModal}
                         updateNodeTitle={updateNodeTitle}
                         updateParentProperty={updateParentProperty}

@@ -58,13 +58,21 @@ const NodeService = {
    * @function createNode
    * @desc creates a new Node with a set of given properties
    * @route Nodes
+   * @param lokiService
    * @param {string} nodeType - the type of node to create.
    * @param {string} nodeTitle - the title of the node.
    * @param {string} [parentId=``] - the Id of the parent of the node. Can be null or empty.
+   * @param iterationId
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode(lokiService, nodeType, nodeTitle, parentId = ``) {
+  createNode(
+    lokiService,
+    nodeType,
+    nodeTitle,
+    parentId = ``,
+    iterationId = ``,
+  ) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
     const nextId = nodes.data.length
@@ -102,7 +110,7 @@ const NodeService = {
       completedDate: ``,
       isLocked: false, // whether the node can be moved from the parent
       isArchived: false,
-      iteration: null, //
+      iterationId, //
     });
     parents
       .chain()

@@ -3,6 +3,7 @@ const Loki = require('lokijs');
 export default class LokiService {
   constructor(projectName) {
     this.db = null;
+    this.iterations = null;
     this.nodes = null;
     this.parents = null;
     this.parentOrder = null;
@@ -67,6 +68,13 @@ export default class LokiService {
       this.tags = this.db.addCollection('tags');
       mustSaveDatabase = true;
     }
+
+    this.tags = this.db.getCollection('iterations');
+    if (!this.iterations) {
+      this.iterations = this.db.addCollection('iterations');
+      mustSaveDatabase = true;
+    }
+
     this.timerPreferences = this.db.getCollection('timerPreferences');
     if (!this.timerPreferences) {
       this.timerPreferences = this.db.addCollection('timerPreferences');
