@@ -79,6 +79,8 @@ const NodeService = {
       ? nodes.chain().simplesort('$loki', true).data()[0].$loki + 1
       : 1;
 
+    console.log(`iterationId`);
+    console.log(iterationId);
     const newNode = nodes.insert({
       nodeType: `task`, // task, note or event. not editable
       nodeState: ``, // in progress, done, whatever the user decides
@@ -129,7 +131,7 @@ const NodeService = {
 
     parents
       .chain()
-      .find({ id: parentId })
+      .find({ $ne: null })
       .update((parent) => {
         const newNodeIds = parent.nodeIds;
         newNodeIds.splice(newNodeIds.indexOf(nodeId), 1);

@@ -66,34 +66,27 @@ class KanbanBoard extends Component {
     const finish = parents[destination.droppableId];
 
     if (start === finish) {
-      const newNodeIds = Array.from(start.nodeIds);
-      newNodeIds.splice(source.index, 1);
-      newNodeIds.splice(destination.index, 0, draggableId);
-      const newParent = {
-        ...start,
-        nodeIds: newNodeIds,
-      };
-
-      updateParents(() => {
-        parentController.updateParentProperty(
-          'nodeIds',
-          newParent.id,
-          newParent.nodeIds,
-        );
-      });
-
-      return;
+      this.moveCardWithinCurrentColumn(
+        start,
+        source,
+        destination,
+        draggableId,
+        updateParents,
+      );
     }
 
     const startNodeIds = Array.from(start.nodeIds);
-    startNodeIds.splice(source.index, 1);
+    const draggableIdIndex = startNodeIds.indexOf(draggableId);
+    if (draggableIdIndex !== -1) {
+      startNodeIds.splice(draggableIdIndex, 1);
+    }
     const newStart = {
       ...start,
       nodeIds: startNodeIds,
     };
 
     const finishNodeIds = Array.from(finish.nodeIds);
-    finishNodeIds.splice(destination.index, 0, draggableId);
+    finishNodeIds.splice(destination.index, 0, result.draggableId);
     const newFinish = {
       ...finish,
       nodeIds: finishNodeIds,
@@ -101,6 +94,34 @@ class KanbanBoard extends Component {
 
     updateParents(() => {
       parentController.updateNodesInParents(newStart, newFinish, draggableId);
+    });
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  moveCardWithinCurrentColumn = (
+    start,
+    source,
+    destination,
+    draggableId,
+    updateParents,
+  ) => {
+    const newNodeIds = Array.from(start.nodeIds);
+    const draggableIdIndex = newNodeIds.indexOf(draggableId);
+    if (draggableIdIndex !== -1) {
+      newNodeIds.splice(draggableIdIndex, 1);
+    }
+    newNodeIds.splice(destination.index, 0, draggableId);
+    const newParent = {
+      ...start,
+      nodeIds: newNodeIds,
+    };
+
+    updateParents(() => {
+      parentController.updateParentProperty(
+        'nodeIds',
+        newParent.id,
+        newParent.nodeIds,
+      );
     });
   };
 
@@ -124,7 +145,9 @@ class KanbanBoard extends Component {
     } = this.props;
     return (
       <DragDropContext
-        onDragEnd={this.onDragEnd}
+        onDragEnd={(result, provided) => {
+          this.onDragEnd(result, provided);
+        }}
         onDragUpdate={this.onDragUpdate}
         onDragStart={this.onDragStart}
       >

@@ -37,6 +37,8 @@ class ProjectPage extends Component {
 
     const self = this;
     ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
+      console.log('Received new state');
+      console.log(newState);
       self.setState(newState);
     });
   }
@@ -61,8 +63,12 @@ class ProjectPage extends Component {
   };
 
   createNewNode = (parentId) => {
+    const { selectedIteration } = this.state;
     const newTitle = `New Node`;
-    NodeController.createNode('child', newTitle, parentId);
+    console.log(
+      `Creating new node with title: ${newTitle}, in parent: ${parentId}, in iteration: ${selectedIteration}`,
+    );
+    NodeController.createNode('child', newTitle, parentId, selectedIteration);
 
     const newState = {
       ...this.state,
@@ -91,9 +97,9 @@ class ProjectPage extends Component {
     });
   };
 
-  selectIteration = (iteration) => {
-    IterationController.selectIteration(iteration);
-
+  setSelectedIteration = (iteration) => {
+    // TODO: IterationController.selectIteration(iteration); // Save selected iteration to db
+    console.log(`Selected iteration: ${iteration}`);
     const newState = {
       ...this.state,
       selectedIteration: iteration,
@@ -275,7 +281,12 @@ class ProjectPage extends Component {
           >
             {this.projectName}
           </span>
-          <IterationDisplay createIteration={this.createIteration} iterations={iterations} selectedIteration={selectedIteration} selectIteration={this.selectIteration}/>
+          <IterationDisplay
+            createIteration={this.createIteration}
+            iterations={iterations}
+            selectedIteration={selectedIteration}
+            setSelectedIteration={this.setSelectedIteration}
+          />
         </div>
         <div>
           {modalNodeId && (

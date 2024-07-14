@@ -372,14 +372,18 @@ ipcMain.on('api:getNode', (event, nodeId) => {
   event.returnValue = NodeService.getNodesWithQuery(currentLokiService, nodeId);
 });
 
-ipcMain.on('api:createNode', (event, nodeType, nodeTitle, parentId) => {
-  event.returnValue = NodeService.createNode(
-    currentLokiService,
-    nodeType,
-    nodeTitle,
-    parentId,
-  );
-});
+ipcMain.on(
+  'api:createNode',
+  (event, nodeType, nodeTitle, parentId, iterationId) => {
+    event.returnValue = NodeService.createNode(
+      currentLokiService,
+      nodeType,
+      nodeTitle,
+      parentId,
+      iterationId,
+    );
+  },
+);
 
 ipcMain.on('api:deleteNode', (event, nodeId, parentId) => {
   NodeService.deleteNode(currentLokiService, nodeId, parentId);
@@ -459,6 +463,10 @@ ipcMain.on('api:initializeProjectState', (event, projectName: any) => {
     ParentService.getParents(currentLokiService);
   individualProjectStateValue.parentOrder =
     ParentService.getParentOrder(currentLokiService);
+  individualProjectStateValue.iterations =
+    IterationService.getIterations(currentLokiService);
+  console.log(`iterations`);
+  console.log(individualProjectStateValue.iterations);
   individualProjectStateValue.lokiLoaded = true;
   individualProjectStateValue.projectName = projectName;
 
@@ -586,6 +594,8 @@ const initializeProjectState = (_event: any, projectName: any) => {
     ParentService.getParents(currentLokiService);
   individualProjectStateValue.parentOrder =
     ParentService.getParentOrder(currentLokiService);
+  individualProjectStateValue.iterations =
+    IterationService.getIterations(currentLokiService);
   individualProjectStateValue.lokiLoaded = true;
   individualProjectStateValue.projectName = projectName;
 

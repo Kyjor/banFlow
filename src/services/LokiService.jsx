@@ -69,7 +69,7 @@ export default class LokiService {
       mustSaveDatabase = true;
     }
 
-    this.tags = this.db.getCollection('iterations');
+    this.iterations = this.db.getCollection('iterations');
     if (!this.iterations) {
       this.iterations = this.db.addCollection('iterations');
       mustSaveDatabase = true;

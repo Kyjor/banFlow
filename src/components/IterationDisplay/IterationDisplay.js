@@ -5,11 +5,6 @@ import * as PropTypes from 'prop-types';
 const { Option } = Select;
 
 export default class IterationDisplay extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { selectedIteration: 0 };
-  }
-
   onKeyDown = (e) => {
     if (e.key === 'Enter') {
       this.addItem(e.target.value);
@@ -17,31 +12,18 @@ export default class IterationDisplay extends React.Component {
   };
 
   addItem = (newItem) => {
-    const { createIteration, iterations } = this.props;
-    this.setState(
-      {
-        selectedIteration: iterations.length,
-      },
-      () => {
-        createIteration(newItem);
-      },
-    );
+    const { createIteration, iterations, setSelectedIteration } = this.props;
+    setSelectedIteration(iterations.length);
+    createIteration(newItem);
   };
 
   render() {
-    const { selectedIteration } = this.state;
-    const { iterations } = this.props;
+    const { iterations, selectedIteration, setSelectedIteration } = this.props;
     console.log(iterations);
     return (
       <Select
         onSelect={(newValue, evt) => {
-          // eslint-disable-next-line react/no-unused-class-component-methods
-          const newState = {
-            ...this.state,
-            selectedIteration: newValue,
-          };
-
-          this.setState({ ...newState });
+          setSelectedIteration(newValue);
         }}
         showSearch
         style={{ width: 200 }}
@@ -56,7 +38,7 @@ export default class IterationDisplay extends React.Component {
         </Option>
         {iterations &&
           Object.values(iterations).map((item, index) => (
-            <Option style={{ width: '100%' }} key={item.id} value={index + 1}>
+            <Option style={{ width: '100%' }} key={item.id} value={item.id}>
               <span style={{ whiteSpace: 'normal' }}>{item.title}</span>
             </Option>
           ))}
@@ -66,10 +48,9 @@ export default class IterationDisplay extends React.Component {
 }
 
 IterationDisplay.propTypes = {
-  currentValue: PropTypes.string.isRequired,
+  createIteration: PropTypes.func.isRequired,
   // eslint-disable-next-line react/forbid-prop-types,react/require-default-props
-  iterations: PropTypes.array,
-  parentEnum: PropTypes.string.isRequired,
-  saveMetadataValue: PropTypes.func.isRequired,
-  updateNodeEnum: PropTypes.func.isRequired,
+  iterations: PropTypes.object.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
+  setSelectedIteration: PropTypes.func.isRequired,
 };

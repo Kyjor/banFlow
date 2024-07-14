@@ -20,6 +20,7 @@ const IterationService = {
       };
     });
 
+    console.log('getting iterations');
     return response;
   },
 

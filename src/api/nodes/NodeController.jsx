@@ -39,15 +39,17 @@ const NodeController = {
    * @param {string} nodeType - the type of node to create.
    * @param {string} nodeTitle - the title of the node.
    * @param {string} [parentId=``] - the Id of the parent of the node. Can be null or empty.
+   * @param iterationId
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode(nodeType, nodeTitle, parentId = ``) {
+  createNode(nodeType, nodeTitle, parentId = ``, iterationId = ``) {
     return ipcRenderer.sendSync(
       'api:createNode',
       nodeType,
       nodeTitle,
       parentId,
+      iterationId,
     );
   },
 
