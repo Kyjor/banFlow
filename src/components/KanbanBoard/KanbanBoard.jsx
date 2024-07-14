@@ -43,38 +43,61 @@ class KanbanBoard extends Component {
 
     document.body.style.color = 'inherit';
 
-    if (!destination) {
+    const isSamePositionOrNoDestination =
+      !destination ||
+      (destination.droppableId === source.droppableId &&
+        destination.index === source.index);
+
+    if (isSamePositionOrNoDestination) {
       return;
     }
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
+
     if (type === 'parent') {
-      const newParentOrder = Array.from(parentOrder);
-      newParentOrder.splice(source.index, 1);
-      newParentOrder.splice(destination.index, 0, draggableId);
-      updateParents(() => {
-        parentController.updateParentOrder(newParentOrder);
-      });
+      this.moveParent(
+        parentOrder,
+        source,
+        destination,
+        draggableId,
+        updateParents,
+      );
 
       return;
     }
+
     const start = parents[source.droppableId];
     const finish = parents[destination.droppableId];
 
     if (start === finish) {
-      this.moveCardWithinCurrentColumn(
+      this.moveCardWithinCurrentParent(
         start,
         source,
         destination,
         draggableId,
         updateParents,
       );
+
+      return;
     }
 
+    this.moveCardToAnotherParent(
+      start,
+      draggableId,
+      finish,
+      destination,
+      result,
+      updateParents,
+    );
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  moveCardToAnotherParent = (
+    start,
+    draggableId,
+    finish,
+    destination,
+    result,
+    updateParents,
+  ) => {
     const startNodeIds = Array.from(start.nodeIds);
     const draggableIdIndex = startNodeIds.indexOf(draggableId);
     if (draggableIdIndex !== -1) {
@@ -98,7 +121,23 @@ class KanbanBoard extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  moveCardWithinCurrentColumn = (
+  moveParent = (
+    parentOrder,
+    source,
+    destination,
+    draggableId,
+    updateParents,
+  ) => {
+    const newParentOrder = Array.from(parentOrder);
+    newParentOrder.splice(source.index, 1);
+    newParentOrder.splice(destination.index, 0, draggableId);
+    updateParents(() => {
+      parentController.updateParentOrder(newParentOrder);
+    });
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  moveCardWithinCurrentParent = (
     start,
     source,
     destination,
