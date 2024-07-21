@@ -116,6 +116,9 @@ const ParentService = {
     nodeId,
   ) {
     const { nodes, parents } = lokiService;
+    console.log(updatedOriginParent.nodeIds);
+    console.log(updatedDestinationParent.nodeIds);
+
     parents
       .chain()
       .find({ id: updatedOriginParent.id })

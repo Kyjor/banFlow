@@ -4,70 +4,42 @@ import * as PropTypes from 'prop-types';
 
 const { Option } = Select;
 
-function IterationDisplayOption(props) {
-  const { item } = props;
-
-  return <span style={{ whiteSpace: 'normal' }}>{item}</span>;
-}
-
-IterationDisplayOption.propTypes = { item: PropTypes.string.isRequired };
-
 export default class IterationDisplay extends React.Component {
-  constructor(props) {
-    super();
-    const { currentValue, items } = props;
-    this.state = { items, value: currentValue };
-  }
-
   onKeyDown = (e) => {
     if (e.key === 'Enter') {
       this.addItem(e.target.value);
     }
   };
 
-  onDelete(val) {
-    const { items } = this.state;
-    items.splice(items.indexOf(val), 1);
-    this.setState({
-      items,
-      value: null,
-    });
-  }
-
   addItem = (newItem) => {
-    const { node, parentEnum, saveMetadataValue, updateNodeEnum } = this.props;
-    const { items } = this.state;
-    const newItems = [...items, `${newItem}`];
-    this.setState({
-      items: newItems,
-      value: newItem,
-    });
-    saveMetadataValue(newItem, parentEnum);
-    updateNodeEnum(newItem, parentEnum, node);
+    const { createIteration, iterations, setSelectedIteration } = this.props;
+    setSelectedIteration(iterations.length);
+    createIteration(newItem);
   };
 
   render() {
-    const { items, value } = this.state;
-    const { node } = this.props;
+    const { iterations, selectedIteration, setSelectedIteration } = this.props;
+    console.log(iterations);
     return (
       <Select
-        showSearch
-        defaultValue={node.nodeType}
-        ref={(select) => {
-          // eslint-disable-next-line react/no-unused-class-component-methods
-          this.select = select;
+        onSelect={(newValue, evt) => {
+          setSelectedIteration(newValue);
         }}
+        showSearch
         style={{ width: 200 }}
-        placeholder="Add an item"
+        placeholder="Add an iteration by typing..."
         onInputKeyDown={this.onKeyDown}
         onSearch={this.onSearch}
-        value={value}
+        value={selectedIteration}
         // filterOption={(input, option) => true}
       >
-        {items &&
-          items.map((item) => (
-            <Option style={{ width: '100%' }} key={item}>
-              <IterationDisplayOption item={item} onDelete={this.onDelete} />
+        <Option style={{ width: '100%' }} key={0} value={0}>
+          <span style={{ whiteSpace: 'normal' }}>Backlog</span>
+        </Option>
+        {iterations &&
+          Object.values(iterations).map((item, index) => (
+            <Option style={{ width: '100%' }} key={item.id} value={item.id}>
+              <span style={{ whiteSpace: 'normal' }}>{item.title}</span>
             </Option>
           ))}
       </Select>
@@ -76,12 +48,9 @@ export default class IterationDisplay extends React.Component {
 }
 
 IterationDisplay.propTypes = {
-  currentValue: PropTypes.string.isRequired,
+  createIteration: PropTypes.func.isRequired,
   // eslint-disable-next-line react/forbid-prop-types,react/require-default-props
-  items: PropTypes.array,
-  // eslint-disable-next-line react/forbid-prop-types
-  node: PropTypes.object.isRequired,
-  parentEnum: PropTypes.string.isRequired,
-  saveMetadataValue: PropTypes.func.isRequired,
-  updateNodeEnum: PropTypes.func.isRequired,
+  iterations: PropTypes.object.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
+  setSelectedIteration: PropTypes.func.isRequired,
 };

@@ -8,6 +8,7 @@ export const defaultTimerPreferences = {
 export const individualProjectState = {
   currentNodeSelectedInTimer: null,
   currentProjectName: '',
+  iterations: {},
   lokiLoaded: false,
   modalDescriptionSelected: false,
   modalParent: null,

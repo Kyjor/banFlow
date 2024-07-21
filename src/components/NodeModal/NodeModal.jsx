@@ -25,7 +25,7 @@ function NodeModal({
       }:00`;
       updateNodeProperty('estimatedDate', node.id, dateToSave, true);
     },
-    [node.id, updateNodeProperty],
+    [node?.id, updateNodeProperty],
   );
 
   const onChangeTimeSpent = useCallback(
@@ -41,10 +41,10 @@ function NodeModal({
         true,
       );
     },
-    [node.id, updateNodeProperty],
+    [node?.id, updateNodeProperty],
   );
 
-  return (
+  return node ? (
     <Modal
       title={
         <div style={{ display: 'flex', marginBottom: '15px' }}>
@@ -188,7 +188,7 @@ function NodeModal({
         </TabPane>
       </Tabs>
     </Modal>
-  );
+  ) : null;
 }
 
 export default NodeModal;

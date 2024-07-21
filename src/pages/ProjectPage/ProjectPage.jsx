@@ -11,6 +11,8 @@ import NodeModal from '../../components/NodeModal/NodeModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
+import IterationDisplay from '../../components/IterationDisplay/IterationDisplay';
+import IterationController from '../../api/iterations/IterationController';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -25,6 +27,8 @@ class ProjectPage extends Component {
     this.state = {
       currentProjectName: this.projectName,
       isTimerRunning: false,
+      iterations: {},
+      selectedIteration: 0,
     };
   }
 
@@ -33,6 +37,8 @@ class ProjectPage extends Component {
 
     const self = this;
     ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
+      console.log('Received new state');
+      console.log(newState);
       self.setState(newState);
     });
   }
@@ -57,14 +63,46 @@ class ProjectPage extends Component {
   };
 
   createNewNode = (parentId) => {
+    const { selectedIteration } = this.state;
     const newTitle = `New Node`;
-    NodeController.createNode('child', newTitle, parentId);
+    console.log(
+      `Creating new node with title: ${newTitle}, in parent: ${parentId}, in iteration: ${selectedIteration}`,
+    );
+    NodeController.createNode('child', newTitle, parentId, selectedIteration);
 
     const newState = {
       ...this.state,
       nodes: NodeController.getNodes(),
       parents: ParentController.getParents(),
       mustFocusNodeTitle: true,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
+  createIteration = (title) => {
+    IterationController.createIteration(title);
+
+    const newState = {
+      ...this.state,
+      iterations: IterationController.getIterations(),
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
+  setSelectedIteration = (iteration) => {
+    // TODO: IterationController.selectIteration(iteration); // Save selected iteration to db
+    console.log(`Selected iteration: ${iteration}`);
+    const newState = {
+      ...this.state,
+      selectedIteration: iteration,
     };
 
     ipcRenderer.invoke('api:setProjectState', {
@@ -219,6 +257,7 @@ class ProjectPage extends Component {
   render() {
     const {
       isTimerRunning,
+      iterations,
       lokiLoaded,
       modalNodeId,
       mustFocusNodeTitle,
@@ -227,6 +266,7 @@ class ProjectPage extends Component {
       nodes,
       parentOrder,
       parents,
+      selectedIteration,
     } = this.state;
 
     return lokiLoaded ? (
@@ -241,6 +281,12 @@ class ProjectPage extends Component {
           >
             {this.projectName}
           </span>
+          <IterationDisplay
+            createIteration={this.createIteration}
+            iterations={iterations}
+            selectedIteration={selectedIteration}
+            setSelectedIteration={this.setSelectedIteration}
+          />
         </div>
         <div>
           {modalNodeId && (
@@ -267,6 +313,7 @@ class ProjectPage extends Component {
           parentOrder={parentOrder}
           parents={parents}
           saveTime={this.updateNodeProperty}
+          selectedIteration={selectedIteration}
           state={this.state}
           showModal={this.showModal}
           updateNodeTitle={this.updateNodeTitle}
