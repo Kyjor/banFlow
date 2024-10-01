@@ -1,5 +1,5 @@
 import React from 'react';
-import { Select } from 'antd';
+import { Button, Select } from 'antd';
 import * as PropTypes from 'prop-types';
 
 const { Option } = Select;
@@ -15,6 +15,12 @@ export default class IterationDisplay extends React.Component {
     const { createIteration, iterations, setSelectedIteration } = this.props;
     setSelectedIteration(iterations.length);
     createIteration(newItem);
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  onClickEditIteration = (selectedIteration) => {
+    const { editIteration } = this.props;
+    editIteration(selectedIteration);
   };
 
   render() {
@@ -46,6 +52,9 @@ export default class IterationDisplay extends React.Component {
               </Option>
             ))}
         </Select>
+        <Button onClick={() => this.onClickEditIteration(selectedIteration)}>
+          Edit
+        </Button>
       </>
     );
   }
@@ -53,6 +62,7 @@ export default class IterationDisplay extends React.Component {
 
 IterationDisplay.propTypes = {
   createIteration: PropTypes.func.isRequired,
+  editIteration: PropTypes.func.isRequired,
   // eslint-disable-next-line react/forbid-prop-types,react/require-default-props
   iterations: PropTypes.object.isRequired,
   selectedIteration: PropTypes.string.isRequired,

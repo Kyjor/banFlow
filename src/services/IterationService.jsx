@@ -32,6 +32,7 @@ const IterationService = {
       : 1;
     const newIteration = iterations.insert({
       id: `iteration-${nextId}`,
+      description: '',
       title: iterationTitle,
       startDate: null,
       endDate: null,

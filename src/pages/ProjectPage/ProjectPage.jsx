@@ -13,6 +13,7 @@ import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
 import IterationDisplay from '../../components/IterationDisplay/IterationDisplay';
 import IterationController from '../../api/iterations/IterationController';
+import IterationModal from '../../components/IterationModal/IterationModal';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -26,6 +27,7 @@ class ProjectPage extends Component {
 
     this.state = {
       currentProjectName: this.projectName,
+      currentEditIteration: null,
       isTimerRunning: false,
       iterations: {},
       selectedIteration: 0,
@@ -37,8 +39,6 @@ class ProjectPage extends Component {
 
     const self = this;
     ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
-      console.log('Received new state');
-      console.log(newState);
       self.setState(newState);
     });
   }
@@ -97,9 +97,33 @@ class ProjectPage extends Component {
     });
   };
 
+  editIteration = (iteration) => {
+    // open modal to edit iteration
+    const newState = {
+      ...this.state,
+      currentEditIteration: iteration,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
+  handleIterationCancel = () => {
+    const newState = {
+      ...this.state,
+      currentEditIteration: null,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
   setSelectedIteration = (iteration) => {
     // TODO: IterationController.selectIteration(iteration); // Save selected iteration to db
-    console.log(`Selected iteration: ${iteration}`);
     const newState = {
       ...this.state,
       selectedIteration: iteration,
@@ -256,6 +280,7 @@ class ProjectPage extends Component {
 
   render() {
     const {
+      currentEditIteration,
       isTimerRunning,
       iterations,
       lokiLoaded,
@@ -284,10 +309,17 @@ class ProjectPage extends Component {
           <br />
           <IterationDisplay
             createIteration={this.createIteration}
+            editIteration={this.editIteration}
             iterations={iterations}
             selectedIteration={selectedIteration}
             setSelectedIteration={this.setSelectedIteration}
           />
+          {currentEditIteration && (
+            <IterationModal
+              iteration={iterations[currentEditIteration]}
+              handleCancel={this.handleIterationCancel}
+            />
+          )}
         </div>
         <div>
           {modalNodeId && (
