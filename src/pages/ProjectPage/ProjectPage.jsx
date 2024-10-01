@@ -281,6 +281,7 @@ class ProjectPage extends Component {
           >
             {this.projectName}
           </span>
+          <br />
           <IterationDisplay
             createIteration={this.createIteration}
             iterations={iterations}
@@ -294,6 +295,7 @@ class ProjectPage extends Component {
               handleCancel={this.handleCancel}
               handleOk={this.handleOk}
               isTimerRunning={isTimerRunning}
+              iterations={iterations}
               node={nodes[modalNodeId]}
               parents={parents}
               updateNodeProperty={this.updateNodeProperty}

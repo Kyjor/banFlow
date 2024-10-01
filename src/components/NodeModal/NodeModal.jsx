@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Button, DatePicker, Modal, Tabs, TimePicker } from 'antd';
+import { Button, DatePicker, Modal, Select, Tabs, TimePicker } from 'antd';
 import moment from 'moment';
 import dateFormat from 'dateformat';
 import { ClockCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
@@ -8,11 +8,13 @@ import EditableTextArea from '../EditableTextArea/EditableTextArea';
 import './NodeModal.css';
 
 const { TabPane } = Tabs;
+const { Option } = Select;
 
 function NodeModal({
   handleCancel,
   handleOk,
   isTimerRunning,
+  iterations,
   node,
   parents,
   updateNodeProperty,
@@ -40,6 +42,13 @@ function NodeModal({
         moment.duration(timeString).asSeconds(),
         true,
       );
+    },
+    [node?.id, updateNodeProperty],
+  );
+
+  const onChangeIteration = useCallback(
+    (value) => {
+      updateNodeProperty('iterationId', node.id, value, true);
     },
     [node?.id, updateNodeProperty],
   );
@@ -128,6 +137,22 @@ function NodeModal({
               updateNodeProperty('notes', node.id, value, true);
             }}
           />
+          <div>Iteration</div>
+          <Select
+            style={{ width: 200 }}
+            value={node.iterationId}
+            onChange={onChangeIteration}
+          >
+            <Option style={{ width: '100%' }} key={0} value={0}>
+              <span style={{ whiteSpace: 'normal' }}>Backlog</span>
+            </Option>
+            {iterations &&
+              Object.values(iterations).map((item, index) => (
+                <Option style={{ width: '100%' }} key={item.id} value={item.id}>
+                  <span style={{ whiteSpace: 'normal' }}>{item.title}</span>
+                </Option>
+              ))}
+          </Select>
         </TabPane>
         <TabPane
           style={{ margin: '0 10px 0 0' }}
@@ -197,6 +222,8 @@ NodeModal.propTypes = {
   handleCancel: PropTypes.func.isRequired,
   handleOk: PropTypes.func.isRequired,
   isTimerRunning: PropTypes.bool.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types,react/require-default-props
+  iterations: PropTypes.object.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   node: PropTypes.object.isRequired,
   // eslint-disable-next-line react/forbid-prop-types

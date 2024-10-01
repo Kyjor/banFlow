@@ -19,30 +19,34 @@ export default class IterationDisplay extends React.Component {
 
   render() {
     const { iterations, selectedIteration, setSelectedIteration } = this.props;
-    console.log(iterations);
     return (
-      <Select
-        onSelect={(newValue, evt) => {
-          setSelectedIteration(newValue);
-        }}
-        showSearch
-        style={{ width: 200 }}
-        placeholder="Add an iteration by typing..."
-        onInputKeyDown={this.onKeyDown}
-        onSearch={this.onSearch}
-        value={selectedIteration}
-        // filterOption={(input, option) => true}
-      >
-        <Option style={{ width: '100%' }} key={0} value={0}>
-          <span style={{ whiteSpace: 'normal' }}>Backlog</span>
-        </Option>
-        {iterations &&
-          Object.values(iterations).map((item, index) => (
-            <Option style={{ width: '100%' }} key={item.id} value={item.id}>
-              <span style={{ whiteSpace: 'normal' }}>{item.title}</span>
-            </Option>
-          ))}
-      </Select>
+      <>
+        <span style={{ fontSize: `large`, marginLeft: `10px` }}>
+          Iteration:
+        </span>
+        <Select
+          onSelect={(newValue, evt) => {
+            setSelectedIteration(newValue);
+          }}
+          showSearch
+          style={{ width: 200 }}
+          placeholder="Add an iteration by typing..."
+          onInputKeyDown={this.onKeyDown}
+          onSearch={this.onSearch}
+          value={selectedIteration}
+          // filterOption={(input, option) => true}
+        >
+          <Option style={{ width: '100%' }} key={0} value={0}>
+            <span style={{ whiteSpace: 'normal' }}>Backlog</span>
+          </Option>
+          {iterations &&
+            Object.values(iterations).map((item, index) => (
+              <Option style={{ width: '100%' }} key={item.id} value={item.id}>
+                <span style={{ whiteSpace: 'normal' }}>{item.title}</span>
+              </Option>
+            ))}
+        </Select>
+      </>
     );
   }
 }
