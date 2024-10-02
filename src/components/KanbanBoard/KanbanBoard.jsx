@@ -43,57 +43,73 @@ class KanbanBoard extends Component {
 
     document.body.style.color = 'inherit';
 
-    if (!destination) {
+    const isSamePositionOrNoDestination =
+      !destination ||
+      (destination.droppableId === source.droppableId &&
+        destination.index === source.index);
+
+    if (isSamePositionOrNoDestination) {
       return;
     }
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
+
     if (type === 'parent') {
-      const newParentOrder = Array.from(parentOrder);
-      newParentOrder.splice(source.index, 1);
-      newParentOrder.splice(destination.index, 0, draggableId);
-      updateParents(() => {
-        parentController.updateParentOrder(newParentOrder);
-      });
+      this.moveParent(
+        parentOrder,
+        source,
+        destination,
+        draggableId,
+        updateParents,
+      );
 
       return;
     }
+
     const start = parents[source.droppableId];
     const finish = parents[destination.droppableId];
 
     if (start === finish) {
-      const newNodeIds = Array.from(start.nodeIds);
-      newNodeIds.splice(source.index, 1);
-      newNodeIds.splice(destination.index, 0, draggableId);
-      const newParent = {
-        ...start,
-        nodeIds: newNodeIds,
-      };
-
-      updateParents(() => {
-        parentController.updateParentProperty(
-          'nodeIds',
-          newParent.id,
-          newParent.nodeIds,
-        );
-      });
+      this.moveCardWithinCurrentParent(
+        start,
+        source,
+        destination,
+        draggableId,
+        updateParents,
+      );
 
       return;
     }
 
+    this.moveCardToAnotherParent(
+      start,
+      draggableId,
+      finish,
+      destination,
+      result,
+      updateParents,
+    );
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  moveCardToAnotherParent = (
+    start,
+    draggableId,
+    finish,
+    destination,
+    result,
+    updateParents,
+  ) => {
     const startNodeIds = Array.from(start.nodeIds);
-    startNodeIds.splice(source.index, 1);
+    const draggableIdIndex = startNodeIds.indexOf(draggableId);
+    if (draggableIdIndex !== -1) {
+      startNodeIds.splice(draggableIdIndex, 1);
+    }
     const newStart = {
       ...start,
       nodeIds: startNodeIds,
     };
 
     const finishNodeIds = Array.from(finish.nodeIds);
-    finishNodeIds.splice(destination.index, 0, draggableId);
+    finishNodeIds.splice(destination.index, 0, result.draggableId);
     const newFinish = {
       ...finish,
       nodeIds: finishNodeIds,
@@ -101,6 +117,50 @@ class KanbanBoard extends Component {
 
     updateParents(() => {
       parentController.updateNodesInParents(newStart, newFinish, draggableId);
+    });
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  moveParent = (
+    parentOrder,
+    source,
+    destination,
+    draggableId,
+    updateParents,
+  ) => {
+    const newParentOrder = Array.from(parentOrder);
+    newParentOrder.splice(source.index, 1);
+    newParentOrder.splice(destination.index, 0, draggableId);
+    updateParents(() => {
+      parentController.updateParentOrder(newParentOrder);
+    });
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  moveCardWithinCurrentParent = (
+    start,
+    source,
+    destination,
+    draggableId,
+    updateParents,
+  ) => {
+    const newNodeIds = Array.from(start.nodeIds);
+    const draggableIdIndex = newNodeIds.indexOf(draggableId);
+    if (draggableIdIndex !== -1) {
+      newNodeIds.splice(draggableIdIndex, 1);
+    }
+    newNodeIds.splice(destination.index, 0, draggableId);
+    const newParent = {
+      ...start,
+      nodeIds: newNodeIds,
+    };
+
+    updateParents(() => {
+      parentController.updateParentProperty(
+        'nodeIds',
+        newParent.id,
+        newParent.nodeIds,
+      );
     });
   };
 
@@ -117,13 +177,16 @@ class KanbanBoard extends Component {
       parentOrder,
       parents,
       saveTime,
+      selectedIteration,
       showModal,
       updateParentProperty,
       updateNodeTitle,
     } = this.props;
     return (
       <DragDropContext
-        onDragEnd={this.onDragEnd}
+        onDragEnd={(result, provided) => {
+          this.onDragEnd(result, provided);
+        }}
         onDragUpdate={this.onDragUpdate}
         onDragStart={this.onDragStart}
       >
@@ -168,6 +231,7 @@ class KanbanBoard extends Component {
                         saveTime={(seconds, nodeId) => {
                           saveTime(`timeSpent`, nodeId, seconds, false);
                         }}
+                        selectedIteration={selectedIteration}
                         showModal={showModal}
                         updateNodeTitle={updateNodeTitle}
                         updateParentProperty={updateParentProperty}
@@ -215,6 +279,7 @@ KanbanBoard.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   parents: PropTypes.object.isRequired,
   saveTime: PropTypes.func.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,

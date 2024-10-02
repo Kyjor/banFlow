@@ -11,6 +11,9 @@ import NodeModal from '../../components/NodeModal/NodeModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
+import IterationDisplay from '../../components/IterationDisplay/IterationDisplay';
+import IterationController from '../../api/iterations/IterationController';
+import IterationModal from '../../components/IterationModal/IterationModal';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -24,7 +27,10 @@ class ProjectPage extends Component {
 
     this.state = {
       currentProjectName: this.projectName,
+      currentEditIteration: null,
       isTimerRunning: false,
+      iterations: {},
+      selectedIteration: 0,
     };
   }
 
@@ -57,14 +63,104 @@ class ProjectPage extends Component {
   };
 
   createNewNode = (parentId) => {
+    const { selectedIteration } = this.state;
     const newTitle = `New Node`;
-    NodeController.createNode('child', newTitle, parentId);
+    console.log(
+      `Creating new node with title: ${newTitle}, in parent: ${parentId}, in iteration: ${selectedIteration}`,
+    );
+    NodeController.createNode('child', newTitle, parentId, selectedIteration);
 
     const newState = {
       ...this.state,
       nodes: NodeController.getNodes(),
       parents: ParentController.getParents(),
       mustFocusNodeTitle: true,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
+  createIteration = (title) => {
+    IterationController.createIteration(title);
+
+    const newState = {
+      ...this.state,
+      iterations: IterationController.getIterations(),
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
+  editIteration = (iteration) => {
+    // open modal to edit iteration
+    const newState = {
+      ...this.state,
+      currentEditIteration: iteration,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
+  deleteIteration = (iterationId) => {
+    if (iterationId === 0) {
+      message.error('Cannot delete backlog');
+      return;
+    }
+
+    // If any nodes are in the iteration, don't delete
+    const { nodes } = this.state;
+    let anyNodesInIteration = false;
+    Object.values(nodes).forEach((node) => {
+      if (node.iterationId !== 0 && node.iterationId === iterationId) {
+        anyNodesInIteration = true;
+      }
+    });
+
+    if (anyNodesInIteration) {
+      message.error('Empty iteration before deleting');
+      return;
+    }
+
+    IterationController.deleteIteration(iterationId);
+
+    const newState = {
+      ...this.state,
+      iterations: IterationController.getIterations(),
+      selectedIteration: 0,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
+  handleIterationCancel = () => {
+    const newState = {
+      ...this.state,
+      currentEditIteration: null,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
+  setSelectedIteration = (iteration) => {
+    // TODO: IterationController.selectIteration(iteration); // Save selected iteration to db
+    const newState = {
+      ...this.state,
+      selectedIteration: iteration,
     };
 
     ipcRenderer.invoke('api:setProjectState', {
@@ -218,7 +314,9 @@ class ProjectPage extends Component {
 
   render() {
     const {
+      currentEditIteration,
       isTimerRunning,
+      iterations,
       lokiLoaded,
       modalNodeId,
       mustFocusNodeTitle,
@@ -227,6 +325,7 @@ class ProjectPage extends Component {
       nodes,
       parentOrder,
       parents,
+      selectedIteration,
     } = this.state;
 
     return lokiLoaded ? (
@@ -241,6 +340,21 @@ class ProjectPage extends Component {
           >
             {this.projectName}
           </span>
+          <br />
+          <IterationDisplay
+            createIteration={this.createIteration}
+            editIteration={this.editIteration}
+            iterations={iterations}
+            selectedIteration={selectedIteration}
+            setSelectedIteration={this.setSelectedIteration}
+          />
+          {currentEditIteration && (
+            <IterationModal
+              deleteIteration={this.deleteIteration}
+              iteration={iterations[currentEditIteration]}
+              handleCancel={this.handleIterationCancel}
+            />
+          )}
         </div>
         <div>
           {modalNodeId && (
@@ -248,6 +362,7 @@ class ProjectPage extends Component {
               handleCancel={this.handleCancel}
               handleOk={this.handleOk}
               isTimerRunning={isTimerRunning}
+              iterations={iterations}
               node={nodes[modalNodeId]}
               parents={parents}
               updateNodeProperty={this.updateNodeProperty}
@@ -267,6 +382,7 @@ class ProjectPage extends Component {
           parentOrder={parentOrder}
           parents={parents}
           saveTime={this.updateNodeProperty}
+          selectedIteration={selectedIteration}
           state={this.state}
           showModal={this.showModal}
           updateNodeTitle={this.updateNodeTitle}

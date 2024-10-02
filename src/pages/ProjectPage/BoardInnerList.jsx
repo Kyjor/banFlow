@@ -14,6 +14,7 @@ class BoardInnerList extends React.PureComponent {
       deleteParent,
       isTimerRunning,
       saveTime,
+      selectedIteration,
       showModal,
       updateNodeTitle,
       updateParentProperty,
@@ -30,6 +31,7 @@ class BoardInnerList extends React.PureComponent {
         nodes={nodes}
         parent={parent}
         saveTime={saveTime}
+        selectedIteration={selectedIteration}
         showModal={showModal}
         updateNodeTitle={updateNodeTitle}
         updateParentProperty={updateParentProperty}
@@ -52,6 +54,7 @@ BoardInnerList.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   parent: PropTypes.object.isRequired,
   saveTime: PropTypes.func.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,

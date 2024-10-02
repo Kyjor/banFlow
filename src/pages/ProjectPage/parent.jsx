@@ -1,5 +1,5 @@
 /* eslint-disable react/jsx-props-no-spreading,react-hooks/exhaustive-deps,jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Draggable,
   Droppable,
@@ -38,44 +38,57 @@ const parentSettingsButtonStyle = {
   backgroundColor: 'transparent',
 };
 
-class ParentInnerList extends React.Component {
-  shouldComponentUpdate(nextProps) {
-    const { nodes } = this.props;
+function ParentInnerList({
+  nodes = {},
+  isTimerRunning,
+  saveTime,
+  selectedIteration,
+  updateNodeTitle,
+  ...rest
+}) {
+  const isInCurrentIteration = (node) => {
+    console.log(`checking is in current iteration`);
+    if (
+      (node.iterationId && node.iterationId === selectedIteration) ||
+      ((!node.iterationId || node.iterationId === ``) &&
+        selectedIteration === 0)
+    ) {
+      return true;
+    }
+    return false;
+  };
 
-    return nextProps.nodes !== nodes;
-  }
+  useEffect(() => {
+    console.log(`selectedIteration: ${selectedIteration}`);
+  }, [selectedIteration]);
 
-  render() {
-    const {
-      nodes = {},
-      isTimerRunning,
-      saveTime,
-      updateNodeTitle,
-      ...rest
-    } = this.props;
-    return nodes.map((node, index) => (
-      <div>
-        {node && (
-          <Node
-            isTimerRunning={isTimerRunning}
-            key={node.id}
-            node={node}
-            index={index}
-            saveTime={saveTime}
-            updateNodeTitle={updateNodeTitle}
-            {...rest}
-          />
-        )}
-      </div>
-    ));
-  }
+  const filteredNodes = useMemo(() => {
+    return nodes.filter((node) => node && isInCurrentIteration(node));
+  }, [nodes, selectedIteration]);
+
+  return (
+    <>
+      {filteredNodes.map((node, index) => (
+        <Node
+          isTimerRunning={isTimerRunning}
+          key={node.id}
+          node={node}
+          index={index}
+          saveTime={saveTime}
+          updateNodeTitle={updateNodeTitle}
+          {...rest}
+        />
+      ))}
+    </>
+  );
 }
 
 ParentInnerList.propTypes = {
+  isTimerRunning: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   nodes: PropTypes.arrayOf(PropTypes.object).isRequired,
   saveTime: PropTypes.func.isRequired,
-  isTimerRunning: PropTypes.bool.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
 };
 
@@ -94,6 +107,7 @@ function Parent(props) {
     nodes,
     parent,
     saveTime,
+    selectedIteration,
     showModal,
     updateNodeTitle,
     updateParentProperty,
@@ -174,13 +188,14 @@ function Parent(props) {
                   {...provided.droppableProps}
                 >
                   <ParentInnerList
-                    isTimerRunning={isTimerRunning}
-                    nodes={nodes}
-                    mustFocusNodeTitle={mustFocusNodeTitle}
-                    updateNodeTitle={updateNodeTitle}
-                    showModal={showModal}
                     deleteNode={deleteNode}
+                    isTimerRunning={isTimerRunning}
+                    mustFocusNodeTitle={mustFocusNodeTitle}
+                    nodes={nodes}
                     saveTime={saveTime}
+                    selectedIteration={selectedIteration}
+                    showModal={showModal}
+                    updateNodeTitle={updateNodeTitle}
                   />
                   {provided.placeholder}
                 </div>
@@ -217,6 +232,7 @@ Parent.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   parent: PropTypes.any.isRequired,
   saveTime: PropTypes.func.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,

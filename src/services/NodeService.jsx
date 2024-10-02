@@ -58,19 +58,29 @@ const NodeService = {
    * @function createNode
    * @desc creates a new Node with a set of given properties
    * @route Nodes
+   * @param lokiService
    * @param {string} nodeType - the type of node to create.
    * @param {string} nodeTitle - the title of the node.
    * @param {string} [parentId=``] - the Id of the parent of the node. Can be null or empty.
+   * @param iterationId
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode(lokiService, nodeType, nodeTitle, parentId = ``) {
+  createNode(
+    lokiService,
+    nodeType,
+    nodeTitle,
+    parentId = ``,
+    iterationId = ``,
+  ) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
     const nextId = nodes.data.length
       ? nodes.chain().simplesort('$loki', true).data()[0].$loki + 1
       : 1;
 
+    console.log(`iterationId`);
+    console.log(iterationId);
     const newNode = nodes.insert({
       nodeType: `task`, // task, note or event. not editable
       nodeState: ``, // in progress, done, whatever the user decides
@@ -102,7 +112,7 @@ const NodeService = {
       completedDate: ``,
       isLocked: false, // whether the node can be moved from the parent
       isArchived: false,
-      iteration: null, //
+      iterationId, //
     });
     parents
       .chain()
@@ -119,9 +129,10 @@ const NodeService = {
     const { nodes } = lokiService;
     const { parents } = lokiService;
 
+    console.log(`Deleting node with id ${nodeId} and parent id ${parentId}`);
     parents
       .chain()
-      .find({ id: parentId })
+      .find({ $ne: null })
       .update((parent) => {
         const newNodeIds = parent.nodeIds;
         newNodeIds.splice(newNodeIds.indexOf(nodeId), 1);
