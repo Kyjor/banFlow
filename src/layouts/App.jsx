@@ -3,6 +3,7 @@ import {
   DesktopOutlined,
   FileOutlined,
   PlusSquareFilled,
+  SettingOutlined,
   TableOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
@@ -41,16 +42,18 @@ function loadSidebarComponents(pathname, setShowModal) {
         <Link to={`/projectPage/${currentProject}`} />
         Kanban
       </Menu.Item>
-      <Menu.Item>
-        <Link to={`/sheets/${currentProject}`} />
-        <TableOutlined />
+      <Menu.Item icon={<TableOutlined />}>
+        {/* <Link to={`/sheets/${currentProject}`} /> */}
+        Table (Coming Soon)
       </Menu.Item>
-      <Menu.Item>
-        <BarChartOutlined />
+      <Menu.Item icon={<BarChartOutlined />}>Analytics (Coming Soon)</Menu.Item>
+      <Menu.Item icon={<FileOutlined />}>
+        {/* <Link to={`/docs/${currentProject}`} /> */}
+        Docs (Coming Soon)
       </Menu.Item>
-      <Menu.Item>
-        <Link to={`/docs/${currentProject}`} />
-        <FileOutlined />
+      <Menu.Item icon={<SettingOutlined />}>
+        <Link to={`/projectSettings/${currentProject}`} />
+        Settings
       </Menu.Item>
     </>
   );

@@ -36,9 +36,11 @@ function NotFound() {
       <Link to="/" style={styles.link}>
         Go back to Dashboard
       </Link>
-      <Link to={`/projectPage/${currentProject}`} style={styles.link}>
-        Go back to Project
-      </Link>
+      {currentProject && (
+        <Link to={`/projectPage/${currentProject}`} style={styles.link}>
+          Go back to Project
+        </Link>
+      )}
     </div>
   );
 }
