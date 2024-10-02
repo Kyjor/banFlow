@@ -1,4 +1,10 @@
-import { DesktopOutlined, PlusSquareFilled } from '@ant-design/icons';
+import {
+  BarChartOutlined,
+  DesktopOutlined,
+  FileOutlined,
+  PlusSquareFilled,
+  TableOutlined,
+} from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import React, { useState } from 'react';
 // Styles
@@ -28,6 +34,26 @@ function loadSidebarComponents(pathname, setShowModal) {
       </Menu.Item>
     );
   }
+  const currentProject = localStorage.getItem('currentProject');
+  return (
+    <>
+      <Menu.Item icon={<PlusSquareFilled />} title="Kanban" key="2">
+        <Link to={`/projectPage/${currentProject}`} />
+        Kanban
+      </Menu.Item>
+      <Menu.Item>
+        <Link to={`/sheets/${currentProject}`} />
+        <TableOutlined />
+      </Menu.Item>
+      <Menu.Item>
+        <BarChartOutlined />
+      </Menu.Item>
+      <Menu.Item>
+        <Link to={`/docs/${currentProject}`} />
+        <FileOutlined />
+      </Menu.Item>
+    </>
+  );
 }
 
 function App(props) {
