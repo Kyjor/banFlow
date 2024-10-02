@@ -129,6 +129,7 @@ const NodeService = {
     const { nodes } = lokiService;
     const { parents } = lokiService;
 
+    console.log(`Deleting node with id ${nodeId} and parent id ${parentId}`);
     parents
       .chain()
       .find({ $ne: null })

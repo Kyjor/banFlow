@@ -1,23 +1,8 @@
-import React, { useCallback } from 'react';
-import {
-  Button,
-  DatePicker,
-  message,
-  Modal,
-  Popconfirm,
-  Select,
-  Tabs,
-  TimePicker,
-} from 'antd';
+import React from 'react';
+import { Button, message, Modal, Popconfirm } from 'antd';
 import PropTypes from 'prop-types';
 
-function IterationModal({
-  deleteIteration,
-  handleCancel,
-  handleOk,
-  iteration,
-  updateIterationProperty,
-}) {
+function IterationModal({ deleteIteration, handleCancel, iteration }) {
   // eslint-disable-next-line class-methods-use-this
   const handleCancelDelete = () => {
     message.error('Iteration not deleted');

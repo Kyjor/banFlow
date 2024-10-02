@@ -44,7 +44,7 @@ const IterationService = {
   },
 
   deleteIteration(lokiService, iterationId) {
-    const { iterations, iterationOrder } = lokiService;
+    const { iterations } = lokiService;
 
     iterations.chain().find({ id: iterationId }).remove();
 

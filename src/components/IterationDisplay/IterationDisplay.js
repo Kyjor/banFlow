@@ -31,7 +31,7 @@ export default class IterationDisplay extends React.Component {
           Iteration:
         </span>
         <Select
-          onSelect={(newValue, evt) => {
+          onSelect={(newValue) => {
             setSelectedIteration(newValue);
           }}
           showSearch
