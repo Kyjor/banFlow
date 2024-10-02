@@ -52,8 +52,6 @@ export default IterationModal;
 IterationModal.propTypes = {
   deleteIteration: PropTypes.func.isRequired,
   handleCancel: PropTypes.func.isRequired,
-  handleOk: PropTypes.func.isRequired,
   // eslint-disable-next-line react/forbid-prop-types,react/require-default-props
   iteration: PropTypes.object.isRequired,
-  updateIterationProperty: PropTypes.func.isRequired,
 };
