@@ -279,6 +279,7 @@ KanbanBoard.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   parents: PropTypes.object.isRequired,
   saveTime: PropTypes.func.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,

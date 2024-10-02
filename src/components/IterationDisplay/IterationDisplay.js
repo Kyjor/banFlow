@@ -46,15 +46,17 @@ export default class IterationDisplay extends React.Component {
             <span style={{ whiteSpace: 'normal' }}>Backlog</span>
           </Option>
           {iterations &&
-            Object.values(iterations).map((item, index) => (
+            Object.values(iterations).map((item) => (
               <Option style={{ width: '100%' }} key={item.id} value={item.id}>
                 <span style={{ whiteSpace: 'normal' }}>{item.title}</span>
               </Option>
             ))}
         </Select>
-        <Button onClick={() => this.onClickEditIteration(selectedIteration)}>
-          Edit
-        </Button>
+        {selectedIteration !== 0 && (
+          <Button onClick={() => this.onClickEditIteration(selectedIteration)}>
+            Edit
+          </Button>
+        )}
       </>
     );
   }

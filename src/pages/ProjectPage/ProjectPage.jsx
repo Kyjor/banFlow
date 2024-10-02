@@ -110,6 +110,40 @@ class ProjectPage extends Component {
     });
   };
 
+  deleteIteration = (iterationId) => {
+    if (iterationId === 0) {
+      message.error('Cannot delete backlog');
+      return;
+    }
+
+    // If any nodes are in the iteration, don't delete
+    const { nodes } = this.state;
+    let anyNodesInIteration = false;
+    Object.values(nodes).forEach((node) => {
+      if (node.iterationId !== 0 && node.iterationId === iterationId) {
+        anyNodesInIteration = true;
+      }
+    });
+
+    if (anyNodesInIteration) {
+      message.error('Empty iteration before deleting');
+      return;
+    }
+
+    IterationController.deleteIteration(iterationId);
+
+    const newState = {
+      ...this.state,
+      iterations: IterationController.getIterations(),
+      selectedIteration: 0,
+    };
+
+    ipcRenderer.invoke('api:setProjectState', {
+      // eslint-disable-next-line guard-for-in,no-restricted-syntax
+      ...newState,
+    });
+  };
+
   handleIterationCancel = () => {
     const newState = {
       ...this.state,
@@ -316,6 +350,7 @@ class ProjectPage extends Component {
           />
           {currentEditIteration && (
             <IterationModal
+              deleteIteration={this.deleteIteration}
               iteration={iterations[currentEditIteration]}
               handleCancel={this.handleIterationCancel}
             />

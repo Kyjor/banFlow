@@ -84,10 +84,11 @@ function ParentInnerList({
 }
 
 ParentInnerList.propTypes = {
+  isTimerRunning: PropTypes.bool.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   nodes: PropTypes.arrayOf(PropTypes.object).isRequired,
   saveTime: PropTypes.func.isRequired,
-  isTimerRunning: PropTypes.bool.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
 };
 
@@ -231,6 +232,7 @@ Parent.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   parent: PropTypes.any.isRequired,
   saveTime: PropTypes.func.isRequired,
+  selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
