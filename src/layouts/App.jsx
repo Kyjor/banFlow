@@ -43,8 +43,8 @@ function loadSidebarComponents(pathname, setShowModal) {
         Kanban
       </Menu.Item>
       <Menu.Item icon={<TableOutlined />}>
-        {/* <Link to={`/sheets/${currentProject}`} /> */}
-        Table (Coming Soon)
+        <Link to={`/sheets/${currentProject}`} />
+        Table
       </Menu.Item>
       <Menu.Item icon={<BarChartOutlined />}>Analytics (Coming Soon)</Menu.Item>
       <Menu.Item icon={<FileOutlined />}>
