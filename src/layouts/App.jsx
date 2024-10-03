@@ -1,10 +1,10 @@
 import {
   BarChartOutlined,
-  DesktopOutlined,
+  DesktopOutlined, ExpandOutlined,
   FileOutlined,
   PlusSquareFilled,
   SettingOutlined,
-  TableOutlined,
+  TableOutlined
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import React, { useState } from 'react';
@@ -50,6 +50,10 @@ function loadSidebarComponents(pathname, setShowModal) {
       <Menu.Item icon={<FileOutlined />}>
         <Link to={`/docs/${currentProject}`} />
         Docs
+      </Menu.Item>
+      <Menu.Item icon={<ExpandOutlined />}>
+        <Link to={`/charts/${currentProject}`} />
+        Charts
       </Menu.Item>
       <Menu.Item icon={<SettingOutlined />}>
         <Link to={`/projectSettings/${currentProject}`} />
