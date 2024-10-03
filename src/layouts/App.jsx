@@ -48,8 +48,8 @@ function loadSidebarComponents(pathname, setShowModal) {
       </Menu.Item>
       <Menu.Item icon={<BarChartOutlined />}>Analytics (Coming Soon)</Menu.Item>
       <Menu.Item icon={<FileOutlined />}>
-        {/* <Link to={`/docs/${currentProject}`} /> */}
-        Docs (Coming Soon)
+        <Link to={`/docs/${currentProject}`} />
+        Docs
       </Menu.Item>
       <Menu.Item icon={<SettingOutlined />}>
         <Link to={`/projectSettings/${currentProject}`} />
