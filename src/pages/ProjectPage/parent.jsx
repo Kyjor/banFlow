@@ -47,8 +47,8 @@ function ParentInnerList({
   ...rest
 }) {
   const isInCurrentIteration = (node) => {
-    console.log(`checking is in current iteration`);
     if (
+      selectedIteration === 0 ||
       (node.iterationId && node.iterationId === selectedIteration) ||
       ((!node.iterationId || node.iterationId === ``) &&
         selectedIteration === 0)

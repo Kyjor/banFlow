@@ -367,9 +367,11 @@ class ProjectPage extends Component {
               const nodeExists = Object.values(this.state.nodes).find(
                 (node) => node?.trello?.id === card.id,
               );
-              const nodeParentId = Object.values(parents).find(
+              const nodeParent = Object.values(parents).find(
                 (parent) => parent?.trello?.id === card.idList,
-              )?.id;
+              );
+
+              const nodeParentId = nodeParent.id;
               if (!nodeExists) {
                 NodeController.createNode(
                   'child',
