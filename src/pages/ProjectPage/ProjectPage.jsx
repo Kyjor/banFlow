@@ -337,7 +337,7 @@ class ProjectPage extends Component {
         lists.forEach((list) => {
           // check if parent exists
           const parentExists = Object.values(parents).find(
-            (parent) => parent?.trello.id === list.id,
+            (parent) => parent?.trello?.id === list.id,
           );
           if (!parentExists) {
             ParentController.createParent(list.name, list);
@@ -368,8 +368,8 @@ class ProjectPage extends Component {
                 (node) => node?.trello?.id === card.id,
               );
               const nodeParentId = Object.values(parents).find(
-                (parent) => parent?.trello.id === card.idList,
-              ).id;
+                (parent) => parent?.trello?.id === card.idList,
+              )?.id;
               if (!nodeExists) {
                 NodeController.createNode(
                   'child',
