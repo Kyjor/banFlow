@@ -1,32 +1,27 @@
-// Libs
 import React from 'react';
-import { HashRouter, Route, Switch } from 'react-router-dom';
+import { HashRouter, Route, Routes } from 'react-router-dom';
 // Pages
 import Dashboard from '../pages/Dashboard/Dashboard';
 import ProjectPage from '../pages/ProjectPage/ProjectPage';
 import NotFound from '../pages/NotFound/NotFound';
-// import TextEditor from '../components/TextEditor/TextEditor';
 import ProjectSettings from '../pages/ProjectSettings/ProjectSettings';
 import SheetPage from '../pages/SheetPage/SheetPage';
 
-function Routes() {
+function AppRoutes() {
   return (
     <HashRouter>
-      <Switch>
-        <Route exact path="/" component={Dashboard} />
-        <Route exact path="/dashboard" component={Dashboard} />
-        <Route exact path="/projectPage/:name" component={ProjectPage} />
-        <Route exact path="/sheets/:name" component={SheetPage} />
-        <Route
-          exact
-          path="/projectSettings/:name"
-          component={ProjectSettings}
-        />
-        <Route component={NotFound} /> {/* Default 404 route */}
-        {/* <Route exact path="/docs/:name" component={TextEditor} /> */}
-      </Switch>
+      <Routes>
+        {/* Use element with JSX in React Router v6 */}
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/projectPage/:name" element={<ProjectPage />} />
+        <Route path="/sheets/:name" element={<SheetPage />} />
+        <Route path="/projectSettings/:name" element={<ProjectSettings />} />
+        {/* Default 404 route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </HashRouter>
   );
 }
 
-export default Routes;
+export default AppRoutes;

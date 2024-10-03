@@ -1,39 +1,31 @@
-import React, { Component } from 'react';
-import { BrowserRouter as Router, Route } from 'react-router-dom';
-import Root from './routes/Root';
+import React from 'react';
+import AppRoutes from './routes/Root';
 import TimerRoot from './routes/TimerRoot';
+import { useLocation } from 'react-router-dom';
 
-const App = Root;
+const App = AppRoutes;
 const Timer = TimerRoot;
 
-class ViewManager extends Component {
-  static Views() {
-    return {
-      app: <App />,
-      timer: <Timer />,
-    };
+const ViewManager = () => {
+  const location = window.location.href; // Get the current URL
+
+  // Check for 'app' or 'timer' in the query parameters
+  let viewName = '';
+  if (location.includes('app')) {
+    viewName = 'app';
+  } else if (location.includes('timer')) {
+    viewName = 'timer';
   }
 
-  static View(props) {
-    let name = props.location.search.substr(1);
-    if (name.includes('=')) {
-      name = name.slice(0, name.indexOf('='));
-    }
-    const view = ViewManager.Views()[name];
-    if (view == null) throw new Error(`View '${name}' is undefined`);
+  const Views = {
+    app: <App />,
+    timer: <Timer />,
+  };
 
-    return view;
-  }
+  const view = Views[viewName];
+  if (view == null) throw new Error(`View '${name}' is undefined`);
 
-  render() {
-    return (
-      <Router>
-        <div>
-          <Route path="/" component={ViewManager.View} />
-        </div>
-      </Router>
-    );
-  }
-}
+  return view;
+};
 
 export default ViewManager;

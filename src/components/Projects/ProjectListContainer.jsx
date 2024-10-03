@@ -1,7 +1,6 @@
 // Libs
 import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
-import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import ProjectList from './ProjectItems/ProjectList';
 import './ProjectListContainer.scss';
@@ -80,4 +79,4 @@ ProjectListContainer.propTypes = {
   openProjectDetails: PropTypes.func.isRequired,
 };
 
-export default withRouter(ProjectListContainer);
+export default ProjectListContainer;

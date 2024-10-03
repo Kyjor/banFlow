@@ -2,7 +2,6 @@
 import React, { Component } from 'react';
 // Layouts
 import { ipcRenderer } from 'electron';
-import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { Button, message } from 'antd';
 import Layout from '../../layouts/App';
@@ -19,9 +18,8 @@ class ProjectPage extends Component {
   constructor(props) {
     super(props);
 
-    const { match } = this.props;
-
-    this.projectName = match.params.name;
+    const location = window.location.href; // Get the current URL
+    this.projectName = location.split('/').pop();
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
@@ -493,7 +491,7 @@ class ProjectPage extends Component {
   }
 }
 
-export default withRouter(ProjectPage);
+export default ProjectPage;
 
 ProjectPage.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
