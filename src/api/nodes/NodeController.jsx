@@ -65,12 +65,20 @@ const NodeController = {
     ipcRenderer.sendSync('api:deleteNode', nodeId, parentId);
   },
 
-  updateNodeProperty(propertyToUpdate, nodeId, newValue) {
+  updateNodeProperty(propertyToUpdate, nodeId, newValue, trelloAuth) {
+    const trelloKey = localStorage.getItem(`trelloKey`);
+    const trelloToken = localStorage.getItem(`trelloToken`);
+    const trelloAuth0 = {
+      key: trelloKey,
+      token: trelloToken,
+    };
+
     return ipcRenderer.sendSync(
       'api:updateNodeProperty',
       propertyToUpdate,
       nodeId,
       newValue,
+      trelloAuth0,
     );
   },
 };

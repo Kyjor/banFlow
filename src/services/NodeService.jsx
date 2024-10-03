@@ -1,5 +1,7 @@
 import ISO8601ServiceInstance from './ISO8601Service';
 
+const axios = require('axios');
+
 const NodeService = {
   /**
    * @function getNodes
@@ -151,7 +153,13 @@ const NodeService = {
     lokiService.saveDB();
   },
 
-  updateNodeProperty(lokiService, propertyToUpdate, nodeId, newValue) {
+  updateNodeProperty(
+    lokiService,
+    propertyToUpdate,
+    nodeId,
+    newValue,
+    trelloAuth,
+  ) {
     // If debug, print out the property to update and the new value
     if (process.env.NODE_ENV === `development`) {
       console.log(
@@ -178,6 +186,31 @@ const NodeService = {
       console.log(
         `Node with id ${nodeId} and name ${nodeToReturn.title} updated successfully.`,
       );
+    }
+
+    if (nodeToReturn.trello && trelloAuth) {
+      const url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeToReturn.title}`;
+
+      axios
+        .put(
+          url,
+          {},
+          {
+            headers: {
+              Accept: 'application/json',
+            },
+          },
+        )
+        .then((response) => {
+          console.log(`Response: ${response.status} ${response.statusText}`);
+          return response.data;
+        })
+        .then((data) => {
+          console.log(data);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
     }
 
     // eslint-disable-next-line consistent-return

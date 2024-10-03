@@ -394,12 +394,13 @@ ipcMain.on('api:deleteNode', (event, nodeId, parentId) => {
 
 ipcMain.on(
   'api:updateNodeProperty',
-  (event, propertyToUpdate, nodeId, newValue) => {
+  (event, propertyToUpdate, nodeId, newValue, trelloAuth) => {
     event.returnValue = NodeService.updateNodeProperty(
       currentLokiService,
       propertyToUpdate,
       nodeId,
       newValue,
+      trelloAuth
     );
   },
 );

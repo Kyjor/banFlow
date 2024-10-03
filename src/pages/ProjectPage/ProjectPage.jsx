@@ -27,6 +27,7 @@ class ProjectPage extends Component {
     localStorage.setItem('currentProject', this.projectName);
     this.trelloToken = localStorage.getItem('trelloToken');
     this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
+    localStorage.setItem(`trelloKey`, this.trelloKey);
 
     this.state = {
       currentProjectName: this.projectName,
@@ -173,7 +174,12 @@ class ProjectPage extends Component {
   };
 
   updateNodeTitle = (newTitle, nodeId) => {
-    this.updateNodeProperty(`title`, nodeId, newTitle);
+    const trelloAuth = {
+      key: this.trelloKey,
+      token: this.trelloToken,
+    };
+
+    this.updateNodeProperty(`title`, nodeId, newTitle, trelloAuth);
     const newState = {
       ...this.state,
       nodes: NodeController.getNodes(),
@@ -273,8 +279,8 @@ class ProjectPage extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
-    NodeController.updateNodeProperty(propertyToUpdate, nodeId, newValue);
+  updateNodeProperty = (propertyToUpdate, nodeId, newValue, trelloAuth) => {
+    NodeController.updateNodeProperty(propertyToUpdate, nodeId, newValue, trelloAuth);
 
     const newState = {
       ...this.state,
