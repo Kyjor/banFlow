@@ -47,8 +47,8 @@ function ParentInnerList({
   ...rest
 }) {
   const isInCurrentIteration = (node) => {
-    console.log(`checking is in current iteration`);
     if (
+      selectedIteration === 0 ||
       (node.iterationId && node.iterationId === selectedIteration) ||
       ((!node.iterationId || node.iterationId === ``) &&
         selectedIteration === 0)
@@ -63,7 +63,10 @@ function ParentInnerList({
   }, [selectedIteration]);
 
   const filteredNodes = useMemo(() => {
-    return nodes.filter((node) => node && isInCurrentIteration(node));
+    const val = nodes.filter((node) => node && isInCurrentIteration(node));
+    console.log(nodes)
+    console.log(val);
+    return val;
   }, [nodes, selectedIteration]);
 
   return (

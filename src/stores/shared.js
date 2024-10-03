@@ -21,6 +21,7 @@ export const individualProjectState = {
   parentModalVisible: false,
   parentOrder: [],
   parents: {},
+  projectSettings: {},
   NodeTitleSelected: false,
   tags: [],
   timerPreferences: defaultTimerPreferences,

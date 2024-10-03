@@ -1,4 +1,5 @@
 // eslint-disable-next-line import/no-cycle
+import { ipcRenderer } from 'electron';
 import projectService from '../../services/ProjectService';
 
 /**
@@ -64,6 +65,14 @@ const ProjectController = {
       projectId,
       newValue,
     );
+  },
+
+  setTrelloBoard(trelloBoard) {
+    return ipcRenderer.sendSync('api:setTrelloBoard', trelloBoard);
+  },
+
+  getProjectSettings() {
+    return ipcRenderer.sendSync('api:getProjectSettings');
   },
 };
 

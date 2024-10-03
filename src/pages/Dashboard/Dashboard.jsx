@@ -17,7 +17,6 @@ import { ipcRenderer } from 'electron';
 import TabPane from 'antd/lib/tabs/TabPane';
 import Layout from '../../layouts/App';
 // Components
-import Path from '../../components/Projects/Path';
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
 import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar';
 import ProjectController from '../../api/project/ProjectController';
@@ -25,6 +24,7 @@ import NodeController from '../../api/nodes/NodeController';
 import ParentController from '../../api/parent/ParentController';
 import TimerController from '../../api/timer/TimerController';
 import TagController from '../../api/tag/TagController';
+import APIKeyInput from '../../components/APIKeyInput/APIKeyInput';
 
 /**
  * Home
@@ -180,9 +180,7 @@ class Dashboard extends Component {
     return (
       <Layout>
         <div className="home">
-          <div>
-            <Path />
-          </div>
+          <APIKeyInput />
           <div className="flex">
             <ProjectListContainer
               openProjectDetails={this.updateSelectedProject}

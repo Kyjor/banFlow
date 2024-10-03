@@ -37,8 +37,8 @@ const ParentController = {
    * @returns {object} parent - the newly created parent
    * @permission {Modification}
    */
-  createParent(parentTitle) {
-    return ipcRenderer.sendSync('api:createParent', parentTitle);
+  createParent(parentTitle, trelloData) {
+    return ipcRenderer.sendSync('api:createParent', parentTitle, trelloData);
   },
 
   deleteParent(parentId) {

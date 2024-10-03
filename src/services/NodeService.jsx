@@ -1,5 +1,7 @@
 import ISO8601ServiceInstance from './ISO8601Service';
 
+const axios = require('axios');
+
 const NodeService = {
   /**
    * @function getNodes
@@ -62,7 +64,9 @@ const NodeService = {
    * @param {string} nodeType - the type of node to create.
    * @param {string} nodeTitle - the title of the node.
    * @param {string} [parentId=``] - the Id of the parent of the node. Can be null or empty.
-   * @param iterationId
+   * @param iterationId - the Id of the iteration the node is associated with
+   * @param trelloData - the trello data to associate with the node
+   * @param trelloAuth - the object with trello key and token
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
@@ -72,6 +76,8 @@ const NodeService = {
     nodeTitle,
     parentId = ``,
     iterationId = ``,
+    trelloData = null,
+    trelloAuth = null,
   ) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
@@ -79,9 +85,7 @@ const NodeService = {
       ? nodes.chain().simplesort('$loki', true).data()[0].$loki + 1
       : 1;
 
-    console.log(`iterationId`);
-    console.log(iterationId);
-    const newNode = nodes.insert({
+    const nodeData = {
       nodeType: `task`, // task, note or event. not editable
       nodeState: ``, // in progress, done, whatever the user decides
       scheduledDate: ``,
@@ -113,7 +117,41 @@ const NodeService = {
       isLocked: false, // whether the node can be moved from the parent
       isArchived: false,
       iterationId, //
-    });
+    };
+
+    const parent = lokiService.parents.findOne({ id: { $eq: parentId } });
+    console.log(`parents:`);
+    console.log(parent);
+    if (trelloData) {
+      nodeData.trello = trelloData;
+      nodeData.description = trelloData.desc;
+    } else if (trelloAuth && parent?.trello) {
+      console.log(parent.trello)
+      const url = `https://api.trello.com/1/cards?idList=${parent.trello.id}&key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeTitle}`;
+
+      axios
+        .post(
+          url,
+          {},
+          {
+            headers: {
+              Accept: 'application/json',
+            },
+          },
+        )
+        .then((response) => {
+          console.log(`Response: ${response.status} ${response.statusText}`);
+          return response.data;
+        })
+        .then((data) => {
+          console.log(data);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    }
+
+    const newNode = nodes.insert(nodeData);
     parents
       .chain()
       .find({ id: parentId })
@@ -143,7 +181,13 @@ const NodeService = {
     lokiService.saveDB();
   },
 
-  updateNodeProperty(lokiService, propertyToUpdate, nodeId, newValue) {
+  updateNodeProperty(
+    lokiService,
+    propertyToUpdate,
+    nodeId,
+    newValue,
+    trelloAuth,
+  ) {
     // If debug, print out the property to update and the new value
     if (process.env.NODE_ENV === `development`) {
       console.log(
@@ -170,6 +214,32 @@ const NodeService = {
       console.log(
         `Node with id ${nodeId} and name ${nodeToReturn.title} updated successfully.`,
       );
+    }
+
+    console.log(trelloAuth);
+    if (nodeToReturn.trello && trelloAuth) {
+      const url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeToReturn.title}&desc=${nodeToReturn.description}`;
+
+      axios
+        .put(
+          url,
+          {},
+          {
+            headers: {
+              Accept: 'application/json',
+            },
+          },
+        )
+        .then((response) => {
+          console.log(`Response: ${response.status} ${response.statusText}`);
+          return response.data;
+        })
+        .then((data) => {
+          console.log(data);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
     }
 
     // eslint-disable-next-line consistent-return

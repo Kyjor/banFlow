@@ -42,13 +42,14 @@ const ParentService = {
     return response;
   },
 
-  createParent(lokiService, parentTitle) {
+  createParent(lokiService, parentTitle, trelloData) {
     const { parents } = lokiService;
 
     const nextId = parents.data.length
       ? parents.chain().simplesort('$loki', true).data()[0].$loki + 1
       : 1;
-    const newParent = parents.insert({
+
+    const parentData = {
       id: `parent-${nextId}`,
       title: parentTitle,
       timeSpent: 0, // the amount of time worked on items WHILE in the parent
@@ -56,7 +57,14 @@ const ParentService = {
       nodeHistory: [],
       sessionHistory: [],
       nodeIds: [],
-    });
+    };
+
+    if (trelloData) {
+      console.log('trelloData', trelloData);
+      parentData.trello = trelloData;
+    }
+
+    const newParent = parents.insert(parentData);
     this.addParentToOrder(lokiService, `parent-${nextId}`);
     lokiService.saveDB();
 

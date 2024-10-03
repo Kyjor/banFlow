@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
 import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { message } from 'antd';
+import { Button, message } from 'antd';
 import Layout from '../../layouts/App';
 // Components
 import NodeModal from '../../components/NodeModal/NodeModal';
@@ -24,6 +24,10 @@ class ProjectPage extends Component {
     this.projectName = match.params.name;
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
+    localStorage.setItem('currentProject', this.projectName);
+    this.trelloToken = localStorage.getItem('trelloToken');
+    this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
+    localStorage.setItem(`trelloKey`, this.trelloKey);
 
     this.state = {
       currentProjectName: this.projectName,
@@ -170,6 +174,11 @@ class ProjectPage extends Component {
   };
 
   updateNodeTitle = (newTitle, nodeId) => {
+    const trelloAuth = {
+      key: this.trelloKey,
+      token: this.trelloToken,
+    };
+
     this.updateNodeProperty(`title`, nodeId, newTitle);
     const newState = {
       ...this.state,
@@ -271,7 +280,11 @@ class ProjectPage extends Component {
 
   // eslint-disable-next-line class-methods-use-this
   updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
-    NodeController.updateNodeProperty(propertyToUpdate, nodeId, newValue);
+    NodeController.updateNodeProperty(
+      propertyToUpdate,
+      nodeId,
+      newValue,
+    );
 
     const newState = {
       ...this.state,
@@ -312,6 +325,84 @@ class ProjectPage extends Component {
     });
   };
 
+  syncProject = (trello) => {
+    const { parents } = this.state;
+
+    fetch(
+      `https://api.trello.com/1/boards/${trello.id}/lists?key=${this.trelloKey}&token=${this.trelloToken}`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+      },
+    )
+      .then((response) => {
+        console.log(`Response: ${response.status} ${response.statusText}`);
+        return response.text();
+      })
+      .then((text) => {
+        console.log(JSON.parse(text));
+        const lists = JSON.parse(text);
+        lists.forEach((list) => {
+          // check if parent exists
+          const parentExists = Object.values(parents).find(
+            (parent) => parent?.trello?.id === list.id,
+          );
+          if (!parentExists) {
+            ParentController.createParent(list.name, list);
+          } else {
+            console.log('Parent already exists');
+          }
+        });
+      })
+      .then(() => {
+        // refresh page
+        // window.location.reload();
+        fetch(
+          `https://api.trello.com/1/boards/${trello.id}/cards?key=${this.trelloKey}&token=${this.trelloToken}`,
+          {
+            method: 'GET',
+          },
+        )
+          .then((response) => {
+            console.log(`Response: ${response.status} ${response.statusText}`);
+            return response.text();
+          })
+          .then((text) => {
+            console.log(JSON.parse(text));
+            const cards = JSON.parse(text);
+            cards.forEach((card) => {
+              // check if node exists
+              const nodeExists = Object.values(this.state.nodes).find(
+                (node) => node?.trello?.id === card.id,
+              );
+              const nodeParent = Object.values(
+                ParentController.getParents(),
+              ).find((parent) => parent?.trello?.id === card.idList);
+
+              const nodeParentId = nodeParent.id;
+              if (!nodeExists) {
+                NodeController.createNode(
+                  'child',
+                  card.name,
+                  nodeParentId,
+                  0,
+                  card,
+                );
+              } else {
+                console.log('Node already exists');
+              }
+            });
+          })
+          .then(() => {
+            window.location.reload();
+          })
+          .catch((err) => console.error(err));
+      })
+      .catch((err) => console.error(err));
+  };
+
   render() {
     const {
       currentEditIteration,
@@ -325,6 +416,7 @@ class ProjectPage extends Component {
       nodes,
       parentOrder,
       parents,
+      projectSettings,
       selectedIteration,
     } = this.state;
 
@@ -340,6 +432,11 @@ class ProjectPage extends Component {
           >
             {this.projectName}
           </span>
+          {projectSettings?.trello?.name && (
+            <Button onClick={() => this.syncProject(projectSettings.trello)}>
+              Sync: {projectSettings.trello.name}
+            </Button>
+          )}
           <br />
           <IterationDisplay
             createIteration={this.createIteration}

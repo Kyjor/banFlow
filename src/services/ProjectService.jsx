@@ -84,6 +84,22 @@ const ProjectService = {
       console.error(err);
     }
   },
+
+  setTrelloBoard(currentLokiService, trelloBoard) {
+    currentLokiService.projectSettings
+      .chain()
+      .find({})
+      .update((projectSettings) => {
+        projectSettings.trello = trelloBoard;
+      });
+    currentLokiService.saveDB();
+  },
+
+  getProjectSettings(currentLokiService) {
+    console.log('getting project settings');
+    console.log(currentLokiService.projectSettings);
+    return currentLokiService.projectSettings.findOne({});
+  },
 };
 
 export default ProjectService;

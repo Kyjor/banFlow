@@ -31,6 +31,7 @@ import { pathCreator } from './util';
 import LokiService from '../services/LokiService';
 import NodeService from '../services/NodeService';
 import ParentService from '../services/ParentService';
+import ProjectService from '../services/ProjectService';
 import MetadataService from '../services/MetadataService';
 import TagService from '../services/TagService';
 import TimerService from '../services/TimerService';
@@ -374,13 +375,15 @@ ipcMain.on('api:getNode', (event, nodeId) => {
 
 ipcMain.on(
   'api:createNode',
-  (event, nodeType, nodeTitle, parentId, iterationId) => {
+  (event, nodeType, nodeTitle, parentId, iterationId, trelloData, trelloAuth) => {
     event.returnValue = NodeService.createNode(
       currentLokiService,
       nodeType,
       nodeTitle,
       parentId,
       iterationId,
+      trelloData,
+      trelloAuth,
     );
   },
 );
@@ -392,12 +395,13 @@ ipcMain.on('api:deleteNode', (event, nodeId, parentId) => {
 
 ipcMain.on(
   'api:updateNodeProperty',
-  (event, propertyToUpdate, nodeId, newValue) => {
+  (event, propertyToUpdate, nodeId, newValue, trelloAuth) => {
     event.returnValue = NodeService.updateNodeProperty(
       currentLokiService,
       propertyToUpdate,
       nodeId,
       newValue,
+      trelloAuth,
     );
   },
 );
@@ -410,10 +414,11 @@ ipcMain.on('api:getParentOrder', (event) => {
   event.returnValue = ParentService.getParentOrder(currentLokiService);
 });
 
-ipcMain.on('api:createParent', (event, parentTitle) => {
+ipcMain.on('api:createParent', (event, parentTitle, trelloData) => {
   event.returnValue = ParentService.createParent(
     currentLokiService,
     parentTitle,
+    trelloData,
   );
 });
 
@@ -453,6 +458,7 @@ ipcMain.on(
 );
 
 ipcMain.on('api:initializeProjectState', (event, projectName: any) => {
+  console.log('initializing project state');
   individualProjectStateValue.nodes = NodeService.getNodesWithQuery(
     currentLokiService,
     {
@@ -465,10 +471,10 @@ ipcMain.on('api:initializeProjectState', (event, projectName: any) => {
     ParentService.getParentOrder(currentLokiService);
   individualProjectStateValue.iterations =
     IterationService.getIterations(currentLokiService);
-  console.log(`iterations`);
-  console.log(individualProjectStateValue.iterations);
   individualProjectStateValue.lokiLoaded = true;
   individualProjectStateValue.projectName = projectName;
+  individualProjectStateValue.projectSettings =
+    ProjectService.getProjectSettings(currentLokiService);
 
   event.returnValue = individualProjectStateValue;
 });
@@ -547,6 +553,15 @@ ipcMain.on(
     );
   },
 );
+
+ipcMain.on('api:setTrelloBoard', (event, trelloBoard) => {
+  ProjectService.setTrelloBoard(currentLokiService, trelloBoard);
+  event.returnValue = true;
+});
+
+ipcMain.on('api:getProjectSettings', (event) => {
+  event.returnValue = ProjectService.getProjectSettings(currentLokiService);
+});
 
 const setProjectState = (_event: any, values: any) => {
   individualProjectStateValue = {
