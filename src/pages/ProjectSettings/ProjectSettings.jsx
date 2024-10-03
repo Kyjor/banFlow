@@ -11,7 +11,7 @@ class ProjectSettings extends Component {
     this.currentProject = localStorage.getItem('currentProject');
     this.trelloToken = localStorage.getItem('trelloToken');
     this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
-    this.authLink = `https://trello.com/1/authorize?expiration=1day&scope=read&response_type=token&key=${this.trelloKey}`;
+    this.authLink = `https://trello.com/1/authorize?expiration=30days&scope=read,write&response_type=token&key=${this.trelloKey}`;
 
     this.state = {
       boards: [],

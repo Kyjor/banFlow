@@ -188,8 +188,9 @@ const NodeService = {
       );
     }
 
+    console.log(trelloAuth);
     if (nodeToReturn.trello && trelloAuth) {
-      const url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeToReturn.title}`;
+      const url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeToReturn.title}&desc=${nodeToReturn.description}`;
 
       axios
         .put(

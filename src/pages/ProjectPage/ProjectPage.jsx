@@ -280,7 +280,12 @@ class ProjectPage extends Component {
 
   // eslint-disable-next-line class-methods-use-this
   updateNodeProperty = (propertyToUpdate, nodeId, newValue, trelloAuth) => {
-    NodeController.updateNodeProperty(propertyToUpdate, nodeId, newValue, trelloAuth);
+    NodeController.updateNodeProperty(
+      propertyToUpdate,
+      nodeId,
+      newValue,
+      trelloAuth,
+    );
 
     const newState = {
       ...this.state,
@@ -373,9 +378,9 @@ class ProjectPage extends Component {
               const nodeExists = Object.values(this.state.nodes).find(
                 (node) => node?.trello?.id === card.id,
               );
-              const nodeParent = Object.values(parents).find(
-                (parent) => parent?.trello?.id === card.idList,
-              );
+              const nodeParent = Object.values(
+                ParentController.getParents(),
+              ).find((parent) => parent?.trello?.id === card.idList);
 
               const nodeParentId = nodeParent.id;
               if (!nodeExists) {
@@ -390,6 +395,9 @@ class ProjectPage extends Component {
                 console.log('Node already exists');
               }
             });
+          })
+          .then(() => {
+            window.location.reload();
           })
           .catch((err) => console.error(err));
       })
