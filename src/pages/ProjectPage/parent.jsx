@@ -63,7 +63,10 @@ function ParentInnerList({
   }, [selectedIteration]);
 
   const filteredNodes = useMemo(() => {
-    return nodes.filter((node) => node && isInCurrentIteration(node));
+    const val = nodes.filter((node) => node && isInCurrentIteration(node));
+    console.log(nodes)
+    console.log(val);
+    return val;
   }, [nodes, selectedIteration]);
 
   return (

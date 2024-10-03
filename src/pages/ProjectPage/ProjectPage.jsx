@@ -179,7 +179,7 @@ class ProjectPage extends Component {
       token: this.trelloToken,
     };
 
-    this.updateNodeProperty(`title`, nodeId, newTitle, trelloAuth);
+    this.updateNodeProperty(`title`, nodeId, newTitle);
     const newState = {
       ...this.state,
       nodes: NodeController.getNodes(),
@@ -279,12 +279,11 @@ class ProjectPage extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  updateNodeProperty = (propertyToUpdate, nodeId, newValue, trelloAuth) => {
+  updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
     NodeController.updateNodeProperty(
       propertyToUpdate,
       nodeId,
       newValue,
-      trelloAuth,
     );
 
     const newState = {

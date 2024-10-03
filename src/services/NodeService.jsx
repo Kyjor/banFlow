@@ -66,6 +66,7 @@ const NodeService = {
    * @param {string} [parentId=``] - the Id of the parent of the node. Can be null or empty.
    * @param iterationId - the Id of the iteration the node is associated with
    * @param trelloData - the trello data to associate with the node
+   * @param trelloAuth - the object with trello key and token
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
@@ -76,6 +77,7 @@ const NodeService = {
     parentId = ``,
     iterationId = ``,
     trelloData = null,
+    trelloAuth = null,
   ) {
     const { nodes } = lokiService;
     const { parents } = lokiService;
@@ -117,10 +119,36 @@ const NodeService = {
       iterationId, //
     };
 
+    const parent = lokiService.parents.findOne({ id: { $eq: parentId } });
+    console.log(`parents:`);
+    console.log(parent);
     if (trelloData) {
-      console.log('trelloData', trelloData);
       nodeData.trello = trelloData;
       nodeData.description = trelloData.desc;
+    } else if (trelloAuth && parent?.trello) {
+      console.log(parent.trello)
+      const url = `https://api.trello.com/1/cards?idList=${parent.trello.id}&key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeTitle}`;
+
+      axios
+        .post(
+          url,
+          {},
+          {
+            headers: {
+              Accept: 'application/json',
+            },
+          },
+        )
+        .then((response) => {
+          console.log(`Response: ${response.status} ${response.statusText}`);
+          return response.data;
+        })
+        .then((data) => {
+          console.log(data);
+        })
+        .catch((err) => {
+          console.error(err);
+        });
     }
 
     const newNode = nodes.insert(nodeData);

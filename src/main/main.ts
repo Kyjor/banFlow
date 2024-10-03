@@ -375,7 +375,7 @@ ipcMain.on('api:getNode', (event, nodeId) => {
 
 ipcMain.on(
   'api:createNode',
-  (event, nodeType, nodeTitle, parentId, iterationId, trelloData) => {
+  (event, nodeType, nodeTitle, parentId, iterationId, trelloData, trelloAuth) => {
     event.returnValue = NodeService.createNode(
       currentLokiService,
       nodeType,
@@ -383,6 +383,7 @@ ipcMain.on(
       parentId,
       iterationId,
       trelloData,
+      trelloAuth,
     );
   },
 );
@@ -400,7 +401,7 @@ ipcMain.on(
       propertyToUpdate,
       nodeId,
       newValue,
-      trelloAuth
+      trelloAuth,
     );
   },
 );

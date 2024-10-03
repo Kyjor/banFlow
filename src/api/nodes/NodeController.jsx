@@ -51,6 +51,11 @@ const NodeController = {
     iterationId = ``,
     trelloData = null,
   ) {
+    const trelloAuth = {
+      key: localStorage.getItem(`trelloKey`),
+      token: localStorage.getItem(`trelloToken`),
+    };
+
     return ipcRenderer.sendSync(
       'api:createNode',
       nodeType,
@@ -58,6 +63,7 @@ const NodeController = {
       parentId,
       iterationId,
       trelloData,
+      trelloAuth,
     );
   },
 
@@ -65,12 +71,10 @@ const NodeController = {
     ipcRenderer.sendSync('api:deleteNode', nodeId, parentId);
   },
 
-  updateNodeProperty(propertyToUpdate, nodeId, newValue, trelloAuth) {
-    const trelloKey = localStorage.getItem(`trelloKey`);
-    const trelloToken = localStorage.getItem(`trelloToken`);
-    const trelloAuth0 = {
-      key: trelloKey,
-      token: trelloToken,
+  updateNodeProperty(propertyToUpdate, nodeId, newValue) {
+    const trelloAuth = {
+      key: localStorage.getItem(`trelloKey`),
+      token: localStorage.getItem(`trelloToken`),
     };
 
     return ipcRenderer.sendSync(
@@ -78,7 +82,7 @@ const NodeController = {
       propertyToUpdate,
       nodeId,
       newValue,
-      trelloAuth0,
+      trelloAuth,
     );
   },
 };
