@@ -228,6 +228,7 @@
     "webpack-merge": "^5.8.0"
   },
   "dependencies": {
+    "@ant-design/flowchart": "^1.2.3",
     "@ant-design/icons": "^4.8.3",
     "@atlaskit/codemod-utils": "^4.2.4",
     "@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration": "^1.2.2",

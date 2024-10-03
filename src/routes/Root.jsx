@@ -7,6 +7,7 @@ import NotFound from '../pages/NotFound/NotFound';
 import ProjectSettings from '../pages/ProjectSettings/ProjectSettings';
 import SheetPage from '../pages/SheetPage/SheetPage';
 import TextEditor from '../components/TextEditor/TextEditor';
+import ChartPage from '../components/ChartPage/ChartPage';
 
 function AppRoutes() {
   return (
@@ -17,6 +18,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/projectPage/:name" element={<ProjectPage />} />
         <Route path="/sheets/:name" element={<SheetPage />} />
+        <Route path="/charts/:name" element={<ChartPage />} />
         <Route path="/projectSettings/:name" element={<ProjectSettings />} />
         <Route path="/docs/:name" element={<TextEditor />} />
         {/* Default 404 route */}
