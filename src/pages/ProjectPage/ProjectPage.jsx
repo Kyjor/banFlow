@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
 import { withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { message } from 'antd';
+import { Button, message } from 'antd';
 import Layout from '../../layouts/App';
 // Components
 import NodeModal from '../../components/NodeModal/NodeModal';
@@ -25,6 +25,8 @@ class ProjectPage extends Component {
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
+    this.trelloToken = localStorage.getItem('trelloToken');
+    this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
 
     this.state = {
       currentProjectName: this.projectName,
@@ -313,6 +315,37 @@ class ProjectPage extends Component {
     });
   };
 
+  syncProject = (trello) => {
+    fetch(
+      `https://api.trello.com/1/boards/${trello.id}/lists?key=${this.trelloKey}&token=${this.trelloToken}`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+      },
+    )
+      .then((response) => {
+        console.log(`Response: ${response.status} ${response.statusText}`);
+        return response.text();
+      })
+      .then((text) => console.log(JSON.parse(text)))
+      .catch((err) => console.error(err));
+
+    fetch(
+      `https://api.trello.com/1/boards/${trello.id}/cards?key=${this.trelloKey}&token=${this.trelloToken}`,
+      {
+        method: 'GET',
+      },
+    )
+      .then((response) => {
+        console.log(`Response: ${response.status} ${response.statusText}`);
+        return response.text();
+      })
+      .then((text) => console.log(JSON.parse(text)))
+      .catch((err) => console.error(err));
+  };
+
   render() {
     const {
       currentEditIteration,
@@ -326,6 +359,7 @@ class ProjectPage extends Component {
       nodes,
       parentOrder,
       parents,
+      projectSettings,
       selectedIteration,
     } = this.state;
 
@@ -341,6 +375,11 @@ class ProjectPage extends Component {
           >
             {this.projectName}
           </span>
+          {projectSettings?.trello?.name && (
+            <Button onClick={() => this.syncProject(projectSettings.trello)}>
+              Sync: {projectSettings.trello.name}
+            </Button>
+          )}
           <br />
           <IterationDisplay
             createIteration={this.createIteration}
