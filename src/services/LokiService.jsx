@@ -7,6 +7,7 @@ export default class LokiService {
     this.nodes = null;
     this.parents = null;
     this.parentOrder = null;
+    this.projectSettings = null;
     this.tags = null;
     this.nodeStates = null;
     this.nodeTypes = null;
@@ -82,6 +83,13 @@ export default class LokiService {
       mustSaveDatabase = true;
     }
 
+    this.projectSettings = this.db.getCollection('projectSettings');
+    if (!this.projectSettings) {
+      this.projectSettings = this.db.addCollection('projectSettings');
+      this.createDefaultProjectSettings();
+      mustSaveDatabase = true;
+    }
+
     if (mustSaveDatabase) {
       this.saveDB();
     }
@@ -142,5 +150,15 @@ export default class LokiService {
 
     this.saveDB();
     return newPreferences;
+  };
+
+  createDefaultProjectSettings = () => {
+    const { projectSettings } = this;
+    const newSettings = projectSettings.insert({
+      trello: {},
+    });
+
+    this.saveDB();
+    return newSettings;
   };
 }

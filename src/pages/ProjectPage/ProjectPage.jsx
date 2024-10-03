@@ -25,7 +25,6 @@ class ProjectPage extends Component {
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
-    console.log(`Project name: ${this.projectName}`);
 
     this.state = {
       currentProjectName: this.projectName,
