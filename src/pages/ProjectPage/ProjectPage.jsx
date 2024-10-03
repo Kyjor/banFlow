@@ -316,6 +316,8 @@ class ProjectPage extends Component {
   };
 
   syncProject = (trello) => {
+    const { parents } = this.state;
+
     fetch(
       `https://api.trello.com/1/boards/${trello.id}/lists?key=${this.trelloKey}&token=${this.trelloToken}`,
       {
@@ -329,20 +331,60 @@ class ProjectPage extends Component {
         console.log(`Response: ${response.status} ${response.statusText}`);
         return response.text();
       })
-      .then((text) => console.log(JSON.parse(text)))
-      .catch((err) => console.error(err));
-
-    fetch(
-      `https://api.trello.com/1/boards/${trello.id}/cards?key=${this.trelloKey}&token=${this.trelloToken}`,
-      {
-        method: 'GET',
-      },
-    )
-      .then((response) => {
-        console.log(`Response: ${response.status} ${response.statusText}`);
-        return response.text();
+      .then((text) => {
+        console.log(JSON.parse(text));
+        const lists = JSON.parse(text);
+        lists.forEach((list) => {
+          // check if parent exists
+          const parentExists = Object.values(parents).find(
+            (parent) => parent?.trello.id === list.id,
+          );
+          if (!parentExists) {
+            ParentController.createParent(list.name, list);
+          } else {
+            console.log('Parent already exists');
+          }
+        });
       })
-      .then((text) => console.log(JSON.parse(text)))
+      .then(() => {
+        // refresh page
+        // window.location.reload();
+        fetch(
+          `https://api.trello.com/1/boards/${trello.id}/cards?key=${this.trelloKey}&token=${this.trelloToken}`,
+          {
+            method: 'GET',
+          },
+        )
+          .then((response) => {
+            console.log(`Response: ${response.status} ${response.statusText}`);
+            return response.text();
+          })
+          .then((text) => {
+            console.log(JSON.parse(text));
+            const cards = JSON.parse(text);
+            cards.forEach((card) => {
+              // check if node exists
+              const nodeExists = Object.values(this.state.nodes).find(
+                (node) => node?.trello?.id === card.id,
+              );
+              const nodeParentId = Object.values(parents).find(
+                (parent) => parent?.trello.id === card.idList,
+              ).id;
+              if (!nodeExists) {
+                NodeController.createNode(
+                  'child',
+                  card.name,
+                  nodeParentId,
+                  0,
+                  card,
+                );
+              } else {
+                console.log('Node already exists');
+              }
+            });
+          })
+          .catch((err) => console.error(err));
+      })
       .catch((err) => console.error(err));
   };
 

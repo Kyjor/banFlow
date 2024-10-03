@@ -375,13 +375,14 @@ ipcMain.on('api:getNode', (event, nodeId) => {
 
 ipcMain.on(
   'api:createNode',
-  (event, nodeType, nodeTitle, parentId, iterationId) => {
+  (event, nodeType, nodeTitle, parentId, iterationId, trelloData) => {
     event.returnValue = NodeService.createNode(
       currentLokiService,
       nodeType,
       nodeTitle,
       parentId,
       iterationId,
+      trelloData,
     );
   },
 );
@@ -411,10 +412,11 @@ ipcMain.on('api:getParentOrder', (event) => {
   event.returnValue = ParentService.getParentOrder(currentLokiService);
 });
 
-ipcMain.on('api:createParent', (event, parentTitle) => {
+ipcMain.on('api:createParent', (event, parentTitle, trelloData) => {
   event.returnValue = ParentService.createParent(
     currentLokiService,
     parentTitle,
+    trelloData,
   );
 });
 

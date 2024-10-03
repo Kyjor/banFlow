@@ -39,17 +39,25 @@ const NodeController = {
    * @param {string} nodeType - the type of node to create.
    * @param {string} nodeTitle - the title of the node.
    * @param {string} [parentId=``] - the Id of the parent of the node. Can be null or empty.
-   * @param iterationId
+   * @param iterationId - the Id of the iteration the node is associated with
+   * @param trelloData - the trello data to associate with the node
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode(nodeType, nodeTitle, parentId = ``, iterationId = ``) {
+  createNode(
+    nodeType,
+    nodeTitle,
+    parentId = ``,
+    iterationId = ``,
+    trelloData = null,
+  ) {
     return ipcRenderer.sendSync(
       'api:createNode',
       nodeType,
       nodeTitle,
       parentId,
       iterationId,
+      trelloData,
     );
   },
 
