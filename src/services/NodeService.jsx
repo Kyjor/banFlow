@@ -120,8 +120,6 @@ const NodeService = {
     };
 
     const parent = lokiService.parents.findOne({ id: { $eq: parentId } });
-    console.log(`parents:`);
-    console.log(parent);
     if (trelloData) {
       nodeData.trello = trelloData;
       nodeData.description = trelloData.desc;
@@ -205,6 +203,7 @@ const NodeService = {
       .find({ id: nodeId })
       .update((node) => {
         node[propertyToUpdate] = newValue;
+        node.lastUpdated = `${ISO8601ServiceInstance.getISO8601Time()}`;
         nodeToReturn = node;
       });
 
@@ -216,7 +215,6 @@ const NodeService = {
       );
     }
 
-    console.log(trelloAuth);
     if (nodeToReturn.trello && trelloAuth) {
       const url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeToReturn.title}&desc=${nodeToReturn.description}`;
 
@@ -235,7 +233,16 @@ const NodeService = {
           return response.data;
         })
         .then((data) => {
-          console.log(data);
+          lokiService.nodes
+            .chain()
+            .find({ id: nodeId })
+            .update((node) => {
+              node.trello = data;
+              nodeToReturn = node;
+            });
+
+          lokiService.saveDB();
+          console.log(`Node's trello data saved successfully.`);
         })
         .catch((err) => {
           console.error(err);

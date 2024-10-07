@@ -276,13 +276,40 @@ class ProjectPage extends Component {
     });
   };
 
+  syncTrelloCard = (node) => {
+    console.log('syncing');
+    fetch(
+      `https://api.trello.com/1/cards/${node.trello.id}?key=${this.trelloKey}&token=${this.trelloToken}`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+      },
+    )
+      .then((response) => {
+        console.log(`Response: ${response.status} ${response.statusText}`);
+        return response.text();
+      })
+      .then((text) => {
+        const card = JSON.parse(text);
+        const local = new Date(node.lastUpdated);
+        const remote = new Date(card.dateLastActivity);
+
+        if (local > remote) {
+          console.log('need to update remote');
+        } else if (remote.getTime() - local.getTime() >= 10000) {
+          console.log('need to update local');
+        } else {
+          console.log('nothing to sync here...');
+        }
+      })
+      .catch((err) => console.error(err));
+  };
+
   // eslint-disable-next-line class-methods-use-this
   updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
-    NodeController.updateNodeProperty(
-      propertyToUpdate,
-      nodeId,
-      newValue,
-    );
+    NodeController.updateNodeProperty(propertyToUpdate, nodeId, newValue);
 
     const newState = {
       ...this.state,
@@ -460,6 +487,7 @@ class ProjectPage extends Component {
               iterations={iterations}
               node={nodes[modalNodeId]}
               parents={parents}
+              syncTrelloCard={this.syncTrelloCard}
               updateNodeProperty={this.updateNodeProperty}
               visible={nodeModalVisible}
             />
