@@ -168,7 +168,9 @@ function Parent(props) {
                   style={{ whiteSpace: 'normal' }}
                   onClick={() => setIsEditing(true)}
                 >
-                  {parent.title}
+                  {`${parent.title} ${
+                    parent.trello ? ' (Synced with Trello)' : ''
+                  }`}
                 </span>
               )}
             </h3>
@@ -203,7 +205,7 @@ function Parent(props) {
                 <Button
                   type="primary"
                   block
-                  onClick={() => createNewNode(parent.id)}
+                  onClick={async () => createNewNode(parent.id)}
                   style={{ borderRadius: '10px' }}
                 >
                   <PlusOutlined style={{ position: 'relative', top: '-3px' }} />

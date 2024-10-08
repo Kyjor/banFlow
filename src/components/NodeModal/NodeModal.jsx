@@ -163,7 +163,12 @@ function NodeModal({
                 ))}
             </Select>
             {trelloKey && trelloToken && node.trello && (
-              <Button style={{ marginLeft: `150px` }} onClick={syncTrelloCard}>
+              <Button
+                style={{ marginLeft: `150px` }}
+                onClick={() => {
+                  syncTrelloCard(node);
+                }}
+              >
                 Trello Sync
               </Button>
             )}

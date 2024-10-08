@@ -375,16 +375,36 @@ ipcMain.on('api:getNode', (event, nodeId) => {
 
 ipcMain.on(
   'api:createNode',
-  (event, nodeType, nodeTitle, parentId, iterationId, trelloData, trelloAuth) => {
-    event.returnValue = NodeService.createNode(
-      currentLokiService,
-      nodeType,
-      nodeTitle,
-      parentId,
-      iterationId,
-      trelloData,
-      trelloAuth,
-    );
+  async (
+    event,
+    nodeType,
+    nodeTitle,
+    parentId,
+    iterationId,
+    trelloData,
+    trelloAuth,
+  ) => {
+    try {
+      // Await the result of the createNode call
+      const result = await NodeService.createNode(
+        currentLokiService,
+        nodeType,
+        nodeTitle,
+        parentId,
+        iterationId,
+        trelloData,
+        trelloAuth,
+      );
+
+      // Send the result back to the renderer process
+      event.reply('api:createNodeResponse', result);
+      console.log('Node created:', result);
+    } catch (error) {
+      console.error('Error creating node:', error);
+
+      // Optionally, you can send an error response back
+      event.reply('api:createNodeResponse', { error: error.message });
+    }
   },
 );
 

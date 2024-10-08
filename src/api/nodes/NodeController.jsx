@@ -44,7 +44,7 @@ const NodeController = {
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode(
+  async createNode(
     nodeType,
     nodeTitle,
     parentId = ``,
@@ -56,7 +56,7 @@ const NodeController = {
       token: localStorage.getItem(`trelloToken`),
     };
 
-    return ipcRenderer.sendSync(
+    const test = await ipcRenderer.send(
       'api:createNode',
       nodeType,
       nodeTitle,
@@ -65,6 +65,8 @@ const NodeController = {
       trelloData,
       trelloAuth,
     );
+    console.log(test);
+    return test;
   },
 
   deleteNode(nodeId, parentId) {
