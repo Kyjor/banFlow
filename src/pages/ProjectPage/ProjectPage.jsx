@@ -310,6 +310,7 @@ class ProjectPage extends Component {
 
         if (local > remote) {
           console.log('need to update remote');
+          NodeController.updateNodeProperty('title', node.id, node.title);
         } else if (
           !node.lastUpdated ||
           remote.getTime() - local.getTime() >= 10000
