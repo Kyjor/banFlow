@@ -56,7 +56,7 @@ const NodeController = {
       token: localStorage.getItem(`trelloToken`),
     };
 
-    const test = await ipcRenderer.send(
+    const test = await ipcRenderer.invoke(
       'api:createNode',
       nodeType,
       nodeTitle,

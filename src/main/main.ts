@@ -186,6 +186,7 @@ app
     });
     ipcMain.handle('api:getProjectState', getProjectState);
     ipcMain.handle('api:setProjectState', setProjectState);
+    ipcMain.handle('api:createNode', createNode);
     ipcMain.handle('api:initializeProjectState', initializeProjectState);
   })
   .catch(console.log);
@@ -373,40 +374,33 @@ ipcMain.on('api:getNode', (event, nodeId) => {
   event.returnValue = NodeService.getNodesWithQuery(currentLokiService, nodeId);
 });
 
-ipcMain.on(
-  'api:createNode',
-  async (
-    event,
-    nodeType,
-    nodeTitle,
-    parentId,
-    iterationId,
-    trelloData,
-    trelloAuth,
-  ) => {
-    try {
-      // Await the result of the createNode call
-      const result = await NodeService.createNode(
-        currentLokiService,
-        nodeType,
-        nodeTitle,
-        parentId,
-        iterationId,
-        trelloData,
-        trelloAuth,
-      );
+const createNode = async (
+  event,
+  nodeType,
+  nodeTitle,
+  parentId,
+  iterationId,
+  trelloData,
+  trelloAuth,
+) => {
+  try {
+    // Await the result of the createNode call
+    const result = await NodeService.createNode(
+      currentLokiService,
+      nodeType,
+      nodeTitle,
+      parentId,
+      iterationId,
+      trelloData,
+      trelloAuth,
+    );
 
-      // Send the result back to the renderer process
-      event.reply('api:createNodeResponse', result);
-      console.log('Node created:', result);
-    } catch (error) {
-      console.error('Error creating node:', error);
-
-      // Optionally, you can send an error response back
-      event.reply('api:createNodeResponse', { error: error.message });
-    }
-  },
-);
+    console.log('Node created:', result);
+    return result;
+  } catch (error) {
+    console.error('Error creating node:', error);
+  }
+};
 
 ipcMain.on('api:deleteNode', (event, nodeId, parentId) => {
   NodeService.deleteNode(currentLokiService, nodeId, parentId);
