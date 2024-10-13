@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 const ParentService = {
   /**
    * @function getParents
@@ -122,11 +124,14 @@ const ParentService = {
     updatedOriginParent,
     updatedDestinationParent,
     nodeId,
+    trelloAuth,
   ) {
     const { nodes, parents } = lokiService;
     console.log(updatedOriginParent.nodeIds);
     console.log(updatedDestinationParent.nodeIds);
 
+    let nodeToUpdate = null;
+    let parentToUpdate = null;
     parents
       .chain()
       .find({ id: updatedOriginParent.id })
@@ -138,14 +143,46 @@ const ParentService = {
       .find({ id: updatedDestinationParent.id })
       .update((parent) => {
         parent.nodeIds = updatedDestinationParent.nodeIds;
+        parentToUpdate = parent;
       });
     nodes
       .chain()
       .find({ id: nodeId })
       .update((node) => {
         node.parent = updatedDestinationParent.id;
+        nodeToUpdate = node;
       });
     lokiService.saveDB();
+
+    console.log('trelloAuth', trelloAuth);
+    if (
+      nodeToUpdate &&
+      nodeToUpdate.trello &&
+      parentToUpdate &&
+      parentToUpdate.trello &&
+      trelloAuth
+    ) {
+      console.log('Updating Trello card');
+      const url = `https://api.trello.com/1/cards/${nodeToUpdate.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&idList=${parentToUpdate.trello.id}`;
+
+      axios
+        .put(
+          url,
+          {},
+          {
+            headers: {
+              Accept: 'application/json',
+            },
+          },
+        )
+        .then((response) => {
+          console.log(`Response: ${response.status} ${response.statusText}`);
+          return response.data;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+    }
   },
 };
 

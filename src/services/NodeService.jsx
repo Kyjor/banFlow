@@ -230,8 +230,12 @@ const NodeService = {
       );
     }
 
-    if (nodeToReturn.trello && trelloAuth) {
-      const url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeToReturn.title}&desc=${nodeToReturn.description}`;
+    const parent = lokiService.parents.findOne({
+      id: { $eq: nodeToReturn.parent },
+    });
+    console.log(parent);
+    if (nodeToReturn.trello && parent.trello && trelloAuth) {
+      const url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeToReturn.title}&desc=${nodeToReturn.description}&idList=${parent.trello.id}`;
 
       axios
         .put(

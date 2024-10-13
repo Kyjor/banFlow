@@ -38,7 +38,17 @@ const ParentController = {
    * @permission {Modification}
    */
   createParent(parentTitle, trelloData) {
-    return ipcRenderer.sendSync('api:createParent', parentTitle, trelloData);
+    const trelloAuth = {
+      key: localStorage.getItem(`trelloKey`),
+      token: localStorage.getItem(`trelloToken`),
+    };
+
+    return ipcRenderer.sendSync(
+      'api:createParent',
+      parentTitle,
+      trelloData,
+      trelloAuth,
+    );
   },
 
   deleteParent(parentId) {
@@ -59,11 +69,17 @@ const ParentController = {
   },
 
   updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {
+    const trelloAuth = {
+      key: localStorage.getItem(`trelloKey`),
+      token: localStorage.getItem(`trelloToken`),
+    };
+
     ipcRenderer.sendSync(
       'api:updateNodesInParents',
       updatedOriginParent,
       updatedDestinationParent,
       nodeId,
+      trelloAuth,
     );
   },
 };

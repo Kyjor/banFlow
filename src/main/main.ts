@@ -460,12 +460,19 @@ ipcMain.on('api:updateParentOrder', (event, parentOrder) => {
 
 ipcMain.on(
   'api:updateNodesInParents',
-  (event, updatedOriginParent, updatedDestinationParent, nodeId) => {
+  (
+    event,
+    updatedOriginParent,
+    updatedDestinationParent,
+    nodeId,
+    trelloAuth,
+  ) => {
     ParentService.updateNodesInParents(
       currentLokiService,
       updatedOriginParent,
       updatedDestinationParent,
       nodeId,
+      trelloAuth,
     );
     event.returnValue = true;
   },
