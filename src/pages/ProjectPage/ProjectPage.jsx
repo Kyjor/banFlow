@@ -13,6 +13,7 @@ import NodeController from '../../api/nodes/NodeController';
 import IterationDisplay from '../../components/IterationDisplay/IterationDisplay';
 import IterationController from '../../api/iterations/IterationController';
 import IterationModal from '../../components/IterationModal/IterationModal';
+import parentController from '../../api/parent/ParentController';
 
 class ProjectPage extends Component {
   constructor(props) {
@@ -318,18 +319,56 @@ class ProjectPage extends Component {
           console.log('need to update local');
           console.log(card);
           NodeController.updateNodeProperty('trello', node.id, card, false);
-          NodeController.updateNodeProperty('title', node.id, card.name, false);
-          NodeController.updateNodeProperty(
-            'description',
-            node.id,
-            card.desc,
-            false,
-          );
+          if (card.name !== node.title) {
+            NodeController.updateNodeProperty(
+              'title',
+              node.id,
+              card.name,
+              false,
+            );
+          }
+
+          if (card.desc !== node.description) {
+            NodeController.updateNodeProperty(
+              'description',
+              node.id,
+              card.desc,
+              false,
+            );
+          }
+
+          const currentParent = ParentController.getParents()[node.parent];
+          const newParentId = card.idList;
+          if (currentParent.trello && currentParent.trello.id !== newParentId) {
+            console.log('need to update parent');
+            // get parent where parent.trello.id === newParentId
+            const newParent = Object.values(ParentController.getParents()).find(
+              (parent) => parent.trello.id === newParentId,
+            );
+
+            const startNodeIds = Array.from(currentParent.nodeIds);
+            // remove node from current parent
+            startNodeIds.splice(startNodeIds.indexOf(node.id), 1);
+            const newStart = {
+              ...currentParent,
+              nodeIds: startNodeIds,
+            };
+
+            const finishNodeIds = Array.from(newParent.nodeIds);
+            // add node to new parent
+            finishNodeIds.push(node.id);
+            const newFinish = {
+              ...newParent,
+              nodeIds: finishNodeIds,
+            };
+            parentController.updateNodesInParents(newStart, newFinish, node.id);
+          }
 
           const newState = {
             ...this.state,
             nodeModalVisible: false,
             nodes: NodeController.getNodes(),
+            parents: ParentController.getParents(),
           };
           ipcRenderer.invoke('api:setProjectState', {
             ...newState,
