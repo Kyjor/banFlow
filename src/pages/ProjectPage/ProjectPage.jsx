@@ -64,13 +64,20 @@ class ProjectPage extends Component {
     });
   };
 
-  createNewNode = (parentId) => {
+  createNewNode = async (parentId) => {
     const { selectedIteration } = this.state;
     const newTitle = `New Node`;
     console.log(
       `Creating new node with title: ${newTitle}, in parent: ${parentId}, in iteration: ${selectedIteration}`,
     );
-    NodeController.createNode('child', newTitle, parentId, selectedIteration);
+    const node = await NodeController.createNode(
+      'child',
+      newTitle,
+      parentId,
+      selectedIteration,
+    );
+
+    console.log(node);
 
     const newState = {
       ...this.state,
@@ -276,12 +283,76 @@ class ProjectPage extends Component {
     });
   };
 
+  syncTrelloCard = (node, event) => {
+    console.log('syncing trello card');
+    fetch(
+      `https://api.trello.com/1/cards/${node.trello.id}?key=${this.trelloKey}&token=${this.trelloToken}`,
+      {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+      },
+    )
+      .then((response) => {
+        console.log(`Response: ${response.status} ${response.statusText}`);
+        return response.text();
+      })
+      .then((text) => {
+        const card = JSON.parse(text);
+        const local = new Date(node.lastUpdated);
+        const remote = new Date(card.dateLastActivity);
+
+        console.log(node);
+        console.log(node.lastUpdated);
+        console.log(local);
+        console.log(remote);
+
+        if (local > remote) {
+          console.log('need to update remote');
+          NodeController.updateNodeProperty('title', node.id, node.title);
+        } else if (
+          !node.lastUpdated ||
+          remote.getTime() - local.getTime() >= 10000
+        ) {
+          console.log('need to update local');
+          console.log(card);
+          NodeController.updateNodeProperty('trello', node.id, card, false);
+          NodeController.updateNodeProperty('title', node.id, card.name, false);
+          NodeController.updateNodeProperty(
+            'description',
+            node.id,
+            card.desc,
+            false,
+          );
+
+          const newState = {
+            ...this.state,
+            nodeModalVisible: false,
+            nodes: NodeController.getNodes(),
+          };
+          ipcRenderer.invoke('api:setProjectState', {
+            ...newState,
+          });
+        } else {
+          console.log('nothing to sync here...');
+        }
+      })
+      .catch((err) => console.error(err));
+  };
+
   // eslint-disable-next-line class-methods-use-this
-  updateNodeProperty = (propertyToUpdate, nodeId, newValue) => {
+  updateNodeProperty = (
+    propertyToUpdate,
+    nodeId,
+    newValue,
+    shouldSync = true,
+  ) => {
     NodeController.updateNodeProperty(
       propertyToUpdate,
       nodeId,
       newValue,
+      shouldSync,
     );
 
     const newState = {
@@ -460,6 +531,7 @@ class ProjectPage extends Component {
               iterations={iterations}
               node={nodes[modalNodeId]}
               parents={parents}
+              syncTrelloCard={this.syncTrelloCard}
               updateNodeProperty={this.updateNodeProperty}
               visible={nodeModalVisible}
             />

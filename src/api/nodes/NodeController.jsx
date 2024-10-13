@@ -44,7 +44,7 @@ const NodeController = {
    * @returns {object} node - the newly created node
    * @permission {Modification}
    */
-  createNode(
+  async createNode(
     nodeType,
     nodeTitle,
     parentId = ``,
@@ -56,7 +56,7 @@ const NodeController = {
       token: localStorage.getItem(`trelloToken`),
     };
 
-    return ipcRenderer.sendSync(
+    const test = await ipcRenderer.invoke(
       'api:createNode',
       nodeType,
       nodeTitle,
@@ -65,17 +65,23 @@ const NodeController = {
       trelloData,
       trelloAuth,
     );
+    console.log(test);
+    return test;
   },
 
   deleteNode(nodeId, parentId) {
     ipcRenderer.sendSync('api:deleteNode', nodeId, parentId);
   },
 
-  updateNodeProperty(propertyToUpdate, nodeId, newValue) {
-    const trelloAuth = {
+  updateNodeProperty(propertyToUpdate, nodeId, newValue, shouldSync = true) {
+    let trelloAuth = {
       key: localStorage.getItem(`trelloKey`),
       token: localStorage.getItem(`trelloToken`),
     };
+
+    if (!shouldSync) {
+      trelloAuth = null;
+    }
 
     return ipcRenderer.sendSync(
       'api:updateNodeProperty',

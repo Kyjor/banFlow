@@ -17,6 +17,7 @@ function NodeModal({
   iterations,
   node,
   parents,
+  syncTrelloCard,
   updateNodeProperty,
   visible,
 }) {
@@ -52,6 +53,9 @@ function NodeModal({
     },
     [node?.id, updateNodeProperty],
   );
+
+  const trelloToken = localStorage.getItem('trelloToken');
+  const trelloKey = localStorage.getItem(`trelloKey`);
 
   return node ? (
     <Modal
@@ -137,22 +141,38 @@ function NodeModal({
               updateNodeProperty('notes', node.id, value, true);
             }}
           />
-          <div>Iteration</div>
-          <Select
-            style={{ width: 200 }}
-            value={node.iterationId}
-            onChange={onChangeIteration}
-          >
-            <Option style={{ width: '100%' }} key={0} value={0}>
-              <span style={{ whiteSpace: 'normal' }}>Backlog</span>
-            </Option>
-            {iterations &&
-              Object.values(iterations).map((item) => (
-                <Option style={{ width: '100%' }} key={item.id} value={item.id}>
-                  <span style={{ whiteSpace: 'normal' }}>{item.title}</span>
-                </Option>
-              ))}
-          </Select>
+          <div>
+            <div>Iteration</div>
+            <Select
+              style={{ width: 200 }}
+              value={node.iterationId}
+              onChange={onChangeIteration}
+            >
+              <Option style={{ width: '100%' }} key={0} value={0}>
+                <span style={{ whiteSpace: 'normal' }}>Backlog</span>
+              </Option>
+              {iterations &&
+                Object.values(iterations).map((item) => (
+                  <Option
+                    style={{ width: '100%' }}
+                    key={item.id}
+                    value={item.id}
+                  >
+                    <span style={{ whiteSpace: 'normal' }}>{item.title}</span>
+                  </Option>
+                ))}
+            </Select>
+            {trelloKey && trelloToken && node.trello && (
+              <Button
+                style={{ marginLeft: `150px` }}
+                onClick={() => {
+                  syncTrelloCard(node);
+                }}
+              >
+                Trello Sync
+              </Button>
+            )}
+          </div>
         </TabPane>
         <TabPane
           style={{ margin: '0 10px 0 0' }}

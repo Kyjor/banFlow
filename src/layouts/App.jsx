@@ -1,10 +1,12 @@
 import {
   BarChartOutlined,
-  DesktopOutlined, ExpandOutlined,
+  DesktopOutlined,
+  ExpandOutlined,
   FileOutlined,
+  PlayCircleOutlined,
   PlusSquareFilled,
   SettingOutlined,
-  TableOutlined
+  TableOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import React, { useState } from 'react';
@@ -58,6 +60,10 @@ function loadSidebarComponents(pathname, setShowModal) {
       <Menu.Item icon={<SettingOutlined />}>
         <Link to={`/projectSettings/${currentProject}`} />
         Settings
+      </Menu.Item>
+      <Menu.Item icon={<PlayCircleOutlined />}>
+        <Link to={`/game/${currentProject}`} />
+        Game
       </Menu.Item>
     </>
   );
