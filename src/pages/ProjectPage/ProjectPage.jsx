@@ -38,7 +38,15 @@ class ProjectPage extends Component {
   }
 
   componentDidMount() {
-    ipcRenderer.invoke('api:initializeProjectState', this.projectName);
+    const newState = ipcRenderer.sendSync(
+      'api:initializeProjectState',
+      this.projectName,
+    );
+
+    this.setState({
+      ...this.state,
+      ...newState,
+    });
 
     const self = this;
     ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
@@ -466,7 +474,6 @@ class ProjectPage extends Component {
       })
       .then(() => {
         // refresh page
-        // window.location.reload();
         fetch(
           `https://api.trello.com/1/boards/${trello.id}/cards?key=${this.trelloKey}&token=${this.trelloToken}`,
           {
@@ -491,6 +498,7 @@ class ProjectPage extends Component {
 
               const nodeParentId = nodeParent.id;
               if (!nodeExists) {
+                console.log('node doesnt exist');
                 NodeController.createNode(
                   'child',
                   card.name,

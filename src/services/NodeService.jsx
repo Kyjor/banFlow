@@ -121,12 +121,14 @@ const NodeService = {
     };
 
     const parent = lokiService.parents.findOne({ id: { $eq: parentId } });
+    console.log('help me');
     if (trelloData) {
+      // using trello data to create node
       nodeData.trello = trelloData;
       nodeData.description = trelloData.desc;
     } else if (trelloAuth && parent?.trello) {
+      // create trello node
       const url = `https://api.trello.com/1/cards?idList=${parent.trello.id}&key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeTitle}`;
-
       const newNodeResponse = await axios
         .post(
           url,
@@ -142,7 +144,7 @@ const NodeService = {
           return response.data;
         })
         .then((data) => {
-          console.log(data);
+          console.log('node data: ', nodeData);
           nodeData.trello = data;
 
           const newNode = nodes.insert(nodeData);
@@ -160,20 +162,20 @@ const NodeService = {
         .catch((err) => {
           console.error(err);
         });
-
+      console.log('trying to create new node');
       return newNodeResponse;
-    } else {
-      const newNode = nodes.insert(nodeData);
-      parents
-        .chain()
-        .find({ id: parentId })
-        .update((parent) => {
-          parent.nodeIds = [...parent.nodeIds, `node-${nextId}`];
-        });
-
-      lokiService.saveDB();
-      return newNode;
     }
+
+    const newNode = nodes.insert(nodeData);
+    parents
+      .chain()
+      .find({ id: parentId })
+      .update((parent) => {
+        parent.nodeIds = [...parent.nodeIds, `node-${nextId}`];
+      });
+
+    lokiService.saveDB();
+    return newNode;
   },
 
   deleteNode(lokiService, nodeId, parentId) {
