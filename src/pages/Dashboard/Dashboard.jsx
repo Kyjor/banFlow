@@ -24,7 +24,6 @@ import NodeController from '../../api/nodes/NodeController';
 import ParentController from '../../api/parent/ParentController';
 import TimerController from '../../api/timer/TimerController';
 import TagController from '../../api/tag/TagController';
-import APIKeyInput from '../../components/APIKeyInput/APIKeyInput';
 
 /**
  * Home
@@ -180,7 +179,6 @@ class Dashboard extends Component {
     return (
       <Layout>
         <div className="home">
-          <APIKeyInput />
           <div className="flex">
             <ProjectListContainer
               openProjectDetails={this.updateSelectedProject}

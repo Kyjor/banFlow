@@ -5,6 +5,7 @@ import Dashboard from '../pages/Dashboard/Dashboard';
 import ProjectPage from '../pages/ProjectPage/ProjectPage';
 import NotFound from '../pages/NotFound/NotFound';
 import ProjectSettings from '../pages/ProjectSettings/ProjectSettings';
+import AppSettings from '../pages/AppSettings/AppSettings';
 import SheetPage from '../pages/SheetPage/SheetPage';
 import Game from '../pages/Game/Game';
 import TextEditor from '../components/TextEditor/TextEditor';
@@ -21,6 +22,7 @@ function AppRoutes() {
         <Route path="/sheets/:name" element={<SheetPage />} />
         <Route path="/charts/:name" element={<ChartPage />} />
         <Route path="/projectSettings/:name" element={<ProjectSettings />} />
+        <Route path="/settings" element={<AppSettings />} />
         <Route path="/docs/:name" element={<TextEditor />} />
         <Route path="/game/:name" element={<Game />} />
         {/* Default 404 route */}

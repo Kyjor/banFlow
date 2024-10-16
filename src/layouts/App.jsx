@@ -23,18 +23,24 @@ const { Content, Sider } = Layout;
 
 // eslint-disable-next-line consistent-return
 function loadSidebarComponents(pathname, setShowModal) {
-  if (pathname === '/dashboard' || pathname === '/') {
+  if (pathname === '/dashboard' || pathname === '/' || pathname === '/settings') {
     return (
-      <Menu.Item
-        icon={<PlusSquareFilled />}
-        onClick={() => {
-          setShowModal(true);
-        }}
-        title="Add New Project"
-        key="2"
-      >
-        Add New Project
-      </Menu.Item>
+      <>
+        <Menu.Item
+          icon={<PlusSquareFilled />}
+          onClick={() => {
+            setShowModal(true);
+          }}
+          title="Add New Project"
+          key="2"
+        >
+          Add New Project
+        </Menu.Item>
+        <Menu.Item icon={<SettingOutlined />}>
+          <Link to="/settings" />
+          Settings
+        </Menu.Item>
+      </>
     );
   }
   const currentProject = localStorage.getItem('currentProject');
