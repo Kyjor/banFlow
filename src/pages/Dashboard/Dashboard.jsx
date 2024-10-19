@@ -202,9 +202,6 @@ class Dashboard extends Component {
                       >
                         <div style={{ width: '50%' }}>
                           <Descriptions size="small" column={3}>
-                            <Descriptions.Item label="Created by">
-                              You
-                            </Descriptions.Item>
                             <Descriptions.Item label="Time Spent">
                               {new Date(this.getProjectTotalTimeSpent() * 1000)
                                 .toISOString()
