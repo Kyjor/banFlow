@@ -272,6 +272,7 @@ class ProjectPage extends Component {
       ...this.state,
       nodeModalVisible: false,
       currentNodeSelectedInTimer: modalNodeId,
+      modalNodeId: null,
     };
     // TODO: don't persist this
     ipcRenderer.invoke('api:setProjectState', {
