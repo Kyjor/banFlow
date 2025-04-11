@@ -42,6 +42,7 @@ let mainWindow: BrowserWindow | null = null;
 // eslint-disable-next-line no-undef
 let timerWindow: BrowserWindow | Electron.PopupOptions | null | undefined;
 let individualProjectStateValue: any = individualProjectState;
+let lastOpenedTimes = {};
 
 export default class AppUpdater {
   constructor() {
@@ -642,3 +643,12 @@ const initializeProjectState = (_event: any, projectName: any) => {
     );
   }
 };
+
+ipcMain.on('getLastOpenedTimes', (event) => {
+  event.returnValue = JSON.stringify(lastOpenedTimes);
+});
+
+ipcMain.on('setLastOpenedTimes', (event, times) => {
+  lastOpenedTimes = JSON.parse(times);
+  event.returnValue = true;
+});

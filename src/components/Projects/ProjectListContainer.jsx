@@ -31,6 +31,7 @@ class ProjectListContainer extends Component {
 
     ipcRenderer.on('ReturnProjectFile', (e, fileName) => {
       if (!fileName) return;
+      localStorage.setItem(`projectLastOpened_${fileName}`, Date.now().toString());
       self.props.openProjectDetails(fileName);
     });
   }
@@ -68,7 +69,14 @@ class ProjectListContainer extends Component {
           items={items}
           deleteProject={this.deleteProject}
           renameProject={this.renameProject}
-          openProjectDetails={openProjectDetails}
+          openProjectDetails={(name) => {
+            // Update last opened time before opening project
+            const lastOpened = JSON.parse(localStorage.getItem('projectLastOpened') || '{}');
+            // Store with .json extension to match the file name
+            lastOpened[name + '.json'] = Date.now();
+            localStorage.setItem('projectLastOpened', JSON.stringify(lastOpened));
+            openProjectDetails(name);
+          }}
         />
       </div>
     );

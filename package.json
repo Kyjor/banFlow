@@ -253,10 +253,6 @@
     "scheduler": "^0.23.2",
     "trello.js": "^1.2.3"
   },
-  "devEngines": {
-    "node": ">=14.x",
-    "npm": ">=7.x"
-  },
   "browserslist": [],
   "prettier": {
     "overrides": [

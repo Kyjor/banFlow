@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, ipcMain } from 'electron';
 import lokiService from './LokiService';
 // eslint-disable-next-line import/no-cycle
 import { ValidateProjectName } from '../validators/Validator';
@@ -21,16 +21,18 @@ const ProjectService = {
         recursive: true,
       });
     }
+
     const files = fs.readdirSync(projectFolder);
     files.forEach((file) => {
       if (file !== '') {
         const newItem = {
           text: file,
-          key: Date.now(),
+          key: Date.now()
         };
         fileList.push(newItem);
       }
     });
+
     return fileList;
   },
 
