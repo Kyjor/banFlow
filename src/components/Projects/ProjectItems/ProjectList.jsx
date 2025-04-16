@@ -46,7 +46,12 @@ function ProjectList(props) {
       .filter((item) => {
         return item.text !== '.json' && !item.text.includes('.json~');
       })
-      .map(createTasks);
+      .map(createTasks)
+      .sort((a, b) => {
+        const dateA = a.lastOpened === 'Never' ? 0 : new Date(a.lastOpened).getTime();
+        const dateB = b.lastOpened === 'Never' ? 0 : new Date(b.lastOpened).getTime();
+        return dateB - dateA; // Sort in descending order (newest first)
+      });
     setListItems(items1);
   }, [items]);
 
@@ -59,7 +64,7 @@ function ProjectList(props) {
       dataSource={listItemsWithoutFileExtension}
       bordered
       pagination={{
-        pageSize: 3,
+        pageSize: 5,
       }}
       renderItem={(item) => (
         <List.Item key={item.name}>

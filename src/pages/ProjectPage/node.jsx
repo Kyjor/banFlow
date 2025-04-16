@@ -1,9 +1,9 @@
 /* eslint-disable react-hooks/exhaustive-deps,react/jsx-props-no-spreading */
 import React, { useEffect, useState } from 'react';
 import { Draggable } from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
-import { Card as AntCard } from 'antd';
+import { Card as AntCard, Tag, Tooltip } from 'antd';
 import PropTypes from 'prop-types';
-import { EllipsisOutlined, SettingOutlined } from '@ant-design/icons';
+import { EllipsisOutlined, SettingOutlined, ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import styles from './node.module.scss';
 import EditableTextArea from '../../components/EditableTextArea/EditableTextArea';
 import StopWatch from '../../components/StopWatch/StopWatch';
@@ -54,6 +54,59 @@ function Node(props) {
   }, [mustFocusNodeTitle]);
 
   const isDragDisabled = node.isLocked;
+
+  const renderDueDate = () => {
+    if (!node.dueDate) return null;
+    
+    const dueDate = new Date(node.dueDate);
+    const isOverdue = dueDate < new Date();
+    
+    return (
+      <Tooltip title={`Due: ${dueDate.toLocaleString()}`}>
+        <Tag 
+          icon={<ClockCircleOutlined />} 
+          color={isOverdue ? 'red' : 'blue'}
+          style={{ marginTop: '8px' }}
+        >
+          {dueDate.toLocaleDateString()}
+        </Tag>
+      </Tooltip>
+    );
+  };
+
+  const renderLabels = () => {
+    if (!node.labels || node.labels.length === 0) return null;
+    
+    return (
+      <div style={{ marginTop: '8px' }}>
+        {node.labels.map((label) => (
+          <Tag key={label.id} color={label.color}>
+            {label.name}
+          </Tag>
+        ))}
+      </div>
+    );
+  };
+
+  const renderChecklistProgress = () => {
+    if (!node.checklist || node.checklist.checks.length === 0) return null;
+    
+    const completed = node.checklist.checks.filter(check => check.complete).length;
+    const total = node.checklist.checks.length;
+    const percentage = Math.round((completed / total) * 100);
+    
+    return (
+      <Tooltip title={`${completed}/${total} items completed`}>
+        <Tag 
+          icon={<CheckCircleOutlined />} 
+          color={percentage === 100 ? 'green' : 'blue'}
+          style={{ marginTop: '8px' }}
+        >
+          {percentage}%
+        </Tag>
+      </Tooltip>
+    );
+  };
 
   return (
     <Draggable
@@ -111,7 +164,14 @@ function Node(props) {
                   </span>
                 )
               }
-              description={node.description}
+              description={
+                <>
+                  {node.description}
+                  {renderLabels()}
+                  {renderDueDate()}
+                  {renderChecklistProgress()}
+                </>
+              }
             />
           </AntCard>
         </div>

@@ -118,6 +118,9 @@ const NodeService = {
       isArchived: false,
       iterationId, //
       lastUpdated: `${ISO8601ServiceInstance.getISO8601Time()}`,
+      labels: [], // Array of label objects {id, name, color}
+      dueDate: null, // ISO8601 date time
+      startDate: null, // ISO8601 date time
     };
 
     const parent = lokiService.parents.findOne({ id: { $eq: parentId } });
@@ -126,6 +129,9 @@ const NodeService = {
       // using trello data to create node
       nodeData.trello = trelloData;
       nodeData.description = trelloData.desc;
+      nodeData.labels = trelloData.labels || [];
+      nodeData.dueDate = trelloData.due;
+      nodeData.startDate = trelloData.start;
     } else if (trelloAuth && parent?.trello) {
       // create trello node
       const url = `https://api.trello.com/1/cards?idList=${parent.trello.id}&key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeTitle}`;
@@ -146,6 +152,9 @@ const NodeService = {
         .then((data) => {
           console.log('node data: ', nodeData);
           nodeData.trello = data;
+          nodeData.labels = data.labels || [];
+          nodeData.dueDate = data.due;
+          nodeData.startDate = data.start;
 
           const newNode = nodes.insert(nodeData);
           parents
@@ -237,7 +246,30 @@ const NodeService = {
     });
     console.log(parent);
     if (nodeToReturn.trello && parent.trello && trelloAuth) {
-      const url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}&name=${nodeToReturn.title}&desc=${nodeToReturn.description}&idList=${parent.trello.id}`;
+      let url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}`;
+      
+      // Build query parameters based on what's being updated
+      const params = [];
+      
+      if (propertyToUpdate === 'title') {
+        params.push(`name=${encodeURIComponent(newValue)}`);
+      }
+      if (propertyToUpdate === 'description') {
+        params.push(`desc=${encodeURIComponent(newValue)}`);
+      }
+      if (propertyToUpdate === 'dueDate') {
+        params.push(`due=${encodeURIComponent(newValue)}`);
+      }
+      if (propertyToUpdate === 'startDate') {
+        params.push(`start=${encodeURIComponent(newValue)}`);
+      }
+      if (propertyToUpdate === 'labels') {
+        // For labels, we need to make a separate API call
+        const labelIds = newValue.map(label => label.id).join(',');
+        params.push(`idLabels=${labelIds}`);
+      }
+      
+      url += `&${params.join('&')}`;
 
       axios
         .put(
@@ -259,6 +291,16 @@ const NodeService = {
             .find({ id: nodeId })
             .update((node) => {
               node.trello = data;
+              // Update local data with Trello response
+              if (propertyToUpdate === 'labels') {
+                node.labels = data.labels || [];
+              }
+              if (propertyToUpdate === 'dueDate') {
+                node.dueDate = data.due;
+              }
+              if (propertyToUpdate === 'startDate') {
+                node.startDate = data.start;
+              }
               nodeToReturn = node;
             });
 
