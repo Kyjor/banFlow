@@ -330,11 +330,15 @@ const NodeService = {
     return nodeToReturn;
   },
 
-  // Helper: Append or update banflow:timeSpent in description
+  // Helper: Append or update banflow:timeSpent in description, with separator
   setBanflowTimeSpentInDescription(description, timeSpent) {
+    const separator = '---Banflow fields, do not edit this line or below it---';
     const banflowLine = `banflow:timeSpent=${timeSpent}`;
     const lines = description ? description.split('\n') : [];
-    const filtered = lines.filter(line => !line.startsWith('banflow:timeSpent='));
+    // Remove any previous separator and banflow fields
+    const sepIndex = lines.findIndex(line => line.trim() === separator);
+    const filtered = sepIndex === -1 ? lines : lines.slice(0, sepIndex);
+    filtered.push(separator);
     filtered.push(banflowLine);
     return filtered.join('\n');
   },
@@ -342,17 +346,23 @@ const NodeService = {
   // Helper: Extract banflow:timeSpent from description, returns { description, timeSpent }
   extractBanflowTimeSpentFromDescription(description) {
     if (!description) return { description: '', timeSpent: null };
+    const separator = '---Banflow fields, do not edit this line or below it---';
     const lines = description.split('\n');
+    const sepIndex = lines.findIndex(line => line.trim() === separator);
     let timeSpent = null;
-    const filtered = lines.filter(line => {
-      const match = line.match(/^banflow:timeSpent=(\d+)/);
-      if (match) {
-        timeSpent = parseInt(match[1], 10);
-        return false;
+    if (sepIndex !== -1) {
+      // Look for banflow:timeSpent in the lines after the separator
+      for (let i = sepIndex + 1; i < lines.length; i++) {
+        const match = lines[i].match(/^banflow:timeSpent=(\d+)/);
+        if (match) {
+          timeSpent = parseInt(match[1], 10);
+          break;
+        }
       }
-      return true;
-    });
-    return { description: filtered.join('\n'), timeSpent };
+    }
+    // Only keep lines before the separator for the local description
+    const cleaned = sepIndex === -1 ? lines : lines.slice(0, sepIndex);
+    return { description: cleaned.join('\n'), timeSpent };
   },
 };
 
