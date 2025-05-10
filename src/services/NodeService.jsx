@@ -128,7 +128,10 @@ const NodeService = {
     if (trelloData) {
       // using trello data to create node
       nodeData.trello = trelloData;
-      nodeData.description = trelloData.desc;
+      // Parse banflow:timeSpent from Trello description
+      const { description, timeSpent } = NodeService.extractBanflowTimeSpentFromDescription(trelloData.desc);
+      nodeData.description = description;
+      if (typeof timeSpent === 'number') nodeData.timeSpent = timeSpent;
       nodeData.labels = trelloData.labels || [];
       nodeData.dueDate = trelloData.due;
       nodeData.startDate = trelloData.start;
@@ -254,8 +257,19 @@ const NodeService = {
       if (propertyToUpdate === 'title') {
         params.push(`name=${encodeURIComponent(newValue)}`);
       }
+      if (propertyToUpdate === 'timeSpent') {
+        // Sync timeSpent to Trello description
+        const currentDesc = nodeToReturn.trello.desc || nodeToReturn.description || '';
+        const newDesc = NodeService.setBanflowTimeSpentInDescription(currentDesc, newValue);
+        params.push(`desc=${encodeURIComponent(newDesc)}`);
+      }
       if (propertyToUpdate === 'description') {
-        params.push(`desc=${encodeURIComponent(newValue)}`);
+        // Remove any old banflow:timeSpent line from the new description
+        const { description: cleanedDesc } = NodeService.extractBanflowTimeSpentFromDescription(newValue);
+        // Append the current node's timeSpent value
+        const timeSpentValue = nodeToReturn.timeSpent || 0;
+        const newDesc = NodeService.setBanflowTimeSpentInDescription(cleanedDesc, timeSpentValue);
+        params.push(`desc=${encodeURIComponent(newDesc)}`);
       }
       if (propertyToUpdate === 'dueDate') {
         params.push(`due=${encodeURIComponent(newValue)}`);
@@ -314,6 +328,31 @@ const NodeService = {
 
     // eslint-disable-next-line consistent-return
     return nodeToReturn;
+  },
+
+  // Helper: Append or update banflow:timeSpent in description
+  setBanflowTimeSpentInDescription(description, timeSpent) {
+    const banflowLine = `banflow:timeSpent=${timeSpent}`;
+    const lines = description ? description.split('\n') : [];
+    const filtered = lines.filter(line => !line.startsWith('banflow:timeSpent='));
+    filtered.push(banflowLine);
+    return filtered.join('\n');
+  },
+
+  // Helper: Extract banflow:timeSpent from description, returns { description, timeSpent }
+  extractBanflowTimeSpentFromDescription(description) {
+    if (!description) return { description: '', timeSpent: null };
+    const lines = description.split('\n');
+    let timeSpent = null;
+    const filtered = lines.filter(line => {
+      const match = line.match(/^banflow:timeSpent=(\d+)/);
+      if (match) {
+        timeSpent = parseInt(match[1], 10);
+        return false;
+      }
+      return true;
+    });
+    return { description: filtered.join('\n'), timeSpent };
   },
 };
 
