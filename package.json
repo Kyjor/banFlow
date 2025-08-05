@@ -233,6 +233,7 @@
     "@atlaskit/codemod-utils": "^4.2.4",
     "@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration": "^1.2.2",
     "@electron/remote": "^2.0.8",
+    "@octokit/rest": "^20.0.2",
     "@uiw/react-md-editor": "^4.0.4",
     "antd": "^4.24.16",
     "axios": "^1.7.7",
@@ -250,7 +251,9 @@
     "react-router-dom": "^6.26.2",
     "react-spreadsheet": "^0.9.5",
     "react-use-precision-timer": "^2.0.4",
+    "react-syntax-highlighter": "^15.5.0",
     "scheduler": "^0.23.2",
+    "simple-git": "^3.20.0",
     "trello.js": "^1.2.3"
   },
   "browserslist": [],

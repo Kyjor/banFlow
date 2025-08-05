@@ -337,13 +337,20 @@ class ProjectPage extends Component {
             );
           }
 
-          if (card.desc !== node.description) {
+          // Parse description and BanFlow fields
+          const { cleanDescription, banflowFields } = this.parseBanflowDescription(card.desc);
+          if (cleanDescription !== node.description) {
             NodeController.updateNodeProperty(
               'description',
               node.id,
-              card.desc,
+              cleanDescription,
               false,
             );
+          }
+          
+          // Update BanFlow fields if they exist
+          if (banflowFields.timeSpent !== undefined) {
+            NodeController.updateNodeProperty('timeSpent', node.id, banflowFields.timeSpent, false);
           }
 
           const currentParent = ParentController.getParents()[node.parent];
@@ -509,6 +516,52 @@ class ProjectPage extends Component {
                 );
               } else {
                 console.log('Node already exists');
+                // Check if node needs to be moved to a different parent/column
+                const currentParent = ParentController.getParents()[nodeExists.parent];
+                const newParentId = card.idList;
+                
+                if (currentParent.trello && currentParent.trello.id !== newParentId) {
+                  console.log('Node needs to be moved to different column');
+                  const newParent = Object.values(ParentController.getParents()).find(
+                    (parent) => parent.trello.id === newParentId,
+                  );
+
+                  const startNodeIds = Array.from(currentParent.nodeIds);
+                  // remove node from current parent
+                  startNodeIds.splice(startNodeIds.indexOf(nodeExists.id), 1);
+                  const newStart = {
+                    ...currentParent,
+                    nodeIds: startNodeIds,
+                  };
+
+                  const finishNodeIds = Array.from(newParent.nodeIds);
+                  // add node to new parent
+                  finishNodeIds.push(nodeExists.id);
+                  const newFinish = {
+                    ...newParent,
+                    nodeIds: finishNodeIds,
+                  };
+                  parentController.updateNodesInParents(newStart, newFinish, nodeExists.id);
+                }
+                
+                // Also update node properties if they've changed
+                if (card.name !== nodeExists.title) {
+                  NodeController.updateNodeProperty('title', nodeExists.id, card.name, false);
+                }
+                
+                // Parse description and BanFlow fields
+                const { cleanDescription, banflowFields } = this.parseBanflowDescription(card.desc);
+                if (cleanDescription !== nodeExists.description) {
+                  NodeController.updateNodeProperty('description', nodeExists.id, cleanDescription, false);
+                }
+                
+                // Update BanFlow fields if they exist
+                if (banflowFields.timeSpent !== undefined) {
+                  NodeController.updateNodeProperty('timeSpent', nodeExists.id, banflowFields.timeSpent, false);
+                }
+                
+                // Update trello data
+                NodeController.updateNodeProperty('trello', nodeExists.id, card, false);
               }
             });
           })
@@ -518,6 +571,42 @@ class ProjectPage extends Component {
           .catch((err) => console.error(err));
       })
       .catch((err) => console.error(err));
+  };
+
+  // Parse Trello description to separate clean description from BanFlow fields
+  parseBanflowDescription = (description) => {
+    if (!description) {
+      return { cleanDescription: '', banflowFields: {} };
+    }
+
+    const banflowSeparator = '---Banflow fields, do not edit this line or below it---';
+    const parts = description.split(banflowSeparator);
+    
+    const cleanDescription = parts[0].trim();
+    const banflowFields = {};
+    
+    if (parts.length > 1) {
+      const fieldsSection = parts[1].trim();
+      const fieldLines = fieldsSection.split('\n');
+      
+      fieldLines.forEach(line => {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('banflow:')) {
+          const fieldPart = trimmedLine.substring(8); // Remove 'banflow:' prefix
+          const [key, value] = fieldPart.split('=');
+          if (key && value !== undefined) {
+            // Convert numeric values
+            if (key === 'timeSpent' && !isNaN(value)) {
+              banflowFields[key] = parseInt(value, 10);
+            } else {
+              banflowFields[key] = value;
+            }
+          }
+        }
+      });
+    }
+    
+    return { cleanDescription, banflowFields };
   };
 
   render() {

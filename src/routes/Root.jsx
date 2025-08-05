@@ -10,25 +10,33 @@ import SheetPage from '../pages/SheetPage/SheetPage';
 import Game from '../pages/Game/Game';
 import TextEditor from '../components/TextEditor/TextEditor';
 import ChartPage from '../components/ChartPage/ChartPage';
+import GitRepositoriesPage from '../pages/Git/GitRepositoriesPage';
+import GitOperationsPage from '../pages/Git/GitOperationsPage';
+// Context
+import { GitProvider } from '../contexts/GitContext';
 
 function AppRoutes() {
   return (
-    <HashRouter>
-      <Routes>
-        {/* Use element with JSX in React Router v6 */}
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/projectPage/:name" element={<ProjectPage />} />
-        <Route path="/sheets/:name" element={<SheetPage />} />
-        <Route path="/charts/:name" element={<ChartPage />} />
-        <Route path="/projectSettings/:name" element={<ProjectSettings />} />
-        <Route path="/settings" element={<AppSettings />} />
-        <Route path="/docs/:name" element={<TextEditor />} />
-        <Route path="/game/:name" element={<Game />} />
-        {/* Default 404 route */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </HashRouter>
+    <GitProvider>
+      <HashRouter>
+        <Routes>
+          {/* Use element with JSX in React Router v6 */}
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/projectPage/:name" element={<ProjectPage />} />
+          <Route path="/sheets/:name" element={<SheetPage />} />
+          <Route path="/charts/:name" element={<ChartPage />} />
+          <Route path="/git/repositories" element={<GitRepositoriesPage />} />
+          <Route path="/git/operations" element={<GitOperationsPage />} />
+          <Route path="/projectSettings/:name" element={<ProjectSettings />} />
+          <Route path="/settings" element={<AppSettings />} />
+          <Route path="/docs/:name" element={<TextEditor />} />
+          <Route path="/game/:name" element={<Game />} />
+          {/* Default 404 route */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </HashRouter>
+    </GitProvider>
   );
 }
 
