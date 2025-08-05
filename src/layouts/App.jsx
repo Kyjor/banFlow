@@ -8,7 +8,6 @@ import {
   SettingOutlined,
   TableOutlined,
   GitlabOutlined,
-  BranchesOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import React, { useState } from 'react';
@@ -70,12 +69,8 @@ function loadSidebarComponents(pathname, setShowModal) {
         Charts
       </Menu.Item>
       <Menu.Item icon={<GitlabOutlined />}>
-        <Link to={`/git/repositories`} />
-        Git Repositories
-      </Menu.Item>
-      <Menu.Item icon={<BranchesOutlined />}>
-        <Link to={`/git/operations`} />
-        Git Operations
+        <Link to="/git" />
+        Git
       </Menu.Item>
       <Menu.Item icon={<SettingOutlined />}>
         <Link to={`/projectSettings/${currentProject}`} />

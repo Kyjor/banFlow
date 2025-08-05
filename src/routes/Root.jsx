@@ -10,8 +10,7 @@ import SheetPage from '../pages/SheetPage/SheetPage';
 import Game from '../pages/Game/Game';
 import TextEditor from '../components/TextEditor/TextEditor';
 import ChartPage from '../components/ChartPage/ChartPage';
-import GitRepositoriesPage from '../pages/Git/GitRepositoriesPage';
-import GitOperationsPage from '../pages/Git/GitOperationsPage';
+import GitPage from '../pages/Git/GitPage';
 // Context
 import { GitProvider } from '../contexts/GitContext';
 
@@ -26,8 +25,7 @@ function AppRoutes() {
           <Route path="/projectPage/:name" element={<ProjectPage />} />
           <Route path="/sheets/:name" element={<SheetPage />} />
           <Route path="/charts/:name" element={<ChartPage />} />
-          <Route path="/git/repositories" element={<GitRepositoriesPage />} />
-          <Route path="/git/operations" element={<GitOperationsPage />} />
+          <Route path="/git" element={<GitPage />} />
           <Route path="/projectSettings/:name" element={<ProjectSettings />} />
           <Route path="/settings" element={<AppSettings />} />
           <Route path="/docs/:name" element={<TextEditor />} />

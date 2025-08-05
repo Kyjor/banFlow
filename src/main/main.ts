@@ -660,8 +660,12 @@ const gitService = new GitService();
 // Repository Management
 ipcMain.handle('git:addRepository', async (event, repoPath) => {
   try {
-    return await gitService.addRepository(repoPath);
+    console.log('Adding repository:', repoPath);
+    const result = await gitService.addRepository(repoPath);
+    console.log('Repository added successfully:', result.name);
+    return result;
   } catch (error) {
+    console.error('Error in git:addRepository:', error);
     throw error;
   }
 });
@@ -676,8 +680,12 @@ ipcMain.handle('git:switchRepository', async (event, repoPath) => {
 
 ipcMain.handle('git:getRepositories', async () => {
   try {
-    return gitService.getRepositories();
+    console.log('Getting repositories...');
+    const repos = gitService.getRepositories();
+    console.log('Found repositories:', repos.length);
+    return repos;
   } catch (error) {
+    console.error('Error in git:getRepositories:', error);
     throw error;
   }
 });

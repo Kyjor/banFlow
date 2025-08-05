@@ -36,7 +36,8 @@ import {
   SyncOutlined,
   CodeOutlined,
   HistoryOutlined,
-  InboxOutlined
+  InboxOutlined,
+  EyeOutlined
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import './GitOperations.scss';
@@ -47,7 +48,7 @@ const { TabPane } = Tabs;
 const { Option } = Select;
 const { Panel } = Collapse;
 
-function GitOperations() {
+function GitOperations({ onViewDiff }) {
   const {
     currentRepository,
     repositoryStatus,
@@ -193,8 +194,16 @@ function GitOperations() {
                 >
                   Stage
                 </Button>
+              ),
+              onViewDiff && (status === 'modified' || status === 'staged') && (
+                <Button
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() => onViewDiff(file)}
+                  title="View Diff"
+                />
               )
-            ] : []}
+            ].filter(Boolean) : []}
           >
             <List.Item.Meta
               avatar={

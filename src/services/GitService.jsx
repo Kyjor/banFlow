@@ -31,13 +31,34 @@ export default class GitService {
       const branches = await git.branch();
       const remotes = await git.getRemotes(true);
       
+      // Create clean, serializable objects for IPC
+      const cleanRemotes = remotes.map(remote => ({
+        name: remote.name,
+        refs: {
+          fetch: remote.refs?.fetch || '',
+          push: remote.refs?.push || ''
+        }
+      }));
+      
+      const cleanStatus = {
+        staged: status.staged || [],
+        modified: status.modified || [],
+        deleted: status.deleted || [],
+        created: status.created || [],
+        conflicted: status.conflicted || [],
+        ahead: status.ahead || 0,
+        behind: status.behind || 0,
+        current: status.current || '',
+        tracking: status.tracking || ''
+      };
+      
       const repoInfo = {
         path: repoPath,
         name: path.basename(repoPath),
         currentBranch: branches.current,
-        branches: branches.all,
-        remotes: remotes,
-        status: status,
+        branches: branches.all || [],
+        remotes: cleanRemotes,
+        status: cleanStatus,
         lastAccessed: new Date().toISOString()
       };
 
@@ -77,16 +98,17 @@ export default class GitService {
       const status = await this.git.status();
       const branches = await this.git.branch();
       
+      // Create clean, serializable status object
       return {
         currentBranch: branches.current,
-        staged: status.staged,
-        modified: status.modified,
-        deleted: status.deleted,
-        created: status.created,
-        conflicted: status.conflicted,
-        ahead: status.ahead,
-        behind: status.behind,
-        branches: branches.all
+        staged: status.staged || [],
+        modified: status.modified || [],
+        deleted: status.deleted || [],
+        created: status.created || [],
+        conflicted: status.conflicted || [],
+        ahead: status.ahead || 0,
+        behind: status.behind || 0,
+        branches: branches.all || []
       };
     } catch (error) {
       console.error('Error getting repository status:', error);
@@ -317,12 +339,12 @@ export default class GitService {
     
     try {
       const stashList = await this.git.stashList();
-      return stashList.all.map(stash => ({
+      return (stashList.all || []).map(stash => ({
         index: stash.index,
-        message: stash.message,
-        date: stash.date,
-        author_name: stash.author_name,
-        author_email: stash.author_email
+        message: stash.message || '',
+        date: stash.date || '',
+        author_name: stash.author_name || '',
+        author_email: stash.author_email || ''
       }));
     } catch (error) {
       console.error('Error getting stash list:', error);
@@ -421,7 +443,14 @@ export default class GitService {
       }
 
       const log = await this.git.log(logOptions);
-      return log.all;
+      return (log.all || []).map(commit => ({
+        hash: commit.hash || '',
+        date: commit.date || '',
+        message: commit.message || '',
+        body: commit.body || '',
+        author_name: commit.author_name || '',
+        author_email: commit.author_email || ''
+      }));
     } catch (error) {
       console.error('Error getting commit history:', error);
       throw error;
@@ -524,10 +553,10 @@ export default class GitService {
       return {
         authenticated: true,
         user: {
-          login: user.login,
-          name: user.name,
-          email: user.email,
-          avatar_url: user.avatar_url
+          login: user.login || '',
+          name: user.name || '',
+          email: user.email || '',
+          avatar_url: user.avatar_url || ''
         }
       };
     } catch (error) {
@@ -567,15 +596,15 @@ export default class GitService {
         per_page: 100
       });
 
-      return repos.map(repo => ({
-        id: repo.id,
-        name: repo.name,
-        full_name: repo.full_name,
-        clone_url: repo.clone_url,
-        ssh_url: repo.ssh_url,
-        description: repo.description,
-        private: repo.private,
-        updated_at: repo.updated_at
+      return (repos || []).map(repo => ({
+        id: repo.id || 0,
+        name: repo.name || '',
+        full_name: repo.full_name || '',
+        clone_url: repo.clone_url || '',
+        ssh_url: repo.ssh_url || '',
+        description: repo.description || '',
+        private: repo.private || false,
+        updated_at: repo.updated_at || ''
       }));
     } catch (error) {
       console.error('Error fetching GitHub repositories:', error);
@@ -629,10 +658,31 @@ export default class GitService {
   }
 
   getRepositories() {
-    return Array.from(this.repositories.values());
+    return Array.from(this.repositories.values()).map(repo => ({
+      path: repo.path,
+      name: repo.name,
+      currentBranch: repo.currentBranch,
+      branches: repo.branches || [],
+      remotes: repo.remotes || [],
+      status: repo.status || {},
+      lastAccessed: repo.lastAccessed
+    }));
   }
 
   getCurrentRepository() {
-    return this.currentRepo ? this.repositories.get(this.currentRepo) : null;
+    if (!this.currentRepo) return null;
+    
+    const repo = this.repositories.get(this.currentRepo);
+    if (!repo) return null;
+    
+    return {
+      path: repo.path,
+      name: repo.name,
+      currentBranch: repo.currentBranch,
+      branches: repo.branches || [],
+      remotes: repo.remotes || [],
+      status: repo.status || {},
+      lastAccessed: repo.lastAccessed
+    };
   }
 } 
