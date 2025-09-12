@@ -37,6 +37,7 @@ import TagService from '../services/TagService';
 import TimerService from '../services/TimerService';
 import IterationService from '../services/IterationService';
 import GitService from '../services/GitService';
+import GitRepositoryService from '../services/GitRepositoryService';
 
 remoteMain.initialize();
 let mainWindow: BrowserWindow | null = null;
@@ -637,6 +638,19 @@ const initializeProjectState = (_event: any, projectName: any) => {
   individualProjectStateValue.lokiLoaded = true;
   individualProjectStateValue.projectName = projectName;
 
+  // Initialize Git repository service for the project
+  if (currentLokiService) {
+    gitRepositoryService = new GitRepositoryService(currentLokiService);
+    gitService.setProjectContext(projectName, gitRepositoryService);
+    
+    // Load project repositories
+    gitService.loadProjectRepositories().then(() => {
+      console.log('Project repositories loaded for:', projectName);
+    }).catch(error => {
+      console.error('Error loading project repositories:', error);
+    });
+  }
+
   if (mainWindow) {
     mainWindow.webContents.send(
       'UpdateProjectPageState',
@@ -656,6 +670,7 @@ ipcMain.on('setLastOpenedTimes', (event, times) => {
 
 // Git Service Integration - IPC Handlers for Solo Developers
 const gitService = new GitService();
+let gitRepositoryService = null;
 
 // Repository Management
 ipcMain.handle('git:addRepository', async (event, repoPath) => {
@@ -893,6 +908,34 @@ ipcMain.handle('git:selectRepository', async () => {
     }
     return null;
   } catch (error) {
+    throw error;
+  }
+});
+
+// Project-specific Git Repository Management
+ipcMain.handle('git:getProjectRepositoryStats', async () => {
+  try {
+    return gitService.getProjectRepositoryStats();
+  } catch (error) {
+    console.error('Error getting project repository stats:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:cleanupProjectRepositories', async () => {
+  try {
+    return await gitService.cleanupProjectRepositories();
+  } catch (error) {
+    console.error('Error cleaning up project repositories:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:loadProjectRepositories', async () => {
+  try {
+    return await gitService.loadProjectRepositories();
+  } catch (error) {
+    console.error('Error loading project repositories:', error);
     throw error;
   }
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Row, Col, Card } from 'antd';
 import Layout from '../../layouts/App';
 import RepositoryManager from '../../components/Git/RepositoryManager/RepositoryManager';
@@ -8,9 +8,22 @@ import { useGit } from '../../contexts/GitContext';
 import './GitPage.scss';
 
 function GitPage() {
-  const { currentRepository } = useGit();
+  const { currentRepository, loadProjectRepositories } = useGit();
   const [showDiffViewer, setShowDiffViewer] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+
+  // Load project repositories on page load
+  useEffect(() => {
+    const loadRepositories = async () => {
+      try {
+        await loadProjectRepositories();
+      } catch (error) {
+        console.error('Failed to load project repositories:', error);
+      }
+    };
+
+    loadRepositories();
+  }, [loadProjectRepositories]);
 
   const handleViewDiff = (file) => {
     setSelectedFile(file);

@@ -45,16 +45,92 @@ function RepositoryManager({ compact = false }) {
     switchRepository,
     selectRepository,
     refreshRepositoryStatus,
-    clearError
+    clearError,
+    getProjectRepositoryStats,
+    cleanupProjectRepositories
   } = useGit();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [repoPath, setRepoPath] = useState('');
   const [selectedRepo, setSelectedRepo] = useState(currentRepository);
+  const [projectStats, setProjectStats] = useState(null);
+  const [showCleanupModal, setShowCleanupModal] = useState(false);
+  const [restoredFromStorage, setRestoredFromStorage] = useState(false);
 
   useEffect(() => {
     setSelectedRepo(currentRepository);
   }, [currentRepository]);
+
+  useEffect(() => {
+    const loadProjectStats = async () => {
+      try {
+        const stats = await getProjectRepositoryStats();
+        setProjectStats(stats);
+      } catch (error) {
+        console.error('Failed to load project stats:', error);
+      }
+    };
+
+    loadProjectStats();
+  }, [getProjectRepositoryStats]);
+
+  // Persist repositories to localStorage whenever the list changes
+  useEffect(() => {
+    try {
+      const paths = (repositories || []).map(r => r.path);
+      localStorage.setItem('gitRepoPaths', JSON.stringify(paths));
+    } catch (_) {
+      // no-op
+    }
+  }, [repositories]);
+
+  // Persist last active repository path
+  useEffect(() => {
+    if (currentRepository) {
+      try {
+        localStorage.setItem('gitLastActiveRepoPath', currentRepository);
+      } catch (_) {
+        // no-op
+      }
+    }
+  }, [currentRepository]);
+
+  // Restore repositories from localStorage on first mount
+  useEffect(() => {
+    if (restoredFromStorage) return;
+    setRestoredFromStorage(true);
+    try {
+      const stored = JSON.parse(localStorage.getItem('gitRepoPaths') || '[]');
+      const lastActive = localStorage.getItem('gitLastActiveRepoPath');
+      if (Array.isArray(stored) && stored.length > 0) {
+        const existingPaths = new Set((repositories || []).map(r => r.path));
+        const toAdd = stored.filter(p => typeof p === 'string' && p && !existingPaths.has(p));
+        const addAll = async () => {
+          for (const p of toAdd) {
+            try {
+              // addRepository validates existence and repo status
+              // Ignore failures silently
+              // eslint-disable-next-line no-await-in-loop
+              await addRepository(p);
+            } catch (_) {}
+          }
+          if (lastActive) {
+            try {
+              await switchRepository(lastActive);
+            } catch (_) {}
+          }
+        };
+        addAll();
+      } else if (lastActive) {
+        // If no list but we have a last active, try to switch
+        switchRepository(lastActive).catch(() => {});
+      }
+    } catch (_) {
+      // no-op
+    }
+  // We only want this to run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAddRepository = async () => {
     try {
@@ -78,6 +154,17 @@ function RepositoryManager({ compact = false }) {
     try {
       await switchRepository(repoPath);
       setSelectedRepo(repoPath);
+    } catch (error) {
+      // Error handled by context
+    }
+  };
+
+  const handleCleanupRepositories = async () => {
+    try {
+      await cleanupProjectRepositories();
+      setShowCleanupModal(false);
+      // Refresh the repository list
+      window.location.reload();
     } catch (error) {
       // Error handled by context
     }
@@ -208,6 +295,13 @@ function RepositoryManager({ compact = false }) {
                 disabled={!currentRepository}
               />
             </Tooltip>
+            <Tooltip title="Cleanup non-existent repositories">
+              <Button 
+                icon={<DeleteOutlined />} 
+                onClick={() => setShowCleanupModal(true)}
+                danger
+              />
+            </Tooltip>
             <Button 
               type="primary" 
               icon={<FolderOpenOutlined />} 
@@ -225,6 +319,37 @@ function RepositoryManager({ compact = false }) {
             <Badge status="error" text={lastError.message} />
             <Button size="small" type="link" onClick={clearError}>Dismiss</Button>
           </div>
+        )}
+
+        {/* Project Repository Stats */}
+        {projectStats && (
+          <Card 
+            size="small" 
+            title="Project Repository Stats" 
+            className="project-stats-card"
+            style={{ marginBottom: '16px' }}
+          >
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text>Total Repositories:</Text>
+                <Tag color="blue">{projectStats.total}</Tag>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text>Active Repository:</Text>
+                <Tag color="green">{projectStats.active}</Tag>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text>Recently Accessed:</Text>
+                <Tag color="orange">{projectStats.recentlyAccessed}</Tag>
+              </div>
+              {projectStats.lastAdded && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Text>Last Added:</Text>
+                  <Text type="secondary">{formatLastAccessed(projectStats.lastAdded.addedAt)}</Text>
+                </div>
+              )}
+            </Space>
+          </Card>
         )}
 
         {/* Current Repository Status */}
@@ -404,6 +529,28 @@ function RepositoryManager({ compact = false }) {
           />
           <Text type="secondary">
             The selected directory must be a valid Git repository (contain .git folder).
+          </Text>
+        </Space>
+      </Modal>
+
+      {/* Cleanup Repositories Modal */}
+      <Modal
+        title="Cleanup Non-existent Repositories"
+        open={showCleanupModal}
+        onOk={handleCleanupRepositories}
+        onCancel={() => setShowCleanupModal(false)}
+        okText="Cleanup"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }}
+      >
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Paragraph>
+            This will remove all repositories from the project that no longer exist on disk.
+            This action cannot be undone.
+          </Paragraph>
+          <Text type="warning">
+            ⚠️ Only repositories that have been moved or deleted will be removed.
+            Valid repositories will remain in the project.
           </Text>
         </Space>
       </Modal>

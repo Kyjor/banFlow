@@ -510,6 +510,41 @@ export function GitProvider({ children }) {
     }
   }, [handleError, showSuccess]);
 
+  // Project-specific repository management
+  const getProjectRepositoryStats = useCallback(async () => {
+    try {
+      const stats = await ipcRenderer.invoke('git:getProjectRepositoryStats');
+      return stats;
+    } catch (error) {
+      handleError(error, 'get project repository stats');
+      return null;
+    }
+  }, [handleError]);
+
+  const cleanupProjectRepositories = useCallback(async () => {
+    try {
+      const removedPaths = await ipcRenderer.invoke('git:cleanupProjectRepositories');
+      if (removedPaths.length > 0) {
+        showSuccess('Repositories cleaned up', `Removed ${removedPaths.length} non-existent repositories`);
+      }
+      return removedPaths;
+    } catch (error) {
+      handleError(error, 'cleanup project repositories');
+      return [];
+    }
+  }, [handleError, showSuccess]);
+
+  const loadProjectRepositories = useCallback(async () => {
+    try {
+      const repos = await ipcRenderer.invoke('git:loadProjectRepositories');
+      dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
+      return repos;
+    } catch (error) {
+      handleError(error, 'load project repositories');
+      return [];
+    }
+  }, [handleError]);
+
   // Initialize repositories on mount
   useEffect(() => {
     const loadRepositories = async () => {
@@ -566,6 +601,11 @@ export function GitProvider({ children }) {
     // GitHub Integration
     authenticateGitHub,
     cloneRepository,
+    
+    // Project-specific Repository Management
+    getProjectRepositoryStats,
+    cleanupProjectRepositories,
+    loadProjectRepositories,
     
     // Utility Functions
     clearError: () => dispatch({ type: GitActionTypes.CLEAR_ERROR })

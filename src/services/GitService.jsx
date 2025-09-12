@@ -11,6 +11,13 @@ export default class GitService {
     this.operationHistory = [];
     this.octokit = null;
     this.isAuthenticated = false;
+    this.gitRepositoryService = null;
+    this.currentProject = null;
+  }
+
+  setProjectContext(projectName, gitRepositoryService) {
+    this.currentProject = projectName;
+    this.gitRepositoryService = gitRepositoryService;
   }
 
   // Repository Management for Solo Developers
@@ -63,6 +70,12 @@ export default class GitService {
       };
 
       this.repositories.set(repoPath, repoInfo);
+      
+      // Cache repository for current project if context is available
+      if (this.gitRepositoryService) {
+        this.gitRepositoryService.addRepositoryToProject(repoInfo);
+      }
+      
       return repoInfo;
     } catch (error) {
       console.error('Error adding repository:', error);
@@ -84,6 +97,11 @@ export default class GitService {
       repoInfo.lastAccessed = new Date().toISOString();
       this.repositories.set(repoPath, repoInfo);
 
+      // Update project cache
+      if (this.gitRepositoryService) {
+        this.gitRepositoryService.setActiveRepository(repoPath);
+      }
+
       return await this.getRepositoryStatus();
     } catch (error) {
       console.error('Error switching repository:', error);
@@ -99,7 +117,7 @@ export default class GitService {
       const branches = await this.git.branch();
       
       // Create clean, serializable status object
-      return {
+      const statusInfo = {
         currentBranch: branches.current,
         staged: status.staged || [],
         modified: status.modified || [],
@@ -110,6 +128,13 @@ export default class GitService {
         behind: status.behind || 0,
         branches: branches.all || []
       };
+
+      // Update project cache with status
+      if (this.gitRepositoryService && this.currentRepo) {
+        this.gitRepositoryService.updateRepositoryStatus(this.currentRepo, statusInfo);
+      }
+
+      return statusInfo;
     } catch (error) {
       console.error('Error getting repository status:', error);
       throw error;
@@ -658,6 +683,27 @@ export default class GitService {
   }
 
   getRepositories() {
+    // If we have project context, load from project cache first
+    if (this.gitRepositoryService) {
+      const projectRepos = this.gitRepositoryService.getProjectRepositories();
+      
+      // Merge with in-memory repositories
+      projectRepos.forEach(projectRepo => {
+        if (!this.repositories.has(projectRepo.path)) {
+          this.repositories.set(projectRepo.path, {
+            path: projectRepo.path,
+            name: projectRepo.name,
+            currentBranch: projectRepo.currentBranch,
+            branches: projectRepo.branches || [],
+            remotes: projectRepo.remotes || [],
+            status: projectRepo.status || {},
+            lastAccessed: projectRepo.lastAccessed,
+            isActive: projectRepo.isActive || false
+          });
+        }
+      });
+    }
+
     return Array.from(this.repositories.values()).map(repo => ({
       path: repo.path,
       name: repo.name,
@@ -665,7 +711,8 @@ export default class GitService {
       branches: repo.branches || [],
       remotes: repo.remotes || [],
       status: repo.status || {},
-      lastAccessed: repo.lastAccessed
+      lastAccessed: repo.lastAccessed,
+      isActive: repo.isActive || false
     }));
   }
 
@@ -682,7 +729,53 @@ export default class GitService {
       branches: repo.branches || [],
       remotes: repo.remotes || [],
       status: repo.status || {},
-      lastAccessed: repo.lastAccessed
+      lastAccessed: repo.lastAccessed,
+      isActive: repo.isActive || false
     };
+  }
+
+  // New methods for project-specific repository management
+  async loadProjectRepositories() {
+    if (!this.gitRepositoryService) return [];
+    
+    try {
+      const projectRepos = this.gitRepositoryService.getProjectRepositories();
+      
+      // Load repositories into memory
+      projectRepos.forEach(projectRepo => {
+        this.repositories.set(projectRepo.path, {
+          path: projectRepo.path,
+          name: projectRepo.name,
+          currentBranch: projectRepo.currentBranch,
+          branches: projectRepo.branches || [],
+          remotes: projectRepo.remotes || [],
+          status: projectRepo.status || {},
+          lastAccessed: projectRepo.lastAccessed,
+          isActive: projectRepo.isActive || false
+        });
+      });
+
+      // Set active repository if available
+      const activeRepo = this.gitRepositoryService.getActiveRepository();
+      if (activeRepo && this.repositories.has(activeRepo.path)) {
+        this.currentRepo = activeRepo.path;
+        this.git = simpleGit(activeRepo.path);
+      }
+
+      return projectRepos;
+    } catch (error) {
+      console.error('Error loading project repositories:', error);
+      return [];
+    }
+  }
+
+  getProjectRepositoryStats() {
+    if (!this.gitRepositoryService) return null;
+    return this.gitRepositoryService.getRepositoryStats();
+  }
+
+  async cleanupProjectRepositories() {
+    if (!this.gitRepositoryService) return [];
+    return this.gitRepositoryService.cleanupNonExistentRepositories();
   }
 } 
