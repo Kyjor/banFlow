@@ -1,0 +1,129 @@
+.git-client {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+
+  .git-client-layout {
+    height: 100%;
+  }
+
+  .git-client-header {
+    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .header-left {
+      display: flex;
+      align-items: center;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+    }
+  }
+
+  .git-client-sidebar {
+    background: #fafafa;
+    border-right: 1px solid #e8e8e8;
+
+    .sidebar-content {
+      padding: 16px;
+    }
+
+    .status-card {
+      .status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+    }
+  }
+
+  .git-client-content {
+    padding: 24px;
+    background: #fff;
+    overflow-y: auto;
+
+    .main-tabs {
+      .ant-tabs-content-holder {
+        padding-top: 16px;
+      }
+    }
+
+    .file-list-card {
+      .file-list {
+        .file-item {
+          padding: 8px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-bottom: 4px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          &:hover {
+            background: #f5f5f5;
+          }
+
+          &.selected {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+          }
+
+          .file-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+          }
+
+          .file-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+          }
+
+          &:hover .file-actions {
+            opacity: 1;
+          }
+        }
+      }
+    }
+
+    .file-content {
+      min-height: 400px;
+    }
+  }
+
+  .no-repository {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .git-client {
+    .git-client-header {
+      padding: 0 16px;
+      
+      .header-left {
+        .ant-typography {
+          font-size: 18px;
+        }
+      }
+    }
+
+    .git-client-content {
+      padding: 16px;
+    }
+  }
+}

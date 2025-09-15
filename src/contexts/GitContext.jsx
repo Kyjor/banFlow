@@ -564,6 +564,52 @@ export function GitProvider({ children }) {
     loadRepositories();
   }, []);
 
+  // File Management Operations
+  const discardChanges = useCallback(async (files) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:discardChanges', files);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Changes discarded', `${files.length} file(s)`);
+      return result;
+    } catch (error) {
+      handleError(error, 'discard changes');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
+  const deleteUntrackedFiles = useCallback(async (files) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:deleteUntrackedFiles', files);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Files deleted', `${files.length} untracked file(s)`);
+      return result;
+    } catch (error) {
+      handleError(error, 'delete untracked files');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
+  const cleanUntrackedFiles = useCallback(async (dryRun = false) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:cleanUntrackedFiles', dryRun);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess(dryRun ? 'Dry run completed' : 'Files cleaned', result.message);
+      return result;
+    } catch (error) {
+      handleError(error, 'clean untracked files');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
   // Context Value
   const contextValue = {
     // State
@@ -606,6 +652,11 @@ export function GitProvider({ children }) {
     getProjectRepositoryStats,
     cleanupProjectRepositories,
     loadProjectRepositories,
+    
+    // File Management Operations
+    discardChanges,
+    deleteUntrackedFiles,
+    cleanUntrackedFiles,
     
     // Utility Functions
     clearError: () => dispatch({ type: GitActionTypes.CLEAR_ERROR })

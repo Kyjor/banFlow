@@ -76,7 +76,10 @@ function GitOperations({ onViewDiff }) {
     popStash,
     getStashList,
     undoLastOperation,
-    refreshRepositoryStatus
+    refreshRepositoryStatus,
+    discardChanges,
+    deleteUntrackedFiles,
+    cleanUntrackedFiles
   } = useGit();
 
   const [activeTab, setActiveTab] = useState('staging');
@@ -106,6 +109,22 @@ function GitOperations({ onViewDiff }) {
   const handleUnstageFiles = async (files) => {
     try {
       await unstageFiles(files);
+    } catch (error) {
+      // Error handled by context
+    }
+  };
+
+  const handleDiscardChanges = async (files) => {
+    try {
+      await discardChanges(files);
+    } catch (error) {
+      // Error handled by context
+    }
+  };
+
+  const handleDeleteUntracked = async (files) => {
+    try {
+      await deleteUntrackedFiles(files);
     } catch (error) {
       // Error handled by context
     }
@@ -202,6 +221,38 @@ function GitOperations({ onViewDiff }) {
                   onClick={() => onViewDiff(file)}
                   title="View Diff"
                 />
+              ),
+              status === 'modified' && (
+                <Popconfirm
+                  title="Discard changes to this file?"
+                  onConfirm={() => handleDiscardChanges([file])}
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <Button
+                    size="small"
+                    icon={<UndoOutlined />}
+                    danger
+                    loading={operationInProgress}
+                    title="Discard Changes"
+                  />
+                </Popconfirm>
+              ),
+              status === 'untracked' && (
+                <Popconfirm
+                  title="Delete this untracked file?"
+                  onConfirm={() => handleDeleteUntracked([file])}
+                  okText="Yes"
+                  cancelText="No"
+                >
+                  <Button
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    danger
+                    loading={operationInProgress}
+                    title="Delete File"
+                  />
+                </Popconfirm>
               )
             ].filter(Boolean) : []}
           >

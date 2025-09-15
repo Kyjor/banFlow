@@ -427,6 +427,8 @@ export default class GitService {
 
   // Diff and History Operations
   async getDiff(file = null, staged = false) {
+    console.log('getDiff called with:', { file, staged, hasGit: !!this.git, currentRepo: this.currentRepository });
+    
     if (!this.git) throw new Error('No repository selected');
     
     try {
@@ -437,7 +439,11 @@ export default class GitService {
         diff = file ? await this.git.diff(['--', file]) : await this.git.diff();
       }
       
-      return this.parseDiff(diff);
+      console.log('Raw diff output:', diff);
+      const parsedDiff = this.parseDiff(diff);
+      console.log('Parsed diff:', parsedDiff);
+      
+      return parsedDiff;
     } catch (error) {
       console.error('Error getting diff:', error);
       throw error;
@@ -562,6 +568,76 @@ export default class GitService {
       return await this.getRepositoryStatus();
     } catch (error) {
       console.error('Error undoing operation:', error);
+      throw error;
+    }
+  }
+
+  // Discard changes to modified files
+  async discardChanges(files) {
+    try {
+      if (!this.git) throw new Error('No repository selected');
+      
+      // Reset modified files to HEAD
+      await this.git.checkout(['HEAD', '--', ...files]);
+      
+      return {
+        success: true,
+        message: `Discarded changes to ${files.length} file(s)`,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error discarding changes:', error);
+      throw error;
+    }
+  }
+
+  // Delete untracked files
+  async deleteUntrackedFiles(files) {
+    try {
+      if (!this.git) throw new Error('No repository selected');
+      
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Delete files from filesystem
+      for (const file of files) {
+        const fullPath = path.join(this.currentRepo, file);
+        if (fs.existsSync(fullPath)) {
+          fs.unlinkSync(fullPath);
+        }
+      }
+      
+      return {
+        success: true,
+        message: `Deleted ${files.length} untracked file(s)`,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error deleting untracked files:', error);
+      throw error;
+    }
+  }
+
+  // Clean untracked files (git clean)
+  async cleanUntrackedFiles(dryRun = false) {
+    try {
+      if (!this.git) throw new Error('No repository selected');
+      
+      const options = ['-f']; // Force
+      if (dryRun) {
+        options.push('-n'); // Dry run
+      }
+      
+      const result = await this.git.clean(options);
+      
+      return {
+        success: true,
+        message: dryRun ? 'Dry run completed' : 'Cleaned untracked files',
+        result: result,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error cleaning untracked files:', error);
       throw error;
     }
   }

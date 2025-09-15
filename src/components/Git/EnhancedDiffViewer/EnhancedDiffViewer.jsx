@@ -1,27 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Select, Button, Space, Typography, Tag, Empty, Spin, Tooltip, Row, Col } from 'antd';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { 
+  Card, 
+  Select, 
+  Button, 
+  Space, 
+  Typography, 
+  Tag, 
+  Empty, 
+  Spin, 
+  Tooltip, 
+  Row, 
+  Col,
+  Switch,
+  Slider,
+  InputNumber,
+  Divider,
+  Badge,
+  Progress,
+  Alert,
+  Input
+} from 'antd';
 import {
   FileTextOutlined,
   SwapOutlined,
   FullscreenOutlined,
   CopyOutlined,
   DownloadOutlined,
-  EyeOutlined
+  EyeOutlined,
+  MinusOutlined,
+  PlusOutlined,
+  SettingOutlined,
+  SearchOutlined,
+  BookOutlined,
+  InfoCircleOutlined,
+  CaretRightOutlined,
+  CaretDownOutlined
 } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useGit } from '../../../contexts/GitContext';
-import './DiffViewer.scss';
+import './EnhancedDiffViewer.scss';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-function DiffViewer({ 
+function EnhancedDiffViewer({ 
   file = null, 
   staged = false, 
   compact = false,
   showFileSelector = true,
-  theme = 'light'
+  theme = 'light',
+  onStageHunk = null,
+  onUnstageHunk = null,
+  showStagingControls = false
 }) {
   const {
     currentRepository,
@@ -33,19 +64,19 @@ function DiffViewer({
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
-
-  useEffect(() => {
-    console.log('DiffViewer file prop changed:', { file, selectedFile });
-    if (file) {
-      setSelectedFile(file);
-    }
-  }, [file]);
-  const [viewMode, setViewMode] = useState('side-by-side'); // 'side-by-side', 'unified', 'split'
+  const [viewMode, setViewMode] = useState('side-by-side');
   const [showWhitespace, setShowWhitespace] = useState(false);
   const [selectedDiff, setSelectedDiff] = useState(null);
+  const [contextLines, setContextLines] = useState(3);
+  const [expandedHunks, setExpandedHunks] = useState(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+  const [wordWrap, setWordWrap] = useState(true);
+  const [showLineNumbers, setShowLineNumbers] = useState(true);
+  const [highlightChanges, setHighlightChanges] = useState(true);
+  const [selectedHunk, setSelectedHunk] = useState(null);
 
   useEffect(() => {
-    console.log('DiffViewer useEffect triggered:', { selectedFile, currentRepository, staged });
     if (selectedFile && currentRepository) {
       loadDiff(selectedFile);
     }
@@ -59,10 +90,8 @@ function DiffViewer({
   }, [currentDiff, selectedFile]);
 
   const loadDiff = async (filename) => {
-    console.log('DiffViewer loadDiff called with:', { filename, staged, currentRepository });
     try {
-      const result = await getDiff(filename, staged);
-      console.log('DiffViewer getDiff result:', result);
+      await getDiff(filename, staged);
     } catch (error) {
       console.error('Failed to load diff:', error);
     }
@@ -101,7 +130,8 @@ function DiffViewer({
       'bash': 'bash',
       'zsh': 'bash',
       'ps1': 'powershell',
-      'dockerfile': 'dockerfile'
+      'dockerfile': 'dockerfile',
+      'jl': 'julia'
     };
     
     return languageMap[extension] || 'text';
@@ -111,12 +141,101 @@ function DiffViewer({
     return <FileTextOutlined style={{ color: '#1890ff' }} />;
   };
 
-  const renderLineNumbers = (lines, startLine = 1) => {
-    return lines.map((_, index) => (
-      <div key={index} className="line-number">
-        {startLine + index}
+  const toggleHunkExpansion = useCallback((hunkIndex) => {
+    setExpandedHunks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(hunkIndex)) {
+        newSet.delete(hunkIndex);
+      } else {
+        newSet.add(hunkIndex);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const filteredHunks = useMemo(() => {
+    if (!selectedDiff || !searchTerm) return selectedDiff?.hunks || [];
+    
+    return selectedDiff.hunks.filter(hunk => 
+      hunk.lines.some(line => 
+        line.content.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [selectedDiff, searchTerm]);
+
+  const renderHunkHeader = (hunk, hunkIndex) => {
+    const isExpanded = expandedHunks.has(hunkIndex);
+    const addedLines = hunk.lines.filter(line => line.type === 'added').length;
+    const deletedLines = hunk.lines.filter(line => line.type === 'deleted').length;
+    
+    return (
+      <div 
+        className="hunk-header"
+        onClick={() => toggleHunkExpansion(hunkIndex)}
+        style={{ cursor: 'pointer' }}
+      >
+        <Space>
+          {isExpanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
+          <Text code style={{ fontSize: '12px' }}>{hunk.header}</Text>
+          {addedLines > 0 && <Tag color="green" size="small">+{addedLines}</Tag>}
+          {deletedLines > 0 && <Tag color="red" size="small">-{deletedLines}</Tag>}
+        </Space>
       </div>
-    ));
+    );
+  };
+
+  const renderLineWithStaging = (line, lineIndex, hunkIndex) => {
+    const isSelected = selectedHunk === `${hunkIndex}-${lineIndex}`;
+    
+    return (
+      <div 
+        key={lineIndex}
+        className={`diff-line diff-line-${line.type} ${isSelected ? 'selected' : ''}`}
+        onClick={() => setSelectedHunk(`${hunkIndex}-${lineIndex}`)}
+      >
+        <div className="line-content">
+          <span className="line-prefix">
+            {line.type === 'added' ? '+' : line.type === 'deleted' ? '-' : ' '}
+          </span>
+          <SyntaxHighlighter
+            language={getLanguageFromFilename(selectedFile)}
+            style={theme === 'dark' ? tomorrow : prism}
+            customStyle={{
+              margin: 0,
+              padding: '0 8px',
+              background: 'transparent',
+              fontSize: '13px',
+              lineHeight: '20px',
+              whiteSpace: wordWrap ? 'pre-wrap' : 'pre'
+            }}
+            PreTag="span"
+            showLineNumbers={showLineNumbers}
+            wrapLines={wordWrap}
+          >
+            {line.content.substring(1) || ' '}
+          </SyntaxHighlighter>
+        </div>
+        {showStagingControls && (line.type === 'added' || line.type === 'deleted') && (
+          <div className="staging-controls">
+            <Tooltip title={line.type === 'added' ? 'Stage this line' : 'Unstage this line'}>
+              <Button
+                size="small"
+                type={line.type === 'added' ? 'primary' : 'default'}
+                icon={line.type === 'added' ? <PlusOutlined /> : <MinusOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (line.type === 'added' && onStageHunk) {
+                    onStageHunk(hunkIndex, lineIndex);
+                  } else if (line.type === 'deleted' && onUnstageHunk) {
+                    onUnstageHunk(hunkIndex, lineIndex);
+                  }
+                }}
+              />
+            </Tooltip>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderUnifiedDiff = (diff) => {
@@ -124,37 +243,16 @@ function DiffViewer({
 
     return (
       <div className="unified-diff">
-        {diff.hunks.map((hunk, hunkIndex) => (
+        {filteredHunks.map((hunk, hunkIndex) => (
           <div key={hunkIndex} className="diff-hunk">
-            <div className="hunk-header">
-              <Text code>{hunk.header}</Text>
-            </div>
-            <div className="hunk-content">
-              {hunk.lines.map((line, lineIndex) => (
-                <div
-                  key={lineIndex}
-                  className={`diff-line diff-line-${line.type}`}
-                >
-                  <span className="line-prefix">
-                    {line.type === 'added' ? '+' : line.type === 'deleted' ? '-' : ' '}
-                  </span>
-                  <SyntaxHighlighter
-                    language={getLanguageFromFilename(selectedFile)}
-                    style={theme === 'dark' ? tomorrow : prism}
-                    customStyle={{
-                      margin: 0,
-                      padding: '0 8px',
-                      background: 'transparent',
-                      fontSize: '13px',
-                      lineHeight: '20px'
-                    }}
-                    PreTag="span"
-                  >
-                    {line.content.substring(1) || ' '}
-                  </SyntaxHighlighter>
-                </div>
-              ))}
-            </div>
+            {renderHunkHeader(hunk, hunkIndex)}
+            {expandedHunks.has(hunkIndex) && (
+              <div className="hunk-content">
+                {hunk.lines.map((line, lineIndex) => 
+                  renderLineWithStaging(line, lineIndex, hunkIndex)
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -169,47 +267,58 @@ function DiffViewer({
     let leftLineNum = 1;
     let rightLineNum = 1;
 
-    diff.hunks.forEach(hunk => {
-      // Parse hunk header to get line numbers
+    filteredHunks.forEach((hunk, hunkIndex) => {
       const headerMatch = hunk.header.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
       if (headerMatch) {
         leftLineNum = parseInt(headerMatch[1]);
         rightLineNum = parseInt(headerMatch[2]);
       }
 
-      hunk.lines.forEach(line => {
+      hunk.lines.forEach((line, lineIndex) => {
         if (line.type === 'deleted') {
           leftLines.push({
             number: leftLineNum++,
             content: line.content.substring(1),
-            type: 'deleted'
+            type: 'deleted',
+            hunkIndex,
+            lineIndex
           });
           rightLines.push({
             number: null,
             content: '',
-            type: 'empty'
+            type: 'empty',
+            hunkIndex,
+            lineIndex
           });
         } else if (line.type === 'added') {
           leftLines.push({
             number: null,
             content: '',
-            type: 'empty'
+            type: 'empty',
+            hunkIndex,
+            lineIndex
           });
           rightLines.push({
             number: rightLineNum++,
             content: line.content.substring(1),
-            type: 'added'
+            type: 'added',
+            hunkIndex,
+            lineIndex
           });
         } else {
           leftLines.push({
             number: leftLineNum++,
             content: line.content.substring(1),
-            type: 'context'
+            type: 'context',
+            hunkIndex,
+            lineIndex
           });
           rightLines.push({
             number: rightLineNum++,
             content: line.content.substring(1),
-            type: 'context'
+            type: 'context',
+            hunkIndex,
+            lineIndex
           });
         }
       });
@@ -228,10 +337,13 @@ function DiffViewer({
                 <div
                   key={index}
                   className={`diff-line diff-line-${line.type}`}
+                  onClick={() => setSelectedHunk(`${line.hunkIndex}-${line.lineIndex}`)}
                 >
-                  <span className="line-number">
-                    {line.number || ''}
-                  </span>
+                  {showLineNumbers && (
+                    <span className="line-number">
+                      {line.number || ''}
+                    </span>
+                  )}
                   <div className="line-content">
                     <SyntaxHighlighter
                       language={getLanguageFromFilename(selectedFile)}
@@ -241,9 +353,11 @@ function DiffViewer({
                         padding: '0 8px',
                         background: 'transparent',
                         fontSize: '13px',
-                        lineHeight: '20px'
+                        lineHeight: '20px',
+                        whiteSpace: wordWrap ? 'pre-wrap' : 'pre'
                       }}
                       PreTag="span"
+                      wrapLines={wordWrap}
                     >
                       {line.content || ' '}
                     </SyntaxHighlighter>
@@ -263,10 +377,13 @@ function DiffViewer({
                 <div
                   key={index}
                   className={`diff-line diff-line-${line.type}`}
+                  onClick={() => setSelectedHunk(`${line.hunkIndex}-${line.lineIndex}`)}
                 >
-                  <span className="line-number">
-                    {line.number || ''}
-                  </span>
+                  {showLineNumbers && (
+                    <span className="line-number">
+                      {line.number || ''}
+                    </span>
+                  )}
                   <div className="line-content">
                     <SyntaxHighlighter
                       language={getLanguageFromFilename(selectedFile)}
@@ -276,9 +393,11 @@ function DiffViewer({
                         padding: '0 8px',
                         background: 'transparent',
                         fontSize: '13px',
-                        lineHeight: '20px'
+                        lineHeight: '20px',
+                        whiteSpace: wordWrap ? 'pre-wrap' : 'pre'
                       }}
                       PreTag="span"
+                      wrapLines={wordWrap}
                     >
                       {line.content || ' '}
                     </SyntaxHighlighter>
@@ -292,7 +411,7 @@ function DiffViewer({
     );
   };
 
-  const availableFiles = staged ? stagedFiles : [...new Set([...(modifiedFiles || []), ...(stagedFiles || [])])];
+  const availableFiles = staged ? stagedFiles : [...(modifiedFiles || []), ...(stagedFiles || [])];
 
   if (!currentRepository) {
     return (
@@ -307,7 +426,7 @@ function DiffViewer({
 
   if (compact) {
     return (
-      <div className="diff-viewer-compact">
+      <div className="enhanced-diff-viewer-compact">
         {selectedDiff ? (
           <div className="compact-diff">
             {renderUnifiedDiff(selectedDiff)}
@@ -322,16 +441,23 @@ function DiffViewer({
   }
 
   return (
-    <div className="diff-viewer">
+    <div className="enhanced-diff-viewer">
       <Card
         title={
           <Space>
             <FileTextOutlined />
-            <Title level={4} style={{ margin: 0 }}>Diff Viewer</Title>
+            <Title level={4} style={{ margin: 0 }}>Enhanced Diff Viewer</Title>
             {selectedFile && (
               <Tag icon={getFileIcon(selectedFile)}>
                 {selectedFile}
               </Tag>
+            )}
+            {selectedDiff && (
+              <Badge 
+                count={selectedDiff.hunks?.length || 0} 
+                style={{ backgroundColor: '#52c41a' }}
+                title="Number of hunks"
+              />
             )}
           </Space>
         }
@@ -344,6 +470,10 @@ function DiffViewer({
                 placeholder="Select file to compare"
                 style={{ minWidth: '200px' }}
                 loading={isLoading}
+                showSearch
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                }
               >
                 {availableFiles.map(file => (
                   <Option key={file} value={file}>
@@ -364,6 +494,23 @@ function DiffViewer({
               <Option value="side-by-side">Side by Side</Option>
               <Option value="unified">Unified</Option>
             </Select>
+
+            <Tooltip title="Search in diff">
+              <Button
+                icon={<SearchOutlined />}
+                onClick={() => setSearchTerm('')}
+                size="small"
+              />
+            </Tooltip>
+
+            <Tooltip title="View settings">
+              <Button
+                icon={<SettingOutlined />}
+                onClick={() => setShowSettings(!showSettings)}
+                type={showSettings ? 'primary' : 'default'}
+                size="small"
+              />
+            </Tooltip>
 
             <Tooltip title="Toggle whitespace visibility">
               <Button
@@ -391,6 +538,63 @@ function DiffViewer({
           </Space>
         }
       >
+        {showSettings && (
+          <div className="diff-settings">
+            <Row gutter={16}>
+              <Col span={8}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Text strong>Context Lines</Text>
+                  <Slider
+                    min={0}
+                    max={10}
+                    value={contextLines}
+                    onChange={setContextLines}
+                    marks={{ 0: '0', 3: '3', 5: '5', 10: '10' }}
+                  />
+                </Space>
+              </Col>
+              <Col span={8}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Text strong>Display Options</Text>
+                  <Space direction="vertical">
+                    <Switch
+                      checked={wordWrap}
+                      onChange={setWordWrap}
+                      checkedChildren="Wrap"
+                      unCheckedChildren="No Wrap"
+                    />
+                    <Switch
+                      checked={showLineNumbers}
+                      onChange={setShowLineNumbers}
+                      checkedChildren="Line #"
+                      unCheckedChildren="No Line #"
+                    />
+                    <Switch
+                      checked={highlightChanges}
+                      onChange={setHighlightChanges}
+                      checkedChildren="Highlight"
+                      unCheckedChildren="No Highlight"
+                    />
+                  </Space>
+                </Space>
+              </Col>
+              <Col span={8}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Text strong>Search</Text>
+                  <Input
+                    placeholder="Search in diff..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    prefix={<SearchOutlined />}
+                    allowClear
+                  />
+                </Space>
+              </Col>
+            </Row>
+            <Divider />
+          </div>
+        )}
+
         <Spin spinning={isLoading}>
           {selectedDiff ? (
             <div className={`diff-container ${viewMode} ${theme}`}>
@@ -401,6 +605,11 @@ function DiffViewer({
                   <Text type="secondary">
                     Language: {getLanguageFromFilename(selectedFile)}
                   </Text>
+                  {searchTerm && (
+                    <Tag color="blue">
+                      {filteredHunks.length} of {selectedDiff.hunks.length} hunks match
+                    </Tag>
+                  )}
                 </Space>
               </div>
               
@@ -428,4 +637,4 @@ function DiffViewer({
   );
 }
 
-export default DiffViewer; 
+export default EnhancedDiffViewer;

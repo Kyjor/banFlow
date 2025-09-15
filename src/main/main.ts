@@ -821,9 +821,13 @@ ipcMain.handle('git:popStash', async (event, stashIndex) => {
 
 // Diff and History
 ipcMain.handle('git:getDiff', async (event, file, staged) => {
+  console.log('IPC git:getDiff called with:', { file, staged });
   try {
-    return await gitService.getDiff(file, staged);
+    const result = await gitService.getDiff(file, staged);
+    console.log('IPC git:getDiff result:', result);
+    return result;
   } catch (error) {
+    console.error('IPC git:getDiff error:', error);
     throw error;
   }
 });
@@ -936,6 +940,34 @@ ipcMain.handle('git:loadProjectRepositories', async () => {
     return await gitService.loadProjectRepositories();
   } catch (error) {
     console.error('Error loading project repositories:', error);
+    throw error;
+  }
+});
+
+// File Management Operations
+ipcMain.handle('git:discardChanges', async (event, files) => {
+  try {
+    return await gitService.discardChanges(files);
+  } catch (error) {
+    console.error('Error discarding changes:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:deleteUntrackedFiles', async (event, files) => {
+  try {
+    return await gitService.deleteUntrackedFiles(files);
+  } catch (error) {
+    console.error('Error deleting untracked files:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:cleanUntrackedFiles', async (event, dryRun) => {
+  try {
+    return await gitService.cleanUntrackedFiles(dryRun);
+  } catch (error) {
+    console.error('Error cleaning untracked files:', error);
     throw error;
   }
 });
