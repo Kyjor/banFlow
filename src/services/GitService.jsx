@@ -432,9 +432,9 @@ export default class GitService {
     try {
       let diff;
       if (staged) {
-        diff = file ? await this.git.diff(['--cached', file]) : await this.git.diff(['--cached']);
+        diff = file ? await this.git.diff(['--cached', '--', file]) : await this.git.diff(['--cached']);
       } else {
-        diff = file ? await this.git.diff([file]) : await this.git.diff();
+        diff = file ? await this.git.diff(['--', file]) : await this.git.diff();
       }
       
       return this.parseDiff(diff);
