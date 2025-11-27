@@ -1,0 +1,291 @@
+.enhanced-diff-viewer {
+  .diff-settings {
+    background: #fafafa;
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+  }
+
+  .diff-container {
+    &.side-by-side {
+      .side-by-side-diff {
+        .diff-pane {
+          border: 1px solid #e8e8e8;
+          border-radius: 4px;
+          overflow: hidden;
+
+          .diff-pane-header {
+            background: #f5f5f5;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+
+          .diff-content {
+            max-height: 500px;
+            overflow-y: auto;
+
+            .diff-line {
+              display: flex;
+              align-items: center;
+              min-height: 20px;
+              font-size: 13px;
+              line-height: 20px;
+              transition: background 0.2s;
+
+              &:hover {
+                background: #f9f9f9;
+              }
+
+              &.diff-line-added {
+                background: #f6ffed;
+
+                .line-number {
+                  background: #d9f7be;
+                  border-right: 1px solid #b7eb8f;
+                }
+              }
+
+              &.diff-line-deleted {
+                background: #fff2f0;
+
+                .line-number {
+                  background: #ffccc7;
+                  border-right: 1px solid #ffa39e;
+                }
+              }
+
+              &.diff-line-context {
+                background: #fff;
+              }
+
+              &.diff-line-empty {
+                background: #f5f5f5;
+
+                .line-number {
+                  background: #e8e8e8;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    &.unified {
+      .unified-diff {
+        .diff-hunk {
+          border: 1px solid #e8e8e8;
+          border-radius: 4px;
+          margin-bottom: 16px;
+          overflow: hidden;
+
+          .hunk-header {
+            background: #f5f5f5;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e8e8e8;
+            cursor: pointer;
+            transition: background 0.2s;
+
+            &:hover {
+              background: #e8e8e8;
+            }
+          }
+
+          .hunk-content {
+            .diff-line {
+              display: flex;
+              align-items: center;
+              padding: 2px 8px;
+              border-bottom: 1px solid #f0f0f0;
+              transition: background 0.2s;
+
+              &:hover {
+                background: #f9f9f9;
+              }
+
+              &.selected {
+                background: #e6f7ff;
+              }
+
+              &.diff-line-added {
+                background: #f6ffed;
+                border-left: 3px solid #52c41a;
+              }
+
+              &.diff-line-deleted {
+                background: #fff2f0;
+                border-left: 3px solid #ff4d4f;
+              }
+
+              &.diff-line-context {
+                background: #fff;
+              }
+
+              .line-content {
+                display: flex;
+                align-items: center;
+                flex: 1;
+                overflow-x: auto;
+
+                .line-number {
+                  min-width: 80px;
+                  padding: 0 8px;
+                  background: #f8f8f8;
+                  border-right: 1px solid #e8e8e8;
+                  color: #666;
+                  text-align: right;
+                  user-select: none;
+                  font-size: 11px;
+                  font-family: monospace;
+                  margin-right: 8px;
+                }
+
+                .line-prefix {
+                  width: 20px;
+                  text-align: center;
+                  font-weight: bold;
+                  color: #666;
+                  margin-right: 8px;
+                }
+              }
+
+              .staging-controls {
+                margin-left: 8px;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .diff-stats {
+      background: #fafafa;
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      border: 1px solid #e8e8e8;
+    }
+  }
+}
+
+.enhanced-diff-viewer-compact {
+  .compact-diff {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+  }
+}
+
+// Dark theme support
+.enhanced-diff-viewer.dark {
+  .diff-container {
+    .diff-stats {
+      background: #1f1f1f;
+      border-color: #303030;
+    }
+
+    &.side-by-side {
+      .side-by-side-diff {
+        .diff-pane {
+          border-color: #303030;
+
+          .diff-pane-header {
+            background: #1f1f1f;
+            border-color: #303030;
+          }
+
+          .diff-content {
+            .diff-line {
+              border-bottom: 1px solid #262626;
+
+              &:hover {
+                background: #2a2a2a;
+              }
+
+              &.diff-line-added {
+                background: #162312;
+
+                .line-number {
+                  background: #274916;
+                  border-right-color: #274916;
+                  color: #52c41a;
+                }
+              }
+
+              &.diff-line-deleted {
+                background: #2a1215;
+
+                .line-number {
+                  background: #58181c;
+                  border-right-color: #58181c;
+                  color: #ff4d4f;
+                }
+              }
+
+              &.diff-line-context {
+                background: #141414;
+              }
+
+              &.diff-line-empty {
+                background: #0f0f0f;
+
+                .line-number {
+                  background: #262626;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    &.unified {
+      .unified-diff {
+        .diff-hunk {
+          border-color: #303030;
+
+          .hunk-header {
+            background: #1f1f1f;
+            border-color: #303030;
+
+            &:hover {
+              background: #2a2a2a;
+            }
+          }
+
+          .hunk-content {
+            .diff-line {
+              border-color: #2a2a2a;
+
+              &:hover {
+                background: #2a2a2a;
+              }
+
+              &.selected {
+                background: #1a3a5c;
+              }
+
+              &.diff-line-added {
+                background: #162312;
+                border-left-color: #52c41a;
+              }
+
+              &.diff-line-deleted {
+                background: #2a1215;
+                border-left-color: #ff4d4f;
+              }
+
+              &.diff-line-context {
+                background: #1f1f1f;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -36,6 +36,8 @@ import MetadataService from '../services/MetadataService';
 import TagService from '../services/TagService';
 import TimerService from '../services/TimerService';
 import IterationService from '../services/IterationService';
+import GitService from '../services/GitService';
+import GitRepositoryService from '../services/GitRepositoryService';
 
 remoteMain.initialize();
 let mainWindow: BrowserWindow | null = null;
@@ -636,6 +638,19 @@ const initializeProjectState = (_event: any, projectName: any) => {
   individualProjectStateValue.lokiLoaded = true;
   individualProjectStateValue.projectName = projectName;
 
+  // Initialize Git repository service for the project
+  if (currentLokiService) {
+    gitRepositoryService = new GitRepositoryService(currentLokiService);
+    gitService.setProjectContext(projectName, gitRepositoryService);
+    
+    // Load project repositories
+    gitService.loadProjectRepositories().then(() => {
+      console.log('Project repositories loaded for:', projectName);
+    }).catch(error => {
+      console.error('Error loading project repositories:', error);
+    });
+  }
+
   if (mainWindow) {
     mainWindow.webContents.send(
       'UpdateProjectPageState',
@@ -651,4 +666,316 @@ ipcMain.on('getLastOpenedTimes', (event) => {
 ipcMain.on('setLastOpenedTimes', (event, times) => {
   lastOpenedTimes = JSON.parse(times);
   event.returnValue = true;
+});
+
+// Git Service Integration - IPC Handlers for Solo Developers
+const gitService = new GitService();
+let gitRepositoryService = null;
+
+// Repository Management
+ipcMain.handle('git:addRepository', async (event, repoPath) => {
+  try {
+    console.log('Adding repository:', repoPath);
+    const result = await gitService.addRepository(repoPath);
+    console.log('Repository added successfully:', result.name);
+    return result;
+  } catch (error) {
+    console.error('Error in git:addRepository:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:switchRepository', async (event, repoPath) => {
+  try {
+    return await gitService.switchRepository(repoPath);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getRepositories', async () => {
+  try {
+    console.log('Getting repositories...');
+    const repos = gitService.getRepositories();
+    console.log('Found repositories:', repos.length);
+    return repos;
+  } catch (error) {
+    console.error('Error in git:getRepositories:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getCurrentRepository', async () => {
+  try {
+    return gitService.getCurrentRepository();
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getRepositoryStatus', async () => {
+  try {
+    return await gitService.getRepositoryStatus();
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Core Git Operations
+ipcMain.handle('git:createBranch', async (event, branchName, startPoint) => {
+  try {
+    return await gitService.createBranch(branchName, startPoint);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:switchBranch', async (event, branchName) => {
+  try {
+    return await gitService.switchBranch(branchName);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:deleteBranch', async (event, branchName, force) => {
+  try {
+    return await gitService.deleteBranch(branchName, force);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getBranchesWithDates', async () => {
+  try {
+    return await gitService.getBranchesWithDates();
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:stageFiles', async (event, files) => {
+  try {
+    return await gitService.stageFiles(files);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:unstageFiles', async (event, files) => {
+  try {
+    return await gitService.unstageFiles(files);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:commit', async (event, message, description) => {
+  try {
+    return await gitService.commit(message, description);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:pull', async (event, remote, branch) => {
+  try {
+    return await gitService.pull(remote, branch);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:push', async (event, remote, branch) => {
+  try {
+    return await gitService.push(remote, branch);
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Stash Operations
+ipcMain.handle('git:stashChanges', async (event, message) => {
+  try {
+    return await gitService.stashChanges(message);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getStashList', async () => {
+  try {
+    return await gitService.getStashList();
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:applyStash', async (event, stashIndex) => {
+  try {
+    return await gitService.applyStash(stashIndex);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:popStash', async (event, stashIndex) => {
+  try {
+    return await gitService.popStash(stashIndex);
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Diff and History
+ipcMain.handle('git:getDiff', async (event, file, staged) => {
+  console.log('IPC git:getDiff called with:', { file, staged });
+  try {
+    const result = await gitService.getDiff(file, staged);
+    console.log('IPC git:getDiff result:', result);
+    return result;
+  } catch (error) {
+    console.error('IPC git:getDiff error:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getCommitHistory', async (event, options) => {
+  try {
+    return await gitService.getCommitHistory(options);
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Merge and Rebase
+ipcMain.handle('git:merge', async (event, branchName, options) => {
+  try {
+    return await gitService.merge(branchName, options);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:rebase', async (event, branchName, interactive) => {
+  try {
+    return await gitService.rebase(branchName, interactive);
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Undo System
+ipcMain.handle('git:undoLastOperation', async () => {
+  try {
+    return await gitService.undoLastOperation();
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getOperationHistory', async () => {
+  try {
+    return gitService.getOperationHistory();
+  } catch (error) {
+    throw error;
+  }
+});
+
+// GitHub Integration
+ipcMain.handle('git:authenticateGitHub', async (event, token) => {
+  try {
+    return await gitService.authenticateGitHub(token);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:cloneRepository', async (event, repoUrl, targetPath) => {
+  try {
+    return await gitService.cloneRepository(repoUrl, targetPath);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getGitHubRepositories', async () => {
+  try {
+    return await gitService.getGitHubRepositories();
+  } catch (error) {
+    throw error;
+  }
+});
+
+// File System Operations for Repository Selection
+ipcMain.handle('git:selectRepository', async () => {
+  try {
+    const result = dialog.showOpenDialogSync(mainWindow, {
+      properties: ['openDirectory'],
+      title: 'Select Git Repository Folder'
+    });
+    
+    if (result && result.length > 0) {
+      return result[0];
+    }
+    return null;
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Project-specific Git Repository Management
+ipcMain.handle('git:getProjectRepositoryStats', async () => {
+  try {
+    return gitService.getProjectRepositoryStats();
+  } catch (error) {
+    console.error('Error getting project repository stats:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:cleanupProjectRepositories', async () => {
+  try {
+    return await gitService.cleanupProjectRepositories();
+  } catch (error) {
+    console.error('Error cleaning up project repositories:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:loadProjectRepositories', async () => {
+  try {
+    return await gitService.loadProjectRepositories();
+  } catch (error) {
+    console.error('Error loading project repositories:', error);
+    throw error;
+  }
+});
+
+// File Management Operations
+ipcMain.handle('git:discardChanges', async (event, files) => {
+  try {
+    return await gitService.discardChanges(files);
+  } catch (error) {
+    console.error('Error discarding changes:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:deleteUntrackedFiles', async (event, files) => {
+  try {
+    return await gitService.deleteUntrackedFiles(files);
+  } catch (error) {
+    console.error('Error deleting untracked files:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:cleanUntrackedFiles', async (event, dryRun) => {
+  try {
+    return await gitService.cleanUntrackedFiles(dryRun);
+  } catch (error) {
+    console.error('Error cleaning untracked files:', error);
+    throw error;
+  }
 });

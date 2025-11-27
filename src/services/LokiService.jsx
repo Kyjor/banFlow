@@ -12,6 +12,7 @@ export default class LokiService {
     this.nodeStates = null;
     this.nodeTypes = null;
     this.timerPreferences = null;
+    this.gitRepositories = null;
     this.projectName = projectName;
     this.isSelectedFromDialog = false;
     this.isDev = null;
@@ -87,6 +88,12 @@ export default class LokiService {
     if (!this.projectSettings) {
       this.projectSettings = this.db.addCollection('projectSettings');
       this.createDefaultProjectSettings();
+      mustSaveDatabase = true;
+    }
+
+    this.gitRepositories = this.db.getCollection('gitRepositories');
+    if (!this.gitRepositories) {
+      this.gitRepositories = this.db.addCollection('gitRepositories');
       mustSaveDatabase = true;
     }
 

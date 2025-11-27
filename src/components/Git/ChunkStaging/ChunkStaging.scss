@@ -1,0 +1,126 @@
+.chunk-staging {
+  .staging-summary {
+    margin-bottom: 24px;
+
+    .summary-card {
+      text-align: center;
+      transition: all 0.2s;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      &.staged {
+        border-color: #52c41a;
+        background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+      }
+
+      &.unstaged {
+        border-color: #faad14;
+        background: linear-gradient(135deg, #fffbe6 0%, #ffe58f 100%);
+      }
+
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+  }
+
+  .bulk-actions {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #fafafa;
+    border-radius: 6px;
+    border: 1px solid #e8e8e8;
+  }
+
+  .chunk-list {
+    .chunk-card {
+      margin-bottom: 12px;
+      transition: all 0.2s;
+      cursor: pointer;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      &.selected {
+        border-color: #1890ff;
+        background: #e6f7ff;
+      }
+
+      &.staged {
+        border-color: #52c41a;
+        background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+      }
+
+      &.unstaged {
+        border-color: #faad14;
+        background: linear-gradient(135deg, #fffbe6 0%, #ffe58f 100%);
+      }
+
+      .chunk-header {
+        margin-bottom: 8px;
+      }
+
+      .chunk-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+    }
+  }
+}
+
+.chunk-staging-compact {
+  .chunk-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+}
+
+// Dark theme support
+.chunk-staging.dark {
+  .staging-summary {
+    .summary-card {
+      &.staged {
+        background: linear-gradient(135deg, #162312 0%, #1a3a1a 100%);
+        border-color: #52c41a;
+      }
+
+      &.unstaged {
+        background: linear-gradient(135deg, #2a2115 0%, #3a2a0a 100%);
+        border-color: #faad14;
+      }
+    }
+  }
+
+  .bulk-actions {
+    background: #1f1f1f;
+    border-color: #303030;
+  }
+
+  .chunk-list {
+    .chunk-card {
+      &.selected {
+        background: #1a3a5c;
+        border-color: #1890ff;
+      }
+
+      &.staged {
+        background: linear-gradient(135deg, #162312 0%, #1a3a1a 100%);
+        border-color: #52c41a;
+      }
+
+      &.unstaged {
+        background: linear-gradient(135deg, #2a2115 0%, #3a2a0a 100%);
+        border-color: #faad14;
+      }
+    }
+  }
+}

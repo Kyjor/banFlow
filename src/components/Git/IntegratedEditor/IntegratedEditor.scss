@@ -1,0 +1,130 @@
+.integrated-editor {
+  .editor-container {
+    .staging-controls {
+      padding: 12px;
+      background: #fafafa;
+      border-radius: 6px;
+      border: 1px solid #e8e8e8;
+      margin-bottom: 16px;
+    }
+
+    .code-editor {
+      border: 1px solid #e8e8e8;
+      border-radius: 6px;
+      overflow: hidden;
+
+      .editor-toolbar {
+        background: #f5f5f5;
+        padding: 8px 12px;
+        border-bottom: 1px solid #e8e8e8;
+        display: flex;
+        align-items: center;
+      }
+
+      .search-replace-bar {
+        background: #f0f0f0;
+        padding: 8px 12px;
+        border-bottom: 1px solid #e8e8e8;
+      }
+
+      .editor-settings {
+        background: #f9f9f9;
+        padding: 12px;
+        border-bottom: 1px solid #e8e8e8;
+      }
+
+      .editor-content {
+        .ant-input {
+          border: none;
+          border-radius: 0;
+          resize: none;
+          font-family: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', 'Courier New', monospace;
+        }
+      }
+
+      .editor-status {
+        background: #f5f5f5;
+        padding: 4px 12px;
+        border-top: 1px solid #e8e8e8;
+        font-size: 12px;
+        color: #666;
+      }
+    }
+
+    .diff-view {
+      margin-top: 16px;
+      border: 1px solid #e8e8e8;
+      border-radius: 6px;
+      overflow: hidden;
+
+      .diff-header {
+        background: #f5f5f5;
+        padding: 8px 12px;
+        border-bottom: 1px solid #e8e8e8;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .diff-content {
+        padding: 16px;
+        background: #fff;
+      }
+    }
+  }
+}
+
+// Dark theme support
+.integrated-editor.dark {
+  .editor-container {
+    .staging-controls {
+      background: #1f1f1f;
+      border-color: #303030;
+    }
+
+    .code-editor {
+      border-color: #303030;
+
+      .editor-toolbar {
+        background: #2a2a2a;
+        border-color: #303030;
+      }
+
+      .search-replace-bar {
+        background: #2a2a2a;
+        border-color: #303030;
+      }
+
+      .editor-settings {
+        background: #2a2a2a;
+        border-color: #303030;
+      }
+
+      .editor-content {
+        .ant-input {
+          background: #1f1f1f;
+          color: #fff;
+        }
+      }
+
+      .editor-status {
+        background: #2a2a2a;
+        border-color: #303030;
+        color: #ccc;
+      }
+    }
+
+    .diff-view {
+      border-color: #303030;
+
+      .diff-header {
+        background: #2a2a2a;
+        border-color: #303030;
+      }
+
+      .diff-content {
+        background: #1f1f1f;
+      }
+    }
+  }
+}
