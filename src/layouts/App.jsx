@@ -41,6 +41,10 @@ function loadSidebarComponents(pathname, setShowModal) {
         >
           Add New Project
         </Menu.Item>
+        <Menu.Item icon={<GitlabOutlined />}>
+          <Link to="/git" />
+          Git
+        </Menu.Item>
         <Menu.Item icon={<SettingOutlined />}>
           <Link to="/settings" />
           Settings

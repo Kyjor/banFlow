@@ -38,6 +38,8 @@ import {
   HistoryOutlined
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
+import { ipcRenderer } from 'electron';
+import { useHeartbeat } from '../../../hooks/useHeartbeat';
 import './IntegratedEditor.scss';
 
 const { Title, Text, Paragraph } = Typography;
@@ -59,6 +61,7 @@ function IntegratedEditor({
     getDiff,
     stageFiles,
     unstageFiles,
+    refreshRepositoryStatus,
     isLoading,
     operationInProgress
   } = useGit();
@@ -72,6 +75,8 @@ function IntegratedEditor({
   const [replaceTerm, setReplaceTerm] = useState('');
   const [showSearchReplace, setShowSearchReplace] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGoToLine, setShowGoToLine] = useState(false);
+  const [goToLineNumber, setGoToLineNumber] = useState('');
   const [editorSettings, setEditorSettings] = useState({
     fontSize: 14,
     tabSize: 2,
@@ -86,9 +91,27 @@ function IntegratedEditor({
   const [isFileStaged, setIsFileStaged] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [diffMode, setDiffMode] = useState('inline'); // 'inline', 'side-by-side'
+  const [lastCheckTime, setLastCheckTime] = useState(null); // Debug: track last heartbeat check
+  const [checkCount, setCheckCount] = useState(0); // Debug: track number of checks
   
   const editorRef = useRef(null);
   const autoSaveTimeoutRef = useRef(null);
+  const lastFileContentRef = useRef(''); // Track last loaded content to detect external changes
+  const isReloadingRef = useRef(false); // Prevent multiple simultaneous reloads
+  const stateRefs = useRef({
+    selectedFile: null,
+    currentRepository: null,
+    hasUnsavedChanges: false
+  });
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    stateRefs.current = {
+      selectedFile,
+      currentRepository,
+      hasUnsavedChanges
+    };
+  }, [selectedFile, currentRepository, hasUnsavedChanges]);
 
   useEffect(() => {
     if (selectedFile && currentRepository) {
@@ -96,6 +119,85 @@ function IntegratedEditor({
       checkFileStagingStatus(selectedFile);
     }
   }, [selectedFile, currentRepository]);
+
+  // Periodically check if the file has changed on disk and reload if safe
+  const checkForExternalChanges = async () => {
+    const state = stateRefs.current;
+    
+    // Update debug state
+    setLastCheckTime(new Date().toLocaleTimeString());
+    setCheckCount(prev => prev + 1);
+    
+    console.log('[Editor] checkForExternalChanges called', {
+      selectedFile: state.selectedFile,
+      currentRepository: state.currentRepository,
+      hasUnsavedChanges: state.hasUnsavedChanges,
+      isReloading: isReloadingRef.current,
+      lastContentLength: lastFileContentRef.current?.length
+    });
+    
+    if (!state.selectedFile || !state.currentRepository || isReloadingRef.current) {
+      console.log('[Editor] Skipping check - missing file/repo or already reloading');
+      return;
+    }
+
+    // Only check if we don't have unsaved changes (to avoid losing work)
+    if (state.hasUnsavedChanges) {
+      console.log('[Editor] Skipping check - has unsaved changes');
+      return;
+    }
+
+    try {
+      console.log('[Editor] Reading file from disk:', state.selectedFile);
+      const result = await ipcRenderer.invoke('git:readFile', state.currentRepository, state.selectedFile);
+      console.log('[Editor] File read result:', {
+        success: result.success,
+        contentLength: result.content?.length,
+        lastContentLength: lastFileContentRef.current?.length,
+        contentChanged: result.content !== lastFileContentRef.current
+      });
+      
+      if (result.success && result.content !== lastFileContentRef.current) {
+        // File has changed externally, reload it
+        console.log('[Editor] FILE CHANGED! Reloading...');
+        isReloadingRef.current = true;
+        setFileContent(result.content);
+        setOriginalContent(result.content);
+        lastFileContentRef.current = result.content;
+        setHasUnsavedChanges(false);
+        setUndoStack([result.content]);
+        setRedoStack([]);
+        message.info(`File "${state.selectedFile}" has been updated externally`);
+        isReloadingRef.current = false;
+      } else {
+        console.log('[Editor] No changes detected');
+      }
+    } catch (error) {
+      console.error('[Editor] Failed to check file for external changes:', error);
+      isReloadingRef.current = false;
+    }
+  };
+
+  // Debug: log heartbeat state
+  const heartbeatEnabled = !!selectedFile && !!currentRepository && !hasUnsavedChanges;
+  console.log('[Editor] Heartbeat config:', {
+    name: `editor-file-check-${selectedFile || 'none'}`,
+    enabled: heartbeatEnabled,
+    selectedFile,
+    currentRepository,
+    hasUnsavedChanges
+  });
+
+  // Use heartbeat to periodically check for external file changes (every 2 seconds)
+  useHeartbeat(
+    `editor-file-check-${selectedFile || 'none'}`,
+    checkForExternalChanges,
+    2000, // Check every 2 seconds
+    {
+      enabled: heartbeatEnabled,
+      immediate: true // Run immediately when enabled
+    }
+  );
 
   useEffect(() => {
     if (autoSave && hasUnsavedChanges) {
@@ -116,31 +218,36 @@ function IntegratedEditor({
   }, [hasUnsavedChanges, autoSave]);
 
   const loadFileContent = async (filename) => {
+    if (!currentRepository || !filename) {
+      return;
+    }
+    
     try {
-      // In a real implementation, this would load the actual file content
-      // For now, we'll simulate file content
-      const mockContent = `// Example file content
-function exampleFunction() {
-  console.log("Hello, World!");
-  return true;
-}
-
-const config = {
-  apiUrl: "https://api.example.com",
-  timeout: 5000,
-  retries: 3
-};
-
-export default config;`;
+      const result = await ipcRenderer.invoke('git:readFile', currentRepository, filename);
       
-      setFileContent(mockContent);
-      setOriginalContent(mockContent);
-      setHasUnsavedChanges(false);
-      setUndoStack([mockContent]);
-      setRedoStack([]);
+      if (result.success) {
+        setFileContent(result.content);
+        setOriginalContent(result.content);
+        lastFileContentRef.current = result.content; // Track loaded content
+        setHasUnsavedChanges(false);
+        setUndoStack([result.content]);
+        setRedoStack([]);
+      } else {
+        throw new Error('Failed to load file');
+      }
     } catch (error) {
-      console.error('Failed to load file content:', error);
-      message.error('Failed to load file content');
+      // If file doesn't exist, treat it as a new file
+      if (error.message && error.message.includes('not found')) {
+        setFileContent('');
+        setOriginalContent('');
+        lastFileContentRef.current = '';
+        setHasUnsavedChanges(false);
+        setUndoStack(['']);
+        setRedoStack([]);
+      } else {
+        console.error('Failed to load file content:', error);
+        message.error(`Failed to load file: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -153,8 +260,11 @@ export default config;`;
     setFileContent(newContent);
     setHasUnsavedChanges(newContent !== originalContent);
     
-    // Add to undo stack
-    setUndoStack(prev => [...prev, newContent]);
+    // Add to undo stack (limit to last 50 states to prevent memory issues)
+    setUndoStack(prev => {
+      const newStack = [...prev, newContent];
+      return newStack.slice(-50);
+    });
     setRedoStack([]);
     
     if (onFileChange) {
@@ -163,20 +273,33 @@ export default config;`;
   }, [originalContent, onFileChange]);
 
   const saveFile = useCallback(async () => {
+    if (!currentRepository || !selectedFile) {
+      message.error('No file selected or repository not available');
+      return;
+    }
+    
     try {
-      // In a real implementation, this would save the file to disk
-      setOriginalContent(fileContent);
-      setHasUnsavedChanges(false);
-      message.success('File saved successfully');
+      const result = await ipcRenderer.invoke('git:writeFile', currentRepository, selectedFile, fileContent);
       
-      if (onFileChange) {
-        onFileChange(fileContent, false);
+      if (result.success) {
+        setOriginalContent(fileContent);
+        setHasUnsavedChanges(false);
+        message.success('File saved successfully');
+        
+        // Refresh repository status to detect the file change
+        await refreshRepositoryStatus();
+        
+        if (onFileChange) {
+          onFileChange(fileContent, false);
+        }
+      } else {
+        throw new Error('Failed to save file');
       }
     } catch (error) {
       console.error('Failed to save file:', error);
-      message.error('Failed to save file');
+      message.error(`Failed to save file: ${error.message || 'Unknown error'}`);
     }
-  }, [fileContent, onFileChange]);
+  }, [fileContent, selectedFile, currentRepository, refreshRepositoryStatus, onFileChange]);
 
   const undo = useCallback(() => {
     if (undoStack.length > 1) {
@@ -215,10 +338,32 @@ export default config;`;
   }, [fileContent, searchTerm, replaceTerm, handleContentChange]);
 
   const goToLine = useCallback((lineNumber) => {
-    // In a real implementation, this would scroll to the specified line
-    setCursorPosition({ line: lineNumber, column: 1 });
-    message.info(`Jumped to line ${lineNumber}`);
-  }, []);
+    const lineNum = parseInt(lineNumber);
+    if (isNaN(lineNum) || lineNum < 1) {
+      message.warning('Please enter a valid line number');
+      return;
+    }
+    
+    const lines = fileContent.split('\n');
+    if (lineNum > lines.length) {
+      message.warning(`Line ${lineNum} is beyond the end of the file (${lines.length} lines)`);
+      return;
+    }
+    
+    setCursorPosition({ line: lineNum, column: 1 });
+    setShowGoToLine(false);
+    message.info(`Jumped to line ${lineNum}`);
+    
+    // Scroll to line in textarea (basic implementation)
+    if (editorRef.current) {
+      const textarea = editorRef.current.resizableTextArea?.textArea;
+      if (textarea) {
+        const lineHeight = parseInt(editorSettings.fontSize) * 1.5;
+        textarea.scrollTop = (lineNum - 1) * lineHeight;
+        textarea.focus();
+      }
+    }
+  }, [fileContent, editorSettings.fontSize]);
 
   const stageFile = useCallback(async () => {
     try {
@@ -312,6 +457,14 @@ export default config;`;
               Find & Replace
             </Button>
             <Button
+              icon={<HistoryOutlined />}
+              onClick={() => setShowGoToLine(true)}
+              size="small"
+              title="Go to Line"
+            >
+              Go to Line
+            </Button>
+            <Button
               icon={<SettingOutlined />}
               onClick={() => setShowSettings(!showSettings)}
               size="small"
@@ -339,12 +492,14 @@ export default config;`;
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{ width: 200 }}
+                onPressEnter={findAndReplace}
               />
               <Input
                 placeholder="Replace with..."
                 value={replaceTerm}
                 onChange={(e) => setReplaceTerm(e.target.value)}
                 style={{ width: 200 }}
+                onPressEnter={findAndReplace}
               />
               <Button
                 type="primary"
@@ -355,6 +510,36 @@ export default config;`;
               </Button>
               <Button
                 onClick={() => setShowSearchReplace(false)}
+              >
+                Close
+              </Button>
+            </Space>
+          </div>
+        )}
+        
+        {showGoToLine && (
+          <div className="go-to-line-bar">
+            <Space>
+              <Input
+                placeholder="Line number..."
+                value={goToLineNumber}
+                onChange={(e) => setGoToLineNumber(e.target.value)}
+                style={{ width: 150 }}
+                onPressEnter={() => goToLine(goToLineNumber)}
+                type="number"
+                min={1}
+              />
+              <Button
+                type="primary"
+                onClick={() => goToLine(goToLineNumber)}
+              >
+                Go
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowGoToLine(false);
+                  setGoToLineNumber('');
+                }}
               >
                 Close
               </Button>
@@ -432,7 +617,24 @@ export default config;`;
           <TextArea
             ref={editorRef}
             value={fileContent}
-            onChange={(e) => handleContentChange(e.target.value)}
+            onChange={(e) => {
+              handleContentChange(e.target.value);
+              // Update cursor position
+              const textarea = e.target;
+              const textBeforeCursor = textarea.value.substring(0, textarea.selectionStart);
+              const lines = textBeforeCursor.split('\n');
+              const currentLine = lines.length;
+              const currentColumn = lines[lines.length - 1].length + 1;
+              setCursorPosition({ line: currentLine, column: currentColumn });
+            }}
+            onSelect={(e) => {
+              const textarea = e.target;
+              const textBeforeCursor = textarea.value.substring(0, textarea.selectionStart);
+              const lines = textBeforeCursor.split('\n');
+              const currentLine = lines.length;
+              const currentColumn = lines[lines.length - 1].length + 1;
+              setCursorPosition({ line: currentLine, column: currentColumn });
+            }}
             placeholder="Start typing..."
             style={{
               fontFamily: 'SF Mono, Monaco, Inconsolata, Roboto Mono, Courier New, monospace',
@@ -458,6 +660,15 @@ export default config;`;
             </Text>
             {hasUnsavedChanges && (
               <Tag color="orange">Unsaved changes</Tag>
+            )}
+            {/* Debug: Heartbeat status */}
+            <Tag color={heartbeatEnabled ? 'green' : 'red'}>
+              HB: {heartbeatEnabled ? 'ON' : 'OFF'}
+            </Tag>
+            {lastCheckTime && (
+              <Tag color="blue">
+                Checks: {checkCount} | Last: {lastCheckTime}
+              </Tag>
             )}
           </Space>
         </div>
@@ -577,12 +788,41 @@ export default config;`;
                 size="small"
               />
             </Tooltip>
-            <Tooltip title="Reload file">
+            <Tooltip title="Force reload from disk">
               <Button
                 icon={<ReloadOutlined />}
-                onClick={() => loadFileContent(selectedFile)}
+                onClick={async () => {
+                  console.log('[Editor] Manual reload triggered');
+                  if (selectedFile && currentRepository) {
+                    try {
+                      const result = await ipcRenderer.invoke('git:readFile', currentRepository, selectedFile);
+                      console.log('[Editor] Manual reload result:', result);
+                      if (result.success) {
+                        setFileContent(result.content);
+                        setOriginalContent(result.content);
+                        lastFileContentRef.current = result.content;
+                        setHasUnsavedChanges(false);
+                        message.success('File reloaded from disk');
+                      }
+                    } catch (error) {
+                      console.error('[Editor] Manual reload error:', error);
+                      message.error('Failed to reload file');
+                    }
+                  }
+                }}
                 size="small"
               />
+            </Tooltip>
+            <Tooltip title="Test heartbeat">
+              <Button
+                onClick={() => {
+                  console.log('[Editor] Manual heartbeat test');
+                  checkForExternalChanges();
+                }}
+                size="small"
+              >
+                Test HB
+              </Button>
             </Tooltip>
           </Space>
         }

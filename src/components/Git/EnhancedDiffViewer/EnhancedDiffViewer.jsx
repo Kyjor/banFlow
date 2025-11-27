@@ -39,6 +39,7 @@ import {
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useGit } from '../../../contexts/GitContext';
+import { useHeartbeat } from '../../../hooks/useHeartbeat';
 import './EnhancedDiffViewer.scss';
 
 const { Title, Text } = Typography;
@@ -101,11 +102,28 @@ function EnhancedDiffViewer({
 
   const loadDiff = async (filename) => {
     try {
+      console.log('[DiffViewer] Loading diff for:', filename);
       await getDiff(filename, staged);
     } catch (error) {
       console.error('Failed to load diff:', error);
     }
   };
+
+  // Auto-refresh diff every 3 seconds when viewing a file
+  useHeartbeat(
+    `diff-viewer-refresh-${selectedFile || 'none'}`,
+    () => {
+      if (selectedFile && currentRepository) {
+        console.log('[DiffViewer] Heartbeat refresh for:', selectedFile);
+        loadDiff(selectedFile);
+      }
+    },
+    3000,
+    {
+      enabled: !!selectedFile && !!currentRepository,
+      immediate: false
+    }
+  );
 
   const getLanguageFromFilename = (filename) => {
     if (!filename) return 'text';

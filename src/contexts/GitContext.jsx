@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import { ipcRenderer } from 'electron';
 import { message } from 'antd';
+import HeartbeatService from '../services/HeartbeatService';
 
 // Git Context State Structure
 const initialState = {
@@ -184,6 +185,24 @@ const GitContext = createContext();
 // Git Context Provider Component
 export function GitProvider({ children }) {
   const [state, dispatch] = useReducer(gitReducer, initialState);
+  const heartbeatIdRef = useRef(null);
+  const heartbeatService = HeartbeatService.getInstance();
+  const stateRef = useRef(state);
+  const refreshRepositoryStatusRef = useRef(null);
+  
+  // Keep state ref in sync
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+  
+  // Configuration: Heartbeat interval in milliseconds (default: 5 seconds)
+  // Can be overridden via environment variable or settings
+  const HEARTBEAT_INTERVAL_MS = parseInt(
+    process.env.REACT_APP_GIT_HEARTBEAT_INTERVAL || 
+    localStorage.getItem('gitHeartbeatInterval') || 
+    '5000',
+    10
+  );
 
   // Error Handling Helper
   const handleError = useCallback((error, operation) => {
@@ -258,6 +277,11 @@ export function GitProvider({ children }) {
       throw error;
     }
   }, [handleError]);
+
+  // Keep refreshRepositoryStatus ref in sync (after function is defined)
+  useEffect(() => {
+    refreshRepositoryStatusRef.current = refreshRepositoryStatus;
+  }, [refreshRepositoryStatus]);
 
   // Core Git Operations
   const createBranch = useCallback(async (branchName, startPoint = null) => {
@@ -573,6 +597,49 @@ export function GitProvider({ children }) {
 
     loadRepositories();
   }, []);
+
+  // Heartbeat: Periodically check for repository status changes
+  useEffect(() => {
+    // Clean up any existing heartbeat
+    if (heartbeatIdRef.current !== null) {
+      heartbeatService.unregister(heartbeatIdRef.current);
+      heartbeatIdRef.current = null;
+    }
+
+    // Only start heartbeat if we have a current repository
+    if (state.currentRepository) {
+      heartbeatIdRef.current = heartbeatService.register(
+        'git-repository-status',
+        async () => {
+          // Only refresh if not currently performing an operation
+          // Use refs to get current state and function to avoid stale closures
+          const currentState = stateRef.current;
+          const refreshFn = refreshRepositoryStatusRef.current;
+          
+          if (refreshFn && !currentState.operationInProgress && !currentState.isLoading && currentState.currentRepository) {
+            try {
+              await refreshFn();
+            } catch (error) {
+              // Silently fail - we don't want to spam errors for heartbeat failures
+              // The error will be logged by refreshRepositoryStatus
+              console.debug('Heartbeat refresh failed:', error);
+            }
+          }
+        },
+        HEARTBEAT_INTERVAL_MS,
+        { immediate: true } // Run immediately, then every interval
+      );
+    }
+
+    // Cleanup on unmount or when repository changes
+    return () => {
+      if (heartbeatIdRef.current !== null) {
+        heartbeatService.unregister(heartbeatIdRef.current);
+        heartbeatIdRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.currentRepository]); // Only re-run when repository changes
 
   // File Management Operations
   const discardChanges = useCallback(async (files) => {

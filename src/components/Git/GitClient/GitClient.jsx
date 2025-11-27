@@ -301,24 +301,39 @@ function GitClient() {
             key="changes"
           >
             <Row gutter={16}>
-              <Col span={showFileList ? 8 : 0}>
-                <Card
-                  title="Files"
-                  size="small"
-                  className="file-list-card"
-                  extra={
-                    <Button
-                      icon={<MenuOutlined />}
-                      onClick={() => setShowFileList(!showFileList)}
-                      size="small"
-                    />
-                  }
-                >
-                  {renderFileList()}
-                </Card>
-              </Col>
+              {showFileList && (
+                <Col span={8}>
+                  <Card
+                    title="Files"
+                    size="small"
+                    className="file-list-card"
+                    extra={
+                      <Button
+                        icon={<MenuOutlined />}
+                        onClick={() => setShowFileList(false)}
+                        size="small"
+                        type="text"
+                      />
+                    }
+                  >
+                    {renderFileList()}
+                  </Card>
+                </Col>
+              )}
               
               <Col span={showFileList ? 16 : 24}>
+                {!showFileList && (
+                  <div style={{ marginBottom: 8 }}>
+                    <Button
+                      icon={<MenuOutlined />}
+                      onClick={() => setShowFileList(true)}
+                      size="small"
+                      type="dashed"
+                    >
+                      Show File List
+                    </Button>
+                  </div>
+                )}
                 {selectedFile ? (
                   <div className="file-content">
                     <EnhancedDiffViewer
@@ -531,6 +546,17 @@ function GitClient() {
         
         <div className="header-right">
           <Space>
+            {activeTab === 'changes' && (
+              <Tooltip title={showFileList ? "Hide File List" : "Show File List"}>
+                <Button
+                  icon={<MenuOutlined />}
+                  onClick={() => setShowFileList(!showFileList)}
+                  type="text"
+                  style={{ color: '#fff' }}
+                />
+              </Tooltip>
+            )}
+            
             <Tooltip title="Refresh">
               <Button
                 icon={<ReloadOutlined />}

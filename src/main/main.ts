@@ -979,3 +979,61 @@ ipcMain.handle('git:cleanUntrackedFiles', async (event, dryRun) => {
     throw error;
   }
 });
+
+// File Editor Operations
+ipcMain.handle('git:readFile', async (event, repoPath, filePath) => {
+  console.log('[IPC git:readFile] Reading file:', repoPath, filePath);
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Resolve file path relative to repository root
+    const fullPath = path.join(repoPath, filePath);
+    console.log('[IPC git:readFile] Full path:', fullPath);
+    
+    // Check if file exists
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+    
+    // Read file content
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    console.log('[IPC git:readFile] Read', content.length, 'bytes');
+    return {
+      success: true,
+      content: content,
+      path: fullPath
+    };
+  } catch (error) {
+    console.error('[IPC git:readFile] Error:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:writeFile', async (event, repoPath, filePath, content) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Resolve file path relative to repository root
+    const fullPath = path.join(repoPath, filePath);
+    
+    // Ensure directory exists
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    // Write file content
+    fs.writeFileSync(fullPath, content, 'utf-8');
+    
+    return {
+      success: true,
+      path: fullPath,
+      message: 'File saved successfully'
+    };
+  } catch (error) {
+    console.error('Error writing file:', error);
+    throw error;
+  }
+});
