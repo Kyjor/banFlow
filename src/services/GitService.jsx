@@ -427,7 +427,7 @@ export default class GitService {
 
   // Diff and History Operations
   async getDiff(file = null, staged = false) {
-    console.log('getDiff called with:', { file, staged, hasGit: !!this.git, currentRepo: this.currentRepository });
+    console.log('getDiff called with:', { file, staged, hasGit: !!this.git, currentRepo: this.currentRepo });
     
     if (!this.git) throw new Error('No repository selected');
     
@@ -484,6 +484,69 @@ export default class GitService {
       }));
     } catch (error) {
       console.error('Error getting commit history:', error);
+      throw error;
+    }
+  }
+
+  async getBranchesWithDates() {
+    if (!this.git) throw new Error('No repository selected');
+    
+    try {
+      const branches = await this.git.branchLocal();
+      const branchList = branches.all || [];
+      const currentBranch = branches.current;
+      
+      // Get last commit date for each branch
+      const branchesWithDates = await Promise.all(
+        branchList.map(async (branchName) => {
+          try {
+            // Get the last commit on this branch
+            const log = await this.git.log({
+              maxCount: 1,
+              from: branchName,
+              format: {
+                date: '%ai',
+                hash: '%H'
+              }
+            });
+            
+            const lastCommit = log.latest || log.all?.[0];
+            const lastCommitDate = lastCommit?.date 
+              ? new Date(lastCommit.date).toISOString()
+              : null;
+            
+            return {
+              name: branchName,
+              isCurrent: branchName === currentBranch,
+              lastCommitDate: lastCommitDate,
+              lastCommitHash: lastCommit?.hash || null
+            };
+          } catch (error) {
+            // If we can't get the date for a branch, still include it
+            console.warn(`Could not get date for branch ${branchName}:`, error);
+            return {
+              name: branchName,
+              isCurrent: branchName === currentBranch,
+              lastCommitDate: null,
+              lastCommitHash: null
+            };
+          }
+        })
+      );
+      
+      // Sort by last commit date (most recent first), then by name
+      branchesWithDates.sort((a, b) => {
+        if (!a.lastCommitDate && !b.lastCommitDate) {
+          return a.name.localeCompare(b.name);
+        }
+        if (!a.lastCommitDate) return 1;
+        if (!b.lastCommitDate) return -1;
+        return new Date(b.lastCommitDate) - new Date(a.lastCommitDate);
+      });
+      
+      return branchesWithDates;
+    } catch (error) {
+      console.error('Error getting branches with dates:', error);
       throw error;
     }
   }

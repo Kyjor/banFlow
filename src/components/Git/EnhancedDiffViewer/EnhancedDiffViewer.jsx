@@ -76,6 +76,14 @@ function EnhancedDiffViewer({
   const [highlightChanges, setHighlightChanges] = useState(true);
   const [selectedHunk, setSelectedHunk] = useState(null);
 
+  // Sync selectedFile with file prop when it changes
+  useEffect(() => {
+    if (file && file !== selectedFile) {
+      setSelectedFile(file);
+      setSelectedDiff(null); // Clear previous diff while loading new one
+    }
+  }, [file]);
+
   useEffect(() => {
     if (selectedFile && currentRepository) {
       loadDiff(selectedFile);
@@ -83,9 +91,11 @@ function EnhancedDiffViewer({
   }, [selectedFile, staged, currentRepository]);
 
   useEffect(() => {
-    if (currentDiff && currentDiff.length > 0) {
+    if (currentDiff && currentDiff.length > 0 && selectedFile) {
       const fileDiff = currentDiff.find(diff => diff.name === selectedFile);
-      setSelectedDiff(fileDiff);
+      setSelectedDiff(fileDiff || null);
+    } else if (!currentDiff || currentDiff.length === 0) {
+      setSelectedDiff(null);
     }
   }, [currentDiff, selectedFile]);
 
@@ -184,7 +194,7 @@ function EnhancedDiffViewer({
     );
   };
 
-  const renderLineWithStaging = (line, lineIndex, hunkIndex) => {
+  const renderLineWithStaging = (line, lineIndex, hunkIndex, oldLineNum = null, newLineNum = null) => {
     const isSelected = selectedHunk === `${hunkIndex}-${lineIndex}`;
     
     return (
@@ -194,6 +204,11 @@ function EnhancedDiffViewer({
         onClick={() => setSelectedHunk(`${hunkIndex}-${lineIndex}`)}
       >
         <div className="line-content">
+          {showLineNumbers && (
+            <span className="line-number">
+              {oldLineNum !== null ? String(oldLineNum).padStart(4) : '    '} {newLineNum !== null ? String(newLineNum).padStart(4) : '    '}
+            </span>
+          )}
           <span className="line-prefix">
             {line.type === 'added' ? '+' : line.type === 'deleted' ? '-' : ' '}
           </span>
@@ -209,7 +224,6 @@ function EnhancedDiffViewer({
               whiteSpace: wordWrap ? 'pre-wrap' : 'pre'
             }}
             PreTag="span"
-            showLineNumbers={showLineNumbers}
             wrapLines={wordWrap}
           >
             {line.content.substring(1) || ' '}
@@ -241,20 +255,51 @@ function EnhancedDiffViewer({
   const renderUnifiedDiff = (diff) => {
     if (!diff || !diff.hunks) return null;
 
+    // Calculate line numbers for unified view - track across all hunks
+    let oldLineNum = 1;
+    let newLineNum = 1;
+
     return (
       <div className="unified-diff">
-        {filteredHunks.map((hunk, hunkIndex) => (
-          <div key={hunkIndex} className="diff-hunk">
-            {renderHunkHeader(hunk, hunkIndex)}
-            {expandedHunks.has(hunkIndex) && (
-              <div className="hunk-content">
-                {hunk.lines.map((line, lineIndex) => 
-                  renderLineWithStaging(line, lineIndex, hunkIndex)
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+        {filteredHunks.map((hunk, hunkIndex) => {
+          // Parse hunk header to get starting line numbers
+          const headerMatch = hunk.header.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
+          if (headerMatch) {
+            oldLineNum = parseInt(headerMatch[1]);
+            newLineNum = parseInt(headerMatch[2]);
+          }
+
+          // Store line numbers for this hunk
+          const hunkLineNumbers = hunk.lines.map((line) => {
+            let oldLine = null;
+            let newLine = null;
+            
+            if (line.type === 'deleted') {
+              oldLine = oldLineNum++;
+            } else if (line.type === 'added') {
+              newLine = newLineNum++;
+            } else if (line.type === 'context') {
+              oldLine = oldLineNum++;
+              newLine = newLineNum++;
+            }
+
+            return { oldLine, newLine };
+          });
+
+          return (
+            <div key={hunkIndex} className="diff-hunk">
+              {renderHunkHeader(hunk, hunkIndex)}
+              {expandedHunks.has(hunkIndex) && (
+                <div className="hunk-content">
+                  {hunk.lines.map((line, lineIndex) => {
+                    const lineNums = hunkLineNumbers[lineIndex];
+                    return renderLineWithStaging(line, lineIndex, hunkIndex, lineNums.oldLine, lineNums.newLine);
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   };

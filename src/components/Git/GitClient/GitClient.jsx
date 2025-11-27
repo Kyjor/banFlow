@@ -44,18 +44,18 @@ import {
   MinusOutlined,
   CheckOutlined,
   UndoOutlined,
-  CloseOutlined
+  CloseOutlined,
+  GitlabOutlined,
+  FolderOpenOutlined
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
-import RepositoryManager from '../RepositoryManager/RepositoryManager';
 import EnhancedDiffViewer from '../EnhancedDiffViewer/EnhancedDiffViewer';
-import ChunkStaging from '../ChunkStaging/ChunkStaging';
 import MergeConflictResolver from '../MergeConflictResolver/MergeConflictResolver';
 import IntegratedEditor from '../IntegratedEditor/IntegratedEditor';
 import GitOperations from '../GitOperations/GitOperations';
 import './GitClient.scss';
 
-const { Header, Sider, Content } = Layout;
+const { Header, Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -63,6 +63,7 @@ const { Option } = Select;
 function GitClient() {
   const {
     currentRepository,
+    repositories,
     repositoryStatus,
     branches,
     currentBranch,
@@ -75,17 +76,24 @@ function GitClient() {
     lastError,
     discardChanges,
     deleteUntrackedFiles,
-    cleanUntrackedFiles
+    cleanUntrackedFiles,
+    switchRepository,
+    selectRepository,
+    switchBranch,
+    getBranchesWithDates,
+    refreshRepositoryStatus
   } = useGit();
 
   const [activeTab, setActiveTab] = useState('changes');
   const [selectedFile, setSelectedFile] = useState(null);
   const [layout, setLayout] = useState('split'); // 'split', 'full', 'compact'
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showFileList, setShowFileList] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [theme, setTheme] = useState('light');
   const [viewMode, setViewMode] = useState('side-by-side');
+  const [branchesWithDates, setBranchesWithDates] = useState([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
 
   useEffect(() => {
     // Auto-select first modified file if available
@@ -93,6 +101,44 @@ function GitClient() {
       setSelectedFile(modifiedFiles[0]);
     }
   }, [modifiedFiles, selectedFile]);
+
+  // Load branches with dates when repository or branch changes
+  useEffect(() => {
+    const loadBranches = async () => {
+      if (currentRepository) {
+        try {
+          setLoadingBranches(true);
+          const branchesData = await getBranchesWithDates();
+          setBranchesWithDates(branchesData || []);
+        } catch (error) {
+          console.error('Failed to load branches:', error);
+          setBranchesWithDates([]);
+        } finally {
+          setLoadingBranches(false);
+        }
+      } else {
+        setBranchesWithDates([]);
+      }
+    };
+
+    loadBranches();
+  }, [currentRepository, currentBranch, getBranchesWithDates]);
+
+  const formatBranchDate = (dateString) => {
+    if (!dateString) return 'No commits';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
 
   const handleFileSelect = useCallback((file) => {
     setSelectedFile(file);
@@ -255,7 +301,7 @@ function GitClient() {
             key="changes"
           >
             <Row gutter={16}>
-              <Col span={showSidebar ? 8 : 0}>
+              <Col span={showFileList ? 8 : 0}>
                 <Card
                   title="Files"
                   size="small"
@@ -263,7 +309,7 @@ function GitClient() {
                   extra={
                     <Button
                       icon={<MenuOutlined />}
-                      onClick={() => setShowSidebar(!showSidebar)}
+                      onClick={() => setShowFileList(!showFileList)}
                       size="small"
                     />
                   }
@@ -272,16 +318,14 @@ function GitClient() {
                 </Card>
               </Col>
               
-              <Col span={showSidebar ? 16 : 24}>
+              <Col span={showFileList ? 16 : 24}>
                 {selectedFile ? (
                   <div className="file-content">
                     <EnhancedDiffViewer
                       file={selectedFile}
                       theme={theme}
                       showFileSelector={false}
-                      onStageHunk={handleStagingChange}
-                      onUnstageHunk={handleStagingChange}
-                      showStagingControls={true}
+                      showStagingControls={false}
                     />
                   </div>
                 ) : (
@@ -315,30 +359,6 @@ function GitClient() {
             ) : (
               <Empty
                 description="Select a file to edit"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            )}
-          </TabPane>
-
-          <TabPane
-            tab={
-              <Space>
-                <PlusOutlined />
-                Staging
-                <Badge count={stagedFiles?.length || 0} />
-              </Space>
-            }
-            key="staging"
-          >
-            {selectedFile ? (
-              <ChunkStaging
-                file={selectedFile}
-                onStagingChange={handleStagingChange}
-                showPreview={true}
-              />
-            ) : (
-              <Empty
-                description="Select a file to stage changes"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               />
             )}
@@ -384,24 +404,127 @@ function GitClient() {
     );
   };
 
+  const handleRepositoryChange = async (repoPath) => {
+    try {
+      await switchRepository(repoPath);
+      await refreshRepositoryStatus();
+    } catch (error) {
+      console.error('Failed to switch repository:', error);
+    }
+  };
+
+  const handleBranchChange = async (branchName) => {
+    try {
+      await switchBranch(branchName);
+      await refreshRepositoryStatus();
+    } catch (error) {
+      console.error('Failed to switch branch:', error);
+    }
+  };
+
   const renderHeader = () => {
     return (
       <Header className="git-client-header">
         <div className="header-left">
-          <Space>
-            <CodeOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
-            <Title level={3} style={{ margin: 0, color: '#fff' }}>
-              Git Client
+          <Space size="middle" style={{ width: '100%' }}>
+            <CodeOutlined style={{ fontSize: '24px', color: '#fff' }} />
+            <Title level={4} style={{ margin: 0, color: '#fff' }}>
+              Git
             </Title>
-            {currentRepository && (
-              <Tag color="blue" style={{ marginLeft: 16 }}>
-                {currentRepository.split('/').pop()}
-              </Tag>
+            
+            {/* Repository Selector */}
+            {currentRepository || (repositories && repositories.length > 0) ? (
+              <Dropdown
+                menu={{
+                  items: [
+                    ...(repositories || []).map(repo => ({
+                      key: repo.path,
+                      label: (
+                        <Space>
+                          <GitlabOutlined />
+                          <span>{repo.name}</span>
+                          {repo.path === currentRepository && (
+                            <Tag color="blue" size="small">Active</Tag>
+                          )}
+                        </Space>
+                      ),
+                      onClick: () => handleRepositoryChange(repo.path)
+                    })),
+                    { type: 'divider' },
+                    {
+                      key: 'add-repo',
+                      label: (
+                        <Space>
+                          <PlusOutlined />
+                          <span>Add Repository</span>
+                        </Space>
+                      ),
+                      onClick: async () => {
+                        try {
+                          await selectRepository();
+                          await refreshRepositoryStatus();
+                        } catch (error) {
+                          console.error('Failed to add repository:', error);
+                        }
+                      }
+                    }
+                  ]
+                }}
+                trigger={['click']}
+              >
+                <Button
+                  type="text"
+                  style={{ color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}
+                  icon={<GitlabOutlined />}
+                >
+                  {currentRepository 
+                    ? currentRepository.split('/').pop() 
+                    : 'Select Repository'}
+                </Button>
+              </Dropdown>
+            ) : (
+              <Button
+                type="primary"
+                icon={<FolderOpenOutlined />}
+                onClick={async () => {
+                  try {
+                    await selectRepository();
+                    await refreshRepositoryStatus();
+                  } catch (error) {
+                    console.error('Failed to add repository:', error);
+                  }
+                }}
+                loading={isLoading}
+              >
+                Add Repository
+              </Button>
             )}
-            {currentBranch && (
-              <Tag icon={<BranchesOutlined />} color="green">
-                {currentBranch}
-              </Tag>
+
+            {/* Branch Selector */}
+            {currentRepository && (
+              <Select
+                value={currentBranch}
+                onChange={handleBranchChange}
+                loading={loadingBranches}
+                style={{ minWidth: 200 }}
+                placeholder="Select branch"
+                suffixIcon={<BranchesOutlined style={{ color: '#fff' }} />}
+                dropdownStyle={{ color: '#000' }}
+              >
+                {branchesWithDates.map(branch => (
+                  <Option key={branch.name} value={branch.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Space>
+                        {branch.isCurrent && <Tag color="green" size="small">Current</Tag>}
+                        <Text strong={branch.isCurrent}>{branch.name}</Text>
+                      </Space>
+                      <Text type="secondary" style={{ fontSize: '11px', marginLeft: 8 }}>
+                        {formatBranchDate(branch.lastCommitDate)}
+                      </Text>
+                    </div>
+                  </Option>
+                ))}
+              </Select>
             )}
           </Space>
         </div>
@@ -411,7 +534,11 @@ function GitClient() {
             <Tooltip title="Refresh">
               <Button
                 icon={<ReloadOutlined />}
-                onClick={() => window.location.reload()}
+                onClick={async () => {
+                  await refreshRepositoryStatus();
+                  const branchesData = await getBranchesWithDates();
+                  setBranchesWithDates(branchesData || []);
+                }}
                 loading={operationInProgress}
                 type="text"
                 style={{ color: '#fff' }}
@@ -460,58 +587,6 @@ function GitClient() {
     );
   };
 
-  const renderSidebar = () => {
-    return (
-      <Sider
-        width={300}
-        className="git-client-sidebar"
-        collapsible
-        collapsed={!showSidebar}
-        onCollapse={setShowSidebar}
-      >
-        <div className="sidebar-content">
-          <RepositoryManager compact={true} />
-          
-          <Divider />
-          
-          <Card
-            title="Repository Status"
-            size="small"
-            className="status-card"
-          >
-            {repositoryStatus ? (
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <div className="status-item">
-                  <Text strong>Branch:</Text>
-                  <Tag color="green">{repositoryStatus.currentBranch}</Tag>
-                </div>
-                <div className="status-item">
-                  <Text strong>Staged:</Text>
-                  <Badge count={stagedFiles?.length || 0} />
-                </div>
-                <div className="status-item">
-                  <Text strong>Modified:</Text>
-                  <Badge count={modifiedFiles?.length || 0} />
-                </div>
-                <div className="status-item">
-                  <Text strong>New:</Text>
-                  <Badge count={untrackedFiles?.length || 0} />
-                </div>
-                {conflictedFiles && conflictedFiles.length > 0 && (
-                  <div className="status-item">
-                    <Text strong>Conflicts:</Text>
-                    <Badge count={conflictedFiles.length} style={{ backgroundColor: '#ff4d4f' }} />
-                  </div>
-                )}
-              </Space>
-            ) : (
-              <Text type="secondary">No status available</Text>
-            )}
-          </Card>
-        </div>
-      </Sider>
-    );
-  };
 
   return (
     <div className="git-client">
@@ -519,8 +594,6 @@ function GitClient() {
         {renderHeader()}
         
         <Layout>
-          {renderSidebar()}
-          
           <Content className="git-client-content">
             <Spin spinning={isLoading}>
               {lastError && (

@@ -305,6 +305,16 @@ export function GitProvider({ children }) {
     }
   }, [handleError, showSuccess]);
 
+  const getBranchesWithDates = useCallback(async () => {
+    try {
+      const branches = await ipcRenderer.invoke('git:getBranchesWithDates');
+      return branches;
+    } catch (error) {
+      handleError(error, 'get branches with dates');
+      throw error;
+    }
+  }, [handleError]);
+
   const stageFiles = useCallback(async (files) => {
     try {
       dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
@@ -625,6 +635,7 @@ export function GitProvider({ children }) {
     createBranch,
     switchBranch,
     deleteBranch,
+    getBranchesWithDates,
     stageFiles,
     unstageFiles,
     commit,

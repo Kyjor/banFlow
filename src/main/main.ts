@@ -746,6 +746,14 @@ ipcMain.handle('git:deleteBranch', async (event, branchName, force) => {
   }
 });
 
+ipcMain.handle('git:getBranchesWithDates', async () => {
+  try {
+    return await gitService.getBranchesWithDates();
+  } catch (error) {
+    throw error;
+  }
+});
+
 ipcMain.handle('git:stageFiles', async (event, files) => {
   try {
     return await gitService.stageFiles(files);

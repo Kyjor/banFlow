@@ -26,6 +26,49 @@
           .diff-content {
             max-height: 500px;
             overflow-y: auto;
+
+            .diff-line {
+              display: flex;
+              align-items: center;
+              min-height: 20px;
+              font-size: 13px;
+              line-height: 20px;
+              transition: background 0.2s;
+
+              &:hover {
+                background: #f9f9f9;
+              }
+
+              &.diff-line-added {
+                background: #f6ffed;
+
+                .line-number {
+                  background: #d9f7be;
+                  border-right: 1px solid #b7eb8f;
+                }
+              }
+
+              &.diff-line-deleted {
+                background: #fff2f0;
+
+                .line-number {
+                  background: #ffccc7;
+                  border-right: 1px solid #ffa39e;
+                }
+              }
+
+              &.diff-line-context {
+                background: #fff;
+              }
+
+              &.diff-line-empty {
+                background: #f5f5f5;
+
+                .line-number {
+                  background: #e8e8e8;
+                }
+              }
+            }
           }
         }
       }
@@ -81,17 +124,32 @@
                 background: #fff;
               }
 
-              .line-prefix {
-                width: 20px;
-                text-align: center;
-                font-weight: bold;
-                color: #666;
-                margin-right: 8px;
-              }
-
               .line-content {
+                display: flex;
+                align-items: center;
                 flex: 1;
                 overflow-x: auto;
+
+                .line-number {
+                  min-width: 80px;
+                  padding: 0 8px;
+                  background: #f8f8f8;
+                  border-right: 1px solid #e8e8e8;
+                  color: #666;
+                  text-align: right;
+                  user-select: none;
+                  font-size: 11px;
+                  font-family: monospace;
+                  margin-right: 8px;
+                }
+
+                .line-prefix {
+                  width: 20px;
+                  text-align: center;
+                  font-weight: bold;
+                  color: #666;
+                  margin-right: 8px;
+                }
               }
 
               .staging-controls {
@@ -138,6 +196,48 @@
           .diff-pane-header {
             background: #1f1f1f;
             border-color: #303030;
+          }
+
+          .diff-content {
+            .diff-line {
+              border-bottom: 1px solid #262626;
+
+              &:hover {
+                background: #2a2a2a;
+              }
+
+              &.diff-line-added {
+                background: #162312;
+
+                .line-number {
+                  background: #274916;
+                  border-right-color: #274916;
+                  color: #52c41a;
+                }
+              }
+
+              &.diff-line-deleted {
+                background: #2a1215;
+
+                .line-number {
+                  background: #58181c;
+                  border-right-color: #58181c;
+                  color: #ff4d4f;
+                }
+              }
+
+              &.diff-line-context {
+                background: #141414;
+              }
+
+              &.diff-line-empty {
+                background: #0f0f0f;
+
+                .line-number {
+                  background: #262626;
+                }
+              }
+            }
           }
         }
       }
