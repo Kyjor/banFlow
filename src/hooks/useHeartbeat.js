@@ -35,19 +35,13 @@ export function useHeartbeat(name, callback, intervalMs, options = {}) {
     }
 
     if (!enabled) {
-      console.debug(`[useHeartbeat] "${name}" disabled`);
       return;
     }
-
-    console.debug(`[useHeartbeat] Registering "${name}" with interval ${intervalMs}ms`);
 
     // Register heartbeat with wrapper that uses current callback
     heartbeatIdRef.current = heartbeatService.register(
       name,
-      () => {
-        console.debug(`[useHeartbeat] "${name}" tick`);
-        callbackRef.current();
-      },
+      () => callbackRef.current(),
       intervalMs,
       { immediate }
     );
@@ -55,7 +49,6 @@ export function useHeartbeat(name, callback, intervalMs, options = {}) {
     // Cleanup on unmount or when dependencies change
     return () => {
       if (heartbeatIdRef.current !== null) {
-        console.debug(`[useHeartbeat] Unregistering "${name}"`);
         heartbeatService.unregister(heartbeatIdRef.current);
         heartbeatIdRef.current = null;
       }

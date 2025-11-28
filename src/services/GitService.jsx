@@ -654,6 +654,318 @@ export default class GitService {
     }
   }
 
+  // Stage a specific hunk from a file
+  async stageHunk(filePath, hunkIndex) {
+    try {
+      if (!this.git) throw new Error('No repository selected');
+      
+      // Get the diff for the file
+      const diff = await this.git.diff(['--', filePath]);
+      const hunks = this.extractHunksFromDiff(diff);
+      
+      if (hunkIndex >= hunks.length) {
+        throw new Error(`Hunk index ${hunkIndex} out of range (${hunks.length} hunks)`);
+      }
+      
+      // Create a patch for just this hunk
+      const patch = this.createPatchFromHunk(filePath, hunks[hunkIndex], diff);
+      
+      // Apply the patch to the index
+      await this.applyPatchToIndex(patch);
+      
+      return {
+        success: true,
+        message: `Staged hunk ${hunkIndex + 1} of ${hunks.length}`,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error staging hunk:', error);
+      throw error;
+    }
+  }
+
+  // Discard a specific hunk from a file
+  async discardHunk(filePath, hunkIndex) {
+    try {
+      if (!this.git) throw new Error('No repository selected');
+      
+      // Get the diff for the file
+      const diff = await this.git.diff(['--', filePath]);
+      const hunks = this.extractHunksFromDiff(diff);
+      
+      if (hunkIndex >= hunks.length) {
+        throw new Error(`Hunk index ${hunkIndex} out of range (${hunks.length} hunks)`);
+      }
+      
+      // Create a reverse patch for just this hunk
+      const patch = this.createPatchFromHunk(filePath, hunks[hunkIndex], diff);
+      
+      // Apply the reverse patch to the working directory
+      await this.applyPatchToWorkingDir(patch, true);
+      
+      return {
+        success: true,
+        message: `Discarded hunk ${hunkIndex + 1} of ${hunks.length}`,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error discarding hunk:', error);
+      throw error;
+    }
+  }
+
+  // Stage specific lines from a hunk
+  async stageLines(filePath, hunkIndex, lineIndices) {
+    try {
+      if (!this.git) throw new Error('No repository selected');
+      
+      // Get the diff for the file
+      const diff = await this.git.diff(['--', filePath]);
+      const hunks = this.extractHunksFromDiff(diff);
+      
+      if (hunkIndex >= hunks.length) {
+        throw new Error(`Hunk index ${hunkIndex} out of range`);
+      }
+      
+      // Create a patch with only the selected lines
+      const patch = this.createPatchFromLines(filePath, hunks[hunkIndex], lineIndices, diff);
+      
+      // Apply the patch to the index
+      await this.applyPatchToIndex(patch);
+      
+      return {
+        success: true,
+        message: `Staged ${lineIndices.length} line(s)`,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error staging lines:', error);
+      throw error;
+    }
+  }
+
+  // Discard specific lines from a hunk
+  async discardLines(filePath, hunkIndex, lineIndices) {
+    try {
+      if (!this.git) throw new Error('No repository selected');
+      
+      // Get the diff for the file
+      const diff = await this.git.diff(['--', filePath]);
+      const hunks = this.extractHunksFromDiff(diff);
+      
+      if (hunkIndex >= hunks.length) {
+        throw new Error(`Hunk index ${hunkIndex} out of range`);
+      }
+      
+      // Create a patch with only the selected lines
+      const patch = this.createPatchFromLines(filePath, hunks[hunkIndex], lineIndices, diff);
+      
+      // Apply the reverse patch to the working directory
+      await this.applyPatchToWorkingDir(patch, true);
+      
+      return {
+        success: true,
+        message: `Discarded ${lineIndices.length} line(s)`,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error discarding lines:', error);
+      throw error;
+    }
+  }
+
+  // Apply an arbitrary patch
+  async applyPatch(patchContent, options = {}) {
+    try {
+      if (!this.git) throw new Error('No repository selected');
+      
+      const { cached = false, reverse = false } = options;
+      
+      if (cached) {
+        await this.applyPatchToIndex(patchContent, reverse);
+      } else {
+        await this.applyPatchToWorkingDir(patchContent, reverse);
+      }
+      
+      return {
+        success: true,
+        message: 'Patch applied successfully',
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error applying patch:', error);
+      throw error;
+    }
+  }
+
+  // Helper: Extract hunks from raw diff output
+  extractHunksFromDiff(diffString) {
+    const hunks = [];
+    const lines = diffString.split('\n');
+    let currentHunk = null;
+    let headerInfo = { aFile: '', bFile: '' };
+    
+    for (const line of lines) {
+      // Capture file headers
+      if (line.startsWith('--- ')) {
+        headerInfo.aFile = line;
+      } else if (line.startsWith('+++ ')) {
+        headerInfo.bFile = line;
+      } else if (line.startsWith('@@')) {
+        if (currentHunk) {
+          hunks.push(currentHunk);
+        }
+        currentHunk = {
+          header: line,
+          lines: [line],
+          aFile: headerInfo.aFile,
+          bFile: headerInfo.bFile
+        };
+      } else if (currentHunk) {
+        currentHunk.lines.push(line);
+      }
+    }
+    
+    if (currentHunk) {
+      hunks.push(currentHunk);
+    }
+    
+    return hunks;
+  }
+
+  // Helper: Create a patch from a single hunk
+  createPatchFromHunk(filePath, hunk, fullDiff) {
+    const lines = fullDiff.split('\n');
+    let header = '';
+    
+    // Find the diff header (everything before first @@)
+    for (const line of lines) {
+      if (line.startsWith('@@')) break;
+      header += line + '\n';
+    }
+    
+    return header + hunk.lines.join('\n') + '\n';
+  }
+
+  // Helper: Create a patch from specific lines within a hunk
+  createPatchFromLines(filePath, hunk, lineIndices, fullDiff) {
+    const lines = fullDiff.split('\n');
+    let header = '';
+    
+    // Find the diff header
+    for (const line of lines) {
+      if (line.startsWith('@@')) break;
+      header += line + '\n';
+    }
+    
+    // Parse hunk header to get line numbers
+    const hunkHeaderMatch = hunk.header.match(/@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@/);
+    if (!hunkHeaderMatch) {
+      throw new Error('Invalid hunk header format');
+    }
+    
+    const oldStart = parseInt(hunkHeaderMatch[1]);
+    const newStart = parseInt(hunkHeaderMatch[3]);
+    
+    // Build new hunk with only selected changed lines (keep context)
+    const lineIndicesSet = new Set(lineIndices);
+    const newLines = [];
+    let oldCount = 0;
+    let newCount = 0;
+    
+    hunk.lines.forEach((line, idx) => {
+      if (idx === 0) return; // Skip hunk header
+      
+      const firstChar = line[0];
+      
+      if (firstChar === ' ' || firstChar === undefined) {
+        // Context line - always include
+        newLines.push(line);
+        oldCount++;
+        newCount++;
+      } else if (firstChar === '-') {
+        if (lineIndicesSet.has(idx)) {
+          // Include this deletion
+          newLines.push(line);
+          oldCount++;
+        } else {
+          // Convert to context line
+          newLines.push(' ' + line.substring(1));
+          oldCount++;
+          newCount++;
+        }
+      } else if (firstChar === '+') {
+        if (lineIndicesSet.has(idx)) {
+          // Include this addition
+          newLines.push(line);
+          newCount++;
+        }
+        // If not selected, just skip the line
+      }
+    });
+    
+    // Create new hunk header
+    const newHeader = `@@ -${oldStart},${oldCount} +${newStart},${newCount} @@`;
+    
+    return header + newHeader + '\n' + newLines.join('\n') + '\n';
+  }
+
+  // Helper: Apply patch to index (staging area)
+  async applyPatchToIndex(patchContent, reverse = false) {
+    const { execSync } = require('child_process');
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    
+    // Write patch to temp file
+    const tempFile = path.join(os.tmpdir(), `git-patch-${Date.now()}.patch`);
+    fs.writeFileSync(tempFile, patchContent);
+    
+    try {
+      const args = ['apply', '--cached'];
+      if (reverse) args.push('--reverse');
+      args.push(tempFile);
+      
+      execSync(`git ${args.join(' ')}`, {
+        cwd: this.currentRepo,
+        encoding: 'utf-8'
+      });
+    } finally {
+      // Clean up temp file
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+    }
+  }
+
+  // Helper: Apply patch to working directory
+  async applyPatchToWorkingDir(patchContent, reverse = false) {
+    const { execSync } = require('child_process');
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    
+    // Write patch to temp file
+    const tempFile = path.join(os.tmpdir(), `git-patch-${Date.now()}.patch`);
+    fs.writeFileSync(tempFile, patchContent);
+    
+    try {
+      const args = ['apply'];
+      if (reverse) args.push('--reverse');
+      args.push(tempFile);
+      
+      execSync(`git ${args.join(' ')}`, {
+        cwd: this.currentRepo,
+        encoding: 'utf-8'
+      });
+    } finally {
+      // Clean up temp file
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile);
+      }
+    }
+  }
+
   // Delete untracked files
   async deleteUntrackedFiles(files) {
     try {

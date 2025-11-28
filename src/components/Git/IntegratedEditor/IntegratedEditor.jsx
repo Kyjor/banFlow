@@ -91,8 +91,6 @@ function IntegratedEditor({
   const [isFileStaged, setIsFileStaged] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [diffMode, setDiffMode] = useState('inline'); // 'inline', 'side-by-side'
-  const [lastCheckTime, setLastCheckTime] = useState(null); // Debug: track last heartbeat check
-  const [checkCount, setCheckCount] = useState(0); // Debug: track number of checks
   
   const editorRef = useRef(null);
   const autoSaveTimeoutRef = useRef(null);
@@ -124,42 +122,20 @@ function IntegratedEditor({
   const checkForExternalChanges = async () => {
     const state = stateRefs.current;
     
-    // Update debug state
-    setLastCheckTime(new Date().toLocaleTimeString());
-    setCheckCount(prev => prev + 1);
-    
-    console.log('[Editor] checkForExternalChanges called', {
-      selectedFile: state.selectedFile,
-      currentRepository: state.currentRepository,
-      hasUnsavedChanges: state.hasUnsavedChanges,
-      isReloading: isReloadingRef.current,
-      lastContentLength: lastFileContentRef.current?.length
-    });
-    
     if (!state.selectedFile || !state.currentRepository || isReloadingRef.current) {
-      console.log('[Editor] Skipping check - missing file/repo or already reloading');
       return;
     }
 
     // Only check if we don't have unsaved changes (to avoid losing work)
     if (state.hasUnsavedChanges) {
-      console.log('[Editor] Skipping check - has unsaved changes');
       return;
     }
 
     try {
-      console.log('[Editor] Reading file from disk:', state.selectedFile);
       const result = await ipcRenderer.invoke('git:readFile', state.currentRepository, state.selectedFile);
-      console.log('[Editor] File read result:', {
-        success: result.success,
-        contentLength: result.content?.length,
-        lastContentLength: lastFileContentRef.current?.length,
-        contentChanged: result.content !== lastFileContentRef.current
-      });
       
       if (result.success && result.content !== lastFileContentRef.current) {
         // File has changed externally, reload it
-        console.log('[Editor] FILE CHANGED! Reloading...');
         isReloadingRef.current = true;
         setFileContent(result.content);
         setOriginalContent(result.content);
@@ -169,33 +145,22 @@ function IntegratedEditor({
         setRedoStack([]);
         message.info(`File "${state.selectedFile}" has been updated externally`);
         isReloadingRef.current = false;
-      } else {
-        console.log('[Editor] No changes detected');
       }
     } catch (error) {
-      console.error('[Editor] Failed to check file for external changes:', error);
+      console.error('Failed to check file for external changes:', error);
       isReloadingRef.current = false;
     }
   };
 
-  // Debug: log heartbeat state
+  // Use heartbeat to periodically check for external file changes
   const heartbeatEnabled = !!selectedFile && !!currentRepository && !hasUnsavedChanges;
-  console.log('[Editor] Heartbeat config:', {
-    name: `editor-file-check-${selectedFile || 'none'}`,
-    enabled: heartbeatEnabled,
-    selectedFile,
-    currentRepository,
-    hasUnsavedChanges
-  });
-
-  // Use heartbeat to periodically check for external file changes (every 2 seconds)
   useHeartbeat(
     `editor-file-check-${selectedFile || 'none'}`,
     checkForExternalChanges,
-    2000, // Check every 2 seconds
+    2000,
     {
       enabled: heartbeatEnabled,
-      immediate: true // Run immediately when enabled
+      immediate: true
     }
   );
 
@@ -661,15 +626,6 @@ function IntegratedEditor({
             {hasUnsavedChanges && (
               <Tag color="orange">Unsaved changes</Tag>
             )}
-            {/* Debug: Heartbeat status */}
-            <Tag color={heartbeatEnabled ? 'green' : 'red'}>
-              HB: {heartbeatEnabled ? 'ON' : 'OFF'}
-            </Tag>
-            {lastCheckTime && (
-              <Tag color="blue">
-                Checks: {checkCount} | Last: {lastCheckTime}
-              </Tag>
-            )}
           </Space>
         </div>
       </div>
@@ -788,41 +744,12 @@ function IntegratedEditor({
                 size="small"
               />
             </Tooltip>
-            <Tooltip title="Force reload from disk">
+            <Tooltip title="Reload from disk">
               <Button
                 icon={<ReloadOutlined />}
-                onClick={async () => {
-                  console.log('[Editor] Manual reload triggered');
-                  if (selectedFile && currentRepository) {
-                    try {
-                      const result = await ipcRenderer.invoke('git:readFile', currentRepository, selectedFile);
-                      console.log('[Editor] Manual reload result:', result);
-                      if (result.success) {
-                        setFileContent(result.content);
-                        setOriginalContent(result.content);
-                        lastFileContentRef.current = result.content;
-                        setHasUnsavedChanges(false);
-                        message.success('File reloaded from disk');
-                      }
-                    } catch (error) {
-                      console.error('[Editor] Manual reload error:', error);
-                      message.error('Failed to reload file');
-                    }
-                  }
-                }}
+                onClick={() => loadFileContent(selectedFile)}
                 size="small"
               />
-            </Tooltip>
-            <Tooltip title="Test heartbeat">
-              <Button
-                onClick={() => {
-                  console.log('[Editor] Manual heartbeat test');
-                  checkForExternalChanges();
-                }}
-                size="small"
-              >
-                Test HB
-              </Button>
             </Tooltip>
           </Space>
         }

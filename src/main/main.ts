@@ -982,14 +982,12 @@ ipcMain.handle('git:cleanUntrackedFiles', async (event, dryRun) => {
 
 // File Editor Operations
 ipcMain.handle('git:readFile', async (event, repoPath, filePath) => {
-  console.log('[IPC git:readFile] Reading file:', repoPath, filePath);
   try {
     const fs = require('fs');
     const path = require('path');
     
     // Resolve file path relative to repository root
     const fullPath = path.join(repoPath, filePath);
-    console.log('[IPC git:readFile] Full path:', fullPath);
     
     // Check if file exists
     if (!fs.existsSync(fullPath)) {
@@ -998,14 +996,13 @@ ipcMain.handle('git:readFile', async (event, repoPath, filePath) => {
     
     // Read file content
     const content = fs.readFileSync(fullPath, 'utf-8');
-    console.log('[IPC git:readFile] Read', content.length, 'bytes');
     return {
       success: true,
       content: content,
       path: fullPath
     };
   } catch (error) {
-    console.error('[IPC git:readFile] Error:', error);
+    console.error('Error reading file:', error);
     throw error;
   }
 });
@@ -1034,6 +1031,52 @@ ipcMain.handle('git:writeFile', async (event, repoPath, filePath, content) => {
     };
   } catch (error) {
     console.error('Error writing file:', error);
+    throw error;
+  }
+});
+
+// Partial Staging Operations (Hunk/Line level)
+ipcMain.handle('git:stageHunk', async (event, filePath, hunkIndex) => {
+  try {
+    return await gitService.stageHunk(filePath, hunkIndex);
+  } catch (error) {
+    console.error('Error staging hunk:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:discardHunk', async (event, filePath, hunkIndex) => {
+  try {
+    return await gitService.discardHunk(filePath, hunkIndex);
+  } catch (error) {
+    console.error('Error discarding hunk:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:stageLines', async (event, filePath, hunkIndex, lineIndices) => {
+  try {
+    return await gitService.stageLines(filePath, hunkIndex, lineIndices);
+  } catch (error) {
+    console.error('Error staging lines:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:discardLines', async (event, filePath, hunkIndex, lineIndices) => {
+  try {
+    return await gitService.discardLines(filePath, hunkIndex, lineIndices);
+  } catch (error) {
+    console.error('Error discarding lines:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:applyPatch', async (event, patchContent, options = {}) => {
+  try {
+    return await gitService.applyPatch(patchContent, options);
+  } catch (error) {
+    console.error('Error applying patch:', error);
     throw error;
   }
 });

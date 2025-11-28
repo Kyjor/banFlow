@@ -687,6 +687,67 @@ export function GitProvider({ children }) {
     }
   }, [handleError, showSuccess]);
 
+  // Hunk/Line level staging operations
+  const stageHunk = useCallback(async (filePath, hunkIndex) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:stageHunk', filePath, hunkIndex);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Hunk staged', result.message);
+      return result;
+    } catch (error) {
+      handleError(error, 'stage hunk');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
+  const discardHunk = useCallback(async (filePath, hunkIndex) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:discardHunk', filePath, hunkIndex);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Hunk discarded', result.message);
+      return result;
+    } catch (error) {
+      handleError(error, 'discard hunk');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
+  const stageLines = useCallback(async (filePath, hunkIndex, lineIndices) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:stageLines', filePath, hunkIndex, lineIndices);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Lines staged', result.message);
+      return result;
+    } catch (error) {
+      handleError(error, 'stage lines');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
+  const discardLines = useCallback(async (filePath, hunkIndex, lineIndices) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:discardLines', filePath, hunkIndex, lineIndices);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Lines discarded', result.message);
+      return result;
+    } catch (error) {
+      handleError(error, 'discard lines');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
   // Context Value
   const contextValue = {
     // State
@@ -735,6 +796,12 @@ export function GitProvider({ children }) {
     discardChanges,
     deleteUntrackedFiles,
     cleanUntrackedFiles,
+    
+    // Hunk/Line Staging Operations
+    stageHunk,
+    discardHunk,
+    stageLines,
+    discardLines,
     
     // Utility Functions
     clearError: () => dispatch({ type: GitActionTypes.CLEAR_ERROR })

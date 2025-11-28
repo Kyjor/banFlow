@@ -340,7 +340,7 @@ function GitClient() {
                       file={selectedFile}
                       theme={theme}
                       showFileSelector={false}
-                      showStagingControls={false}
+                      showStagingControls={true}
                     />
                   </div>
                 ) : (

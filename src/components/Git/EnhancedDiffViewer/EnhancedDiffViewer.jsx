@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { ipcRenderer } from 'electron';
 import { 
   Card, 
   Select, 
@@ -18,7 +19,8 @@ import {
   Badge,
   Progress,
   Alert,
-  Input
+  Input,
+  message
 } from 'antd';
 import {
   FileTextOutlined,
@@ -34,7 +36,11 @@ import {
   BookOutlined,
   InfoCircleOutlined,
   CaretRightOutlined,
-  CaretDownOutlined
+  CaretDownOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  UndoOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -51,9 +57,8 @@ function EnhancedDiffViewer({
   compact = false,
   showFileSelector = true,
   theme = 'light',
-  onStageHunk = null,
-  onUnstageHunk = null,
-  showStagingControls = false
+  showStagingControls = true,
+  editable = false
 }) {
   const {
     currentRepository,
@@ -61,7 +66,15 @@ function EnhancedDiffViewer({
     modifiedFiles,
     stagedFiles,
     getDiff,
-    isLoading
+    isLoading,
+    operationInProgress,
+    stageFiles,
+    unstageFiles,
+    discardChanges,
+    stageHunk,
+    discardHunk,
+    stageLines,
+    discardLines
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -76,6 +89,12 @@ function EnhancedDiffViewer({
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [highlightChanges, setHighlightChanges] = useState(true);
   const [selectedHunk, setSelectedHunk] = useState(null);
+  const [selectedLines, setSelectedLines] = useState(new Set());
+  const [editMode, setEditMode] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const [originalFileContent, setOriginalFileContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const editorRef = useRef(null);
 
   // Sync selectedFile with file prop when it changes
   useEffect(() => {
@@ -102,7 +121,6 @@ function EnhancedDiffViewer({
 
   const loadDiff = async (filename) => {
     try {
-      console.log('[DiffViewer] Loading diff for:', filename);
       await getDiff(filename, staged);
     } catch (error) {
       console.error('Failed to load diff:', error);
@@ -114,7 +132,6 @@ function EnhancedDiffViewer({
     `diff-viewer-refresh-${selectedFile || 'none'}`,
     () => {
       if (selectedFile && currentRepository) {
-        console.log('[DiffViewer] Heartbeat refresh for:', selectedFile);
         loadDiff(selectedFile);
       }
     },
@@ -181,6 +198,198 @@ function EnhancedDiffViewer({
     });
   }, []);
 
+  // Toggle line selection for batch operations
+  const toggleLineSelection = useCallback((hunkIndex, lineIndex) => {
+    const key = `${hunkIndex}-${lineIndex}`;
+    setSelectedLines(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Clear line selection
+  const clearLineSelection = useCallback(() => {
+    setSelectedLines(new Set());
+  }, []);
+
+  // Stage file handler
+  const handleStageFile = useCallback(async () => {
+    if (!selectedFile) return;
+    try {
+      await stageFiles([selectedFile]);
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to stage file:', error);
+    }
+  }, [selectedFile, stageFiles, loadDiff]);
+
+  // Unstage file handler
+  const handleUnstageFile = useCallback(async () => {
+    if (!selectedFile) return;
+    try {
+      await unstageFiles([selectedFile]);
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to unstage file:', error);
+    }
+  }, [selectedFile, unstageFiles, loadDiff]);
+
+  // Discard file handler
+  const handleDiscardFile = useCallback(async () => {
+    if (!selectedFile) return;
+    try {
+      await discardChanges([selectedFile]);
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to discard file:', error);
+    }
+  }, [selectedFile, discardChanges, loadDiff]);
+
+  // Stage hunk handler
+  const handleStageHunk = useCallback(async (hunkIndex) => {
+    if (!selectedFile) return;
+    try {
+      await stageHunk(selectedFile, hunkIndex);
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to stage hunk:', error);
+    }
+  }, [selectedFile, stageHunk, loadDiff]);
+
+  // Discard hunk handler
+  const handleDiscardHunk = useCallback(async (hunkIndex) => {
+    if (!selectedFile) return;
+    try {
+      await discardHunk(selectedFile, hunkIndex);
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to discard hunk:', error);
+    }
+  }, [selectedFile, discardHunk, loadDiff]);
+
+  // Stage selected lines handler
+  const handleStageSelectedLines = useCallback(async () => {
+    if (!selectedFile || selectedLines.size === 0) return;
+    
+    // Group selected lines by hunk
+    const hunkGroups = {};
+    selectedLines.forEach(key => {
+      const [hunkIndex, lineIndex] = key.split('-').map(Number);
+      if (!hunkGroups[hunkIndex]) {
+        hunkGroups[hunkIndex] = [];
+      }
+      hunkGroups[hunkIndex].push(lineIndex);
+    });
+    
+    try {
+      // Stage lines for each hunk
+      for (const [hunkIndex, lineIndices] of Object.entries(hunkGroups)) {
+        await stageLines(selectedFile, parseInt(hunkIndex), lineIndices);
+      }
+      clearLineSelection();
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to stage lines:', error);
+    }
+  }, [selectedFile, selectedLines, stageLines, clearLineSelection, loadDiff]);
+
+  // Discard selected lines handler
+  const handleDiscardSelectedLines = useCallback(async () => {
+    if (!selectedFile || selectedLines.size === 0) return;
+    
+    // Group selected lines by hunk
+    const hunkGroups = {};
+    selectedLines.forEach(key => {
+      const [hunkIndex, lineIndex] = key.split('-').map(Number);
+      if (!hunkGroups[hunkIndex]) {
+        hunkGroups[hunkIndex] = [];
+      }
+      hunkGroups[hunkIndex].push(lineIndex);
+    });
+    
+    try {
+      // Discard lines for each hunk
+      for (const [hunkIndex, lineIndices] of Object.entries(hunkGroups)) {
+        await discardLines(selectedFile, parseInt(hunkIndex), lineIndices);
+      }
+      clearLineSelection();
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to discard lines:', error);
+    }
+  }, [selectedFile, selectedLines, discardLines, clearLineSelection, loadDiff]);
+
+  // Stage single line handler
+  const handleStageLine = useCallback(async (hunkIndex, lineIndex) => {
+    if (!selectedFile) return;
+    try {
+      await stageLines(selectedFile, hunkIndex, [lineIndex]);
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to stage line:', error);
+    }
+  }, [selectedFile, stageLines, loadDiff]);
+
+  // Discard single line handler
+  const handleDiscardLine = useCallback(async (hunkIndex, lineIndex) => {
+    if (!selectedFile) return;
+    try {
+      await discardLines(selectedFile, hunkIndex, [lineIndex]);
+      loadDiff(selectedFile);
+    } catch (error) {
+      console.error('Failed to discard line:', error);
+    }
+  }, [selectedFile, discardLines, loadDiff]);
+
+  // Load file content for editing
+  const loadFileForEditing = useCallback(async () => {
+    if (!selectedFile || !currentRepository) return;
+    try {
+      const result = await ipcRenderer.invoke('git:readFile', currentRepository, selectedFile);
+      if (result.success) {
+        setEditedContent(result.content);
+        setOriginalFileContent(result.content);
+        setEditMode(true);
+      }
+    } catch (error) {
+      console.error('Failed to load file for editing:', error);
+      message.error('Failed to load file for editing');
+    }
+  }, [selectedFile, currentRepository]);
+
+  // Save edited content
+  const handleSaveEdit = useCallback(async () => {
+    if (!selectedFile || !currentRepository) return;
+    setIsSaving(true);
+    try {
+      const result = await ipcRenderer.invoke('git:writeFile', currentRepository, selectedFile, editedContent);
+      if (result.success) {
+        message.success('File saved successfully');
+        setOriginalFileContent(editedContent);
+        loadDiff(selectedFile);
+      }
+    } catch (error) {
+      console.error('Failed to save file:', error);
+      message.error('Failed to save file');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedFile, currentRepository, editedContent, loadDiff]);
+
+  // Cancel edit mode
+  const handleCancelEdit = useCallback(() => {
+    setEditedContent(originalFileContent);
+    setEditMode(false);
+  }, [originalFileContent]);
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = editMode && editedContent !== originalFileContent;
+
   const filteredHunks = useMemo(() => {
     if (!selectedDiff || !searchTerm) return selectedDiff?.hunks || [];
     
@@ -197,30 +406,75 @@ function EnhancedDiffViewer({
     const deletedLines = hunk.lines.filter(line => line.type === 'deleted').length;
     
     return (
-      <div 
-        className="hunk-header"
-        onClick={() => toggleHunkExpansion(hunkIndex)}
-        style={{ cursor: 'pointer' }}
-      >
-        <Space>
-          {isExpanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
-          <Text code style={{ fontSize: '12px' }}>{hunk.header}</Text>
-          {addedLines > 0 && <Tag color="green" size="small">+{addedLines}</Tag>}
-          {deletedLines > 0 && <Tag color="red" size="small">-{deletedLines}</Tag>}
-        </Space>
+      <div className="hunk-header">
+        <div 
+          className="hunk-header-info"
+          onClick={() => toggleHunkExpansion(hunkIndex)}
+          style={{ cursor: 'pointer', flex: 1 }}
+        >
+          <Space>
+            {isExpanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
+            <Text code style={{ fontSize: '12px' }}>{hunk.header}</Text>
+            {addedLines > 0 && <Tag color="green" size="small">+{addedLines}</Tag>}
+            {deletedLines > 0 && <Tag color="red" size="small">-{deletedLines}</Tag>}
+          </Space>
+        </div>
+        {showStagingControls && !staged && (
+          <div className="hunk-actions" onClick={(e) => e.stopPropagation()}>
+            <Space size="small">
+              <Tooltip title="Stage this hunk">
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => handleStageHunk(hunkIndex)}
+                  loading={operationInProgress}
+                >
+                  Stage
+                </Button>
+              </Tooltip>
+              <Tooltip title="Discard this hunk">
+                <Button
+                  size="small"
+                  danger
+                  icon={<UndoOutlined />}
+                  onClick={() => handleDiscardHunk(hunkIndex)}
+                  loading={operationInProgress}
+                >
+                  Discard
+                </Button>
+              </Tooltip>
+            </Space>
+          </div>
+        )}
       </div>
     );
   };
 
   const renderLineWithStaging = (line, lineIndex, hunkIndex, oldLineNum = null, newLineNum = null) => {
-    const isSelected = selectedHunk === `${hunkIndex}-${lineIndex}`;
+    const lineKey = `${hunkIndex}-${lineIndex}`;
+    const isSelected = selectedHunk === lineKey;
+    const isLineSelected = selectedLines.has(lineKey);
+    const isChangedLine = line.type === 'added' || line.type === 'deleted';
     
     return (
       <div 
         key={lineIndex}
-        className={`diff-line diff-line-${line.type} ${isSelected ? 'selected' : ''}`}
-        onClick={() => setSelectedHunk(`${hunkIndex}-${lineIndex}`)}
+        className={`diff-line diff-line-${line.type} ${isSelected ? 'selected' : ''} ${isLineSelected ? 'line-selected' : ''}`}
+        onClick={() => setSelectedHunk(lineKey)}
       >
+        {/* Checkbox for line selection */}
+        {showStagingControls && !staged && isChangedLine && (
+          <div className="line-checkbox" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              checked={isLineSelected}
+              onChange={() => toggleLineSelection(hunkIndex, lineIndex)}
+              title="Select line for batch operations"
+            />
+          </div>
+        )}
+        
         <div className="line-content">
           {showLineNumbers && (
             <span className="line-number">
@@ -247,23 +501,30 @@ function EnhancedDiffViewer({
             {line.content.substring(1) || ' '}
           </SyntaxHighlighter>
         </div>
-        {showStagingControls && (line.type === 'added' || line.type === 'deleted') && (
-          <div className="staging-controls">
-            <Tooltip title={line.type === 'added' ? 'Stage this line' : 'Unstage this line'}>
-              <Button
-                size="small"
-                type={line.type === 'added' ? 'primary' : 'default'}
-                icon={line.type === 'added' ? <PlusOutlined /> : <MinusOutlined />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (line.type === 'added' && onStageHunk) {
-                    onStageHunk(hunkIndex, lineIndex);
-                  } else if (line.type === 'deleted' && onUnstageHunk) {
-                    onUnstageHunk(hunkIndex, lineIndex);
-                  }
-                }}
-              />
-            </Tooltip>
+        
+        {/* Line-level staging controls */}
+        {showStagingControls && !staged && isChangedLine && (
+          <div className="line-actions" onClick={(e) => e.stopPropagation()}>
+            <Space size={2}>
+              <Tooltip title="Stage this line">
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<PlusOutlined style={{ color: '#52c41a', fontSize: '12px' }} />}
+                  onClick={() => handleStageLine(hunkIndex, lineIndex)}
+                  disabled={operationInProgress}
+                />
+              </Tooltip>
+              <Tooltip title="Discard this line">
+                <Button
+                  size="small"
+                  type="text"
+                  icon={<CloseOutlined style={{ color: '#ff4d4f', fontSize: '12px' }} />}
+                  onClick={() => handleDiscardLine(hunkIndex, lineIndex)}
+                  disabled={operationInProgress}
+                />
+              </Tooltip>
+            </Space>
           </div>
         )}
       </div>
@@ -387,6 +648,82 @@ function EnhancedDiffViewer({
       });
     });
 
+    const renderSideBySideLine = (line, index, isRight = false) => {
+      const lineKey = `${line.hunkIndex}-${line.lineIndex}`;
+      const isLineSelected = selectedLines.has(lineKey);
+      const isChangedLine = line.type === 'added' || line.type === 'deleted';
+      
+      return (
+        <div
+          key={index}
+          className={`diff-line diff-line-${line.type} ${isLineSelected ? 'line-selected' : ''}`}
+          onClick={() => setSelectedHunk(lineKey)}
+        >
+          {/* Checkbox for line selection (only on deleted lines in left pane or added lines in right pane) */}
+          {showStagingControls && !staged && isChangedLine && (
+            <div className="line-checkbox" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={isLineSelected}
+                onChange={() => toggleLineSelection(line.hunkIndex, line.lineIndex)}
+                title="Select line"
+              />
+            </div>
+          )}
+          
+          {showLineNumbers && (
+            <span className="line-number">
+              {line.number || ''}
+            </span>
+          )}
+          <div className="line-content">
+            <SyntaxHighlighter
+              language={getLanguageFromFilename(selectedFile)}
+              style={theme === 'dark' ? tomorrow : prism}
+              customStyle={{
+                margin: 0,
+                padding: '0 8px',
+                background: 'transparent',
+                fontSize: '13px',
+                lineHeight: '20px',
+                whiteSpace: wordWrap ? 'pre-wrap' : 'pre'
+              }}
+              PreTag="span"
+              wrapLines={wordWrap}
+            >
+              {line.content || ' '}
+            </SyntaxHighlighter>
+          </div>
+          
+          {/* Line actions */}
+          {showStagingControls && !staged && isChangedLine && (
+            <div className="line-actions" onClick={(e) => e.stopPropagation()}>
+              <Space size={2}>
+                <Tooltip title="Stage">
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<PlusOutlined style={{ color: '#52c41a', fontSize: '10px' }} />}
+                    onClick={() => handleStageLine(line.hunkIndex, line.lineIndex)}
+                    disabled={operationInProgress}
+                  />
+                </Tooltip>
+                <Tooltip title="Discard">
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<CloseOutlined style={{ color: '#ff4d4f', fontSize: '10px' }} />}
+                    onClick={() => handleDiscardLine(line.hunkIndex, line.lineIndex)}
+                    disabled={operationInProgress}
+                  />
+                </Tooltip>
+              </Space>
+            </div>
+          )}
+        </div>
+      );
+    };
+
     return (
       <div className="side-by-side-diff">
         <Row gutter={1}>
@@ -396,37 +733,7 @@ function EnhancedDiffViewer({
               <Tag color="red">-{diff.deleted}</Tag>
             </div>
             <div className="diff-content">
-              {leftLines.map((line, index) => (
-                <div
-                  key={index}
-                  className={`diff-line diff-line-${line.type}`}
-                  onClick={() => setSelectedHunk(`${line.hunkIndex}-${line.lineIndex}`)}
-                >
-                  {showLineNumbers && (
-                    <span className="line-number">
-                      {line.number || ''}
-                    </span>
-                  )}
-                  <div className="line-content">
-                    <SyntaxHighlighter
-                      language={getLanguageFromFilename(selectedFile)}
-                      style={theme === 'dark' ? tomorrow : prism}
-                      customStyle={{
-                        margin: 0,
-                        padding: '0 8px',
-                        background: 'transparent',
-                        fontSize: '13px',
-                        lineHeight: '20px',
-                        whiteSpace: wordWrap ? 'pre-wrap' : 'pre'
-                      }}
-                      PreTag="span"
-                      wrapLines={wordWrap}
-                    >
-                      {line.content || ' '}
-                    </SyntaxHighlighter>
-                  </div>
-                </div>
-              ))}
+              {leftLines.map((line, index) => renderSideBySideLine(line, index, false))}
             </div>
           </Col>
           
@@ -436,37 +743,7 @@ function EnhancedDiffViewer({
               <Tag color="green">+{diff.added}</Tag>
             </div>
             <div className="diff-content">
-              {rightLines.map((line, index) => (
-                <div
-                  key={index}
-                  className={`diff-line diff-line-${line.type}`}
-                  onClick={() => setSelectedHunk(`${line.hunkIndex}-${line.lineIndex}`)}
-                >
-                  {showLineNumbers && (
-                    <span className="line-number">
-                      {line.number || ''}
-                    </span>
-                  )}
-                  <div className="line-content">
-                    <SyntaxHighlighter
-                      language={getLanguageFromFilename(selectedFile)}
-                      style={theme === 'dark' ? tomorrow : prism}
-                      customStyle={{
-                        margin: 0,
-                        padding: '0 8px',
-                        background: 'transparent',
-                        fontSize: '13px',
-                        lineHeight: '20px',
-                        whiteSpace: wordWrap ? 'pre-wrap' : 'pre'
-                      }}
-                      PreTag="span"
-                      wrapLines={wordWrap}
-                    >
-                      {line.content || ' '}
-                    </SyntaxHighlighter>
-                  </div>
-                </div>
-              ))}
+              {rightLines.map((line, index) => renderSideBySideLine(line, index, true))}
             </div>
           </Col>
         </Row>
@@ -598,6 +875,29 @@ function EnhancedDiffViewer({
                 size="small"
               />
             </Tooltip>
+
+            {/* Edit mode toggle */}
+            {selectedFile && !staged && (
+              <Tooltip title={editMode ? "Exit edit mode" : "Edit file directly"}>
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => {
+                    if (editMode) {
+                      if (hasUnsavedChanges) {
+                        // Prompt to save
+                        handleCancelEdit();
+                      } else {
+                        setEditMode(false);
+                      }
+                    } else {
+                      loadFileForEditing();
+                    }
+                  }}
+                  type={editMode ? 'primary' : 'default'}
+                  size="small"
+                />
+              </Tooltip>
+            )}
           </Space>
         }
       >
@@ -661,6 +961,80 @@ function EnhancedDiffViewer({
         <Spin spinning={isLoading}>
           {selectedDiff ? (
             <div className={`diff-container ${viewMode} ${theme}`}>
+              {/* File-level actions */}
+              {showStagingControls && (
+                <div className="file-actions">
+                  <Space>
+                    {!staged ? (
+                      <>
+                        <Button
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={handleStageFile}
+                          loading={operationInProgress}
+                        >
+                          Stage File
+                        </Button>
+                        <Button
+                          danger
+                          icon={<UndoOutlined />}
+                          onClick={handleDiscardFile}
+                          loading={operationInProgress}
+                        >
+                          Discard All Changes
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        icon={<MinusOutlined />}
+                        onClick={handleUnstageFile}
+                        loading={operationInProgress}
+                      >
+                        Unstage File
+                      </Button>
+                    )}
+                  </Space>
+                </div>
+              )}
+              
+              {/* Selected lines action bar */}
+              {selectedLines.size > 0 && (
+                <div className="selected-lines-actions">
+                  <Alert
+                    type="info"
+                    message={
+                      <Space>
+                        <Text strong>{selectedLines.size} line(s) selected</Text>
+                        <Button
+                          size="small"
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={handleStageSelectedLines}
+                          loading={operationInProgress}
+                        >
+                          Stage Selected
+                        </Button>
+                        <Button
+                          size="small"
+                          danger
+                          icon={<CloseOutlined />}
+                          onClick={handleDiscardSelectedLines}
+                          loading={operationInProgress}
+                        >
+                          Discard Selected
+                        </Button>
+                        <Button
+                          size="small"
+                          onClick={clearLineSelection}
+                        >
+                          Clear Selection
+                        </Button>
+                      </Space>
+                    }
+                  />
+                </div>
+              )}
+              
               <div className="diff-stats">
                 <Space>
                   <Tag color="green">+{selectedDiff.added} additions</Tag>
@@ -673,15 +1047,69 @@ function EnhancedDiffViewer({
                       {filteredHunks.length} of {selectedDiff.hunks.length} hunks match
                     </Tag>
                   )}
+                  {editMode && (
+                    <Tag color={hasUnsavedChanges ? 'orange' : 'blue'}>
+                      {hasUnsavedChanges ? 'Unsaved changes' : 'Edit Mode'}
+                    </Tag>
+                  )}
                 </Space>
               </div>
               
-              <div className="diff-content-wrapper">
-                {viewMode === 'side-by-side' 
-                  ? renderSideBySideDiff(selectedDiff)
-                  : renderUnifiedDiff(selectedDiff)
-                }
-              </div>
+              {/* Edit mode panel */}
+              {editMode ? (
+                <div className="edit-mode-container">
+                  <div className="edit-mode-toolbar">
+                    <Space>
+                      <Button
+                        type="primary"
+                        icon={<CheckOutlined />}
+                        onClick={handleSaveEdit}
+                        loading={isSaving}
+                        disabled={!hasUnsavedChanges}
+                      >
+                        Save Changes
+                      </Button>
+                      <Button
+                        icon={<CloseOutlined />}
+                        onClick={handleCancelEdit}
+                        disabled={isSaving}
+                      >
+                        {hasUnsavedChanges ? 'Discard & Exit' : 'Exit Edit Mode'}
+                      </Button>
+                      {hasUnsavedChanges && (
+                        <Button
+                          icon={<UndoOutlined />}
+                          onClick={() => setEditedContent(originalFileContent)}
+                        >
+                          Reset Changes
+                        </Button>
+                      )}
+                    </Space>
+                  </div>
+                  <div className="edit-mode-editor">
+                    <Input.TextArea
+                      ref={editorRef}
+                      value={editedContent}
+                      onChange={(e) => setEditedContent(e.target.value)}
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '13px',
+                        lineHeight: '1.5',
+                        minHeight: '400px',
+                        resize: 'vertical'
+                      }}
+                      autoSize={{ minRows: 20, maxRows: 40 }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="diff-content-wrapper">
+                  {viewMode === 'side-by-side' 
+                    ? renderSideBySideDiff(selectedDiff)
+                    : renderUnifiedDiff(selectedDiff)
+                  }
+                </div>
+              )}
             </div>
           ) : availableFiles.length === 0 ? (
             <Empty
