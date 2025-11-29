@@ -26,6 +26,7 @@ function AppRoutes() {
           <Route path="/sheets/:name" element={<SheetPage />} />
           <Route path="/charts/:name" element={<ChartPage />} />
           <Route path="/git" element={<GitPage />} />
+          <Route path="/git/:name" element={<GitPage />} />
           <Route path="/projectSettings/:name" element={<ProjectSettings />} />
           <Route path="/settings" element={<AppSettings />} />
           <Route path="/docs/:name" element={<TextEditor />} />

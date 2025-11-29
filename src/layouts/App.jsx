@@ -24,7 +24,15 @@ const { Content, Sider } = Layout;
 
 // eslint-disable-next-line consistent-return
 function loadSidebarComponents(pathname, setShowModal) {
+  if (pathname === '/dashboard' || pathname === '/' || pathname === '/settings') {
+    localStorage.removeItem('currentProject');
+  }
+
+  const currentProject = localStorage.getItem('currentProject');
   if (
+    !currentProject ||
+    currentProject === 'null' ||
+    currentProject === 'undefined' ||
     pathname === '/dashboard' ||
     pathname === '/' ||
     pathname === '/settings'
@@ -52,7 +60,6 @@ function loadSidebarComponents(pathname, setShowModal) {
       </>
     );
   }
-  const currentProject = localStorage.getItem('currentProject');
   return (
     <>
       <Menu.Item icon={<PlusSquareFilled />} title="Kanban" key="2">
@@ -73,7 +80,7 @@ function loadSidebarComponents(pathname, setShowModal) {
         Charts
       </Menu.Item>
       <Menu.Item icon={<GitlabOutlined />}>
-        <Link to="/git" />
+        <Link to={`/git/${currentProject}`} />
         Git
       </Menu.Item>
       <Menu.Item icon={<SettingOutlined />}>
