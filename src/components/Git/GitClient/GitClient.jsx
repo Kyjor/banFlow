@@ -94,6 +94,79 @@ function GitClient() {
   const [viewMode, setViewMode] = useState('side-by-side');
   const [branchesWithDates, setBranchesWithDates] = useState([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
+  const [recentRepositories, setRecentRepositories] = useState([]);
+  const [hasTriedAutoOpen, setHasTriedAutoOpen] = useState(false);
+
+  // Load recent repositories from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('gitRecentRepositories');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setRecentRepositories(parsed);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load recent repositories:', error);
+    }
+  }, []);
+
+  // Auto-open most recent repository on startup
+  useEffect(() => {
+    const autoOpenRecent = async () => {
+      if (hasTriedAutoOpen) return;
+      if (currentRepository) return; // Already have a repo open
+      
+      setHasTriedAutoOpen(true);
+      
+      try {
+        const stored = localStorage.getItem('gitRecentRepositories');
+        if (stored) {
+          const recent = JSON.parse(stored);
+          if (Array.isArray(recent) && recent.length > 0) {
+            const mostRecent = recent[0];
+            // Try to switch to the most recent repository
+            await switchRepository(mostRecent.path);
+            await refreshRepositoryStatus();
+          }
+        }
+      } catch (error) {
+        console.error('Failed to auto-open recent repository:', error);
+        // Silently fail - user can manually select
+      }
+    };
+
+    autoOpenRecent();
+  }, [hasTriedAutoOpen, currentRepository, switchRepository, refreshRepositoryStatus]);
+
+  // Save current repository to recent list when it changes
+  useEffect(() => {
+    if (currentRepository) {
+      const repoName = currentRepository.split('/').pop();
+      const newEntry = {
+        path: currentRepository,
+        name: repoName,
+        lastOpened: new Date().toISOString()
+      };
+
+      setRecentRepositories(prev => {
+        // Remove existing entry for this path
+        const filtered = prev.filter(r => r.path !== currentRepository);
+        // Add to front of list, limit to 10 items
+        const updated = [newEntry, ...filtered].slice(0, 10);
+        
+        // Save to localStorage
+        try {
+          localStorage.setItem('gitRecentRepositories', JSON.stringify(updated));
+        } catch (error) {
+          console.error('Failed to save recent repositories:', error);
+        }
+        
+        return updated;
+      });
+    }
+  }, [currentRepository]);
 
   useEffect(() => {
     // Auto-select first modified file if available
@@ -448,23 +521,57 @@ function GitClient() {
             </Title>
             
             {/* Repository Selector */}
-            {currentRepository || (repositories && repositories.length > 0) ? (
+            {currentRepository || (repositories && repositories.length > 0) || recentRepositories.length > 0 ? (
               <Dropdown
                 menu={{
                   items: [
-                    ...(repositories || []).map(repo => ({
-                      key: repo.path,
-                      label: (
-                        <Space>
-                          <GitlabOutlined />
-                          <span>{repo.name}</span>
-                          {repo.path === currentRepository && (
-                            <Tag color="blue" size="small">Active</Tag>
-                          )}
-                        </Space>
-                      ),
-                      onClick: () => handleRepositoryChange(repo.path)
-                    })),
+                    // Current session repositories
+                    ...(repositories && repositories.length > 0 ? [
+                      { key: 'session-header', label: <Text type="secondary" style={{ fontSize: '11px' }}>SESSION</Text>, disabled: true },
+                      ...(repositories || []).map(repo => ({
+                        key: `session-${repo.path}`,
+                        label: (
+                          <Space>
+                            <GitlabOutlined />
+                            <span>{repo.name}</span>
+                            {repo.path === currentRepository && (
+                              <Tag color="blue" size="small">Active</Tag>
+                            )}
+                          </Space>
+                        ),
+                        onClick: () => handleRepositoryChange(repo.path)
+                      }))
+                    ] : []),
+                    // Recent repositories (excluding current session ones)
+                    ...(recentRepositories.filter(r => 
+                      !(repositories || []).some(repo => repo.path === r.path)
+                    ).length > 0 ? [
+                      { type: 'divider' },
+                      { key: 'recent-header', label: <Text type="secondary" style={{ fontSize: '11px' }}>RECENT</Text>, disabled: true },
+                      ...recentRepositories
+                        .filter(r => !(repositories || []).some(repo => repo.path === r.path))
+                        .map(repo => ({
+                          key: `recent-${repo.path}`,
+                          label: (
+                            <Space>
+                              <HistoryOutlined />
+                              <span>{repo.name}</span>
+                              <Text type="secondary" style={{ fontSize: '10px' }}>
+                                {formatBranchDate(repo.lastOpened)}
+                              </Text>
+                            </Space>
+                          ),
+                          onClick: async () => {
+                            try {
+                              await switchRepository(repo.path);
+                              await refreshRepositoryStatus();
+                            } catch (error) {
+                              console.error('Failed to open recent repository:', error);
+                              message.error('Failed to open repository. It may have been moved or deleted.');
+                            }
+                          }
+                        }))
+                    ] : []),
                     { type: 'divider' },
                     {
                       key: 'add-repo',
@@ -482,7 +589,23 @@ function GitClient() {
                           console.error('Failed to add repository:', error);
                         }
                       }
-                    }
+                    },
+                    ...(recentRepositories.length > 0 ? [
+                      {
+                        key: 'clear-recent',
+                        label: (
+                          <Space>
+                            <CloseOutlined />
+                            <span style={{ color: '#999' }}>Clear Recent</span>
+                          </Space>
+                        ),
+                        onClick: () => {
+                          setRecentRepositories([]);
+                          localStorage.removeItem('gitRecentRepositories');
+                          message.info('Recent repositories cleared');
+                        }
+                      }
+                    ] : [])
                   ]
                 }}
                 trigger={['click']}
