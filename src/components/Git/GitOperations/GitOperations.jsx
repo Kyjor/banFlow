@@ -90,6 +90,7 @@ function GitOperations({ onViewDiff }) {
   const [showCommitModal, setShowCommitModal] = useState(false);
   const [showStashModal, setShowStashModal] = useState(false);
   const [stashMessage, setStashMessage] = useState('');
+  const [pullStrategy, setPullStrategy] = useState('merge');
 
   useEffect(() => {
     if (currentRepository) {
@@ -457,10 +458,35 @@ function GitOperations({ onViewDiff }) {
                       <Paragraph type="secondary">
                         Download changes from remote repository
                       </Paragraph>
+                      <Select
+                        value={pullStrategy}
+                        onChange={setPullStrategy}
+                        style={{ width: '100%', marginBottom: 8 }}
+                        size="small"
+                      >
+                        <Option value="merge">
+                          <Space>
+                            <MergeOutlined />
+                            <span>Merge (default)</span>
+                          </Space>
+                        </Option>
+                        <Option value="rebase">
+                          <Space>
+                            <SyncOutlined />
+                            <span>Rebase</span>
+                          </Space>
+                        </Option>
+                        <Option value="ff-only">
+                          <Space>
+                            <CloudDownloadOutlined />
+                            <span>Fast-forward only</span>
+                          </Space>
+                        </Option>
+                      </Select>
                       <Button
                         type="primary"
                         icon={<CloudDownloadOutlined />}
-                        onClick={() => pull()}
+                        onClick={() => pull('origin', null, pullStrategy)}
                         loading={operationInProgress}
                         block
                       >

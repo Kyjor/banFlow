@@ -384,12 +384,13 @@ export function GitProvider({ children }) {
     }
   }, [handleError, showSuccess]);
 
-  const pull = useCallback(async (remote = 'origin', branch = null) => {
+  const pull = useCallback(async (remote = 'origin', branch = null, strategy = 'merge') => {
     try {
       dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
-      const result = await ipcRenderer.invoke('git:pull', remote, branch);
+      const result = await ipcRenderer.invoke('git:pull', remote, branch, strategy);
       dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
-      showSuccess('Pulled changes', `from ${remote}`);
+      const strategyLabel = strategy === 'rebase' ? '(rebased)' : strategy === 'ff-only' ? '(fast-forward)' : '';
+      showSuccess('Pulled changes', `from ${remote} ${strategyLabel}`.trim());
       return result;
     } catch (error) {
       handleError(error, 'pull');

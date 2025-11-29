@@ -101,39 +101,54 @@ function GitClient() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('gitRecentRepositories');
+      console.log('[GitClient] Loading recent repos from localStorage:', stored ? 'found' : 'not found');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
+          console.log('[GitClient] Loaded recent repos:', parsed.length, 'entries');
           setRecentRepositories(parsed);
         }
       }
     } catch (error) {
-      console.error('Failed to load recent repositories:', error);
+      console.error('[GitClient] Failed to load recent repositories:', error);
     }
   }, []);
 
   // Auto-open most recent repository on startup
   useEffect(() => {
     const autoOpenRecent = async () => {
-      if (hasTriedAutoOpen) return;
-      if (currentRepository) return; // Already have a repo open
+      if (hasTriedAutoOpen) {
+        console.log('[GitClient] Auto-open: already tried, skipping');
+        return;
+      }
+      if (currentRepository) {
+        console.log('[GitClient] Auto-open: already have a repo open:', currentRepository);
+        return;
+      }
       
       setHasTriedAutoOpen(true);
       
       try {
         const stored = localStorage.getItem('gitRecentRepositories');
+        console.log('[GitClient] Auto-open: checking localStorage');
         if (stored) {
           const recent = JSON.parse(stored);
           if (Array.isArray(recent) && recent.length > 0) {
             const mostRecent = recent[0];
-            // Try to switch to the most recent repository
+            console.log('[GitClient] Auto-open: attempting to open:', mostRecent.path);
             await switchRepository(mostRecent.path);
+            console.log('[GitClient] Auto-open: switchRepository succeeded');
             await refreshRepositoryStatus();
+            console.log('[GitClient] Auto-open: refreshRepositoryStatus succeeded');
+          } else {
+            console.log('[GitClient] Auto-open: no recent repos found');
           }
+        } else {
+          console.log('[GitClient] Auto-open: no localStorage data');
         }
       } catch (error) {
-        console.error('Failed to auto-open recent repository:', error);
-        // Silently fail - user can manually select
+        console.error('[GitClient] Auto-open failed:', error);
+        message.warning('Could not open recent repository. It may have been moved or deleted.');
       }
     };
 
@@ -466,7 +481,8 @@ function GitClient() {
               <MergeConflictResolver
                 file={conflictedFiles[0]}
                 onConflictResolved={handleConflictResolved}
-                showTutorial={true}
+                onFileChange={refreshRepositoryStatus}
+                theme={theme}
               />
             ) : (
               <Empty
@@ -563,11 +579,19 @@ function GitClient() {
                           ),
                           onClick: async () => {
                             try {
+                              console.log('[GitClient] Opening recent repo:', repo.path);
                               await switchRepository(repo.path);
+                              console.log('[GitClient] Recent repo opened successfully');
                               await refreshRepositoryStatus();
                             } catch (error) {
-                              console.error('Failed to open recent repository:', error);
-                              message.error('Failed to open repository. It may have been moved or deleted.');
+                              console.error('[GitClient] Failed to open recent repository:', error);
+                              message.error(`Failed to open repository: ${error.message || 'Unknown error'}`);
+                              // Remove from recent list if it can't be opened
+                              setRecentRepositories(prev => {
+                                const updated = prev.filter(r => r.path !== repo.path);
+                                localStorage.setItem('gitRecentRepositories', JSON.stringify(updated));
+                                return updated;
+                              });
                             }
                           }
                         }))

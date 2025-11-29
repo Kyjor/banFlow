@@ -778,9 +778,9 @@ ipcMain.handle('git:commit', async (event, message, description) => {
   }
 });
 
-ipcMain.handle('git:pull', async (event, remote, branch) => {
+ipcMain.handle('git:pull', async (event, remote, branch, strategy) => {
   try {
-    return await gitService.pull(remote, branch);
+    return await gitService.pull(remote, branch, strategy);
   } catch (error) {
     throw error;
   }

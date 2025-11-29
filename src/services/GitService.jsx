@@ -85,8 +85,16 @@ export default class GitService {
 
   async switchRepository(repoPath) {
     try {
+      // If repository isn't in our managed list, try to add it first
+      // This handles the case where the app was restarted and we're opening from recent list
       if (!this.repositories.has(repoPath)) {
-        throw new Error('Repository not found in managed repositories');
+        console.log('Repository not in managed list, attempting to add:', repoPath);
+        try {
+          await this.addRepository(repoPath);
+        } catch (addError) {
+          console.error('Failed to add repository:', addError);
+          throw new Error(`Cannot open repository: ${addError.message}`);
+        }
       }
 
       this.currentRepo = repoPath;
@@ -94,8 +102,10 @@ export default class GitService {
       
       // Update last accessed time
       const repoInfo = this.repositories.get(repoPath);
-      repoInfo.lastAccessed = new Date().toISOString();
-      this.repositories.set(repoPath, repoInfo);
+      if (repoInfo) {
+        repoInfo.lastAccessed = new Date().toISOString();
+        this.repositories.set(repoPath, repoInfo);
+      }
 
       // Update project cache
       if (this.gitRepositoryService) {
@@ -278,7 +288,7 @@ export default class GitService {
     }
   }
 
-  async pull(remote = 'origin', branch = null) {
+  async pull(remote = 'origin', branch = null, strategy = 'merge') {
     if (!this.git) throw new Error('No repository selected');
     
     try {
@@ -288,11 +298,22 @@ export default class GitService {
       const operation = {
         type: 'PULL',
         timestamp: new Date().toISOString(),
-        data: { remote, branch: pullBranch },
+        data: { remote, branch: pullBranch, strategy },
         repoPath: this.currentRepo
       };
 
-      const result = await this.git.pull(remote, pullBranch);
+      // Build pull options based on strategy
+      const pullOptions = {};
+      if (strategy === 'rebase') {
+        pullOptions['--rebase'] = true;
+      } else if (strategy === 'ff-only') {
+        pullOptions['--ff-only'] = true;
+      } else {
+        // Default to merge (--no-rebase)
+        pullOptions['--no-rebase'] = true;
+      }
+
+      const result = await this.git.pull(remote, pullBranch, pullOptions);
       this.operationHistory.push(operation);
       
       return {
