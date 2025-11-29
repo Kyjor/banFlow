@@ -2,128 +2,431 @@
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #fff;
+  color: #333;
 
-  .git-client-layout {
-    height: 100%;
-  }
-
-  .git-client-header {
-    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-    padding: 0 24px;
+  // Toolbar
+  .git-toolbar {
+    background: #fff;
+    border-bottom: 1px solid #e8e8e8;
+    padding: 0 16px;
+    height: 48px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    justify-content: space-between;
+    flex-shrink: 0;
 
-    .header-left {
+    .toolbar-left {
       display: flex;
       align-items: center;
+      gap: 12px;
+
+      .repo-button {
+        background: #fff;
+        border: 1px solid #d9d9d9;
+        
+        &:hover {
+          border-color: #1890ff;
+          color: #1890ff;
+        }
+      }
+
+      .branch-select {
+        min-width: 160px;
+      }
     }
 
-    .header-right {
+    .toolbar-center {
+      .ant-btn {
+        background: #fff;
+        border: 1px solid #d9d9d9;
+        
+        &:hover:not(:disabled) {
+          border-color: #1890ff;
+          color: #1890ff;
+        }
+
+        &:disabled {
+          opacity: 0.5;
+        }
+      }
+
+      .ant-divider {
+        margin: 0 12px;
+      }
+    }
+
+    .toolbar-right {
       display: flex;
-      align-items: center;
+      gap: 8px;
+
+      .ant-btn {
+        border: none;
+        color: #666;
+        
+        &:hover {
+          color: #1890ff;
+          background: #f5f5f5;
+        }
+      }
     }
   }
 
-  .git-client-sidebar {
-    background: #fafafa;
+  // Main layout
+  .git-layout {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  // Left sider - commit history
+  .left-sider {
+    background: #fafafa !important;
     border-right: 1px solid #e8e8e8;
 
-    .sidebar-content {
-      padding: 16px;
+    .ant-layout-sider-children {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
 
-    .status-card {
-      .status-item {
+    .commit-history {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+
+      .history-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e8e8e8;
+        background: #fff;
+      }
+
+      .commit-list {
+        flex: 1;
+        overflow-y: auto;
+      }
+
+      .commit-item {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-    }
-  }
+        align-items: flex-start;
+        padding: 10px 12px;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
 
-  .git-client-content {
-    padding: 24px;
-    background: #fff;
-    overflow-y: auto;
+        &:hover {
+          background: #f0f0f0;
+        }
 
-    .main-tabs {
-      .ant-tabs-content-holder {
-        padding-top: 16px;
-      }
-    }
+        &.active {
+          background: #e6f7ff;
+          border-left-color: #1890ff;
+        }
 
-    .file-list-card {
-      .file-list {
-        .file-item {
-          padding: 8px 12px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.2s;
-          margin-bottom: 4px;
+        &.uncommitted {
+          background: #fffbe6;
+          border-left-color: #faad14;
+
+          .graph-node {
+            background: #faad14;
+          }
+        }
+
+        .commit-graph {
+          width: 24px;
           display: flex;
-          justify-content: space-between;
+          flex-direction: column;
           align-items: center;
+          position: relative;
+          margin-right: 10px;
+          flex-shrink: 0;
+          padding-top: 4px;
 
-          &:hover {
-            background: #f5f5f5;
+          .graph-line {
+            position: absolute;
+            width: 2px;
+            background: #d9d9d9;
+            top: 0;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
           }
 
-          &.selected {
-            background: #e6f7ff;
-            border: 1px solid #91d5ff;
+          .graph-node {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #1890ff;
+            z-index: 1;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px #d9d9d9;
+          }
+        }
+
+        .commit-info {
+          flex: 1;
+          min-width: 0;
+
+          .commit-msg {
+            display: block;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 2px;
           }
 
-          .file-info {
-            flex: 1;
-            display: flex;
-            align-items: center;
-          }
-
-          .file-actions {
-            display: flex;
-            gap: 4px;
-            opacity: 0;
-            transition: opacity 0.2s;
-          }
-
-          &:hover .file-actions {
-            opacity: 1;
+          .commit-meta {
+            display: block;
+            font-size: 11px;
+            color: #999;
           }
         }
       }
     }
+  }
 
-    .file-content {
-      min-height: 400px;
+  // Middle content - diff viewer
+  .middle-content {
+    flex: 1;
+    background: #fff;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #e8e8e8;
+
+    .middle-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+
+      &.empty {
+        align-items: center;
+        justify-content: center;
+        background: #fafafa;
+      }
+
+      &.has-file {
+        .file-header {
+          padding: 10px 16px;
+          background: #fafafa;
+          border-bottom: 1px solid #e8e8e8;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-shrink: 0;
+        }
+
+        .diff-wrapper {
+          flex: 1;
+          overflow: auto;
+
+          .untracked-notice {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 48px;
+          }
+        }
+      }
     }
   }
 
-  .no-repository {
+  // Right sider - files + commit form
+  .right-sider {
+    background: #fff !important;
+    border-left: none;
+
+    .ant-layout-sider-children {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+
+      // Commit details
+      .commit-details {
+        border-bottom: 1px solid #e8e8e8;
+
+        .section-header {
+          padding: 10px 12px;
+          background: #fafafa;
+          border-bottom: 1px solid #e8e8e8;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .details-body {
+          padding: 12px;
+
+          .detail-row {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            gap: 8px;
+
+            .ant-typography-secondary {
+              min-width: 50px;
+              flex-shrink: 0;
+            }
+
+            &.message {
+              margin-top: 12px;
+              padding-top: 12px;
+              border-top: 1px solid #f0f0f0;
+              display: block;
+            }
+          }
+        }
+      }
+
+      // File sections
+      .file-section {
+        border-bottom: 1px solid #e8e8e8;
+
+        .section-header {
+          padding: 8px 12px;
+          background: #fafafa;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          .staged-label {
+            color: #52c41a;
+          }
+
+          .unstaged-label {
+            color: #fa8c16;
+          }
+        }
+
+        .file-list {
+          max-height: 200px;
+          overflow-y: auto;
+
+          .file-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px;
+            cursor: pointer;
+            gap: 8px;
+            transition: background 0.2s;
+
+            &:hover {
+              background: #f5f5f5;
+
+              .actions {
+                opacity: 1;
+              }
+            }
+
+            &.active {
+              background: #e6f7ff;
+            }
+
+            .filename {
+              flex: 1;
+              min-width: 0;
+              font-size: 12px;
+            }
+
+            .actions {
+              display: flex;
+              gap: 2px;
+              opacity: 0;
+              transition: opacity 0.2s;
+
+              .ant-btn {
+                padding: 2px 6px;
+                height: auto;
+              }
+            }
+          }
+        }
+      }
+
+      // No changes
+      .no-changes {
+        padding: 32px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+
+      // Commit form
+      .commit-form {
+        margin-top: auto;
+        padding: 12px;
+        border-top: 1px solid #e8e8e8;
+        background: #fafafa;
+
+        .section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+
+        .commit-input {
+          margin-bottom: 8px;
+        }
+
+        .commit-desc {
+          margin-bottom: 10px;
+          resize: none;
+        }
+      }
+    }
+  }
+
+  // Empty state
+  .empty-state {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 400px;
   }
 }
 
-// Responsive design
-@media (max-width: 768px) {
+// Responsive
+@media (max-width: 1200px) {
   .git-client {
-    .git-client-header {
-      padding: 0 16px;
-      
-      .header-left {
-        .ant-typography {
-          font-size: 18px;
-        }
-      }
+    .left-sider {
+      width: 220px !important;
+      min-width: 220px !important;
+      max-width: 220px !important;
     }
 
-    .git-client-content {
-      padding: 16px;
+    .right-sider {
+      width: 250px !important;
+      min-width: 250px !important;
+      max-width: 250px !important;
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .git-client {
+    .left-sider {
+      width: 180px !important;
+      min-width: 180px !important;
+      max-width: 180px !important;
+    }
+
+    .right-sider {
+      width: 220px !important;
+      min-width: 220px !important;
+      max-width: 220px !important;
     }
   }
 }

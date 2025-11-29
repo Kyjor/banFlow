@@ -126,14 +126,55 @@ export default class GitService {
       const status = await this.git.status();
       const branches = await this.git.branch();
       
+      // Properly separate staged vs unstaged files using the detailed file status
+      // status.files contains {path, index, working_dir} for each file
+      // index: status in staging area (A=added, M=modified, D=deleted, R=renamed, ' '=unchanged)
+      // working_dir: status in working directory (M=modified, D=deleted, ' '=unchanged, ?=untracked)
+      
+      const stagedFiles = [];
+      const unstagedModified = [];
+      const untrackedFiles = [];
+      const deletedFiles = [];
+      const conflictedFiles = [];
+      
+      for (const file of (status.files || [])) {
+        const { path, index, working_dir } = file;
+        
+        // Check for conflicts (both have changes)
+        if (index === 'U' || working_dir === 'U' || (index === 'A' && working_dir === 'A') || (index === 'D' && working_dir === 'D')) {
+          conflictedFiles.push(path);
+          continue;
+        }
+        
+        // Staged changes (index has a status other than ' ' or '?')
+        if (index && index !== ' ' && index !== '?') {
+          stagedFiles.push(path);
+        }
+        
+        // Unstaged modifications (working_dir is 'M')
+        if (working_dir === 'M') {
+          unstagedModified.push(path);
+        }
+        
+        // Deleted in working dir
+        if (working_dir === 'D') {
+          deletedFiles.push(path);
+        }
+        
+        // Untracked files (working_dir is '?')
+        if (working_dir === '?') {
+          untrackedFiles.push(path);
+        }
+      }
+      
       // Create clean, serializable status object
       const statusInfo = {
         currentBranch: branches.current,
-        staged: status.staged || [],
-        modified: status.modified || [],
-        deleted: status.deleted || [],
-        created: status.created || [],
-        conflicted: status.conflicted || [],
+        staged: stagedFiles,
+        modified: unstagedModified, // Only files with actual unstaged changes
+        deleted: deletedFiles,
+        created: untrackedFiles, // Untracked files
+        conflicted: conflictedFiles,
         ahead: status.ahead || 0,
         behind: status.behind || 0,
         branches: branches.all || []
