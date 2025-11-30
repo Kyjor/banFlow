@@ -82,6 +82,8 @@ function GitClient() {
     switchBranch,
     getBranchesWithDates,
     getCommitHistory,
+    getCommitFiles,
+    getCommitDiff,
     refreshRepositoryStatus,
     undoLastOperation,
     createBranch
@@ -101,6 +103,9 @@ function GitClient() {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchError, setNewBranchError] = useState('');
+  const [commitFiles, setCommitFiles] = useState([]);
+  const [commitDiff, setCommitDiff] = useState(null);
+  const [loadingCommitFiles, setLoadingCommitFiles] = useState(false);
 
   // Load recent repositories from localStorage
   useEffect(() => {
@@ -219,17 +224,45 @@ function GitClient() {
     setSelectedFileStaged(isStaged);
   }, []);
 
-  const handleCommitSelect = useCallback((commitData) => {
+  const handleCommitSelect = useCallback(async (commitData) => {
     setSelectedCommit(commitData);
     setSelectedFile(null);
     setSelectedFileStaged(false);
-  }, []);
+    setCommitDiff(null);
+    setCommitFiles([]);
+    
+    if (commitData?.hash) {
+      try {
+        setLoadingCommitFiles(true);
+        const files = await getCommitFiles(commitData.hash);
+        setCommitFiles(files || []);
+      } catch (error) {
+        console.error('Failed to load commit files:', error);
+      } finally {
+        setLoadingCommitFiles(false);
+      }
+    }
+  }, [getCommitFiles]);
 
   const handleBackToChanges = useCallback(() => {
     setSelectedCommit(null);
     setSelectedFile(null);
     setSelectedFileStaged(false);
+    setCommitFiles([]);
+    setCommitDiff(null);
   }, []);
+
+  const handleCommitFileSelect = useCallback(async (filePath) => {
+    if (!selectedCommit?.hash) return;
+    setSelectedFile(filePath);
+    setCommitDiff(null);
+    try {
+      const diff = await getCommitDiff(selectedCommit.hash, filePath);
+      setCommitDiff(diff);
+    } catch (error) {
+      console.error('Failed to load commit diff:', error);
+    }
+  }, [selectedCommit, getCommitDiff]);
 
   const handleStageFile = useCallback(async (filePath) => {
     try {
@@ -550,6 +583,40 @@ function GitClient() {
     }
 
     if (selectedFile) {
+      // Viewing a file from a historical commit
+      if (selectedCommit) {
+        const fileInfo = commitFiles.find(f => f.path === selectedFile);
+        return (
+          <div className="middle-panel has-file">
+            <div className="file-header">
+              <Space>
+                <FileTextOutlined />
+                <Text strong>{selectedFile}</Text>
+                {fileInfo && <Tag color="blue">{fileInfo.status}</Tag>}
+                <Tag>{selectedCommit.hash?.substring(0, 7)}</Tag>
+              </Space>
+              <Button size="small" onClick={() => { setSelectedFile(null); setCommitDiff(null); }}>Close</Button>
+            </div>
+            <div className="diff-wrapper">
+              {commitDiff ? (
+                <EnhancedDiffViewer
+                  diffData={commitDiff}
+                  showFileSelector={false}
+                  theme="light"
+                  showStagingControls={false}
+                  readOnly
+                />
+              ) : (
+                <div style={{ padding: 24, textAlign: 'center' }}>
+                  <Spin tip="Loading diff..." />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      // Viewing uncommitted changes
       const isUntracked = isFileUntracked(selectedFile);
       
       return (
@@ -613,29 +680,60 @@ function GitClient() {
     <div className="right-panel">
       {/* Commit details when viewing a historical commit */}
       {selectedCommit && (
-        <div className="commit-details">
-          <div className="section-header">
-            <Text strong>Commit Info</Text>
-            <Button size="small" type="link" onClick={handleBackToChanges}>Back to changes</Button>
+        <>
+          <div className="commit-details">
+            <div className="section-header">
+              <Text strong>Commit Info</Text>
+              <Button size="small" type="link" onClick={handleBackToChanges}>Back to changes</Button>
+            </div>
+            <div className="details-body">
+              <div className="detail-row">
+                <Text type="secondary">Hash</Text>
+                <Text code copyable={{ text: selectedCommit.hash }}>{selectedCommit.hash?.substring(0, 8)}</Text>
+              </div>
+              <div className="detail-row">
+                <Text type="secondary">Author</Text>
+                <Text>{selectedCommit.author_name}</Text>
+              </div>
+              <div className="detail-row">
+                <Text type="secondary">Date</Text>
+                <Text>{new Date(selectedCommit.date).toLocaleString()}</Text>
+              </div>
+              <div className="detail-row message">
+                <Text>{selectedCommit.message}</Text>
+              </div>
+            </div>
           </div>
-          <div className="details-body">
-            <div className="detail-row">
-              <Text type="secondary">Hash</Text>
-              <Text code copyable={{ text: selectedCommit.hash }}>{selectedCommit.hash?.substring(0, 8)}</Text>
+          
+          <div className="file-section">
+            <div className="section-header">
+              <Space>
+                <Text strong>Changed Files</Text>
+                <Badge count={commitFiles.length} style={{ backgroundColor: '#1890ff' }} />
+              </Space>
             </div>
-            <div className="detail-row">
-              <Text type="secondary">Author</Text>
-              <Text>{selectedCommit.author_name}</Text>
-            </div>
-            <div className="detail-row">
-              <Text type="secondary">Date</Text>
-              <Text>{new Date(selectedCommit.date).toLocaleString()}</Text>
-            </div>
-            <div className="detail-row message">
-              <Text>{selectedCommit.message}</Text>
-            </div>
+            <Spin spinning={loadingCommitFiles}>
+              <div className="file-list">
+                {commitFiles.map(({ path, status }) => (
+                  <div 
+                    key={path}
+                    className={`file-item ${selectedFile === path ? 'active' : ''}`}
+                    onClick={() => handleCommitFileSelect(path)}
+                  >
+                    {getStatusIcon(status === 'added' ? 'untracked' : status === 'deleted' ? 'modified' : 'modified')}
+                    <Text className="filename" ellipsis>{path}</Text>
+                    <Tag size="small" style={{ marginLeft: 'auto' }}>
+                      {status}
+                    </Tag>
+                  </div>
+                ))}
+                {!loadingCommitFiles && commitFiles.length === 0 && (
+                  <Empty description="No files changed" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                )}
+              </div>
+            </Spin>
           </div>
-        </div>
+        </>
       )}
 
       {/* File sections - only show when viewing uncommitted changes */}

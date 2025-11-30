@@ -513,6 +513,24 @@ export function GitProvider({ children }) {
     }
   }, [handleError]);
 
+  const getCommitFiles = useCallback(async (commitHash) => {
+    try {
+      return await ipcRenderer.invoke('git:getCommitFiles', commitHash);
+    } catch (error) {
+      handleError(error, 'get commit files');
+      throw error;
+    }
+  }, [handleError]);
+
+  const getCommitDiff = useCallback(async (commitHash, file = null) => {
+    try {
+      return await ipcRenderer.invoke('git:getCommitDiff', commitHash, file);
+    } catch (error) {
+      handleError(error, 'get commit diff');
+      throw error;
+    }
+  }, [handleError]);
+
   // Undo System
   const undoLastOperation = useCallback(async () => {
     try {
@@ -796,6 +814,8 @@ export function GitProvider({ children }) {
     // Diff and History
     getDiff,
     getCommitHistory,
+    getCommitFiles,
+    getCommitDiff,
     
     // Undo System
     undoLastOperation,

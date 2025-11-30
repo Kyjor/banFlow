@@ -58,7 +58,9 @@ function EnhancedDiffViewer({
   showFileSelector = true,
   theme = 'light',
   showStagingControls = true,
-  editable = false
+  editable = false,
+  diffData = null,
+  readOnly = false
 }) {
   const {
     currentRepository,
@@ -104,20 +106,37 @@ function EnhancedDiffViewer({
     }
   }, [file]);
 
+  // Use provided diffData if available (for historical commits)
   useEffect(() => {
+    if (diffData) {
+      // diffData is already parsed, find the file diff or use first one
+      if (Array.isArray(diffData) && diffData.length > 0) {
+        const fileDiff = file ? diffData.find(d => d.name === file) : diffData[0];
+        setSelectedDiff(fileDiff || diffData[0] || null);
+      } else {
+        setSelectedDiff(null);
+      }
+    }
+  }, [diffData, file]);
+
+  useEffect(() => {
+    // Skip fetching if we have pre-loaded diffData
+    if (diffData) return;
     if (selectedFile && currentRepository) {
       loadDiff(selectedFile);
     }
-  }, [selectedFile, staged, currentRepository]);
+  }, [selectedFile, staged, currentRepository, diffData]);
 
   useEffect(() => {
+    // Skip if we have pre-loaded diffData
+    if (diffData) return;
     if (currentDiff && currentDiff.length > 0 && selectedFile) {
       const fileDiff = currentDiff.find(diff => diff.name === selectedFile);
       setSelectedDiff(fileDiff || null);
     } else if (!currentDiff || currentDiff.length === 0) {
       setSelectedDiff(null);
     }
-  }, [currentDiff, selectedFile]);
+  }, [currentDiff, selectedFile, diffData]);
 
   const loadDiff = async (filename) => {
     try {
@@ -127,17 +146,17 @@ function EnhancedDiffViewer({
     }
   };
 
-  // Auto-refresh diff every 3 seconds when viewing a file
+  // Auto-refresh diff every 3 seconds when viewing a file (disabled for read-only/historical diffs)
   useHeartbeat(
     `diff-viewer-refresh-${selectedFile || 'none'}`,
     () => {
-      if (selectedFile && currentRepository) {
+      if (selectedFile && currentRepository && !diffData) {
         loadDiff(selectedFile);
       }
     },
     3000,
     {
-      enabled: !!selectedFile && !!currentRepository,
+      enabled: !!selectedFile && !!currentRepository && !diffData && !readOnly,
       immediate: false
     }
   );

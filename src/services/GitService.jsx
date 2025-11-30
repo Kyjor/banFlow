@@ -567,6 +567,58 @@ export default class GitService {
     }
   }
 
+  async getCommitFiles(commitHash) {
+    if (!this.git) throw new Error('No repository selected');
+    
+    try {
+      // Get list of files changed in this commit with their status
+      const result = await this.git.raw(['diff-tree', '--no-commit-id', '--name-status', '-r', commitHash]);
+      const files = result.trim().split('\n').filter(Boolean).map(line => {
+        const [status, ...pathParts] = line.split('\t');
+        const path = pathParts.join('\t'); // Handle paths with tabs
+        return {
+          path,
+          status: status === 'A' ? 'added' : status === 'D' ? 'deleted' : status === 'M' ? 'modified' : status.startsWith('R') ? 'renamed' : 'changed'
+        };
+      });
+      return files;
+    } catch (error) {
+      console.error('Error getting commit files:', error);
+      throw error;
+    }
+  }
+
+  async getCommitDiff(commitHash, file = null) {
+    if (!this.git) throw new Error('No repository selected');
+    
+    try {
+      // Get diff for this commit (compare with parent)
+      const args = ['diff', `${commitHash}^`, commitHash];
+      if (file) {
+        args.push('--', file);
+      }
+      const diff = await this.git.raw(args);
+      return this.parseDiff(diff);
+    } catch (error) {
+      // Handle first commit (no parent)
+      if (error.message && error.message.includes('unknown revision')) {
+        try {
+          const args = ['diff', '--root', commitHash];
+          if (file) {
+            args.push('--', file);
+          }
+          const diff = await this.git.raw(args);
+          return this.parseDiff(diff);
+        } catch (innerError) {
+          console.error('Error getting first commit diff:', innerError);
+          throw innerError;
+        }
+      }
+      console.error('Error getting commit diff:', error);
+      throw error;
+    }
+  }
+
   async getBranchesWithDates() {
     if (!this.git) throw new Error('No repository selected');
     

@@ -856,6 +856,22 @@ ipcMain.handle('git:getCommitHistory', async (event, options) => {
   }
 });
 
+ipcMain.handle('git:getCommitFiles', async (event, commitHash) => {
+  try {
+    return await gitService.getCommitFiles(commitHash);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getCommitDiff', async (event, commitHash, file) => {
+  try {
+    return await gitService.getCommitDiff(commitHash, file);
+  } catch (error) {
+    throw error;
+  }
+});
+
 // Merge and Rebase
 ipcMain.handle('git:merge', async (event, branchName, options) => {
   try {
