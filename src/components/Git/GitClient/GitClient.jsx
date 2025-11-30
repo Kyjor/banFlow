@@ -1002,12 +1002,24 @@ function GitClient() {
             placeholder="Commit message"
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && hasStagedChanges && commitMessage.trim()) {
+                e.preventDefault();
+                handleCommit();
+              }
+            }}
             className="commit-input"
           />
           <TextArea
             placeholder="Description (optional)"
             value={commitDescription}
             onChange={(e) => setCommitDescription(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && hasStagedChanges && commitMessage.trim()) {
+                e.preventDefault();
+                handleCommit();
+              }
+            }}
             autoSize={{ minRows: 2, maxRows: 4 }}
             className="commit-desc"
           />
