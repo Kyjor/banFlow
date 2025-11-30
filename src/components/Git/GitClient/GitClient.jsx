@@ -70,6 +70,7 @@ function GitClient() {
     stageFiles,
     unstageFiles,
     commit,
+    fetch,
     pull,
     push,
     stashChanges,
@@ -82,7 +83,8 @@ function GitClient() {
     getBranchesWithDates,
     getCommitHistory,
     refreshRepositoryStatus,
-    undoLastOperation
+    undoLastOperation,
+    createBranch
   } = useGit();
 
   // UI State
@@ -97,6 +99,8 @@ function GitClient() {
   const [hasTriedAutoOpen, setHasTriedAutoOpen] = useState(false);
   const [pullStrategy, setPullStrategy] = useState('merge');
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [newBranchName, setNewBranchName] = useState('');
+  const [newBranchError, setNewBranchError] = useState('');
 
   // Load recent repositories from localStorage
   useEffect(() => {
@@ -315,6 +319,30 @@ function GitClient() {
     }
   }, [switchBranch, refreshRepositoryStatus, getCommitHistory]);
 
+  const handleCreateBranch = useCallback(async () => {
+    const trimmedName = newBranchName.trim();
+    if (!trimmedName) {
+      setNewBranchError('Branch name is required');
+      return;
+    }
+    // Check for duplicate
+    const exists = branchesWithDates.some(b => b.name === trimmedName);
+    if (exists) {
+      setNewBranchError(`Branch "${trimmedName}" already exists`);
+      return;
+    }
+    try {
+      await createBranch(trimmedName);
+      setNewBranchName('');
+      setNewBranchError('');
+      // Refresh branches list
+      const branchesData = await getBranchesWithDates();
+      setBranchesWithDates(branchesData || []);
+    } catch (error) {
+      setNewBranchError(error.message || 'Failed to create branch');
+    }
+  }, [newBranchName, branchesWithDates, createBranch, getBranchesWithDates]);
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'staged': return <CheckOutlined style={{ color: '#52c41a' }} />;
@@ -398,6 +426,9 @@ function GitClient() {
 
           <Divider type="vertical" />
 
+          <Tooltip title="Fetch">
+            <Button icon={<SyncOutlined />} onClick={() => fetch()} loading={operationInProgress} />
+          </Tooltip>
           <Tooltip title={`Pull (${pullStrategy})`}>
             <Dropdown
               menu={{
@@ -789,9 +820,29 @@ function GitClient() {
       <Modal
         title="Branches"
         open={showBranchModal}
-        onCancel={() => setShowBranchModal(false)}
+        onCancel={() => { setShowBranchModal(false); setNewBranchName(''); setNewBranchError(''); }}
         footer={null}
       >
+        <div style={{ marginBottom: 16 }}>
+          <Space.Compact style={{ width: '100%' }}>
+            <Input
+              placeholder="New branch name"
+              value={newBranchName}
+              onChange={(e) => { setNewBranchName(e.target.value); setNewBranchError(''); }}
+              onPressEnter={handleCreateBranch}
+              status={newBranchError ? 'error' : undefined}
+            />
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />} 
+              onClick={handleCreateBranch}
+              loading={operationInProgress}
+            >
+              Create
+            </Button>
+          </Space.Compact>
+          {newBranchError && <Text type="danger" style={{ fontSize: 12 }}>{newBranchError}</Text>}
+        </div>
         <List
           dataSource={branchesWithDates}
           renderItem={branch => (

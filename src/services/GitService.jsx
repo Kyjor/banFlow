@@ -329,6 +329,23 @@ export default class GitService {
     }
   }
 
+  async fetch(remote = 'origin', prune = false) {
+    if (!this.git) throw new Error('No repository selected');
+    
+    try {
+      const fetchOptions = prune ? ['--prune'] : [];
+      const result = await this.git.fetch(remote, fetchOptions);
+      
+      return {
+        ...result,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error fetching:', error);
+      throw error;
+    }
+  }
+
   async pull(remote = 'origin', branch = null, strategy = 'merge') {
     if (!this.git) throw new Error('No repository selected');
     

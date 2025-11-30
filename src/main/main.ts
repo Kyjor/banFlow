@@ -778,6 +778,14 @@ ipcMain.handle('git:commit', async (event, message, description) => {
   }
 });
 
+ipcMain.handle('git:fetch', async (event, remote, prune) => {
+  try {
+    return await gitService.fetch(remote, prune);
+  } catch (error) {
+    throw error;
+  }
+});
+
 ipcMain.handle('git:pull', async (event, remote, branch, strategy) => {
   try {
     return await gitService.pull(remote, branch, strategy);

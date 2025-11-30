@@ -384,6 +384,21 @@ export function GitProvider({ children }) {
     }
   }, [handleError, showSuccess]);
 
+  const fetch = useCallback(async (remote = 'origin', prune = false) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:fetch', remote, prune);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Fetched', `from ${remote}`);
+      return result;
+    } catch (error) {
+      handleError(error, 'fetch');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
   const pull = useCallback(async (remote = 'origin', branch = null, strategy = 'merge') => {
     try {
       dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
@@ -768,6 +783,7 @@ export function GitProvider({ children }) {
     stageFiles,
     unstageFiles,
     commit,
+    fetch,
     pull,
     push,
     

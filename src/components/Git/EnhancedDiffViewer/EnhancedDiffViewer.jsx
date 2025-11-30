@@ -786,7 +786,7 @@ function EnhancedDiffViewer({
         title={
           <Space>
             <FileTextOutlined />
-            <Title level={4} style={{ margin: 0 }}>Enhanced Diff Viewer</Title>
+            <Title level={4} style={{ margin: 0 }}>Diff Viewer</Title>
             {selectedFile && (
               <Tag icon={getFileIcon(selectedFile)}>
                 {selectedFile}
