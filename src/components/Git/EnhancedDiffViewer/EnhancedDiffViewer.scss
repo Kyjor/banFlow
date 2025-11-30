@@ -45,12 +45,14 @@
 
           .diff-content {
             max-height: 500px;
-            overflow-y: auto;
+            overflow: auto;
 
             .diff-line {
               display: flex;
               align-items: center;
               min-height: 20px;
+              min-width: 100%;
+              width: max-content;
               font-size: 13px;
               line-height: 20px;
               transition: background 0.2s;
@@ -166,10 +168,14 @@
           }
 
           .hunk-content {
+            overflow-x: auto;
+            
             .diff-line {
               display: flex;
               align-items: center;
               padding: 2px 8px;
+              min-width: 100%;
+              width: max-content;
               border-bottom: 1px solid #f0f0f0;
               transition: background 0.2s;
 
