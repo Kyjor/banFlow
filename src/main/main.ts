@@ -1059,6 +1059,37 @@ ipcMain.handle('git:writeFile', async (event, repoPath, filePath, content) => {
   }
 });
 
+ipcMain.handle('git:listFiles', async (event, repoPath) => {
+  try {
+    const path = require('path');
+    const fs = require('fs');
+    
+    const files: string[] = [];
+    const ignoreDirs = new Set(['.git', 'node_modules', 'dist', 'build', '.next', '__pycache__', '.venv', 'venv']);
+    
+    function walkDir(dir: string, prefix = '') {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') && entry.name !== '.env') continue;
+        if (ignoreDirs.has(entry.name)) continue;
+        
+        const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+          walkDir(path.join(dir, entry.name), relativePath);
+        } else {
+          files.push(relativePath);
+        }
+      }
+    }
+    
+    walkDir(repoPath);
+    return files.sort();
+  } catch (error) {
+    console.error('Error listing files:', error);
+    throw error;
+  }
+});
+
 // Partial Staging Operations (Hunk/Line level)
 ipcMain.handle('git:stageHunk', async (event, filePath, hunkIndex) => {
   try {

@@ -421,4 +421,59 @@
       }
     }
   }
+
+  .full-file-container {
+    .full-file-header {
+      margin-bottom: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    .full-file-content {
+      border: 1px solid #e8e8e8;
+      border-radius: 6px;
+      overflow: hidden;
+
+      pre {
+        margin: 0 !important;
+      }
+    }
+  }
+
+  .inline-edit-actions {
+    margin-bottom: 12px;
+    
+    .ant-alert {
+      .ant-alert-message {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+    }
+  }
+
+  .diff-line {
+    &.editable {
+      cursor: text;
+      
+      &:hover {
+        background-color: rgba(24, 144, 255, 0.05) !important;
+      }
+    }
+
+    &.editing {
+      background-color: rgba(24, 144, 255, 0.1) !important;
+    }
+  }
+}
+
+// File picker modal styles
+.file-picker-item {
+  &:hover {
+    background: #f5f5f5;
+  }
+
+  &:active {
+    background: #e6f7ff;
+  }
 }

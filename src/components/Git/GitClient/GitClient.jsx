@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { ipcRenderer } from 'electron';
 import {
   Layout,
   Button,
@@ -42,7 +43,9 @@ import {
   CodeOutlined,
   WarningOutlined,
   SyncOutlined,
-  CopyOutlined
+  CopyOutlined,
+  FileSearchOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import EnhancedDiffViewer from '../EnhancedDiffViewer/EnhancedDiffViewer';
@@ -106,6 +109,15 @@ function GitClient() {
   const [commitFiles, setCommitFiles] = useState([]);
   const [commitDiff, setCommitDiff] = useState(null);
   const [loadingCommitFiles, setLoadingCommitFiles] = useState(false);
+  const [showFilePicker, setShowFilePicker] = useState(false);
+  const [allFiles, setAllFiles] = useState([]);
+  const [fileSearchTerm, setFileSearchTerm] = useState('');
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [editingFile, setEditingFile] = useState(null);
+  const [editedContent, setEditedContent] = useState('');
+  const [originalContent, setOriginalContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const fileSearchInputRef = useRef(null);
 
   // Load recent repositories from localStorage
   useEffect(() => {
@@ -222,6 +234,9 @@ function GitClient() {
     console.log('File selected:', file, 'staged:', isStaged);
     setSelectedFile(file);
     setSelectedFileStaged(isStaged);
+    setEditingFile(null);
+    setEditedContent('');
+    setOriginalContent('');
   }, []);
 
   const handleCommitSelect = useCallback(async (commitData) => {
@@ -230,6 +245,9 @@ function GitClient() {
     setSelectedFileStaged(false);
     setCommitDiff(null);
     setCommitFiles([]);
+    setEditingFile(null);
+    setEditedContent('');
+    setOriginalContent('');
     
     if (commitData?.hash) {
       try {
@@ -250,6 +268,9 @@ function GitClient() {
     setSelectedFileStaged(false);
     setCommitFiles([]);
     setCommitDiff(null);
+    setEditingFile(null);
+    setEditedContent('');
+    setOriginalContent('');
   }, []);
 
   const handleCommitFileSelect = useCallback(async (filePath) => {
@@ -376,6 +397,94 @@ function GitClient() {
     }
   }, [newBranchName, branchesWithDates, createBranch, getBranchesWithDates]);
 
+  // File picker functions
+  const openFilePicker = useCallback(async () => {
+    if (!currentRepository) return;
+    setShowFilePicker(true);
+    setFileSearchTerm('');
+    setLoadingFiles(true);
+    try {
+      const files = await ipcRenderer.invoke('git:listFiles', currentRepository);
+      setAllFiles(files || []);
+    } catch (error) {
+      console.error('Failed to load files:', error);
+      message.error('Failed to load file list');
+    } finally {
+      setLoadingFiles(false);
+    }
+  }, [currentRepository]);
+
+  const handleFilePickerSelect = useCallback(async (filePath) => {
+    setShowFilePicker(false);
+    setSelectedCommit(null); // Clear any selected commit
+    setSelectedFile(null); // Clear regular file selection
+    setSelectedFileStaged(false);
+    try {
+      const result = await ipcRenderer.invoke('git:readFile', currentRepository, filePath);
+      if (result.success) {
+        setEditingFile(filePath);
+        setEditedContent(result.content);
+        setOriginalContent(result.content);
+      }
+    } catch (error) {
+      console.error('Failed to load file:', error);
+      message.error('Failed to load file');
+    }
+  }, [currentRepository]);
+
+  const handleSaveFile = useCallback(async () => {
+    if (!editingFile || !currentRepository) return;
+    setIsSaving(true);
+    try {
+      const result = await ipcRenderer.invoke('git:writeFile', currentRepository, editingFile, editedContent);
+      if (result.success) {
+        message.success('File saved');
+        setOriginalContent(editedContent);
+        await refreshRepositoryStatus();
+      }
+    } catch (error) {
+      console.error('Failed to save file:', error);
+      message.error('Failed to save file');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [editingFile, currentRepository, editedContent, refreshRepositoryStatus]);
+
+  const handleCloseEditor = useCallback(() => {
+    setEditingFile(null);
+    setEditedContent('');
+    setOriginalContent('');
+  }, []);
+
+  const filteredPickerFiles = useMemo(() => {
+    if (!fileSearchTerm) return allFiles.slice(0, 50);
+    const term = fileSearchTerm.toLowerCase();
+    return allFiles.filter(f => f.toLowerCase().includes(term)).slice(0, 50);
+  }, [allFiles, fileSearchTerm]);
+
+  const hasUnsavedChanges = editingFile && editedContent !== originalContent;
+
+  // Focus search input when file picker opens
+  useEffect(() => {
+    if (showFilePicker && fileSearchInputRef.current) {
+      setTimeout(() => fileSearchInputRef.current?.focus(), 100);
+    }
+  }, [showFilePicker]);
+
+  // Ctrl+P keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        if (currentRepository) {
+          openFilePicker();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentRepository, openFilePicker]);
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'staged': return <CheckOutlined style={{ color: '#52c41a' }} />;
@@ -498,6 +607,12 @@ function GitClient() {
           <Tooltip title="Pop Stash">
             <Button icon={<ExportOutlined />} onClick={() => popStash()} disabled={operationInProgress} />
           </Tooltip>
+
+          <Divider type="vertical" />
+
+          <Tooltip title="Open File (Ctrl+P)">
+            <Button icon={<FileSearchOutlined />} onClick={openFilePicker} />
+          </Tooltip>
         </Space>
       </div>
 
@@ -570,6 +685,51 @@ function GitClient() {
 
   // MIDDLE: Diff viewer
   const renderMiddlePanel = () => {
+    // Editing a file from file picker
+    if (editingFile) {
+      return (
+        <div className="middle-panel has-file">
+          <div className="file-header">
+            <Space>
+              <FileTextOutlined />
+              <Text strong>{editingFile}</Text>
+              {hasUnsavedChanges && <Tag color="orange">Unsaved</Tag>}
+            </Space>
+            <Space>
+              <Button 
+                type="primary" 
+                size="small" 
+                onClick={handleSaveFile} 
+                loading={isSaving}
+                disabled={!hasUnsavedChanges}
+              >
+                Save
+              </Button>
+              <Button size="small" onClick={handleCloseEditor}>
+                Close
+              </Button>
+            </Space>
+          </div>
+          <div className="diff-wrapper" style={{ height: 'calc(100% - 50px)', overflow: 'hidden' }}>
+            <Input.TextArea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                lineHeight: '1.6',
+                height: '100%',
+                resize: 'none',
+                border: 'none',
+                borderRadius: 0,
+                padding: '12px'
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+
     if (hasConflicts) {
       return (
         <div className="middle-panel">
@@ -965,6 +1125,65 @@ function GitClient() {
           )}
         />
       </Modal>
+
+      {/* Quick Open File Modal */}
+      <Modal
+        title={
+          <Space>
+            <FileSearchOutlined />
+            <span>Open File</span>
+            <Tag>Ctrl+P</Tag>
+          </Space>
+        }
+        open={showFilePicker}
+        onCancel={() => setShowFilePicker(false)}
+        footer={null}
+        width={600}
+      >
+        <Input
+          ref={fileSearchInputRef}
+          placeholder="Type to search files..."
+          value={fileSearchTerm}
+          onChange={(e) => setFileSearchTerm(e.target.value)}
+          prefix={<SearchOutlined />}
+          allowClear
+          style={{ marginBottom: 12 }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && filteredPickerFiles.length > 0) {
+              handleFilePickerSelect(filteredPickerFiles[0]);
+            }
+            if (e.key === 'Escape') {
+              setShowFilePicker(false);
+            }
+          }}
+        />
+        <Spin spinning={loadingFiles}>
+          <List
+            size="small"
+            dataSource={filteredPickerFiles}
+            style={{ maxHeight: 400, overflow: 'auto' }}
+            renderItem={(filePath) => (
+              <List.Item
+                style={{ cursor: 'pointer', padding: '8px 12px' }}
+                onClick={() => handleFilePickerSelect(filePath)}
+                className="file-picker-item"
+              >
+                <Space>
+                  <FileTextOutlined />
+                  <Text ellipsis style={{ maxWidth: 500 }}>{filePath}</Text>
+                </Space>
+              </List.Item>
+            )}
+            locale={{ emptyText: fileSearchTerm ? 'No files match' : 'No files found' }}
+          />
+          {allFiles.length > 50 && (
+            <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
+              Showing {Math.min(50, filteredPickerFiles.length)} of {allFiles.length} files
+            </Text>
+          )}
+        </Spin>
+      </Modal>
+
     </div>
   );
 }
