@@ -872,6 +872,22 @@ ipcMain.handle('git:getCommitDiff', async (event, commitHash, file) => {
   }
 });
 
+ipcMain.handle('git:getFileHistory', async (event, filePath, maxCount) => {
+  try {
+    return await gitService.getFileHistory(filePath, maxCount);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getFileAtCommit', async (event, filePath, commitHash) => {
+  try {
+    return await gitService.getFileAtCommit(filePath, commitHash);
+  } catch (error) {
+    throw error;
+  }
+});
+
 // Merge and Rebase
 ipcMain.handle('git:merge', async (event, branchName, options) => {
   try {
@@ -921,6 +937,26 @@ ipcMain.handle('git:cloneRepository', async (event, repoUrl, targetPath) => {
   } catch (error) {
     throw error;
   }
+});
+
+ipcMain.handle('git:initRepository', async (event, targetPath) => {
+  try {
+    return await gitService.initRepository(targetPath);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:selectDirectory', async () => {
+  const { dialog } = require('electron');
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Select Directory'
+  });
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+  return result.filePaths[0];
 });
 
 ipcMain.handle('git:getGitHubRepositories', async () => {

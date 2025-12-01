@@ -89,7 +89,10 @@ function GitClient() {
     getCommitDiff,
     refreshRepositoryStatus,
     undoLastOperation,
-    createBranch
+    createBranch,
+    cloneRepository,
+    initRepository,
+    selectDirectory
   } = useGit();
 
   // UI State
@@ -117,6 +120,11 @@ function GitClient() {
   const [editedContent, setEditedContent] = useState('');
   const [originalContent, setOriginalContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [showInitModal, setShowInitModal] = useState(false);
+  const [cloneUrl, setCloneUrl] = useState('');
+  const [cloneTargetPath, setCloneTargetPath] = useState('');
+  const [initTargetPath, setInitTargetPath] = useState('');
   const fileSearchInputRef = useRef(null);
 
   // Load recent repositories from localStorage
@@ -485,6 +493,51 @@ function GitClient() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentRepository, openFilePicker]);
 
+  const handleClone = useCallback(async () => {
+    if (!cloneUrl.trim() || !cloneTargetPath.trim()) {
+      message.warning('Please enter a repository URL and target directory');
+      return;
+    }
+    try {
+      await cloneRepository(cloneUrl.trim(), cloneTargetPath.trim());
+      setShowCloneModal(false);
+      setCloneUrl('');
+      setCloneTargetPath('');
+      await refreshRepositoryStatus();
+    } catch (error) {
+      console.error('Failed to clone:', error);
+    }
+  }, [cloneUrl, cloneTargetPath, cloneRepository, refreshRepositoryStatus]);
+
+  const handleInit = useCallback(async () => {
+    if (!initTargetPath.trim()) {
+      message.warning('Please select a directory');
+      return;
+    }
+    try {
+      await initRepository(initTargetPath.trim());
+      setShowInitModal(false);
+      setInitTargetPath('');
+      await refreshRepositoryStatus();
+    } catch (error) {
+      console.error('Failed to init:', error);
+    }
+  }, [initTargetPath, initRepository, refreshRepositoryStatus]);
+
+  const handleSelectCloneDirectory = useCallback(async () => {
+    const dir = await selectDirectory();
+    if (dir) {
+      setCloneTargetPath(dir);
+    }
+  }, [selectDirectory]);
+
+  const handleSelectInitDirectory = useCallback(async () => {
+    const dir = await selectDirectory();
+    if (dir) {
+      setInitTargetPath(dir);
+    }
+  }, [selectDirectory]);
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'staged': return <CheckOutlined style={{ color: '#52c41a' }} />;
@@ -523,7 +576,9 @@ function GitClient() {
                 }))
               ] : []),
               { type: 'divider' },
-              { key: 'add', label: <Space><FolderOpenOutlined />Add Repository</Space>, onClick: () => selectRepository().then(() => refreshRepositoryStatus()) }
+              { key: 'add', label: <Space><FolderOpenOutlined />Add Repository</Space>, onClick: () => selectRepository().then(() => refreshRepositoryStatus()) },
+              { key: 'clone', label: <Space><CloudDownloadOutlined />Clone Repository</Space>, onClick: () => setShowCloneModal(true) },
+              { key: 'init', label: <Space><PlusOutlined />Init New Repository</Space>, onClick: () => setShowInitModal(true) }
             ]
           }}
           trigger={['click']}
@@ -1196,6 +1251,81 @@ function GitClient() {
         </Spin>
       </Modal>
 
+      {/* Clone Repository Modal */}
+      <Modal
+        title={
+          <Space>
+            <CloudDownloadOutlined />
+            <span>Clone Repository</span>
+          </Space>
+        }
+        open={showCloneModal}
+        onCancel={() => { setShowCloneModal(false); setCloneUrl(''); setCloneTargetPath(''); }}
+        onOk={handleClone}
+        okText="Clone"
+        confirmLoading={isLoading}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div>
+            <Text strong>Repository URL</Text>
+            <Input
+              placeholder="https://github.com/user/repo.git"
+              value={cloneUrl}
+              onChange={(e) => setCloneUrl(e.target.value)}
+              style={{ marginTop: 4 }}
+            />
+          </div>
+          <div>
+            <Text strong>Clone to Directory</Text>
+            <Space.Compact style={{ width: '100%', marginTop: 4 }}>
+              <Input
+                placeholder="Select target directory..."
+                value={cloneTargetPath}
+                onChange={(e) => setCloneTargetPath(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <Button icon={<FolderOpenOutlined />} onClick={handleSelectCloneDirectory}>
+                Browse
+              </Button>
+            </Space.Compact>
+          </div>
+        </Space>
+      </Modal>
+
+      {/* Init Repository Modal */}
+      <Modal
+        title={
+          <Space>
+            <PlusOutlined />
+            <span>Initialize New Repository</span>
+          </Space>
+        }
+        open={showInitModal}
+        onCancel={() => { setShowInitModal(false); setInitTargetPath(''); }}
+        onOk={handleInit}
+        okText="Initialize"
+        confirmLoading={isLoading}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div>
+            <Text strong>Directory</Text>
+            <Space.Compact style={{ width: '100%', marginTop: 4 }}>
+              <Input
+                placeholder="Select directory to initialize..."
+                value={initTargetPath}
+                onChange={(e) => setInitTargetPath(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <Button icon={<FolderOpenOutlined />} onClick={handleSelectInitDirectory}>
+                Browse
+              </Button>
+            </Space.Compact>
+            <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
+              This will create a new Git repository in the selected directory.
+            </Text>
+          </div>
+        </Space>
+      </Modal>
     </div>
   );
 }

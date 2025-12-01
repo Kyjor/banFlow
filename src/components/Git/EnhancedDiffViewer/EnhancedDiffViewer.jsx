@@ -44,7 +44,8 @@ import {
   UndoOutlined,
   EditOutlined,
   FileSearchOutlined,
-  FolderOpenOutlined
+  FolderOpenOutlined,
+  HistoryOutlined
 } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -80,7 +81,10 @@ function EnhancedDiffViewer({
     stageHunk,
     discardHunk,
     stageLines,
-    discardLines
+    discardLines,
+    getFileHistory,
+    getFileAtCommit,
+    getCommitDiff
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -109,6 +113,10 @@ function EnhancedDiffViewer({
   const [inlineEditMode, setInlineEditMode] = useState(false);
   const [inlineEdits, setInlineEdits] = useState({}); // { lineKey: newContent }
   const [editingLineKey, setEditingLineKey] = useState(null);
+  const [fileHistory, setFileHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedHistoryCommit, setSelectedHistoryCommit] = useState(null);
+  const [historicalContent, setHistoricalContent] = useState(null);
   const editorRef = useRef(null);
   const fileSearchInputRef = useRef(null);
   const inlineEditInputRef = useRef(null);
@@ -214,6 +222,56 @@ function EnhancedDiffViewer({
       setTimeout(() => fileSearchInputRef.current?.focus(), 100);
     }
   }, [showFilePicker]);
+
+  // Load file history when file changes
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (selectedFile && currentRepository && !readOnly) {
+        setLoadingHistory(true);
+        try {
+          const history = await getFileHistory(selectedFile);
+          setFileHistory(history || []);
+        } catch (error) {
+          console.error('Failed to load file history:', error);
+          setFileHistory([]);
+        } finally {
+          setLoadingHistory(false);
+        }
+      } else {
+        setFileHistory([]);
+      }
+    };
+    loadHistory();
+    // Reset historical view when file changes
+    setSelectedHistoryCommit(null);
+    setHistoricalContent(null);
+  }, [selectedFile, currentRepository, readOnly, getFileHistory]);
+
+  // Load file content at selected historical commit
+  const handleHistorySelect = useCallback(async (commitHash) => {
+    if (!commitHash) {
+      // "Current" selected - go back to normal diff view
+      setSelectedHistoryCommit(null);
+      setHistoricalContent(null);
+      return;
+    }
+    
+    setSelectedHistoryCommit(commitHash);
+    try {
+      const content = await getFileAtCommit(selectedFile, commitHash);
+      setHistoricalContent(content);
+    } catch (error) {
+      console.error('Failed to load file at commit:', error);
+      message.error('Failed to load historical version');
+      setHistoricalContent(null);
+    }
+  }, [selectedFile, getFileAtCommit]);
+
+  const formatHistoryDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   const openFilePicker = async () => {
     if (!currentRepository) return;
@@ -1077,6 +1135,38 @@ function EnhancedDiffViewer({
                 {selectedFile}
               </Tag>
             )}
+            {selectedFile && fileHistory.length > 0 && !readOnly && (
+              <Select
+                size="small"
+                style={{ minWidth: 200 }}
+                placeholder="History"
+                value={selectedHistoryCommit}
+                onChange={handleHistorySelect}
+                loading={loadingHistory}
+                allowClear
+                dropdownMatchSelectWidth={false}
+              >
+                <Option value={null}>
+                  <Space>
+                    <HistoryOutlined />
+                    <Text>Current (Working)</Text>
+                  </Space>
+                </Option>
+                {fileHistory.map((commit) => (
+                  <Option key={commit.hash} value={commit.hash}>
+                    <Space direction="vertical" size={0} style={{ lineHeight: 1.2 }}>
+                      <Text ellipsis style={{ maxWidth: 300 }}>{commit.message}</Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        {commit.hash.substring(0, 7)} • {formatHistoryDate(commit.date)}
+                      </Text>
+                    </Space>
+                  </Option>
+                ))}
+              </Select>
+            )}
+            {selectedHistoryCommit && (
+              <Tag color="purple">Viewing {selectedHistoryCommit.substring(0, 7)}</Tag>
+            )}
             {selectedDiff && (
               <Badge 
                 count={selectedDiff.hunks?.length || 0} 
@@ -1478,6 +1568,39 @@ function EnhancedDiffViewer({
                       }}
                       autoSize={{ minRows: 20, maxRows: 40 }}
                     />
+                  </div>
+                </div>
+              ) : selectedHistoryCommit && historicalContent !== null ? (
+                <div className="full-file-container">
+                  <div className="full-file-header">
+                    <Space>
+                      <Tag color="purple">Historical Version</Tag>
+                      <Tag>{selectedHistoryCommit.substring(0, 7)}</Tag>
+                      <Text type="secondary">{historicalContent.split('\n').length} lines</Text>
+                      <Button 
+                        size="small" 
+                        onClick={() => { setSelectedHistoryCommit(null); setHistoricalContent(null); }}
+                      >
+                        Back to Current
+                      </Button>
+                    </Space>
+                  </div>
+                  <div className="full-file-content">
+                    <SyntaxHighlighter
+                      language={getLanguageFromFilename(selectedFile)}
+                      style={theme === 'dark' ? tomorrow : prism}
+                      showLineNumbers={showLineNumbers}
+                      wrapLines={wordWrap}
+                      customStyle={{
+                        margin: 0,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        maxHeight: '600px',
+                        overflow: 'auto'
+                      }}
+                    >
+                      {historicalContent}
+                    </SyntaxHighlighter>
                   </div>
                 </div>
               ) : viewFullFile ? (

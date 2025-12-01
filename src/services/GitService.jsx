@@ -619,6 +619,44 @@ export default class GitService {
     }
   }
 
+  async getFileHistory(filePath, maxCount = 50) {
+    if (!this.git) throw new Error('No repository selected');
+    
+    try {
+      // Get commits that modified this specific file
+      const result = await this.git.raw([
+        'log',
+        '--follow',
+        `--max-count=${maxCount}`,
+        '--format=%H|%ai|%s|%an',
+        '--',
+        filePath
+      ]);
+      
+      if (!result.trim()) return [];
+      
+      return result.trim().split('\n').filter(Boolean).map(line => {
+        const [hash, date, message, author] = line.split('|');
+        return { hash, date, message, author };
+      });
+    } catch (error) {
+      console.error('Error getting file history:', error);
+      throw error;
+    }
+  }
+
+  async getFileAtCommit(filePath, commitHash) {
+    if (!this.git) throw new Error('No repository selected');
+    
+    try {
+      const content = await this.git.raw(['show', `${commitHash}:${filePath}`]);
+      return content;
+    } catch (error) {
+      console.error('Error getting file at commit:', error);
+      throw error;
+    }
+  }
+
   async getBranchesWithDates() {
     if (!this.git) throw new Error('No repository selected');
     
@@ -1175,19 +1213,42 @@ export default class GitService {
 
   async cloneRepository(repoUrl, targetPath) {
     try {
+      // Extract repo name from URL (e.g., "Flecs.jl" from "https://github.com/user/Flecs.jl.git")
+      const repoName = repoUrl.split('/').pop().replace(/\.git$/, '');
+      const fullPath = path.join(targetPath, repoName);
+      
       const operation = {
         type: 'CLONE',
         timestamp: new Date().toISOString(),
-        data: { repoUrl, targetPath },
+        data: { repoUrl, targetPath: fullPath },
+        repoPath: fullPath
+      };
+
+      await simpleGit().clone(repoUrl, fullPath);
+      this.operationHistory.push(operation);
+      
+      return await this.addRepository(fullPath);
+    } catch (error) {
+      console.error('Error cloning repository:', error);
+      throw error;
+    }
+  }
+
+  async initRepository(targetPath) {
+    try {
+      const operation = {
+        type: 'INIT',
+        timestamp: new Date().toISOString(),
+        data: { targetPath },
         repoPath: targetPath
       };
 
-      await simpleGit().clone(repoUrl, targetPath);
+      await simpleGit(targetPath).init();
       this.operationHistory.push(operation);
       
       return await this.addRepository(targetPath);
     } catch (error) {
-      console.error('Error cloning repository:', error);
+      console.error('Error initializing repository:', error);
       throw error;
     }
   }

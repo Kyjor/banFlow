@@ -531,6 +531,24 @@ export function GitProvider({ children }) {
     }
   }, [handleError]);
 
+  const getFileHistory = useCallback(async (filePath, maxCount = 50) => {
+    try {
+      return await ipcRenderer.invoke('git:getFileHistory', filePath, maxCount);
+    } catch (error) {
+      handleError(error, 'get file history');
+      throw error;
+    }
+  }, [handleError]);
+
+  const getFileAtCommit = useCallback(async (filePath, commitHash) => {
+    try {
+      return await ipcRenderer.invoke('git:getFileAtCommit', filePath, commitHash);
+    } catch (error) {
+      handleError(error, 'get file at commit');
+      throw error;
+    }
+  }, [handleError]);
+
   // Undo System
   const undoLastOperation = useCallback(async () => {
     try {
@@ -577,6 +595,30 @@ export function GitProvider({ children }) {
       dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
     }
   }, [handleError, showSuccess]);
+
+  const initRepository = useCallback(async (targetPath) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+      const result = await ipcRenderer.invoke('git:initRepository', targetPath);
+      dispatch({ type: GitActionTypes.ADD_REPOSITORY, payload: result });
+      showSuccess('Repository initialized', result.name);
+      return result;
+    } catch (error) {
+      handleError(error, 'initialize repository');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
+  const selectDirectory = useCallback(async () => {
+    try {
+      return await ipcRenderer.invoke('git:selectDirectory');
+    } catch (error) {
+      handleError(error, 'select directory');
+      return null;
+    }
+  }, [handleError]);
 
   // Project-specific repository management
   const getProjectRepositoryStats = useCallback(async () => {
@@ -816,6 +858,8 @@ export function GitProvider({ children }) {
     getCommitHistory,
     getCommitFiles,
     getCommitDiff,
+    getFileHistory,
+    getFileAtCommit,
     
     // Undo System
     undoLastOperation,
@@ -823,6 +867,8 @@ export function GitProvider({ children }) {
     // GitHub Integration
     authenticateGitHub,
     cloneRepository,
+    initRepository,
+    selectDirectory,
     
     // Project-specific Repository Management
     getProjectRepositoryStats,
