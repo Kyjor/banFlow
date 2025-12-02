@@ -4,7 +4,6 @@ import {
   ExpandOutlined,
   FileOutlined,
   PlayCircleOutlined,
-  PlusSquareFilled,
   SettingOutlined,
   TableOutlined,
   GitlabOutlined,
@@ -18,12 +17,11 @@ import PropTypes from 'prop-types';
 import { useLocation, Link } from 'react-router-dom';
 import { ipcRenderer } from 'electron';
 import { Header } from 'antd/es/layout/layout';
-import AddProject from '../components/Projects/AddProject';
 
 const { Content, Sider } = Layout;
 
 // eslint-disable-next-line consistent-return
-function loadSidebarComponents(pathname, setShowModal) {
+function loadSidebarComponents(pathname) {
   if (pathname === '/dashboard' || pathname === '/' || pathname === '/settings') {
     localStorage.removeItem('currentProject');
   }
@@ -39,16 +37,6 @@ function loadSidebarComponents(pathname, setShowModal) {
   ) {
     return (
       <>
-        <Menu.Item
-          icon={<PlusSquareFilled />}
-          onClick={() => {
-            setShowModal(true);
-          }}
-          title="Add New Project"
-          key="2"
-        >
-          Add New Project
-        </Menu.Item>
         <Menu.Item icon={<GitlabOutlined />}>
           <Link to="/git" />
           Git
@@ -62,7 +50,7 @@ function loadSidebarComponents(pathname, setShowModal) {
   }
   return (
     <>
-      <Menu.Item icon={<PlusSquareFilled />} title="Kanban" key="2">
+      <Menu.Item title="Kanban" key="2">
         <Link to={`/projectPage/${currentProject}`} />
         Kanban
       </Menu.Item>
@@ -97,14 +85,10 @@ function loadSidebarComponents(pathname, setShowModal) {
 
 function App(props) {
   const [collapsed, setCollapsed] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   const { children } = props;
   const location = useLocation();
 
-  const sidebarComponents = loadSidebarComponents(
-    location.pathname,
-    setShowModal,
-  );
+  const sidebarComponents = loadSidebarComponents(location.pathname);
 
   return (
     <Layout
@@ -151,13 +135,6 @@ function App(props) {
               minHeight: 360,
             }}
           >
-            <AddProject
-              handleCancel={() => {
-                setShowModal(false);
-                window.location.reload();
-              }}
-              visible={showModal}
-            />
             {children}
           </div>
         </Content>

@@ -1,35 +1,313 @@
-.todoListMain .header input {
-  padding: 10px;
-  font-size: 16px;
-  border: 2px solid #FFF;
-  width: 165px;
+// Project List Container
+.project-list-container {
+  width: 420px;
+  min-width: 420px;
+  max-width: 420px;
+  max-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-right: 24px;
 }
 
-.todoListMain .header button {
-  padding: 10px;
-  font-size: 16px;
-  margin: 10px;
-  margin-right: 0px;
-  border: 2px solid #0066FF;
+.project-list-header {
+  padding: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.todoListMain .header button:hover {
-  border: 2px solid #003399;
+.project-list-title {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.create-project-form {
+  margin-bottom: 16px;
+  
+  .ant-input {
+    border-radius: 8px 0 0 8px;
+    border-right: none;
+    background: rgba(255, 255, 255, 0.95);
+    color: #262626;
+    
+    &::placeholder {
+      color: #8c8c8c;
+    }
+    
+    &:focus {
+      border-color: rgba(255, 255, 255, 0.5);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+      background: #ffffff;
+    }
+  }
+  
+  .ant-btn-primary {
+    border-radius: 0 8px 8px 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    color: #ffffff;
+    font-weight: 500;
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.4);
+      color: #ffffff;
+    }
+  }
+}
+
+.project-list-controls {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  
+  .search-input {
+    flex: 1;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    
+    .ant-input {
+      background: transparent;
+      color: #262626;
+      
+      &::placeholder {
+        color: #8c8c8c;
+      }
+    }
+    
+    &:focus,
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.5);
+      
+      .ant-input {
+        background: #ffffff;
+      }
+    }
+  }
+  
+  .sort-select {
+    width: 140px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.95);
+    
+    .ant-select-selector {
+      border-radius: 8px !important;
+      background: transparent !important;
+      color: #262626 !important;
+    }
+    
+    .ant-select-selection-item {
+      color: #262626 !important;
+    }
+    
+    &:hover,
+    &.ant-select-focused {
+      .ant-select-selector {
+        border-color: rgba(255, 255, 255, 0.5) !important;
+        background: #ffffff !important;
+      }
+    }
+  }
+}
+
+.open-file-button {
+  width: 100%;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(10px);
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+  }
+}
+
+// Project List Wrapper
+.project-list-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f5f7fa;
+  
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+    
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+}
+
+.project-list-item {
+  margin-bottom: 16px;
+  padding: 0 !important;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.project-card {
+  border-radius: 12px !important;
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  overflow: hidden;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: #667eea;
+  }
+  
+  .ant-card-body {
+    padding: 20px;
+  }
+  
+  .ant-card-actions {
+    background: #fafafa;
+    border-top: 1px solid #f0f0f0;
+    
+    li {
+      margin: 8px 0;
+      
+      .ant-btn {
+        color: #8c8c8c;
+        
+        &:hover {
+          color: #667eea;
+        }
+      }
+    }
+  }
 }
 
-.todoListMain .theList {
-  list-style: none;
-  padding-left: 0;
-  width: 250px;
+.project-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.todoListMain .theList li {
-  color: #333;
-  padding: 15px;
-  margin-bottom: 15px;
-  border-radius: 5px;
-  list-style: none;
+.project-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.project-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+  
+  .project-card:hover & {
+    transform: scale(1.05);
+  }
+}
+
+.project-title-wrapper {
+  flex: 1;
+  min-width: 0;
+  
+  .project-title {
+    margin: 0 !important;
+    font-size: 18px;
+    font-weight: 600;
+    color: #262626;
+    
+    .ant-typography {
+      margin: 0;
+      color: #262626;
+    }
+  }
+}
+
+.project-card-meta {
+  margin-top: 4px;
+  
+  .ant-tag {
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    margin: 0;
+  }
+}
+
+// Empty State
+.project-list-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background: #f5f7fa;
+  
+  .ant-empty {
+    .ant-empty-description {
+      color: #8c8c8c;
+    }
+  }
+}
+
+// Legacy styles (for backward compatibility)
+.todoListMain {
+  .header input {
+    padding: 10px;
+    font-size: 16px;
+    border: 2px solid #FFF;
+    width: 165px;
+  }
+
+  .header button {
+    padding: 10px;
+    font-size: 16px;
+    margin: 10px;
+    margin-right: 0px;
+    border: 2px solid #0066FF;
+  }
+
+  .header button:hover {
+    border: 2px solid #003399;
+    cursor: pointer;
+  }
+
+  .theList {
+    list-style: none;
+    padding-left: 0;
+    width: 250px;
+  }
+
+  .theList li {
+    color: #333;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    list-style: none;
+  }
 }
 
 ul.theList {

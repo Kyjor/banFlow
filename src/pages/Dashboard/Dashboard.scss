@@ -1,12 +1,13 @@
 .home {
-  padding: 0 50px;
+  padding: 24px 50px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
   
   .flex {
     display: flex;
-    gap: 30px;
-    padding-top: 20px;
+    gap: 24px;
+    padding-top: 0;
+    align-items: flex-start;
   }
 }
 
@@ -189,16 +190,7 @@
   }
 }
 
-// Project list container styling
-.project-list-container {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 20px;
-  min-width: 300px;
-  max-width: 350px;
-}
+// Project list container styling is now handled in ProjectListContainer.scss
 
 // Responsive design
 @media (max-width: 1200px) {

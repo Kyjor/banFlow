@@ -1,12 +1,54 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Button, Card, List, Popconfirm, Typography } from 'antd';
+import { Button, Card, List, Popconfirm, Typography, Empty, Tag, Space } from 'antd';
 import '../ProjectListContainer.scss';
-import { CalendarOutlined, DeleteTwoTone } from '@ant-design/icons';
+import {
+  CalendarOutlined,
+  DeleteTwoTone,
+  FolderOutlined,
+  EditOutlined,
+  ClockCircleOutlined,
+} from '@ant-design/icons';
 import dateFormat from 'dateformat';
 
-const { Paragraph } = Typography;
+const { Paragraph, Text } = Typography;
+
+// Generate a color based on project name for consistent icon colors
+const getProjectColor = (name) => {
+  const colors = [
+    '#1890ff', // Blue
+    '#52c41a', // Green
+    '#faad14', // Orange
+    '#f5222d', // Red
+    '#722ed1', // Purple
+    '#13c2c2', // Cyan
+    '#eb2f96', // Pink
+    '#fa8c16', // Orange
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
+// Format time ago
+const getTimeAgo = (timestamp) => {
+  if (!timestamp) return 'Never';
+  const date = new Date(parseInt(timestamp, 10));
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  return dateFormat(date, "mmm d, yyyy");
+};
 
 function ProjectList(props) {
   const { items } = props;
@@ -14,95 +56,198 @@ function ProjectList(props) {
 
   const onChange = (lastStr, currentStr) => {
     const { renameProject } = props;
-    renameProject(lastStr, currentStr);
+    if (currentStr && currentStr.trim() && currentStr !== lastStr) {
+      renameProject(lastStr, currentStr.trim());
+    }
   };
 
   const createTasks = (item) => {
-    const projectName = item.text.includes('.json')
-      ? item.text.slice(0, item.text.indexOf('.'))
-      : item.text;
-    const lastOpened = localStorage.getItem(`projectLastOpened_${projectName}`);
-    const lastOpenedFormatted = lastOpened ? dateFormat(new Date(parseInt(lastOpened, 10)), "mmm d, yyyy h:MM TT") : 'Never';
+    // Only process files ending with .json
+    if (!item.text.endsWith('.json') || item.text.endsWith('.json~')) {
+      return null;
+    }
+    
+    // Extract project name (remove .json extension)
+    const projectName = item.text.slice(0, item.text.lastIndexOf('.json'));
+    
+    // Skip items with empty or invalid project names
+    if (!projectName || !projectName.trim()) {
+      return null;
+    }
+    
+    const trimmedName = projectName.trim();
+    const lowerName = trimmedName.toLowerCase();
+    
+    // Filter out system files
+    const systemFiles = ['.ds_store', 'thumbs.db', '.gitignore', '.gitkeep'];
+    if (systemFiles.includes(lowerName)) {
+      return null;
+    }
+    
+    const lastOpened = localStorage.getItem(`projectLastOpened_${trimmedName}`);
+    const lastOpenedFormatted = lastOpened
+      ? dateFormat(new Date(parseInt(lastOpened, 10)), "mmm d, yyyy h:MM TT")
+      : null;
+    const timeAgo = getTimeAgo(lastOpened);
+    const projectColor = getProjectColor(trimmedName);
+
     const listItem = {
-      jsx: (
-        <Paragraph
-          key={item.key}
-          editable={{ onChange: (str) => onChange(projectName, str) }}
-        >
-          {projectName}
-        </Paragraph>
-      ),
-      name: projectName,
-      lastOpened: lastOpenedFormatted
+      name: trimmedName,
+      lastOpened: lastOpenedFormatted,
+      timeAgo,
+      color: projectColor,
+      key: trimmedName, // Use project name as key for proper deduplication
     };
 
     return listItem;
   };
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-shadow
-    if (!listItemsWithoutFileExtension) return;
     const items1 = items
-      .filter((item) => {
-        return item.text !== '.json' && !item.text.includes('.json~');
-      })
       .map(createTasks)
-      .sort((a, b) => {
-        const dateA = a.lastOpened === 'Never' ? 0 : new Date(a.lastOpened).getTime();
-        const dateB = b.lastOpened === 'Never' ? 0 : new Date(b.lastOpened).getTime();
-        return dateB - dateA; // Sort in descending order (newest first)
-      });
-    setListItems(items1);
+      .filter((item) => item !== null && item.name); // Remove null items and items without names
+    
+    // Deduplicate by project name (case-insensitive)
+    const uniqueItemsMap = new Map();
+    items1.forEach((item) => {
+      if (item && item.name) {
+        const lowerName = item.name.toLowerCase();
+        // Keep first occurrence of each project name
+        if (!uniqueItemsMap.has(lowerName)) {
+          uniqueItemsMap.set(lowerName, item);
+        }
+      }
+    });
+    
+    setListItems(Array.from(uniqueItemsMap.values()));
   }, [items]);
 
   const { deleteProject, openProjectDetails } = props;
 
-  return (
-    <List
-      itemLayout="vertical"
-      size="large"
-      dataSource={listItemsWithoutFileExtension}
-      bordered
-      pagination={{
-        pageSize: 5,
-      }}
-      renderItem={(item) => (
-        <List.Item key={item.name}>
-          <Card title={item.jsx} hoverable style={{ borderRadius: `20px` }}>
-            <div style={{ marginBottom: '10px', color: '#666' }}>
-              Last opened: {item.lastOpened}
+  if (listItemsWithoutFileExtension.length === 0) {
+    return (
+      <div className="project-list-empty">
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <div>
+              <Text strong style={{ fontSize: '16px', display: 'block', marginBottom: '8px' }}>
+                No projects yet
+              </Text>
+              <Text type="secondary">
+                Create your first project using the form above to get started!
+              </Text>
             </div>
-            <Button
-              type="text"
-              icon={
-                <CalendarOutlined
-                  onClick={() => {
-                    localStorage.setItem(`projectLastOpened_${item.name}`, Date.now().toString());
-                    openProjectDetails(item.name);
+          }
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="project-list-wrapper">
+      <List
+        itemLayout="vertical"
+        size="large"
+        dataSource={listItemsWithoutFileExtension}
+        pagination={{
+          pageSize: 8,
+          showSizeChanger: false,
+          showTotal: (total) => `Total ${total} project${total > 1 ? 's' : ''}`,
+        }}
+        renderItem={(item) => {
+          return (
+            <List.Item key={`project-${item.name}`} className="project-list-item">
+              <Card
+                className="project-card"
+                hoverable
+                onClick={() => {
+                  localStorage.setItem(`projectLastOpened_${item.name}`, Date.now().toString());
+                  openProjectDetails(item.name);
+                }}
+              actions={[
+                <Button
+                  key="edit"
+                  type="text"
+                  icon={<EditOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
                   }}
-                />
-              }
-            />
-            <Popconfirm
-              title="Are you sure delete this project?"
-              onConfirm={() => deleteProject(item.name)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Button
-                type="text"
-                icon={
-                  <DeleteTwoTone
-                    twoToneColor="#eb2f96"
-                    style={{ fontSize: '16px' }}
+                  title="Rename project"
+                />,
+                <Popconfirm
+                  key="delete"
+                  title="Delete this project?"
+                  description="This action cannot be undone."
+                  onConfirm={(e) => {
+                    e?.stopPropagation();
+                    deleteProject(item.name);
+                  }}
+                  onCancel={(e) => {
+                    e?.stopPropagation();
+                  }}
+                  okText="Delete"
+                  cancelText="Cancel"
+                  okButtonProps={{ danger: true }}
+                >
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteTwoTone twoToneColor="#ff4d4f" />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    title="Delete project"
                   />
-                }
-              />
-            </Popconfirm>
-          </Card>
-        </List.Item>
-      )}
-    />
+                </Popconfirm>,
+              ]}
+            >
+              <div className="project-card-content">
+                <div className="project-card-header">
+                  <div
+                    className="project-icon"
+                    style={{
+                      backgroundColor: `${item.color}15`,
+                      color: item.color,
+                    }}
+                  >
+                    <FolderOutlined style={{ fontSize: '24px' }} />
+                  </div>
+                  <div className="project-title-wrapper">
+                    <Paragraph
+                      className="project-title"
+                      editable={{
+                        onChange: (str) => onChange(item.name, str),
+                        tooltip: 'Click to edit',
+                        triggerType: ['icon'],
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      {item.name}
+                    </Paragraph>
+                  </div>
+                </div>
+                <div className="project-card-meta">
+                  <Space size="small" wrap>
+                    <Tag icon={<ClockCircleOutlined />} color="default">
+                      {item.timeAgo}
+                    </Tag>
+                    {item.lastOpened && (
+                      <Tag icon={<CalendarOutlined />} color="default">
+                        {item.lastOpened}
+                      </Tag>
+                    )}
+                  </Space>
+                </div>
+              </div>
+            </Card>
+          </List.Item>
+          );
+        }}
+      />
+    </div>
   );
 }
 
