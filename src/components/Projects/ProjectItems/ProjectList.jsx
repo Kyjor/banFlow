@@ -51,7 +51,7 @@ const getTimeAgo = (timestamp) => {
 };
 
 function ProjectList(props) {
-  const { items } = props;
+  const { items, selectedProject } = props;
   const [listItemsWithoutFileExtension, setListItems] = useState([]);
 
   const onChange = (lastStr, currentStr) => {
@@ -156,10 +156,16 @@ function ProjectList(props) {
           showTotal: (total) => `Total ${total} project${total > 1 ? 's' : ''}`,
         }}
         renderItem={(item) => {
+          // Normalize comparison - case-insensitive and trimmed
+          const normalizedSelected = selectedProject ? selectedProject.trim().toLowerCase() : '';
+          const normalizedItemName = item.name ? item.name.trim().toLowerCase() : '';
+          const isSelected = normalizedSelected && normalizedItemName && 
+            normalizedSelected === normalizedItemName;
+          
           return (
             <List.Item key={`project-${item.name}`} className="project-list-item">
               <Card
-                className="project-card"
+                className={`project-card ${isSelected ? 'project-card-selected' : ''}`}
                 hoverable
                 onClick={() => {
                   localStorage.setItem(`projectLastOpened_${item.name}`, Date.now().toString());
@@ -256,6 +262,7 @@ ProjectList.propTypes = {
   items: PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.object])).isRequired,
   renameProject: PropTypes.func.isRequired,
   openProjectDetails: PropTypes.func.isRequired,
+  selectedProject: PropTypes.string,
 };
 
 export default ProjectList;

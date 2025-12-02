@@ -180,6 +180,32 @@
     border-color: #667eea;
   }
   
+  &.project-card-selected {
+    border: 2px solid #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+    
+    .project-icon {
+      transform: scale(1.08);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+    }
+    
+    .project-title {
+      color: #667eea;
+      font-weight: 700;
+      
+      .ant-typography {
+        color: #667eea;
+      }
+    }
+    
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+  }
+  
   .ant-card-body {
     padding: 20px;
   }

@@ -69,6 +69,12 @@ class Dashboard extends Component {
       tagArray.push(thisTag.title);
     });
 
+    // Normalize project name - remove .json extension if present
+    let normalizedProjectName = projectName ? projectName.trim() : '';
+    if (normalizedProjectName.endsWith('.json')) {
+      normalizedProjectName = normalizedProjectName.slice(0, normalizedProjectName.lastIndexOf('.json')).trim();
+    }
+
     const newState = {
       ...this.state,
       nodes: NodeController.getNodes(),
@@ -76,7 +82,7 @@ class Dashboard extends Component {
       parentOrder: ParentController.getParentOrder(),
       nodeTypes: nodeTypeArray,
       nodeStates: nodeStateArray,
-      selectedProject: projectName,
+      selectedProject: normalizedProjectName,
       tags: tagArray,
       timerPreferences: TimerController.getTimerPreferences(),
     };
@@ -118,7 +124,9 @@ class Dashboard extends Component {
   // eslint-disable-next-line class-methods-use-this
   updateSelectedProject = (projectName) => {
     if (projectName) {
-      ProjectController.openProject(projectName);
+      const normalizedName = projectName.trim();
+      this.setState({ selectedProject: normalizedName });
+      ProjectController.openProject(normalizedName);
     }
   };
 
@@ -182,6 +190,7 @@ class Dashboard extends Component {
           <div className="flex">
             <ProjectListContainer
               openProjectDetails={this.updateSelectedProject}
+              selectedProject={selectedProject}
             />
             {selectedProject && (
               <Tabs defaultActiveKey="1">

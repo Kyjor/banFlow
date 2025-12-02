@@ -182,7 +182,7 @@ class ProjectListContainer extends Component {
 
   render() {
     const { searchQuery, sortBy, newProjectName, isCreating } = this.state;
-    const { openProjectDetails } = this.props;
+    const { openProjectDetails, selectedProject } = this.props;
     const filteredItems = this.getFilteredAndSortedItems();
 
     return (
@@ -247,6 +247,7 @@ class ProjectListContainer extends Component {
           items={filteredItems}
           deleteProject={this.deleteProject}
           renameProject={this.renameProject}
+          selectedProject={selectedProject}
           openProjectDetails={(name) => {
             // Update last opened time before opening project
             localStorage.setItem(`projectLastOpened_${name}`, Date.now().toString());
@@ -260,6 +261,7 @@ class ProjectListContainer extends Component {
 
 ProjectListContainer.propTypes = {
   openProjectDetails: PropTypes.func.isRequired,
+  selectedProject: PropTypes.string,
 };
 
 export default ProjectListContainer;
