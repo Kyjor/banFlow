@@ -5,6 +5,7 @@ import dateFormat from 'dateformat';
 import { ClockCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import EditableTextArea from '../EditableTextArea/EditableTextArea';
+import SessionManager from './SessionManager';
 import './NodeModal.css';
 
 const { TabPane } = Tabs;
@@ -100,7 +101,8 @@ function NodeModal({
           </Button>
         ),
       ]}
-      bodyStyle={{ borderRadius: '20px' }}
+      bodyStyle={{ borderRadius: '20px', maxHeight: '80vh', overflowY: 'auto' }}
+      width={900}
     >
       <Tabs defaultActiveKey="1">
         <TabPane
@@ -230,6 +232,19 @@ function NodeModal({
               style={{ borderRadius: '5px' }}
             />
           </div>
+          {/* Session Manager in Timing tab */}
+          <SessionManager
+            node={node}
+            parents={parents}
+            updateNodeProperty={updateNodeProperty}
+            onSessionsChange={(updatedSessions, newTimeSpent) => {
+              // Update local node reference if needed
+              if (node) {
+                node.sessionHistory = updatedSessions;
+                node.timeSpent = newTimeSpent;
+              }
+            }}
+          />
         </TabPane>
       </Tabs>
     </Modal>
@@ -247,7 +262,7 @@ NodeModal.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   node: PropTypes.object.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
-  parents: PropTypes.array.isRequired,
+  parents: PropTypes.object.isRequired,
   updateNodeProperty: PropTypes.func.isRequired,
   visible: PropTypes.bool.isRequired,
 };

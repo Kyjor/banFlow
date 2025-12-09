@@ -1,0 +1,94 @@
+.session-manager {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #f0f0f0;
+  max-width: 100%;
+  overflow: hidden;
+
+  .session-manager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    h4 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+  }
+
+  .session-table {
+    width: 100%;
+    overflow-x: auto;
+    
+    .ant-table {
+      min-width: 800px;
+    }
+
+    .ant-table-thead > tr > th {
+      background-color: #fafafa;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .ant-table-tbody > tr {
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: rgba(102, 126, 234, 0.05);
+      }
+
+      &.editing-row {
+        background-color: rgba(102, 126, 234, 0.1);
+      }
+
+      // Style for unallocated time row
+      &.unallocated-row {
+        background-color: rgba(24, 144, 255, 0.08);
+        font-weight: 500;
+        
+        &:hover {
+          background-color: rgba(24, 144, 255, 0.12);
+        }
+      }
+
+      // Style for temporary session row
+      &.temp-session-row {
+        background-color: rgba(255, 193, 7, 0.1);
+        border: 2px dashed rgba(255, 193, 7, 0.5);
+        
+        &:hover {
+          background-color: rgba(255, 193, 7, 0.15);
+        }
+      }
+    }
+
+    .ant-table-tbody > tr > td {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .ant-input,
+    .ant-picker,
+    .ant-select {
+      border-radius: 4px;
+      max-width: 100%;
+    }
+
+    .ant-table-cell {
+      padding: 8px 12px;
+    }
+  }
+
+  .session-pagination {
+    margin-top: 16px;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+

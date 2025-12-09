@@ -1,0 +1,50 @@
+.statistics-cards {
+  margin-bottom: 24px;
+  
+  .stat-card {
+    height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+    
+    .ant-statistic {
+      .ant-statistic-title {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 8px;
+        
+        .stat-title {
+          display: inline-block;
+          max-width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+      
+      .ant-statistic-content {
+        .ant-statistic-content-prefix {
+          margin-right: 8px;
+          font-size: 20px;
+        }
+        
+        .ant-statistic-content-value {
+          font-size: 24px;
+          line-height: 1.2;
+        }
+        
+        .ant-statistic-content-suffix {
+          font-size: 12px;
+          color: #999;
+          margin-left: 4px;
+        }
+      }
+    }
+  }
+}
+

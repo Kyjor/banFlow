@@ -8,6 +8,19 @@
     gap: 24px;
     padding-top: 0;
     align-items: flex-start;
+    
+    .project-sidebar {
+      min-width: 300px;
+      max-width: 350px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .dashboard-content {
+      flex: 1;
+      min-width: 0;
+    }
   }
 }
 
@@ -200,6 +213,11 @@
     .flex {
       flex-direction: column;
       gap: 20px;
+      
+      .project-sidebar {
+        min-width: 100%;
+        max-width: 100%;
+      }
     }
   }
   
@@ -211,6 +229,13 @@
 @media (max-width: 768px) {
   .home {
     padding: 0 20px;
+    
+    .flex {
+      .project-sidebar {
+        min-width: 100%;
+        max-width: 100%;
+      }
+    }
   }
   
   .ant-tabs {
@@ -219,5 +244,11 @@
   
   .notes-month {
     font-size: 24px;
+  }
+  
+  .statistics-cards {
+    .ant-col {
+      margin-bottom: 16px;
+    }
   }
 }

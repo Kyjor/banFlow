@@ -358,11 +358,29 @@ ipcMain.on('InitializedLokiService', (_event, lokiService) => {
 
 // Todo: Consolidate these gets into one function
 ipcMain.on('api:getNodesWithQuery', (event, query) => {
-  event.returnValue = NodeService.getNodesWithQuery(currentLokiService, query);
+  if (!currentLokiService || !currentLokiService.nodes) {
+    event.returnValue = {};
+    return;
+  }
+  try {
+    event.returnValue = NodeService.getNodesWithQuery(currentLokiService, query);
+  } catch (error) {
+    console.error('Error in api:getNodesWithQuery:', error);
+    event.returnValue = {};
+  }
 });
 
 ipcMain.on('api:getNodes', (event) => {
-  event.returnValue = NodeService.getNodes(currentLokiService);
+  if (!currentLokiService || !currentLokiService.nodes) {
+    event.returnValue = {};
+    return;
+  }
+  try {
+    event.returnValue = NodeService.getNodes(currentLokiService);
+  } catch (error) {
+    console.error('Error in api:getNodes:', error);
+    event.returnValue = {};
+  }
 });
 
 ipcMain.on('utils:closeTimerWindow', (event) => {
@@ -1037,6 +1055,135 @@ ipcMain.handle('git:cleanUntrackedFiles', async (event, dryRun) => {
   } catch (error) {
     console.error('Error cleaning untracked files:', error);
     throw error;
+  }
+});
+
+// Dashboard project data loading handlers
+ipcMain.handle('dashboard:loadProjectData', async (event, projectName) => {
+  try {
+    const fs = require('fs');
+    const Loki = require('lokijs');
+    
+    const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
+      ? projectName
+      : `../banFlowProjects/${projectName}.json`;
+    
+    if (!fs.existsSync(projectPath)) {
+      throw new Error(`Project file not found: ${projectPath}`);
+    }
+    
+    return new Promise((resolve, reject) => {
+      const db = new Loki(projectPath, {
+        autoload: true,
+        autosave: false,
+        verbose: false,
+        autoloadCallback: () => {
+          try {
+            const nodes = db.getCollection('nodes');
+            const parents = db.getCollection('parents');
+            const parentOrder = db.getCollection('parentOrder');
+            const iterations = db.getCollection('iterations');
+            const tags = db.getCollection('tags');
+            
+            const projectData = {
+              projectName: projectName.replace('.json', ''),
+              nodes: nodes ? nodes.data : [],
+              parents: parents ? parents.data : [],
+              parentOrder: parentOrder ? parentOrder.data : [],
+              iterations: iterations ? iterations.data : [],
+              tags: tags ? tags.data : [],
+            };
+            
+            resolve(projectData);
+          } catch (error) {
+            reject(error);
+          }
+        },
+      });
+    });
+  } catch (error) {
+    console.error('Error loading project data:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('dashboard:loadMultipleProjectsData', async (event, projectNames) => {
+  try {
+    const fs = require('fs');
+    const Loki = require('lokijs');
+    
+    const loadProject = (projectName) => {
+      return new Promise((resolve) => {
+        try {
+          const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
+            ? projectName
+            : `../banFlowProjects/${projectName}.json`;
+          
+          if (!fs.existsSync(projectPath)) {
+            resolve(null);
+            return;
+          }
+          
+          const db = new Loki(projectPath, {
+            autoload: true,
+            autosave: false,
+            verbose: false,
+            autoloadCallback: () => {
+              try {
+                const nodes = db.getCollection('nodes');
+                const parents = db.getCollection('parents');
+                const parentOrder = db.getCollection('parentOrder');
+                const iterations = db.getCollection('iterations');
+                const tags = db.getCollection('tags');
+                
+                resolve({
+                  projectName: projectName.replace('.json', ''),
+                  nodes: nodes ? nodes.data : [],
+                  parents: parents ? parents.data : [],
+                  parentOrder: parentOrder ? parentOrder.data : [],
+                  iterations: iterations ? iterations.data : [],
+                  tags: tags ? tags.data : [],
+                });
+              } catch (err) {
+                console.error(`Error processing ${projectName}:`, err);
+                resolve(null);
+              }
+            },
+          });
+        } catch (error) {
+          console.error(`Error loading project ${projectName}:`, error);
+          resolve(null);
+        }
+      });
+    };
+    
+    const results = await Promise.all(projectNames.map(loadProject));
+    return results.filter(result => result !== null);
+  } catch (error) {
+    console.error('Error loading multiple projects:', error);
+    throw error;
+  }
+});
+
+ipcMain.on('dashboard:getAllProjectNames', (event) => {
+  try {
+    const fs = require('fs');
+    const projectFolder = '../banFlowProjects';
+    
+    if (!fs.existsSync(projectFolder)) {
+      event.returnValue = [];
+      return;
+    }
+    
+    const files = fs.readdirSync(projectFolder);
+    const projectNames = files
+      .filter(file => file.endsWith('.json') && !file.endsWith('.json~'))
+      .map(file => file.replace('.json', ''));
+    
+    event.returnValue = projectNames;
+  } catch (error) {
+    console.error('Error getting project names:', error);
+    event.returnValue = [];
   }
 });
 
