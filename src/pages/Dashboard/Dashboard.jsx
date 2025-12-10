@@ -26,6 +26,7 @@ import {
   PlusOutlined,
 } from '@ant-design/icons';
 import dateFormat from 'dateformat';
+import moment from 'moment';
 import { ipcRenderer } from 'electron';
 import TabPane from 'antd/lib/tabs/TabPane';
 import Layout from '../../layouts/App';
@@ -81,6 +82,9 @@ class Dashboard extends Component {
       quickAddProject: null,
       quickAddTitle: '',
       quickAddDueDate: null,
+      calendarItemModalVisible: false,
+      selectedCalendarItem: null,
+      selectedDate: new Date(), // For single project view calendar sync
     };
 
     const self = this;
@@ -278,6 +282,15 @@ class Dashboard extends Component {
   };
 
   dateCellRender = (value) => {
+    // Check if this date is from a different month
+    const cellMoment = moment(value);
+    const currentMonth = moment(this.state.selectedDate || moment());
+    
+    // If date is from a different month, return null to hide it
+    if (!cellMoment.isSame(currentMonth, 'month')) {
+      return null;
+    }
+    
     const listData = this.getListData(value);
     return (
       <ul className="events">
@@ -436,7 +449,6 @@ class Dashboard extends Component {
             </div>
             <div className="dashboard-content">
               <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2 style={{ margin: 0 }}>Dashboard</h2>
                 {/* Quick Add button temporarily hidden */}
                 {false && (
                   <Button
@@ -484,45 +496,63 @@ class Dashboard extends Component {
                         {singleProjectStats && (
                           <StatisticsCards stats={singleProjectStats} />
                         )}
-                        {isLokiLoaded ? (
-                          <div style={{ display: 'flex', marginTop: '24px' }}>
-                            <div style={{ width: '50%', paddingRight: '12px' }}>
-                              <Descriptions size="small" column={1}>
-                                <Descriptions.Item label="Time Spent">
-                                  {new Date(this.getProjectTotalTimeSpent() * 1000)
-                                    .toISOString()
-                                    .substr(11, 8)}
-                                </Descriptions.Item>
-                              </Descriptions>
-                            </div>
-                            <div style={{ width: '50%', paddingLeft: '12px' }}>
-                              <DayByDayCalendar
-                                dayCellRender={this.dayCellRender}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <div style={{ textAlign: 'center', padding: '40px' }}>
-                            <Spin size="large" />
-                            <div style={{ marginTop: '16px', color: '#666' }}>Loading project data...</div>
-                          </div>
-                        )}
                       </PageHeader>
-                      {isLokiLoaded && (
-                        <Tabs defaultActiveKey="daily" style={{ marginTop: '24px' }}>
-                          <TabPane tab="Daily" key="daily">
-                            <div style={{ padding: '16px' }}>
+                      {isLokiLoaded ? (
+                        <div style={{ marginTop: '24px' }}>
+                          {/* Bottom section with two calendars */}
+                          <div style={{ 
+                            display: 'flex', 
+                            gap: '16px',
+                            marginTop: '24px',
+                          }}>
+                            {/* Left: Full Calendar */}
+                            <div style={{ 
+                              width: '50%',
+                              paddingRight: '8px',
+                            }}>
+                              <div style={{
+                                background: 'rgba(255, 255, 255, 0.95)',
+                                borderRadius: '12px',
+                                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
+                                padding: '20px',
+                                border: '1px solid rgba(0, 0, 0, 0.06)',
+                                height: '400px',
+                                overflow: 'auto',
+                              }}>
+                                <Calendar
+                                  value={moment(this.state.selectedDate)}
+                                  onSelect={(date) => {
+                                    this.setState({ selectedDate: date });
+                                  }}
+                                  dateCellRender={this.dateCellRender}
+                                  fullscreen={false}
+                                  validRange={[
+                                    moment(this.state.selectedDate).startOf('month'),
+                                    moment(this.state.selectedDate).endOf('month')
+                                  ]}
+                                />
+                              </div>
+                            </div>
+                            {/* Right: Day by Day Calendar */}
+                            <div style={{ 
+                              width: '50%',
+                              paddingLeft: '8px',
+                            }}>
                               <DayByDayCalendar
                                 dayCellRender={this.dayCellRender}
+                                currentDate={this.state.selectedDate}
+                                onDateChange={(date) => {
+                                  this.setState({ selectedDate: date });
+                                }}
                               />
                             </div>
-                          </TabPane>
-                          <TabPane tab="Monthly" key="monthly">
-                            <div style={{ padding: '16px' }}>
-                              <Calendar dateCellRender={this.dateCellRender} />
-                            </div>
-                          </TabPane>
-                        </Tabs>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '40px' }}>
+                          <Spin size="large" />
+                          <div style={{ marginTop: '16px', color: '#666' }}>Loading project data...</div>
+                        </div>
                       )}
                     </>
                   ) : (

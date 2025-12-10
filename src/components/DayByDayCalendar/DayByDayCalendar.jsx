@@ -2,6 +2,7 @@
 import React from 'react';
 // Styles
 import PropTypes from 'prop-types';
+import moment from 'moment';
 import {
   DoubleLeftOutlined,
   DoubleRightOutlined,
@@ -12,17 +13,26 @@ import {
 class DayByDayCalendar extends React.Component {
   constructor(props) {
     super(props);
-    const today = new Date();
-    const tomorrow = new Date(today.getTime());
-    tomorrow.setDate(today.getDate() + 1);
-    const yesterday = new Date(today.getTime());
-    yesterday.setDate(today.getDate() - 1);
+    const today = moment();
+    const tomorrow = moment().add(1, 'day');
+    const yesterday = moment().subtract(1, 'day');
+    const currentDate = props.currentDate ? moment(props.currentDate) : today;
     this.state = {
-      currentDate: today,
+      currentDate,
       today,
       tomorrow,
       yesterday,
     };
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.props.currentDate) {
+      const prevMoment = prevProps.currentDate ? moment(prevProps.currentDate) : null;
+      const currentMoment = moment(this.props.currentDate);
+      if (!prevMoment || !prevMoment.isSame(currentMoment, 'day')) {
+        this.setState({ currentDate: currentMoment });
+      }
+    }
   }
 
   header = () => {
@@ -78,19 +88,16 @@ class DayByDayCalendar extends React.Component {
             textAlign: 'center',
           }}
         >
-          {currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
-            yesterday.toJSON().slice(0, 10).replace(/-/g, '/') && (
+          {currentDate.isSame(yesterday, 'day') && (
             <span>Yesterday, </span>
           )}
-          {currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
-            today.toJSON().slice(0, 10).replace(/-/g, '/') && (
+          {currentDate.isSame(today, 'day') && (
             <span>Today, </span>
           )}
-          {currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
-            tomorrow.toJSON().slice(0, 10).replace(/-/g, '/') && (
+          {currentDate.isSame(tomorrow, 'day') && (
             <span>Tomorrow, </span>
           )}
-          {currentDate.toJSON().slice(0, 10).replace(/-/g, '/')}
+          {currentDate.format('YYYY/MM/DD')}
         </div>
         <RightOutlined
           style={{
@@ -126,9 +133,11 @@ class DayByDayCalendar extends React.Component {
 
   incrementDays = (days) => {
     const { currentDate } = this.state;
-    const newDay = new Date(currentDate.getTime());
-    newDay.setDate(currentDate.getDate() + days);
+    const newDay = moment(currentDate).add(days, 'days');
     this.setState({ currentDate: newDay });
+    if (this.props.onDateChange) {
+      this.props.onDateChange(newDay);
+    }
   };
 
   render() {
@@ -149,7 +158,7 @@ class DayByDayCalendar extends React.Component {
           display: 'flex',
           flexDirection: 'column',
         }}>
-          {dayCellRender({ _d: currentDate }, this.header)}
+          {dayCellRender({ _d: currentDate.toDate() }, this.header)}
         </div>
       </div>
     );
@@ -157,5 +166,10 @@ class DayByDayCalendar extends React.Component {
 }
 DayByDayCalendar.propTypes = {
   dayCellRender: PropTypes.func.isRequired,
+  currentDate: PropTypes.oneOfType([
+    PropTypes.instanceOf(Date),
+    PropTypes.object, // moment object
+  ]),
+  onDateChange: PropTypes.func,
 };
 export default DayByDayCalendar;

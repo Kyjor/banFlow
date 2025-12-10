@@ -32,9 +32,9 @@
       background: #ffffff !important;
       border-radius: 12px !important;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
-      padding: 24px !important;
+      padding: 24px 32px !important;
       margin-top: 16px !important;
-      margin-right: 16px !important;
+      margin-right: 24px !important;
       margin-bottom: 16px !important;
     }
   }
@@ -161,26 +161,38 @@
 }
 
 .ant-calendar {
-  background: rgba(255, 255, 255, 0.95);
+  background: transparent;
   border-radius: 12px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
   border: none;
   
   .ant-calendar-header {
     background: #2c3e50;
     color: white;
-    border-radius: 12px 12px 0 0;
-    padding: 15px 20px;
+    border-radius: 8px 8px 0 0;
+    padding: 12px 16px;
+    font-size: 13px;
     
     .ant-calendar-year-select,
     .ant-calendar-month-select {
       color: white;
+      font-size: 13px;
     }
   }
   
+  .ant-calendar-body {
+    padding: 8px;
+  }
+  
+  .ant-calendar-table {
+    font-size: 12px;
+  }
+  
   .ant-calendar-date {
-    border-radius: 6px;
+    border-radius: 4px;
     transition: all 0.2s ease;
+    padding: 4px;
+    font-size: 12px;
     
     &:hover {
       background: rgba(52, 152, 219, 0.1);
@@ -197,6 +209,7 @@
     font-weight: bold;
   }
 }
+
 
 .ant-list {
   background: rgba(255, 255, 255, 0.9);
@@ -263,6 +276,7 @@
   }
   
   .statistics-cards {
+    margin-right: 10px;
     .ant-col {
       margin-bottom: 16px;
     }

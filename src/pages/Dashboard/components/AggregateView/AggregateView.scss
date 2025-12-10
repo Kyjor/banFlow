@@ -1,4 +1,9 @@
 .aggregate-view {
+  padding-right: 16px;
+  
+  > * {
+    margin-right: 0px;
+  }
   .aggregate-filters {
     margin-bottom: 24px;
     padding: 16px;
