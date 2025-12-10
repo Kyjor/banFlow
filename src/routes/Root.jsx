@@ -10,7 +10,7 @@ import SheetPage from '../pages/SheetPage/SheetPage';
 import Game from '../pages/Game/Game';
 import TextEditor from '../components/TextEditor/TextEditor';
 import DocsPage from '../pages/DocsPage/DocsPage';
-import ChartPage from '../components/ChartPage/ChartPage';
+import ChartPage from '../pages/ChartPage/ChartPage';
 import GitPage from '../pages/Git/GitPage';
 import Analytics from '../pages/Analytics/Analytics';
 // Context

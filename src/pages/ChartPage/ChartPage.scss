@@ -1,0 +1,12 @@
+.custom-node {
+  transition: all 0.2s;
+  
+  &.selected {
+    transform: scale(1.02);
+  }
+}
+
+.react-flow {
+  background: #fafafa;
+}
+

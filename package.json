@@ -254,6 +254,7 @@
     "react-spreadsheet": "^0.9.5",
     "react-syntax-highlighter": "^15.5.0",
     "react-use-precision-timer": "^2.0.4",
+    "reactflow": "^11.11.4",
     "scheduler": "^0.23.2",
     "simple-git": "^3.20.0",
     "trello.js": "^1.2.3"

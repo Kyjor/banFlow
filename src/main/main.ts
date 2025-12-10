@@ -1621,3 +1621,178 @@ ipcMain.handle('docs:deleteImage', async (event, imagePath: string, projectName:
     throw error;
   }
 });
+
+// ==================== DIAGRAMS MANAGEMENT ====================
+
+// Get base paths for project and global diagrams
+const getProjectDiagramsPath = (projectName: string) => {
+  const fs = require('fs');
+  const path = require('path');
+  const basePath = path.join(__dirname, '../../banFlowProjects', projectName);
+  const diagramsPath = path.join(basePath, 'diagrams');
+  
+  // Ensure directories exist
+  if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
+  if (!fs.existsSync(diagramsPath)) fs.mkdirSync(diagramsPath, { recursive: true });
+  
+  return { diagramsPath, basePath };
+};
+
+const getGlobalDiagramsPath = () => {
+  const fs = require('fs');
+  const path = require('path');
+  const basePath = path.join(__dirname, '../../banFlowProjects', 'global');
+  const diagramsPath = path.join(basePath, 'diagrams');
+  
+  // Ensure directories exist
+  if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
+  if (!fs.existsSync(diagramsPath)) fs.mkdirSync(diagramsPath, { recursive: true });
+  
+  return { diagramsPath, basePath };
+};
+
+// List diagrams
+ipcMain.handle('diagrams:list', async (event, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
+    
+    const listFiles = (dir: string, baseDir: string = ''): any[] => {
+      const items: any[] = [];
+      if (!fs.existsSync(dir)) return items;
+      
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = baseDir ? path.join(baseDir, entry.name) : entry.name;
+        
+        if (entry.isDirectory()) {
+          items.push({
+            name: entry.name,
+            path: relativePath,
+            type: 'folder',
+            children: listFiles(fullPath, relativePath),
+          });
+        } else if (entry.name.endsWith('.json')) {
+          const stats = fs.statSync(fullPath);
+          items.push({
+            name: entry.name.replace('.json', ''),
+            path: relativePath,
+            type: 'file',
+            size: stats.size,
+            created: stats.birthtime.toISOString(),
+            modified: stats.mtime.toISOString(),
+          });
+        }
+      }
+      
+      return items.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    };
+    
+    return listFiles(diagramsPath);
+  } catch (error) {
+    console.error('Error listing diagrams:', error);
+    throw error;
+  }
+});
+
+// Read diagram
+ipcMain.handle('diagrams:read', async (event, diagramPath: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
+    const fullPath = path.join(diagramsPath, diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`);
+    
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`Diagram not found: ${diagramPath}`);
+    }
+    
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    const stats = fs.statSync(fullPath);
+    
+    return {
+      content: JSON.parse(content),
+      path: diagramPath,
+      name: path.basename(diagramPath, '.json'),
+      size: stats.size,
+      created: stats.birthtime.toISOString(),
+      modified: stats.mtime.toISOString(),
+    };
+  } catch (error) {
+    console.error('Error reading diagram:', error);
+    throw error;
+  }
+});
+
+// Save diagram
+ipcMain.handle('diagrams:save', async (event, diagramPath: string, content: any, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
+    const fullPath = path.join(diagramsPath, diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`);
+    
+    // Ensure parent directories exist
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    fs.writeFileSync(fullPath, JSON.stringify(content, null, 2), 'utf-8');
+    
+    return { success: true, path: diagramPath };
+  } catch (error) {
+    console.error('Error saving diagram:', error);
+    throw error;
+  }
+});
+
+// Delete diagram
+ipcMain.handle('diagrams:delete', async (event, diagramPath: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
+    const fullPath = path.join(diagramsPath, diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`);
+    
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      return { success: true };
+    }
+    
+    throw new Error(`Diagram not found: ${diagramPath}`);
+  } catch (error) {
+    console.error('Error deleting diagram:', error);
+    throw error;
+  }
+});
+
+// Create folder
+ipcMain.handle('diagrams:createFolder', async (event, folderPath: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
+    const fullPath = path.join(diagramsPath, folderPath);
+    
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
+    }
+    
+    return { success: true, path: folderPath };
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    throw error;
+  }
+});
