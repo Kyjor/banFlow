@@ -179,6 +179,7 @@ class KanbanBoard extends Component {
       saveTime,
       selectedIteration,
       showModal,
+      showParentModal,
       updateParentProperty,
       updateNodeTitle,
     } = this.props;
@@ -233,6 +234,7 @@ class KanbanBoard extends Component {
                         }}
                         selectedIteration={selectedIteration}
                         showModal={showModal}
+                        showParentModal={showParentModal}
                         updateNodeTitle={updateNodeTitle}
                         updateParentProperty={updateParentProperty}
                       />

@@ -152,7 +152,28 @@ const ParentService = {
         node.parent = updatedDestinationParent.id;
         nodeToUpdate = node;
       });
+    
+    // If the destination parent has markAsDoneOnDrag enabled, mark the node as complete
+    if (parentToUpdate && parentToUpdate.markAsDoneOnDrag && nodeToUpdate) {
+      const ISO8601ServiceInstance = require('./ISO8601Service').default;
+      nodes
+        .chain()
+        .find({ id: nodeId })
+        .update((node) => {
+          node.isComplete = true;
+          // Set completedDate if not already set
+          if (!node.completedDate) {
+            node.completedDate = ISO8601ServiceInstance.getISO8601Time();
+          }
+        });
+    }
+    
     lokiService.saveDB();
+
+    // Refresh nodeToUpdate after potential completion update
+    if (parentToUpdate && parentToUpdate.markAsDoneOnDrag) {
+      nodeToUpdate = nodes.findOne({ id: nodeId });
+    }
 
     console.log('trelloAuth', trelloAuth);
     if (

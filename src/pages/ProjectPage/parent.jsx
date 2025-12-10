@@ -110,6 +110,7 @@ function Parent(props) {
     saveTime,
     selectedIteration,
     showModal,
+    showParentModal,
     updateNodeTitle,
     updateParentProperty,
   } = props;
@@ -179,6 +180,7 @@ function Parent(props) {
               button={<EllipsisOutlined style={parentSettingsButtonStyle} />}
               parent={parent}
               deleteParent={deleteParent}
+              showParentModal={showParentModal}
             />
           </div>
           <Droppable droppableId={parent.id} type="node">

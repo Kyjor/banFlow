@@ -13,6 +13,7 @@ import NodeController from '../../api/nodes/NodeController';
 import IterationDisplay from '../../components/IterationDisplay/IterationDisplay';
 import IterationController from '../../api/iterations/IterationController';
 import IterationModal from '../../components/IterationModal/IterationModal';
+import ParentModal from '../../components/ParentModal/ParentModal';
 import parentController from '../../api/parent/ParentController';
 
 class ProjectPage extends Component {
@@ -34,6 +35,8 @@ class ProjectPage extends Component {
       isTimerRunning: false,
       iterations: {},
       selectedIteration: 0,
+      parentModalVisible: false,
+      modalParentId: null,
     };
   }
 
@@ -210,6 +213,30 @@ class ProjectPage extends Component {
       ...this.state,
       nodeModalVisible: true,
       modalNodeId: node.id,
+    };
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
+    });
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  showParentModal = (parent) => {
+    const newState = {
+      ...this.state,
+      parentModalVisible: true,
+      modalParentId: parent.id,
+    };
+    ipcRenderer.invoke('api:setProjectState', {
+      ...newState,
+    });
+  };
+
+  // eslint-disable-next-line class-methods-use-this
+  handleParentModalCancel = () => {
+    const newState = {
+      ...this.state,
+      parentModalVisible: false,
+      modalParentId: null,
     };
     ipcRenderer.invoke('api:setProjectState', {
       ...newState,
@@ -616,9 +643,11 @@ class ProjectPage extends Component {
       iterations,
       lokiLoaded,
       modalNodeId,
+      modalParentId,
       mustFocusNodeTitle,
       mustFocusParentTitle,
       nodeModalVisible,
+      parentModalVisible,
       nodes,
       parentOrder,
       parents,
@@ -673,6 +702,15 @@ class ProjectPage extends Component {
               visible={nodeModalVisible}
             />
           )}
+          {modalParentId && (
+            <ParentModal
+              handleCancel={this.handleParentModalCancel}
+              deleteParent={this.deleteParent}
+              parent={parents[modalParentId]}
+              updateParentProperty={this.updateParentProperty}
+              visible={parentModalVisible}
+            />
+          )}
         </div>
         <KanbanBoard
           createNewNode={this.createNewNode}
@@ -692,6 +730,7 @@ class ProjectPage extends Component {
           updateNodeTitle={this.updateNodeTitle}
           updateParentProperty={this.updateParentProperty}
           updateParents={this.updateParents}
+          showParentModal={this.showParentModal}
         />
       </Layout>
     ) : (

@@ -7,30 +7,31 @@ import TimedItemHistory from '../TimedItemHistory/TimedItemHistory';
 const { TabPane } = Tabs;
 
 class ParentModal extends React.Component {
-  constructor(props) {
-    super(props);
-    const { parent } = props;
-
-    this.parent = parent;
-  }
-
   handleConfirmParentDelete = () => {
-    const { deleteParent } = this.props;
-    if (this.parent.nodeIds.length > 0) {
+    const { deleteParent, parent } = this.props;
+    if (parent.nodeIds.length > 0) {
       message.error('Empty Parent before deleting');
       return;
     }
-    deleteParent(this.parent.id);
+    deleteParent(parent.id);
     message.success('Deleted parent');
   };
 
   handleTimedCheckboxChange = (e) => {
-    const { updateParentProperty } = this.props;
+    const { updateParentProperty, parent } = this.props;
     updateParentProperty(
-      () => this.parent.isTimed,
-      this.parent.id,
+      'isTimed',
+      parent.id,
       e.target.checked,
-      true,
+    );
+  };
+
+  handleMarkAsDoneCheckboxChange = (e) => {
+    const { updateParentProperty, parent } = this.props;
+    updateParentProperty(
+      'markAsDoneOnDrag',
+      parent.id,
+      e.target.checked,
     );
   };
 
@@ -40,14 +41,14 @@ class ParentModal extends React.Component {
   };
 
   render() {
-    const { handleCancel, updateParentProperty, visible } = this.props;
+    const { handleCancel, updateParentProperty, visible, parent } = this.props;
     return (
       <Modal
         title={
           <div style={{ display: 'flex', marginBottom: '15px' }}>
-            <span>#{this.parent.$loki}:</span>
+            <span>#{parent.$loki}:</span>
             <EditableTextArea
-              defaultValue={this.parent.title}
+              defaultValue={parent.title}
               style={{
                 width: '430px',
                 resize: 'none',
@@ -58,10 +59,9 @@ class ParentModal extends React.Component {
               autoSize={{ maxRows: 1 }}
               updateText={(value) => {
                 updateParentProperty(
-                  () => this.parent.title,
-                  this.parent.id,
+                  'title',
+                  parent.id,
                   value,
-                  true,
                 );
               }}
             />
@@ -76,28 +76,37 @@ class ParentModal extends React.Component {
         ]}
       >
         <Tabs defaultActiveKey="1">
-          <TabPane tab={<span>Tab 1</span>} key="1">
-            <Popconfirm
-              title="Are you sure delete this parent?"
-              onConfirm={this.handleConfirmParentDelete}
-              onCancel={this.handleCancelParentDelete}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Button>Delete Parent</Button>
-            </Popconfirm>
-            ,
-            <div>
+          <TabPane tab={<span>Settings</span>} key="1">
+            <div style={{ marginBottom: '16px' }}>
               <Checkbox
                 onChange={this.handleTimedCheckboxChange}
-                defaultChecked={this.parent.isTimed}
+                checked={parent.isTimed || false}
               >
                 Items in Parent are Timed
-              </Checkbox>{' '}
+              </Checkbox>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <Checkbox
+                onChange={this.handleMarkAsDoneCheckboxChange}
+                checked={parent.markAsDoneOnDrag || false}
+              >
+                Mark cards dragged here as done
+              </Checkbox>
+            </div>
+            <div>
+              <Popconfirm
+                title="Are you sure delete this parent?"
+                onConfirm={this.handleConfirmParentDelete}
+                onCancel={this.handleCancelParentDelete}
+                okText="Yes"
+                cancelText="No"
+              >
+                <Button danger>Delete Parent</Button>
+              </Popconfirm>
             </div>
           </TabPane>
-          <TabPane tab={<span>Tab 2</span>} key="2">
-            <TimedItemHistory parent={this.parent} />
+          <TabPane tab={<span>History</span>} key="2">
+            <TimedItemHistory parent={parent} />
           </TabPane>
         </Tabs>
       </Modal>

@@ -16,6 +16,7 @@ class BoardInnerList extends React.PureComponent {
       saveTime,
       selectedIteration,
       showModal,
+      showParentModal,
       updateNodeTitle,
       updateParentProperty,
     } = this.props;
@@ -33,6 +34,7 @@ class BoardInnerList extends React.PureComponent {
         saveTime={saveTime}
         selectedIteration={selectedIteration}
         showModal={showModal}
+        showParentModal={showParentModal}
         updateNodeTitle={updateNodeTitle}
         updateParentProperty={updateParentProperty}
       />
@@ -56,6 +58,7 @@ BoardInnerList.propTypes = {
   saveTime: PropTypes.func.isRequired,
   selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
+  showParentModal: PropTypes.func,
   updateNodeTitle: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,
 };
