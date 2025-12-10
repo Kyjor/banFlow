@@ -11,6 +11,7 @@ import Game from '../pages/Game/Game';
 import TextEditor from '../components/TextEditor/TextEditor';
 import ChartPage from '../components/ChartPage/ChartPage';
 import GitPage from '../pages/Git/GitPage';
+import Analytics from '../pages/Analytics/Analytics';
 // Context
 import { GitProvider } from '../contexts/GitContext';
 
@@ -31,6 +32,7 @@ function AppRoutes() {
           <Route path="/settings" element={<AppSettings />} />
           <Route path="/docs/:name" element={<TextEditor />} />
           <Route path="/game/:name" element={<Game />} />
+          <Route path="/analytics" element={<Analytics />} />
           {/* Default 404 route */}
           <Route path="*" element={<NotFound />} />
         </Routes>

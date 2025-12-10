@@ -58,7 +58,10 @@ function loadSidebarComponents(pathname) {
         <Link to={`/sheets/${currentProject}`} />
         Table
       </Menu.Item>
-      <Menu.Item icon={<BarChartOutlined />}>Analytics (Coming Soon)</Menu.Item>
+      <Menu.Item icon={<BarChartOutlined />}>
+        <Link to="/analytics" />
+        Analytics
+      </Menu.Item>
       <Menu.Item icon={<FileOutlined />}>
         <Link to={`/docs/${currentProject}`} />
         Docs
