@@ -180,6 +180,7 @@ class KanbanBoard extends Component {
       selectedIteration,
       showModal,
       showParentModal,
+      filterNode,
       updateParentProperty,
       updateNodeTitle,
     } = this.props;
@@ -236,6 +237,7 @@ class KanbanBoard extends Component {
                         showModal={showModal}
                         showParentModal={showParentModal}
                         updateNodeTitle={updateNodeTitle}
+                        filterNode={filterNode}
                         updateParentProperty={updateParentProperty}
                       />
                     )
@@ -283,6 +285,7 @@ KanbanBoard.propTypes = {
   saveTime: PropTypes.func.isRequired,
   selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
+  filterNode: PropTypes.func,
   updateNodeTitle: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,
   updateParents: PropTypes.func.isRequired,

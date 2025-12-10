@@ -44,6 +44,7 @@ function ParentInnerList({
   saveTime,
   selectedIteration,
   updateNodeTitle,
+  filterNode,
   ...rest
 }) {
   const isInCurrentIteration = (node) => {
@@ -63,9 +64,11 @@ function ParentInnerList({
   }, [selectedIteration]);
 
   const filteredNodes = useMemo(() => {
-    const val = nodes.filter((node) => node && isInCurrentIteration(node));
+    const val = nodes.filter(
+      (node) => node && isInCurrentIteration(node) && (!filterNode || filterNode(node)),
+    );
     return val;
-  }, [nodes, selectedIteration]);
+  }, [nodes, selectedIteration, filterNode]);
 
   return (
     <>
@@ -113,6 +116,7 @@ function Parent(props) {
     showParentModal,
     updateNodeTitle,
     updateParentProperty,
+    filterNode,
   } = props;
 
   useEffect(() => {
@@ -200,6 +204,7 @@ function Parent(props) {
                     saveTime={saveTime}
                     selectedIteration={selectedIteration}
                     showModal={showModal}
+                    filterNode={filterNode}
                     updateNodeTitle={updateNodeTitle}
                   />
                   {provided.placeholder}
@@ -239,6 +244,8 @@ Parent.propTypes = {
   saveTime: PropTypes.func.isRequired,
   selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
+  showParentModal: PropTypes.func,
   updateParentProperty: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
+  filterNode: PropTypes.func,
 };

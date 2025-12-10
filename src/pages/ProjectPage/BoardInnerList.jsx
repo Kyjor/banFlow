@@ -18,6 +18,7 @@ class BoardInnerList extends React.PureComponent {
       showModal,
       showParentModal,
       updateNodeTitle,
+      filterNode,
       updateParentProperty,
     } = this.props;
     return (
@@ -36,6 +37,7 @@ class BoardInnerList extends React.PureComponent {
         showModal={showModal}
         showParentModal={showParentModal}
         updateNodeTitle={updateNodeTitle}
+        filterNode={filterNode}
         updateParentProperty={updateParentProperty}
       />
     );
@@ -60,6 +62,7 @@ BoardInnerList.propTypes = {
   showModal: PropTypes.func.isRequired,
   showParentModal: PropTypes.func,
   updateNodeTitle: PropTypes.func.isRequired,
+  filterNode: PropTypes.func,
   updateParentProperty: PropTypes.func.isRequired,
 };
 
