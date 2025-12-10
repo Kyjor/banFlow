@@ -4,6 +4,7 @@ import { Draggable } from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd
 import { Card as AntCard, Tag, Tooltip } from 'antd';
 import PropTypes from 'prop-types';
 import { EllipsisOutlined, SettingOutlined, ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import TagController from '../../api/tag/TagController';
 import styles from './node.module.scss';
 import EditableTextArea from '../../components/EditableTextArea/EditableTextArea';
 import StopWatch from '../../components/StopWatch/StopWatch';
@@ -108,6 +109,27 @@ function Node(props) {
     );
   };
 
+  const renderTags = () => {
+    if (!node.tags || node.tags.length === 0) return null;
+    
+    // Get tag colors from global tags
+    const globalTags = TagController.getTags() || [];
+    const tagMap = {};
+    globalTags.forEach((tag) => {
+      tagMap[tag.title || tag.id] = tag.color || '';
+    });
+    
+    return (
+      <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+        {node.tags.map((tag) => (
+          <Tag key={tag} color={tagMap[tag] || 'default'} style={{ margin: 0 }}>
+            {tag}
+          </Tag>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <Draggable
       draggableId={node.id}
@@ -140,33 +162,47 @@ function Node(props) {
           >
             <Meta
               title={
-                isEditing || isFirstEdit ? (
-                  <EditableTextArea
-                    editing={isEditing || isFirstEdit}
-                    defaultValue={node.title}
-                    maxLength={100}
-                    autoSize={{ minRows: 3 }}
-                    style={{
-                      marginBottom: '10px',
-                    }}
-                    placeholder="Add node title here..."
-                    updateText={(value) =>
-                      (
-                        // eslint-disable-next-line no-sequences
-                        setIsEditing(false),
-                        updateNodeTitle(value, node.id, false)
-                      )
-                    }
-                  />
-                ) : (
-                  <span style={{ whiteSpace: 'normal', pointerEvents: 'none' }}>
-                    {node.title}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {node.isComplete && (
+                    <CheckCircleOutlined 
+                      style={{ 
+                        color: '#52c41a', 
+                        fontSize: '18px',
+                        flexShrink: 0 
+                      }} 
+                    />
+                  )}
+                  <span style={{ flex: 1 }}>
+                    {isEditing || isFirstEdit ? (
+                      <EditableTextArea
+                        editing={isEditing || isFirstEdit}
+                        defaultValue={node.title}
+                        maxLength={100}
+                        autoSize={{ minRows: 3 }}
+                        style={{
+                          marginBottom: '10px',
+                        }}
+                        placeholder="Add node title here..."
+                        updateText={(value) =>
+                          (
+                            // eslint-disable-next-line no-sequences
+                            setIsEditing(false),
+                            updateNodeTitle(value, node.id, false)
+                          )
+                        }
+                      />
+                    ) : (
+                      <span style={{ whiteSpace: 'normal', pointerEvents: 'none' }}>
+                        {node.title}
+                      </span>
+                    )}
                   </span>
-                )
+                </div>
               }
               description={
                 <>
                   {node.description}
+                  {renderTags()}
                   {renderLabels()}
                   {renderDueDate()}
                   {renderChecklistProgress()}

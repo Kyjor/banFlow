@@ -536,8 +536,13 @@ ipcMain.on('api:getTags', (event) => {
   event.returnValue = TagService.getTags(currentLokiService);
 });
 
-ipcMain.on('api:addTag', (event, tagTitle) => {
-  TagService.addTag(currentLokiService, tagTitle);
+ipcMain.on('api:addTag', (event, tagTitle, color = '') => {
+  TagService.addTag(currentLokiService, tagTitle, color);
+  event.returnValue = true;
+});
+
+ipcMain.on('api:updateTagColor', (event, tagTitle, color) => {
+  TagService.updateTagColor(currentLokiService, tagTitle, color);
   event.returnValue = true;
 });
 

@@ -1,11 +1,12 @@
-import React, { useCallback } from 'react';
-import { Button, DatePicker, Modal, Select, Tabs, TimePicker, Switch, Space } from 'antd';
+import React, { useCallback, useState, useEffect } from 'react';
+import { Button, DatePicker, Modal, Select, Tabs, TimePicker, Switch, Space, Tag, Input, AutoComplete, Popover } from 'antd';
 import moment from 'moment';
 import dateFormat from 'dateformat';
-import { ClockCircleOutlined, InfoCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, InfoCircleOutlined, CheckCircleOutlined, PlusOutlined, CloseOutlined, BgColorsOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import EditableTextArea from '../EditableTextArea/EditableTextArea';
 import SessionManager from './SessionManager';
+import TagController from '../../api/tag/TagController';
 import './NodeModal.css';
 
 const { TabPane } = Tabs;
@@ -53,6 +54,85 @@ function NodeModal({
       updateNodeProperty('iterationId', node.id, value, true);
     },
     [node?.id, updateNodeProperty],
+  );
+
+  // Tag management
+  const [tags, setTags] = useState(node?.tags || []);
+  const [inputVisible, setInputVisible] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const [availableTags, setAvailableTags] = useState([]);
+  const [tagColors, setTagColors] = useState({});
+
+  useEffect(() => {
+    // Load available tags from global tag list
+    const globalTags = TagController.getTags();
+    const tagTitles = globalTags ? globalTags.map((tag) => tag.title || tag.id) : [];
+    setAvailableTags(tagTitles);
+    
+    // Build color map
+    const colorMap = {};
+    if (globalTags) {
+      globalTags.forEach((tag) => {
+        colorMap[tag.title || tag.id] = tag.color || '';
+      });
+    }
+    setTagColors(colorMap);
+  }, []);
+
+  useEffect(() => {
+    // Sync tags when node changes
+    setTags(node?.tags || []);
+  }, [node?.tags]);
+
+  const handleTagClose = useCallback(
+    (removedTag) => {
+      const newTags = tags.filter((tag) => tag !== removedTag);
+      setTags(newTags);
+      updateNodeProperty('tags', node.id, newTags, true);
+    },
+    [tags, node?.id, updateNodeProperty],
+  );
+
+  const handleTagAdd = useCallback(
+    (tagValue, color = '') => {
+      if (!tagValue || tags.includes(tagValue)) {
+        return;
+      }
+      const newTags = [...tags, tagValue];
+      setTags(newTags);
+      updateNodeProperty('tags', node.id, newTags, true);
+      
+      // Create global tag if it doesn't exist
+      if (!availableTags.includes(tagValue)) {
+        TagController.addTag(tagValue, color);
+        setAvailableTags([...availableTags, tagValue]);
+        setTagColors({ ...tagColors, [tagValue]: color });
+      }
+      setInputVisible(false);
+      setInputValue('');
+    },
+    [tags, availableTags, tagColors, node?.id, updateNodeProperty],
+  );
+
+  const handleTagColorChange = useCallback(
+    (tagValue, color) => {
+      TagController.updateTagColor(tagValue, color);
+      setTagColors({ ...tagColors, [tagValue]: color });
+    },
+    [tagColors],
+  );
+
+  const handleInputConfirm = useCallback(() => {
+    if (inputValue.trim()) {
+      handleTagAdd(inputValue.trim());
+    }
+  }, [inputValue, handleTagAdd]);
+
+  const handleSelectTag = useCallback(
+    (value) => {
+      handleTagAdd(value);
+    },
+    [handleTagAdd],
   );
 
   const trelloToken = localStorage.getItem('trelloToken');
@@ -171,6 +251,98 @@ function NodeModal({
               updateNodeProperty('notes', node.id, value, true);
             }}
           />
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '8px', fontWeight: 500 }}>Tags</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+              {tags.map((tag) => (
+                <Tag
+                  key={tag}
+                  closable
+                  onClose={() => handleTagClose(tag)}
+                  color={tagColors[tag] || 'default'}
+                  style={{ margin: 0, padding: '4px 8px', fontSize: '13px' }}
+                >
+                  {tag}
+                  <Popover
+                    content={
+                      <div style={{ padding: '8px', minWidth: '200px' }}>
+                        <div style={{ marginBottom: '8px', fontWeight: 500 }}>Tag Color:</div>
+                        <Select
+                          value={tagColors[tag] || 'default'}
+                          onChange={(color) => {
+                            handleTagColorChange(tag, color === 'default' ? '' : color);
+                          }}
+                          style={{ width: '100%' }}
+                          size="small"
+                        >
+                          <Select.Option value="default">Default</Select.Option>
+                          <Select.Option value="red">Red</Select.Option>
+                          <Select.Option value="orange">Orange</Select.Option>
+                          <Select.Option value="gold">Gold</Select.Option>
+                          <Select.Option value="green">Green</Select.Option>
+                          <Select.Option value="cyan">Cyan</Select.Option>
+                          <Select.Option value="blue">Blue</Select.Option>
+                          <Select.Option value="purple">Purple</Select.Option>
+                          <Select.Option value="magenta">Magenta</Select.Option>
+                          <Select.Option value="volcano">Volcano</Select.Option>
+                          <Select.Option value="lime">Lime</Select.Option>
+                          <Select.Option value="geekblue">Geek Blue</Select.Option>
+                        </Select>
+                      </div>
+                    }
+                    trigger="click"
+                    placement="bottom"
+                  >
+                    <BgColorsOutlined 
+                      style={{ 
+                        marginLeft: '4px', 
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }} 
+                      onClick={(e) => e.stopPropagation()} 
+                    />
+                  </Popover>
+                </Tag>
+              ))}
+              {inputVisible ? (
+                <AutoComplete
+                  dataSource={availableTags
+                    .filter((t) => !tags.includes(t))
+                    .filter((t) => t.toUpperCase().includes(inputValue.toUpperCase()))}
+                  style={{ width: 150 }}
+                  onSelect={handleSelectTag}
+                  onBlur={handleInputConfirm}
+                  open={inputValue.length > 0 && availableTags.filter((t) => !tags.includes(t) && t.toUpperCase().includes(inputValue.toUpperCase())).length > 0}
+                  filterOption={false}
+                >
+                  <Input
+                    type="text"
+                    size="small"
+                    style={{ width: 150 }}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onPressEnter={handleInputConfirm}
+                    onBlur={handleInputConfirm}
+                    autoFocus
+                    placeholder="Type tag name"
+                  />
+                </AutoComplete>
+              ) : (
+                <Tag
+                  onClick={() => setInputVisible(true)}
+                  style={{
+                    borderStyle: 'dashed',
+                    cursor: 'pointer',
+                    margin: 0,
+                    padding: '4px 8px',
+                    fontSize: '13px',
+                  }}
+                >
+                  <PlusOutlined /> Add Tag
+                </Tag>
+              )}
+            </div>
+          </div>
           <div>
             <div>Iteration</div>
             <Select

@@ -8,8 +8,11 @@ const TagController = {
   getTags() {
     return ipcRenderer.sendSync('api:getTags');
   },
-  addTag(tagTitle) {
-    return ipcRenderer.sendSync('api:addTag', tagTitle);
+  addTag(tagTitle, color = '') {
+    return ipcRenderer.sendSync('api:addTag', tagTitle, color);
+  },
+  updateTagColor(tagTitle, color) {
+    return ipcRenderer.sendSync('api:updateTagColor', tagTitle, color);
   },
 };
 
