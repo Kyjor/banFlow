@@ -1,8 +1,8 @@
 import React, { useCallback } from 'react';
-import { Button, DatePicker, Modal, Select, Tabs, TimePicker } from 'antd';
+import { Button, DatePicker, Modal, Select, Tabs, TimePicker, Switch, Space } from 'antd';
 import moment from 'moment';
 import dateFormat from 'dateformat';
-import { ClockCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { ClockCircleOutlined, InfoCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import EditableTextArea from '../EditableTextArea/EditableTextArea';
 import SessionManager from './SessionManager';
@@ -114,6 +114,34 @@ function NodeModal({
           }
           key="1"
         >
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '8px' }}>
+            <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+              <div>
+                <CheckCircleOutlined style={{ marginRight: '8px', color: node.isComplete ? '#52c41a' : '#999' }} />
+                <span style={{ fontWeight: 500, fontSize: '16px' }}>Completion Status</span>
+              </div>
+              <Switch
+                checked={node.isComplete || false}
+                onChange={(checked) => {
+                  updateNodeProperty('isComplete', node.id, checked, true);
+                  // Update completedDate when marking as complete/incomplete
+                  if (checked) {
+                    updateNodeProperty('completedDate', node.id, new Date().toISOString(), true);
+                  } else {
+                    updateNodeProperty('completedDate', node.id, '', true);
+                  }
+                }}
+                checkedChildren="Complete"
+                unCheckedChildren="Incomplete"
+                style={{ minWidth: '100px' }}
+              />
+            </Space>
+            {node.isComplete && node.completedDate && (
+              <div style={{ marginTop: '8px', color: '#666', fontSize: '12px' }}>
+                Completed on: {moment(node.completedDate).format('YYYY-MM-DD HH:mm')}
+              </div>
+            )}
+          </div>
           <div>Description</div>
           <EditableTextArea
             defaultValue={node.description}

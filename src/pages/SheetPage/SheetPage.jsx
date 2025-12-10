@@ -33,9 +33,8 @@ import {
   DeleteOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  FileExcelOutlined,
+  FileOutlined,
   FileTextOutlined,
-  FileJsonOutlined,
   BarChartOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
@@ -44,7 +43,6 @@ import Layout from '../../layouts/App';
 import NodeModal from '../../components/NodeModal/NodeModal';
 import NodeController from '../../api/nodes/NodeController';
 import ParentController from '../../api/parent/ParentController';
-import IterationController from '../../api/iterations/IterationController';
 import { formatTimeHuman } from '../Dashboard/utils/statisticsCalculations';
 import moment from 'moment';
 import './SheetPage.scss';
@@ -738,46 +736,82 @@ class SheetPage extends Component {
   // Views menu
   getViewsMenu = () => {
     const { savedViews } = this.state;
+    const menuItems = [];
+    
+    if (savedViews.length === 0) {
+      menuItems.push(
+        <Menu.Item key="no-views" disabled>
+          No saved views
+        </Menu.Item>
+      );
+    } else {
+      savedViews.forEach((view) => {
+        menuItems.push(
+          <Menu.Item key={view.name}>
+            <Space>
+              <Button 
+                type="link" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  this.loadView(view);
+                }}
+                style={{ padding: 0 }}
+              >
+                {view.name}
+              </Button>
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  this.deleteView(view.name);
+                }}
+                style={{ padding: 0 }}
+              />
+            </Space>
+          </Menu.Item>
+        );
+      });
+    }
+    
+    menuItems.push(<Menu.Divider key="divider" />);
+    menuItems.push(
+      <Menu.Item key="save" icon={<SaveOutlined />} onClick={this.saveCurrentView}>
+        Save Current View
+      </Menu.Item>
+    );
+    
+    return <Menu>{menuItems}</Menu>;
+  };
+
+  // Export menu
+  getExportMenu = () => {
     return (
       <Menu>
-        {savedViews.length === 0 ? (
-          <Menu.Item disabled>No saved views</Menu.Item>
-        ) : (
-          savedViews.map((view) => (
-            <Menu.Item key={view.name}>
-              <Space>
-                <Button type="link" onClick={() => this.loadView(view)}>
-                  {view.name}
-                </Button>
-                <Button
-                  type="link"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => this.deleteView(view.name)}
-                />
-              </Space>
-            </Menu.Item>
-          ))
-        )}
-        <Menu.Divider />
-        <Menu.Item key="save" icon={<SaveOutlined />} onClick={this.saveCurrentView}>
-          Save Current View
+        <Menu.Item 
+          key="csv" 
+          icon={<FileTextOutlined />} 
+          onClick={(e) => {
+            e.domEvent?.stopPropagation();
+            this.exportToCSV();
+          }}
+        >
+          Export to CSV
+        </Menu.Item>
+        <Menu.Item 
+          key="json" 
+          icon={<FileOutlined />} 
+          onClick={(e) => {
+            e.domEvent?.stopPropagation();
+            this.exportToJSON();
+          }}
+        >
+          Export to JSON
         </Menu.Item>
       </Menu>
     );
   };
-
-  // Export menu
-  getExportMenu = () => (
-    <Menu>
-      <Menu.Item key="csv" icon={<FileTextOutlined />} onClick={this.exportToCSV}>
-        Export to CSV
-      </Menu.Item>
-      <Menu.Item key="json" icon={<FileJsonOutlined />} onClick={this.exportToJSON}>
-        Export to JSON
-      </Menu.Item>
-    </Menu>
-  );
 
   render() {
     const {
