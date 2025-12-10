@@ -57,6 +57,8 @@ class SheetPage extends Component {
 
     const location = window.location.href;
     this.projectName = location.split('/').pop();
+    // Remove query parameters (everything after ?)
+    this.projectName = this.projectName.split('?')[0];
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
     this.currentProject = this.projectName;
@@ -1048,7 +1050,7 @@ class SheetPage extends Component {
                   type="text"
                 >
                   Hide Statistics
-                </Button>
+        </Button>
               </div>
             </Card>
           )}

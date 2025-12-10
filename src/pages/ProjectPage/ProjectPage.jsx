@@ -37,6 +37,8 @@ class ProjectPage extends Component {
 
     const location = window.location.href; // Get the current URL
     this.projectName = location.split('/').pop();
+    // Remove query parameters (everything after ?)
+    this.projectName = this.projectName.split('?')[0];
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
@@ -68,6 +70,9 @@ class ProjectPage extends Component {
     this.setState({
       ...this.state,
       ...newState,
+    }, () => {
+      // Check URL parameters for node or parent to open
+      this.checkUrlParameters();
     });
 
     const self = this;
@@ -75,6 +80,45 @@ class ProjectPage extends Component {
       self.setState(newState);
     });
   }
+
+  componentDidUpdate(prevProps, prevState) {
+    // Check URL parameters when state updates (e.g., after nodes/parents are loaded)
+    if (!prevState.lokiLoaded && this.state.lokiLoaded) {
+      this.checkUrlParameters();
+    }
+  }
+
+  checkUrlParameters = () => {
+    // Parse hash URL for HashRouter: #/projectPage/ProjectName?node=nodeId
+    const hash = window.location.hash;
+    const hashParts = hash.split('?');
+    if (hashParts.length < 2) return;
+
+    const queryString = hashParts[1];
+    const urlParams = new URLSearchParams(queryString);
+    const nodeId = urlParams.get('node');
+    const parentId = urlParams.get('parent');
+
+    if (nodeId && this.state.nodes && this.state.nodes[nodeId]) {
+      const node = this.state.nodes[nodeId];
+      // Small delay to ensure modal can render
+      setTimeout(() => {
+        this.showModal(node);
+        // Clean up URL parameter
+        const newHash = hashParts[0];
+        window.history.replaceState({}, '', window.location.pathname + newHash);
+      }, 100);
+    } else if (parentId && this.state.parents && this.state.parents[parentId]) {
+      const parent = this.state.parents[parentId];
+      // Small delay to ensure modal can render
+      setTimeout(() => {
+        this.showParentModal(parent);
+        // Clean up URL parameter
+        const newHash = hashParts[0];
+        window.history.replaceState({}, '', window.location.pathname + newHash);
+      }, 100);
+    }
+  };
 
   componentWillUnmount() {
     ipcRenderer.removeAllListeners('UpdateProjectPageState');

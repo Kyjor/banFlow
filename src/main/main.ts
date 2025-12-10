@@ -1323,3 +1323,301 @@ ipcMain.handle('git:applyPatch', async (event, patchContent, options = {}) => {
     throw error;
   }
 });
+
+// ==================== DOCS MANAGEMENT ====================
+
+// Get base paths for project and global docs
+const getProjectDocsPath = (projectName: string) => {
+  const fs = require('fs');
+  const path = require('path');
+  const basePath = path.join(__dirname, '../../banFlowProjects', projectName);
+  const docsPath = path.join(basePath, 'docs');
+  const imagesPath = path.join(basePath, 'images');
+  
+  // Ensure directories exist
+  if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
+  if (!fs.existsSync(docsPath)) fs.mkdirSync(docsPath, { recursive: true });
+  if (!fs.existsSync(imagesPath)) fs.mkdirSync(imagesPath, { recursive: true });
+  
+  return { docsPath, imagesPath, basePath };
+};
+
+const getGlobalDocsPath = () => {
+  const fs = require('fs');
+  const path = require('path');
+  const basePath = path.join(__dirname, '../../banFlowProjects', 'global');
+  const docsPath = path.join(basePath, 'docs');
+  const imagesPath = path.join(basePath, 'images');
+  
+  // Ensure directories exist
+  if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
+  if (!fs.existsSync(docsPath)) fs.mkdirSync(docsPath, { recursive: true });
+  if (!fs.existsSync(imagesPath)) fs.mkdirSync(imagesPath, { recursive: true });
+  
+  return { docsPath, imagesPath, basePath };
+};
+
+// List documents
+ipcMain.handle('docs:list', async (event, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    
+    const listFiles = (dir: string, baseDir: string = ''): any[] => {
+      const items: any[] = [];
+      if (!fs.existsSync(dir)) return items;
+      
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = baseDir ? path.join(baseDir, entry.name) : entry.name;
+        
+        if (entry.isDirectory()) {
+          items.push({
+            name: entry.name,
+            path: relativePath,
+            type: 'folder',
+            children: listFiles(fullPath, relativePath),
+          });
+        } else if (entry.name.endsWith('.md')) {
+          const stats = fs.statSync(fullPath);
+          items.push({
+            name: entry.name.replace('.md', ''),
+            path: relativePath,
+            type: 'file',
+            fullPath,
+            size: stats.size,
+            created: stats.birthtime,
+            modified: stats.mtime,
+          });
+        }
+      }
+      
+      return items.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    };
+    
+    return listFiles(docsPath);
+  } catch (error) {
+    console.error('Error listing docs:', error);
+    throw error;
+  }
+});
+
+// Read document
+ipcMain.handle('docs:read', async (event, docPath: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(docsPath, docPath.endsWith('.md') ? docPath : `${docPath}.md`);
+    
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`Document not found: ${docPath}`);
+    }
+    
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    const stats = fs.statSync(fullPath);
+    
+    return {
+      content,
+      path: docPath,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      size: stats.size,
+    };
+  } catch (error) {
+    console.error('Error reading doc:', error);
+    throw error;
+  }
+});
+
+// Save document
+ipcMain.handle('docs:save', async (event, docPath: string, content: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(docsPath, docPath.endsWith('.md') ? docPath : `${docPath}.md`);
+    
+    // Ensure parent directories exist
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    fs.writeFileSync(fullPath, content, 'utf-8');
+    
+    const stats = fs.statSync(fullPath);
+    return {
+      path: docPath,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      size: stats.size,
+    };
+  } catch (error) {
+    console.error('Error saving doc:', error);
+    throw error;
+  }
+});
+
+// Delete document
+ipcMain.handle('docs:delete', async (event, docPath: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(docsPath, docPath.endsWith('.md') ? docPath : `${docPath}.md`);
+    
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      return { success: true };
+    }
+    
+    throw new Error(`Document not found: ${docPath}`);
+  } catch (error) {
+    console.error('Error deleting doc:', error);
+    throw error;
+  }
+});
+
+// Create folder
+ipcMain.handle('docs:createFolder', async (event, folderPath: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(docsPath, folderPath);
+    
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
+    }
+    
+    return { success: true, path: folderPath };
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    throw error;
+  }
+});
+
+// List images
+ipcMain.handle('docs:listImages', async (event, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { imagesPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    
+    if (!fs.existsSync(imagesPath)) return [];
+    
+    const files = fs.readdirSync(imagesPath);
+    const images = files
+      .filter((file: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file))
+      .map((file: string) => {
+        const fullPath = path.join(imagesPath, file);
+        const stats = fs.statSync(fullPath);
+        return {
+          name: file,
+          path: file,
+          fullPath,
+          size: stats.size,
+          created: stats.birthtime,
+          modified: stats.mtime,
+        };
+      });
+    
+    return images;
+  } catch (error) {
+    console.error('Error listing images:', error);
+    throw error;
+  }
+});
+
+// Get image data URL
+ipcMain.handle('docs:getImage', async (event, imagePath: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { imagesPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(imagesPath, imagePath);
+    
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`Image not found: ${imagePath}`);
+    }
+    
+    const imageBuffer = fs.readFileSync(fullPath);
+    const ext = path.extname(imagePath).toLowerCase().slice(1);
+    const mimeType = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
+    const base64 = imageBuffer.toString('base64');
+    
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error getting image:', error);
+    throw error;
+  }
+});
+
+// Save image (from base64 or buffer)
+ipcMain.handle('docs:saveImage', async (event, imageName: string, imageData: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { imagesPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(imagesPath, imageName);
+    
+    // Handle base64 data URL
+    let buffer: Buffer;
+    if (imageData.startsWith('data:')) {
+      const base64Data = imageData.split(',')[1];
+      buffer = Buffer.from(base64Data, 'base64');
+    } else {
+      buffer = Buffer.from(imageData, 'base64');
+    }
+    
+    fs.writeFileSync(fullPath, buffer);
+    
+    const stats = fs.statSync(fullPath);
+    return {
+      name: imageName,
+      path: imageName,
+      size: stats.size,
+      created: stats.birthtime,
+      modified: stats.mtime,
+    };
+  } catch (error) {
+    console.error('Error saving image:', error);
+    throw error;
+  }
+});
+
+// Delete image
+ipcMain.handle('docs:deleteImage', async (event, imagePath: string, projectName: string | null, isGlobal: boolean = false) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const { imagesPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(imagesPath, imagePath);
+    
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      return { success: true };
+    }
+    
+    throw new Error(`Image not found: ${imagePath}`);
+  } catch (error) {
+    console.error('Error deleting image:', error);
+    throw error;
+  }
+});

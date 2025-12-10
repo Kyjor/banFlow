@@ -1,0 +1,81 @@
+.docs-page {
+  height: 100%;
+  
+  .ant-layout-sider {
+    .ant-tree {
+      .ant-tree-node-content-wrapper {
+        padding: 4px 8px;
+        
+        &:hover {
+          background: #f5f5f5;
+        }
+      }
+    }
+  }
+  
+  .markdown-editor {
+    .w-md-editor {
+      height: 100%;
+      
+      .w-md-editor-text {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+    }
+  }
+  
+  .markdown-preview {
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 24px;
+      margin-bottom: 16px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+    
+    h1 { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+    h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+    h3 { font-size: 1.25em; }
+    
+    code {
+      background: #f6f8fa;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-size: 85%;
+    }
+    
+    pre {
+      background: #f6f8fa;
+      padding: 16px;
+      border-radius: 6px;
+      overflow: auto;
+      
+      code {
+        background: transparent;
+        padding: 0;
+      }
+    }
+    
+    blockquote {
+      border-left: 4px solid #dfe2e5;
+      padding: 0 16px;
+      color: #6a737d;
+    }
+    
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      
+      th, td {
+        border: 1px solid #dfe2e5;
+        padding: 6px 13px;
+      }
+      
+      th {
+        background: #f6f8fa;
+        font-weight: 600;
+      }
+    }
+  }
+}
+

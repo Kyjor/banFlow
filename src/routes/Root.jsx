@@ -9,6 +9,7 @@ import AppSettings from '../pages/AppSettings/AppSettings';
 import SheetPage from '../pages/SheetPage/SheetPage';
 import Game from '../pages/Game/Game';
 import TextEditor from '../components/TextEditor/TextEditor';
+import DocsPage from '../pages/DocsPage/DocsPage';
 import ChartPage from '../components/ChartPage/ChartPage';
 import GitPage from '../pages/Git/GitPage';
 import Analytics from '../pages/Analytics/Analytics';
@@ -30,7 +31,7 @@ function AppRoutes() {
           <Route path="/git/:name" element={<GitPage />} />
           <Route path="/projectSettings/:name" element={<ProjectSettings />} />
           <Route path="/settings" element={<AppSettings />} />
-          <Route path="/docs/:name" element={<TextEditor />} />
+          <Route path="/docs/:name" element={<DocsPage />} />
           <Route path="/game/:name" element={<Game />} />
           <Route path="/analytics" element={<Analytics />} />
           {/* Default 404 route */}
