@@ -469,6 +469,7 @@ class ProjectPage extends Component {
       ...currentState,
       parents: ParentController.getParents(),
       parentOrder: ParentController.getParentOrder(),
+      nodes: NodeController.getNodes(), // Also refresh nodes to reflect any property changes (e.g., completion status)
     };
 
     ipcRenderer.invoke('api:setProjectState', {
