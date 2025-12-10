@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Spin, message, DatePicker, Select, Space, Button } from 'antd';
+import { Row, Col, Spin, message, DatePicker, Select, Space, Button, Tabs, Calendar, List, Checkbox, Badge } from 'antd';
+import TabPane from 'antd/lib/tabs/TabPane';
 import { ReloadOutlined, FilterOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import moment from 'moment';
+import dateFormat from 'dateformat';
 import StatisticsCards from '../StatisticsCards/StatisticsCards';
 import { TimeDistributionChart, TimeTrendChart, ActivityHeatmap } from '../TimeCharts';
 import ProjectComparison from '../ProjectComparison/ProjectComparison';
+import DayByDayCalendar from '../../../../components/DayByDayCalendar/DayByDayCalendar';
 import { aggregateProjectStats, compareProjects, getAggregateRecentActivity } from '../../utils/aggregateCalculations';
 import { calculateTimeInDateRange } from '../../utils/statisticsCalculations';
 import './AggregateView.scss';
@@ -13,11 +16,12 @@ import './AggregateView.scss';
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoading }) {
+function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoading, dayCellRender, dateCellRender }) {
   const [dateRange, setDateRange] = useState(null);
   const [selectedTag, setSelectedTag] = useState(null);
   const [selectedIteration, setSelectedIteration] = useState(null);
   const [trendPeriod, setTrendPeriod] = useState('week');
+  const [calendarTab, setCalendarTab] = useState('daily');
 
   // Calculate aggregate statistics
   const aggregateStats = useMemo(() => {
@@ -207,98 +211,130 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
 
   return (
     <div className="aggregate-view">
-      {/* Filters */}
-      <div className="aggregate-filters">
-        <Space wrap>
-          <RangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            format="YYYY-MM-DD"
-            placeholder={['Start Date', 'End Date']}
-            allowClear
+      <Tabs defaultActiveKey="calendar" size="large">
+        <TabPane tab="Calendar" key="calendar">
+          <Tabs 
+            activeKey={calendarTab} 
+            onChange={setCalendarTab}
+            defaultActiveKey="daily"
+            style={{ marginTop: '16px' }}
+          >
+            <TabPane tab="Daily" key="daily">
+              <div style={{ padding: '16px' }}>
+                {dayCellRender ? (
+                  <DayByDayCalendar dayCellRender={dayCellRender} />
+                ) : (
+                  <div>Calendar loading...</div>
+                )}
+              </div>
+            </TabPane>
+            <TabPane tab="Monthly" key="monthly">
+              <div style={{ padding: '16px' }}>
+                {dateCellRender ? (
+                  <Calendar dateCellRender={dateCellRender} />
+                ) : (
+                  <div>Calendar loading...</div>
+                )}
+              </div>
+            </TabPane>
+          </Tabs>
+        </TabPane>
+        
+        <TabPane tab="Analytics" key="analytics">
+          {/* Filters */}
+          <div className="aggregate-filters" style={{ marginTop: '16px', marginBottom: '16px' }}>
+            <Space wrap>
+              <RangePicker
+                value={dateRange}
+                onChange={setDateRange}
+                format="YYYY-MM-DD"
+                placeholder={['Start Date', 'End Date']}
+                allowClear
+              />
+              <Select
+                placeholder="Filter by Tag"
+                value={selectedTag}
+                onChange={setSelectedTag}
+                style={{ width: 200 }}
+                allowClear
+              >
+                {availableTags.map(tag => (
+                  <Option key={tag} value={tag}>{tag}</Option>
+                ))}
+              </Select>
+              <Select
+                placeholder="Filter by Iteration"
+                value={selectedIteration}
+                onChange={setSelectedIteration}
+                style={{ width: 200 }}
+                allowClear
+              >
+                {availableIterations.map(iter => (
+                  <Option key={iter.id} value={iter.id}>{iter.title}</Option>
+                ))}
+              </Select>
+              {(dateRange || selectedTag || selectedIteration) && (
+                <Button
+                  icon={<FilterOutlined />}
+                  onClick={handleClearFilters}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </Space>
+          </div>
+
+          {/* Statistics Cards */}
+          <StatisticsCards 
+            stats={{
+              ...aggregateStats,
+              completed: aggregateStats.totalCompleted,
+              incomplete: aggregateStats.totalIncomplete,
+            }}
+            isAggregate={true}
           />
-          <Select
-            placeholder="Filter by Tag"
-            value={selectedTag}
-            onChange={setSelectedTag}
-            style={{ width: 200 }}
-            allowClear
-          >
-            {availableTags.map(tag => (
-              <Option key={tag} value={tag}>{tag}</Option>
-            ))}
-          </Select>
-          <Select
-            placeholder="Filter by Iteration"
-            value={selectedIteration}
-            onChange={setSelectedIteration}
-            style={{ width: 200 }}
-            allowClear
-          >
-            {availableIterations.map(iter => (
-              <Option key={iter.id} value={iter.id}>{iter.title}</Option>
-            ))}
-          </Select>
-          {(dateRange || selectedTag || selectedIteration) && (
-            <Button
-              icon={<FilterOutlined />}
-              onClick={handleClearFilters}
-            >
-              Clear Filters
-            </Button>
+
+          {/* Charts Row */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={12}>
+              <TimeDistributionChart 
+                data={distributionData}
+                title="Time Distribution by Status"
+              />
+            </Col>
+            <Col xs={24} lg={12}>
+              <TimeTrendChart 
+                data={trendData}
+                title="Time Trend"
+                selectedPeriod={trendPeriod}
+                onPeriodChange={setTrendPeriod}
+              />
+            </Col>
+          </Row>
+
+          {/* Activity Heatmap */}
+          <Row gutter={[16, 16]}>
+            <Col xs={24}>
+              <ActivityHeatmap 
+                data={heatmapData}
+                title="Activity Heatmap (Last 30 Days)"
+              />
+            </Col>
+          </Row>
+
+          {/* Project Comparison */}
+          {comparisonData.length > 1 && (
+            <Row gutter={[16, 16]}>
+              <Col xs={24}>
+                <ProjectComparison 
+                  projects={comparisonData}
+                  onProjectClick={onProjectClick}
+                />
+              </Col>
+            </Row>
           )}
-        </Space>
-      </div>
-
-      {/* Statistics Cards */}
-      <StatisticsCards 
-        stats={{
-          ...aggregateStats,
-          completed: aggregateStats.totalCompleted,
-          incomplete: aggregateStats.totalIncomplete,
-        }}
-        isAggregate={true}
-      />
-
-      {/* Charts Row */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <TimeDistributionChart 
-            data={distributionData}
-            title="Time Distribution by Status"
-          />
-        </Col>
-        <Col xs={24} lg={12}>
-          <TimeTrendChart 
-            data={trendData}
-            title="Time Trend"
-            selectedPeriod={trendPeriod}
-            onPeriodChange={setTrendPeriod}
-          />
-        </Col>
-      </Row>
-
-      {/* Activity Heatmap */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24}>
-          <ActivityHeatmap 
-            data={heatmapData}
-            title="Activity Heatmap (Last 30 Days)"
-          />
-        </Col>
-      </Row>
-
-      {/* Project Comparison */}
-      {comparisonData.length > 1 && (
-        <Row gutter={[16, 16]}>
-          <Col xs={24}>
-            <ProjectComparison 
-              projects={comparisonData}
-              onProjectClick={onProjectClick}
-            />
-          </Col>
-        </Row>
-      )}
+        </TabPane>
+      </Tabs>
     </div>
   );
 }
@@ -316,6 +352,8 @@ AggregateView.propTypes = {
   selectedProjects: PropTypes.arrayOf(PropTypes.string).isRequired,
   onProjectClick: PropTypes.func,
   isLoading: PropTypes.bool,
+  dayCellRender: PropTypes.func,
+  dateCellRender: PropTypes.func,
 };
 
 AggregateView.defaultProps = {

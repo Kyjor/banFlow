@@ -1,6 +1,6 @@
 .home {
   padding: 24px 50px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f5f7fa;
   min-height: 100vh;
   
   .flex {
@@ -15,11 +15,27 @@
       display: flex;
       flex-direction: column;
       gap: 16px;
+      padding-top: 0;
+      margin-top: 0;
+      padding-left: 0;
+      margin-left: 0;
+      
+      .project-list-container {
+        margin-top: 0;
+        margin-left: 0;
+      }
     }
     
     .dashboard-content {
       flex: 1;
       min-width: 0;
+      background: #ffffff !important;
+      border-radius: 12px !important;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+      padding: 24px !important;
+      margin-top: 16px !important;
+      margin-right: 16px !important;
+      margin-bottom: 16px !important;
     }
   }
 }
@@ -81,12 +97,12 @@
 }
 
 // Enhanced Ant Design component overrides
-.ant-tabs {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 20px;
+.dashboard-content .ant-tabs {
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
   flex: 1;
   
   .ant-tabs-tab {
@@ -94,12 +110,12 @@
     font-size: 16px;
     
     &.ant-tabs-tab-active .ant-tabs-tab-btn {
-      color: #667eea;
+      color: #3498db;
     }
   }
   
   .ant-tabs-ink-bar {
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: #3498db;
     height: 3px;
     border-radius: 2px;
   }
@@ -122,7 +138,7 @@
       transition: color 0.3s ease;
       
       &:hover {
-        color: #667eea;
+        color: #3498db;
       }
     }
   }
@@ -151,7 +167,7 @@
   border: none;
   
   .ant-calendar-header {
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: #2c3e50;
     color: white;
     border-radius: 12px 12px 0 0;
     padding: 15px 20px;
@@ -167,17 +183,17 @@
     transition: all 0.2s ease;
     
     &:hover {
-      background: rgba(102, 126, 234, 0.1);
+      background: rgba(52, 152, 219, 0.1);
     }
   }
   
   .ant-calendar-selected-day .ant-calendar-date {
-    background: linear-gradient(45deg, #667eea, #764ba2);
+    background: #3498db;
     color: white;
   }
   
   .ant-calendar-today .ant-calendar-date {
-    border: 2px solid #667eea;
+    border: 2px solid #3498db;
     font-weight: bold;
   }
 }
@@ -187,7 +203,7 @@
   border-radius: 8px;
   
   .ant-list-header {
-    background: rgba(102, 126, 234, 0.1);
+    background: rgba(44, 62, 80, 0.1);
     font-weight: 600;
     color: #2c3e50;
     border-radius: 8px 8px 0 0;
@@ -198,7 +214,7 @@
     transition: background 0.2s ease;
     
     &:hover {
-      background: rgba(102, 126, 234, 0.05);
+      background: rgba(52, 152, 219, 0.05);
     }
   }
 }

@@ -13,11 +13,25 @@ import {
   Tabs,
   Spin,
   message,
+  Modal,
+  Input,
+  DatePicker,
+  Select,
+  Button,
+  Space,
+  Tooltip,
+  Tag,
 } from 'antd';
+import {
+  PlusOutlined,
+} from '@ant-design/icons';
 import dateFormat from 'dateformat';
 import { ipcRenderer } from 'electron';
 import TabPane from 'antd/lib/tabs/TabPane';
 import Layout from '../../layouts/App';
+import { Typography } from 'antd';
+
+const { Text } = Typography;
 // Components
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
 import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar';
@@ -27,7 +41,6 @@ import ParentController from '../../api/parent/ParentController';
 import TimerController from '../../api/timer/TimerController';
 import TagController from '../../api/tag/TagController';
 // New Components
-import ProjectSelector from './components/ProjectSelector/ProjectSelector';
 import StatisticsCards from './components/StatisticsCards/StatisticsCards';
 import AggregateView from './components/AggregateView/AggregateView';
 import { loadMultipleProjectsData, getAllProjectNames } from './utils/projectDataLoader';
@@ -35,6 +48,7 @@ import {
   calculateProjectHealth,
   calculateNodeStats,
   calculateTotalTimeSpent,
+  formatTimeHuman,
 } from './utils/statisticsCalculations';
 
 /**
@@ -47,21 +61,26 @@ class Dashboard extends Component {
   constructor(props) {
     super(props);
 
-    // Load selected projects from localStorage
+    // Load selected projects from localStorage, default to all
     const savedSelectedProjects = localStorage.getItem('dashboardSelectedProjects');
+    const allProjects = getAllProjectNames();
     const initialSelectedProjects = savedSelectedProjects 
       ? JSON.parse(savedSelectedProjects) 
-      : [];
+      : allProjects; // Default to all projects
 
     this.state = {
       selectedProject: '',
       isLokiLoaded: false,
       // Multi-project state
-      viewMode: 'single', // 'single' or 'aggregate'
-      availableProjects: [],
+      viewMode: 'aggregate', // Default to aggregate view
+      availableProjects: allProjects,
       selectedProjects: initialSelectedProjects,
       projectsData: [],
       isLoadingProjects: false,
+      quickAddModalVisible: false,
+      quickAddProject: null,
+      quickAddTitle: '',
+      quickAddDueDate: null,
     };
 
     const self = this;
@@ -72,8 +91,15 @@ class Dashboard extends Component {
 
   componentDidMount() {
     this.loadAvailableProjects();
-    if (this.state.selectedProjects.length > 0) {
-      this.loadProjectsData(this.state.selectedProjects);
+    // Load all projects by default
+    const allProjects = getAllProjectNames();
+    if (allProjects.length > 0) {
+      this.setState({ 
+        availableProjects: allProjects,
+        selectedProjects: allProjects,
+      }, () => {
+        this.loadProjectsData(allProjects);
+      });
     }
   }
 
@@ -143,23 +169,40 @@ class Dashboard extends Component {
     }
   };
 
-  // eslint-disable-next-line class-methods-use-this
   getListData = (value) => {
     try {
       const listData = [];
       // eslint-disable-next-line no-underscore-dangle
       const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-      const dueItems = NodeController.getNodesWithQuery({
-        estimatedDate: { $ne: '' },
-      });
-
-      if (!dueItems) return [];
-
-      Object.values(dueItems).forEach((item) => {
-        if (item && item.estimatedDate && dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
-          listData.push({ type: 'success', content: item.title });
-        }
-      });
+      
+      // Get todos from all projects in projectsData
+      const { projectsData } = this.state;
+      
+      if (projectsData && projectsData.length > 0) {
+        projectsData.forEach((project) => {
+          const nodes = project.nodes || [];
+          nodes.forEach((node) => {
+            // Check dueDate, estimatedDate, or any date field
+            let nodeDate = null;
+            if (node.dueDate) {
+              nodeDate = dateFormat(node.dueDate, 'yyyy-mm-dd');
+            } else if (node.estimatedDate) {
+              nodeDate = dateFormat(node.estimatedDate, 'yyyy-mm-dd');
+            }
+            
+            if (nodeDate === cellDate) {
+              listData.push({ 
+                type: node.isComplete ? 'default' : 'success', 
+                content: node.title,
+                projectName: project.projectName,
+                isComplete: node.isComplete,
+                nodeId: node.id,
+                node: node, // Store full node data
+              });
+            }
+          });
+        });
+      }
 
       return listData || [];
     } catch (error) {
@@ -238,46 +281,62 @@ class Dashboard extends Component {
     const listData = this.getListData(value);
     return (
       <ul className="events">
-        {listData.map((item) => (
-          <li key={item.content}>
-            <Badge status={item.type} text={item.content} />
+        {listData.map((item, index) => (
+          <li key={`${item.content}-${index}`}>
+            <Tooltip title={`${item.content} - ${item.projectName}`}>
+              <Badge 
+                status={item.type} 
+                text={item.content}
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  this.setState({
+                    calendarItemModalVisible: true,
+                    selectedCalendarItem: item,
+                  });
+                }}
+              />
+            </Tooltip>
           </li>
         ))}
       </ul>
     );
   };
 
-  // eslint-disable-next-line class-methods-use-this
   dayCellRender = (value, header) => {
     try {
       const listData = [];
       // eslint-disable-next-line no-underscore-dangle
       const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-      const dueItems = NodeController.getNodesWithQuery({
-        estimatedDate: { $ne: '' },
-      });
-
-      if (!dueItems) {
-        return (
-          <List
-            size="large"
-            header={header()}
-            style={{ height: '100%' }}
-            dataSource={[]}
-            renderItem={() => null}
-          />
-        );
-      }
-
-      Object.values(dueItems).forEach((item) => {
-        if (item && item.estimatedDate && dateFormat(item.estimatedDate, 'yyyy-mm-dd') === cellDate) {
-          listData.push({
-            type: 'success',
-            content: item.title,
-            isComplete: item.isComplete,
+      
+      // Get todos from all projects in projectsData
+      const { projectsData } = this.state;
+      
+      if (projectsData && projectsData.length > 0) {
+        projectsData.forEach((project) => {
+          const nodes = project.nodes || [];
+          nodes.forEach((node) => {
+            // Check dueDate, estimatedDate, or any date field
+            let nodeDate = null;
+            if (node.dueDate) {
+              nodeDate = dateFormat(node.dueDate, 'yyyy-mm-dd');
+            } else if (node.estimatedDate) {
+              nodeDate = dateFormat(node.estimatedDate, 'yyyy-mm-dd');
+            }
+            
+            if (nodeDate === cellDate) {
+              listData.push({
+                type: node.isComplete ? 'default' : 'success',
+                content: node.title,
+                projectName: project.projectName,
+                isComplete: node.isComplete,
+                nodeId: node.id,
+                node: node, // Store full node data
+              });
+            }
           });
-        }
-      });
+        });
+      }
 
       return (
         <List
@@ -286,13 +345,31 @@ class Dashboard extends Component {
           style={{ height: '100%' }}
           dataSource={listData}
           renderItem={(item) => (
-            <List.Item>
+            <List.Item
+              style={{ 
+                cursor: 'pointer',
+                padding: '8px',
+                backgroundColor: item.isComplete ? '#f0f0f0' : 'transparent',
+              }}
+              onClick={() => {
+                this.setState({
+                  calendarItemModalVisible: true,
+                  selectedCalendarItem: item,
+                });
+              }}
+            >
               <Checkbox
                 checked={item.isComplete}
                 disabled
-                style={{ marginRight: '5px' }}
+                style={{ marginRight: '8px' }}
               />
-              {item.content}
+              <Tooltip title={`Project: ${item.projectName}`}>
+                <span style={{ flex: 1 }}>{item.content}</span>
+              </Tooltip>
+              <Badge 
+                text={item.projectName} 
+                style={{ fontSize: '11px', color: '#999' }}
+              />
             </List.Item>
           )}
         />
@@ -356,20 +433,43 @@ class Dashboard extends Component {
                 openProjectDetails={this.updateSelectedProject}
                 selectedProject={selectedProject}
               />
-              <ProjectSelector
-                availableProjects={availableProjects}
-                selectedProjects={selectedProjects}
-                onSelectionChange={this.handleProjectSelectionChange}
-                onSelectAll={this.handleSelectAll}
-                onDeselectAll={this.handleDeselectAll}
-              />
             </div>
             <div className="dashboard-content">
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ margin: 0 }}>Dashboard</h2>
+                {/* Quick Add button temporarily hidden */}
+                {false && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      this.setState({ 
+                        quickAddModalVisible: true,
+                        quickAddProject: this.state.availableProjects[0] || null,
+                        quickAddTitle: '',
+                        quickAddDueDate: null,
+                      });
+                    }}
+                  >
+                    Quick Add Todo
+                  </Button>
+                )}
+              </div>
               <Tabs 
                 activeKey={viewMode} 
                 onChange={this.handleViewModeChange}
-                defaultActiveKey="single"
+                defaultActiveKey="aggregate"
               >
+                <TabPane tab="All Projects" key="aggregate">
+                  <AggregateView
+                    projectsData={projectsData}
+                    selectedProjects={selectedProjects}
+                    onProjectClick={this.handleProjectClick}
+                    isLoading={isLoadingProjects}
+                    dayCellRender={this.dayCellRender}
+                    dateCellRender={this.dateCellRender}
+                  />
+                </TabPane>
                 <TabPane tab="Single Project" key="single">
                   {selectedProject ? (
                     <>
@@ -431,21 +531,219 @@ class Dashboard extends Component {
                     </div>
                   )}
                 </TabPane>
-                <TabPane tab="Multi-Project Aggregate" key="aggregate">
-                  <AggregateView
-                    projectsData={projectsData}
-                    selectedProjects={selectedProjects}
-                    onProjectClick={this.handleProjectClick}
-                    isLoading={isLoadingProjects}
-                  />
-                </TabPane>
               </Tabs>
+              
+              {/* Quick Add Modal */}
+              <Modal
+                title="Quick Add Todo"
+                open={this.state.quickAddModalVisible}
+                onOk={this.handleQuickAdd}
+                onCancel={() => this.setState({ quickAddModalVisible: false })}
+                okText="Add"
+                cancelText="Cancel"
+              >
+                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                  <div>
+                    <Text strong>Project</Text>
+                    <Select
+                      value={this.state.quickAddProject}
+                      onChange={(value) => this.setState({ quickAddProject: value })}
+                      style={{ width: '100%', marginTop: 8 }}
+                      placeholder="Select project"
+                    >
+                      {this.state.availableProjects.map((project) => (
+                        <Select.Option key={project} value={project}>
+                          {project}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <Text strong>Title</Text>
+                    <Input
+                      value={this.state.quickAddTitle}
+                      onChange={(e) => this.setState({ quickAddTitle: e.target.value })}
+                      placeholder="Enter todo title"
+                      style={{ marginTop: 8 }}
+                      onPressEnter={this.handleQuickAdd}
+                    />
+                  </div>
+                  <div>
+                    <Text strong>Due Date (Optional)</Text>
+                    <DatePicker
+                      value={this.state.quickAddDueDate}
+                      onChange={(date) => this.setState({ quickAddDueDate: date })}
+                      style={{ width: '100%', marginTop: 8 }}
+                      showTime={false}
+                    />
+                  </div>
+                </Space>
+              </Modal>
+              
+              {/* Calendar Item Detail Modal */}
+              <Modal
+                title="Todo Details"
+                open={this.state.calendarItemModalVisible}
+                onCancel={() => this.setState({ calendarItemModalVisible: false, selectedCalendarItem: null })}
+                footer={[
+                  <Button
+                    key="open"
+                    type="primary"
+                    onClick={() => {
+                      const item = this.state.selectedCalendarItem;
+                      if (item) {
+                        const projectName = item.projectName.replace(/\//g, '@');
+                        window.location.hash = `#/projectPage/${projectName}?node=${item.nodeId}`;
+                        this.setState({ calendarItemModalVisible: false, selectedCalendarItem: null });
+                      }
+                    }}
+                  >
+                    Open in Project
+                  </Button>,
+                  <Button
+                    key="close"
+                    onClick={() => this.setState({ calendarItemModalVisible: false, selectedCalendarItem: null })}
+                  >
+                    Close
+                  </Button>,
+                ]}
+                width={600}
+              >
+                {this.state.selectedCalendarItem && (() => {
+                  const item = this.state.selectedCalendarItem;
+                  const node = item.node || {};
+                  
+                  // Format date
+                  const formatDate = (dateStr) => {
+                    if (!dateStr) return 'Not set';
+                    try {
+                      return dateFormat(new Date(dateStr), 'mmmm dd, yyyy');
+                    } catch {
+                      return dateStr;
+                    }
+                  };
+                  
+                  return (
+                    <Descriptions column={1} bordered>
+                      <Descriptions.Item label="Title">
+                        {item.content}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Project">
+                        <Tag color="blue">{item.projectName}</Tag>
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Status">
+                        <Badge 
+                          status={item.isComplete ? 'success' : 'processing'} 
+                          text={item.isComplete ? 'Completed' : 'In Progress'} 
+                        />
+                      </Descriptions.Item>
+                      {node.description && (
+                        <Descriptions.Item label="Description">
+                          {node.description}
+                        </Descriptions.Item>
+                      )}
+                      {node.timeSpent > 0 && (
+                        <Descriptions.Item label="Time Spent">
+                          {formatTimeHuman(node.timeSpent)}
+                        </Descriptions.Item>
+                      )}
+                      {node.dueDate && (
+                        <Descriptions.Item label="Due Date">
+                          {formatDate(node.dueDate)}
+                        </Descriptions.Item>
+                      )}
+                      {node.estimatedTime > 0 && (
+                        <Descriptions.Item label="Estimated Time">
+                          {formatTimeHuman(node.estimatedTime)}
+                        </Descriptions.Item>
+                      )}
+                      {node.tags && node.tags.length > 0 && (
+                        <Descriptions.Item label="Tags">
+                          {node.tags.map((tag, idx) => {
+                            const tagName = typeof tag === 'string' ? tag : (tag.title || tag.name || tag);
+                            return <Tag key={idx} color={tag.color || 'default'}>{tagName}</Tag>;
+                          })}
+                        </Descriptions.Item>
+                      )}
+                      {node.nodeState && (
+                        <Descriptions.Item label="State">
+                          {node.nodeState}
+                        </Descriptions.Item>
+                      )}
+                      {node.parent && (
+                        <Descriptions.Item label="Parent Column">
+                          {node.parent}
+                        </Descriptions.Item>
+                      )}
+                    </Descriptions>
+                  );
+                })()}
+              </Modal>
             </div>
           </div>
         </div>
       </Layout>
     );
   }
+
+  handleQuickAdd = async () => {
+    const { quickAddProject, quickAddTitle, quickAddDueDate } = this.state;
+    
+    if (!quickAddProject || !quickAddTitle.trim()) {
+      message.warning('Please select a project and enter a title');
+      return;
+    }
+
+    try {
+      // Open the project first
+      ProjectController.openProject(quickAddProject);
+      
+      // Wait a bit for project to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Get the first parent (or default parent)
+      const parents = ParentController.getParents();
+      const parentOrder = ParentController.getParentOrder();
+      const firstParentId = parentOrder && parentOrder.length > 0 
+        ? parentOrder[0].id 
+        : (parents && Object.keys(parents).length > 0 ? Object.keys(parents)[0] : null);
+      
+      if (!firstParentId) {
+        message.error('No parent column found in project. Please create one first.');
+        return;
+      }
+
+      // Create the node
+      const node = await NodeController.createNode(
+        'child',
+        quickAddTitle.trim(),
+        firstParentId,
+        '', // No iteration
+      );
+
+      // If due date is set, update it
+      if (quickAddDueDate) {
+        const dueDateStr = dateFormat(quickAddDueDate._d || quickAddDueDate, 'yyyy-mm-dd');
+        NodeController.updateNodeProperty('dueDate', node.id, dueDateStr);
+      }
+
+      message.success('Todo added successfully!');
+      
+      // Refresh projects data
+      this.loadProjectsData(this.state.selectedProjects);
+      
+      // Close modal and reset
+      this.setState({
+        quickAddModalVisible: false,
+        quickAddProject: null,
+        quickAddTitle: '',
+        quickAddDueDate: null,
+      });
+    } catch (error) {
+      console.error('Error creating todo:', error);
+      message.error('Failed to create todo');
+    }
+  };
 }
 
 export default Dashboard;

@@ -6,7 +6,6 @@ import moment from 'moment';
 // Layout
 import Layout from '../../layouts/App';
 // Reuse components
-import ProjectSelector from '../Dashboard/components/ProjectSelector/ProjectSelector';
 import StatisticsCards from '../Dashboard/components/StatisticsCards/StatisticsCards';
 import TimeTrendChart from '../Dashboard/components/TimeCharts/TimeTrendChart';
 import TimeDistributionChart from '../Dashboard/components/TimeCharts/TimeDistributionChart';
@@ -45,10 +44,13 @@ class Analytics extends Component {
 
   componentDidMount() {
     this.loadAvailableProjects();
-    const { selectedProjects } = this.state;
-    if (selectedProjects.length > 0) {
-      this.loadProjectsData(selectedProjects);
-    }
+    // Default to all projects
+    const availableProjects = getAllProjectNames();
+    this.setState({ availableProjects, selectedProjects: availableProjects }, () => {
+      if (availableProjects.length > 0) {
+        this.loadProjectsData(availableProjects);
+      }
+    });
   }
 
   loadAvailableProjects = () => {
@@ -74,25 +76,7 @@ class Analytics extends Component {
     }
   };
 
-  handleProjectSelect = (selectedProjects) => {
-    this.setState({ selectedProjects }, () => {
-      localStorage.setItem('analyticsSelectedProjects', JSON.stringify(selectedProjects));
-      this.loadProjectsData(selectedProjects);
-    });
-  };
-
-  handleProjectSelectionChange = (selectedProjects) => {
-    this.handleProjectSelect(selectedProjects);
-  };
-
-  handleSelectAll = () => {
-    const { availableProjects } = this.state;
-    this.handleProjectSelect([...availableProjects]);
-  };
-
-  handleDeselectAll = () => {
-    this.handleProjectSelect([]);
-  };
+  // Removed project selection - always uses all projects
 
   addFilterRule = () => {
     const { filterRules } = this.state;

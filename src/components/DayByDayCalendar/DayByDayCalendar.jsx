@@ -33,12 +33,26 @@ class DayByDayCalendar extends React.Component {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          padding: '12px 16px',
+          background: '#2c3e50',
+          borderRadius: '8px',
+          marginBottom: '16px',
+          color: 'white',
+          fontWeight: 600,
+          fontSize: '16px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
         }}
       >
         <DoubleLeftOutlined
           style={{
             cursor: 'pointer',
+            fontSize: '18px',
+            padding: '4px',
+            borderRadius: '4px',
+            transition: 'background 0.2s',
           }}
+          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+          onMouseLeave={(e) => e.target.style.background = 'transparent'}
           onClick={() => {
             this.incrementDays(-7);
           }}
@@ -46,7 +60,13 @@ class DayByDayCalendar extends React.Component {
         <LeftOutlined
           style={{
             cursor: 'pointer',
+            fontSize: '18px',
+            padding: '4px',
+            borderRadius: '4px',
+            transition: 'background 0.2s',
           }}
+          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+          onMouseLeave={(e) => e.target.style.background = 'transparent'}
           onClick={() => {
             this.incrementDays(-1);
           }}
@@ -54,6 +74,8 @@ class DayByDayCalendar extends React.Component {
         <div
           style={{
             cursor: 'pointer',
+            flex: 1,
+            textAlign: 'center',
           }}
         >
           {currentDate.toJSON().slice(0, 10).replace(/-/g, '/') ===
@@ -73,7 +95,13 @@ class DayByDayCalendar extends React.Component {
         <RightOutlined
           style={{
             cursor: 'pointer',
+            fontSize: '18px',
+            padding: '4px',
+            borderRadius: '4px',
+            transition: 'background 0.2s',
           }}
+          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+          onMouseLeave={(e) => e.target.style.background = 'transparent'}
           onClick={() => {
             this.incrementDays(1);
           }}
@@ -81,7 +109,13 @@ class DayByDayCalendar extends React.Component {
         <DoubleRightOutlined
           style={{
             cursor: 'pointer',
+            fontSize: '18px',
+            padding: '4px',
+            borderRadius: '4px',
+            transition: 'background 0.2s',
           }}
+          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
+          onMouseLeave={(e) => e.target.style.background = 'transparent'}
           onClick={() => {
             this.incrementDays(7);
           }}
@@ -102,8 +136,19 @@ class DayByDayCalendar extends React.Component {
     const { dayCellRender } = this.props;
 
     return (
-      <div style={{ height: '400px' }}>
-        <div style={{ height: '100%' }}>
+      <div style={{ 
+        height: '400px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: '12px',
+        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
+        padding: '20px',
+        border: '1px solid rgba(0, 0, 0, 0.06)',
+      }}>
+        <div style={{ 
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
           {dayCellRender({ _d: currentDate }, this.header)}
         </div>
       </div>
