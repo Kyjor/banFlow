@@ -191,6 +191,24 @@ app
     ipcMain.handle('api:setProjectState', setProjectState);
     ipcMain.handle('api:createNode', createNode);
     ipcMain.handle('api:initializeProjectState', initializeProjectState);
+    
+    // Initialize backup schedules after a short delay to ensure everything is loaded
+    setTimeout(() => {
+      const fs = require('fs');
+      const path = require('path');
+      const projectsDir = path.join(__dirname, '../../banFlowProjects');
+      if (fs.existsSync(projectsDir)) {
+        const files = fs.readdirSync(projectsDir);
+        files.forEach((file: string) => {
+          if (file.endsWith('.json') && !file.startsWith('_') && file !== 'appSettings.json') {
+            const projectName = file.replace('.json', '');
+            // Default settings: enabled, 24 hours, 10 backups
+            // The renderer will update these when settings are loaded
+            startBackupSchedule(projectName, 24, 10);
+          }
+        });
+      }
+    }, 2000);
   })
   .catch(console.log);
 
@@ -608,6 +626,454 @@ ipcMain.on('api:setTrelloBoard', (event, trelloBoard) => {
 
 ipcMain.on('api:getProjectSettings', (event) => {
   event.returnValue = ProjectService.getProjectSettings(currentLokiService);
+});
+
+ipcMain.handle('api:updateProjectSettings', async (event, projectName: string, settings: any) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const Loki = require('lokijs');
+    
+    const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
+      ? projectName
+      : path.join(__dirname, '../../banFlowProjects', `${projectName}.json`);
+    
+    return new Promise((resolve, reject) => {
+      const db = new Loki(projectPath, {
+        autoload: true,
+        autosave: true,
+        verbose: false,
+        autoloadCallback: () => {
+          try {
+            let projectSettings = db.getCollection('projectSettings');
+            if (!projectSettings) {
+              projectSettings = db.addCollection('projectSettings');
+            }
+            
+            const existing = projectSettings.findOne({});
+            if (existing) {
+              projectSettings.update({ ...existing, ...settings });
+            } else {
+              projectSettings.insert(settings);
+            }
+            
+            db.saveDatabase((err) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve({ success: true });
+              }
+            });
+          } catch (error) {
+            reject(error);
+          }
+        },
+      });
+    });
+  } catch (error) {
+    console.error('Error updating project settings:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('app:getDataPath', async () => {
+  const path = require('path');
+  return path.join(__dirname, '../../banFlowProjects');
+});
+
+ipcMain.handle('app:openDataPath', async () => {
+  const { shell } = require('electron');
+  const path = require('path');
+  const dataPath = path.join(__dirname, '../../banFlowProjects');
+  shell.openPath(dataPath);
+  return { success: true };
+});
+
+// ==================== BACKUP & RECOVERY SYSTEM ====================
+
+let backupIntervals: Map<string, NodeJS.Timeout> = new Map();
+let backupTimers: Map<string, NodeJS.Timeout> = new Map();
+
+const getBackupPath = (projectName: string) => {
+  const fs = require('fs');
+  const path = require('path');
+  const backupDir = path.join(__dirname, '../../banFlowProjects', '_backups', projectName);
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+  return backupDir;
+};
+
+const getAllBackupsPath = () => {
+  const fs = require('fs');
+  const path = require('path');
+  const backupDir = path.join(__dirname, '../../banFlowProjects', '_backups');
+  if (!fs.existsSync(backupDir)) {
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+  return backupDir;
+};
+
+const createBackup = async (projectName: string): Promise<string> => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  try {
+    const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
+      ? projectName
+      : path.join(__dirname, '../../banFlowProjects', `${projectName}.json`);
+    
+    if (!fs.existsSync(projectPath)) {
+      throw new Error(`Project file not found: ${projectPath}`);
+    }
+    
+    const backupDir = getBackupPath(projectName);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFileName = `${projectName}_${timestamp}.json`;
+    const backupPath = path.join(backupDir, backupFileName);
+    
+    // Copy the project file
+    fs.copyFileSync(projectPath, backupPath);
+    
+    // Also backup associated folders (docs, images, diagrams) if they exist
+    const projectBasePath = path.dirname(projectPath);
+    const projectFolderName = path.basename(projectPath, '.json');
+    const projectFolder = path.join(projectBasePath, projectFolderName);
+    
+    if (fs.existsSync(projectFolder) && fs.statSync(projectFolder).isDirectory()) {
+      const backupProjectFolder = path.join(backupDir, `${projectFolderName}_${timestamp}`);
+      if (fs.existsSync(backupProjectFolder)) {
+        fs.rmSync(backupProjectFolder, { recursive: true, force: true });
+      }
+      fs.mkdirSync(backupProjectFolder, { recursive: true });
+      
+      // Copy all subdirectories
+      const copyDir = (src: string, dest: string) => {
+        if (!fs.existsSync(dest)) {
+          fs.mkdirSync(dest, { recursive: true });
+        }
+        const entries = fs.readdirSync(src, { withFileTypes: true });
+        for (const entry of entries) {
+          const srcPath = path.join(src, entry.name);
+          const destPath = path.join(dest, entry.name);
+          if (entry.isDirectory()) {
+            copyDir(srcPath, destPath);
+          } else {
+            fs.copyFileSync(srcPath, destPath);
+          }
+        }
+      };
+      
+      copyDir(projectFolder, backupProjectFolder);
+    }
+    
+    return backupPath;
+  } catch (error) {
+    console.error('Error creating backup:', error);
+    throw error;
+  }
+};
+
+const cleanupOldBackups = async (projectName: string, maxBackups: number) => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  try {
+    const backupDir = getBackupPath(projectName);
+    if (!fs.existsSync(backupDir)) {
+      return;
+    }
+    
+    const files = fs.readdirSync(backupDir);
+    const backupFiles = files
+      .filter((file: string) => file.endsWith('.json'))
+      .map((file: string) => {
+        const filePath = path.join(backupDir, file);
+        const stats = fs.statSync(filePath);
+        return {
+          name: file,
+          path: filePath,
+          created: stats.birthtime,
+        };
+      })
+      .sort((a: any, b: any) => b.created.getTime() - a.created.getTime());
+    
+    // Keep only the most recent maxBackups
+    if (backupFiles.length > maxBackups) {
+      const toDelete = backupFiles.slice(maxBackups);
+      for (const backup of toDelete) {
+        try {
+          fs.unlinkSync(backup.path);
+          // Also delete associated folder if it exists
+          const folderName = backup.name.replace('.json', '');
+          const folderPath = path.join(backupDir, folderName);
+          if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+            fs.rmSync(folderPath, { recursive: true, force: true });
+          }
+        } catch (err) {
+          console.error(`Error deleting backup ${backup.name}:`, err);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error cleaning up backups:', error);
+  }
+};
+
+const startBackupSchedule = (projectName: string, intervalHours: number, maxBackups: number) => {
+  // Clear existing interval if any
+  if (backupIntervals.has(projectName)) {
+    clearInterval(backupIntervals.get(projectName)!);
+  }
+  
+  const intervalMs = intervalHours * 60 * 60 * 1000;
+  
+  const performBackup = async () => {
+    try {
+      await createBackup(projectName);
+      await cleanupOldBackups(projectName, maxBackups);
+      console.log(`Backup created for project: ${projectName}`);
+    } catch (error) {
+      console.error(`Error in scheduled backup for ${projectName}:`, error);
+    }
+  };
+  
+  // Perform initial backup
+  performBackup();
+  
+  // Schedule recurring backups
+  const interval = setInterval(performBackup, intervalMs);
+  backupIntervals.set(projectName, interval);
+};
+
+const stopBackupSchedule = (projectName: string) => {
+  if (backupIntervals.has(projectName)) {
+    clearInterval(backupIntervals.get(projectName)!);
+    backupIntervals.delete(projectName);
+  }
+};
+
+// IPC Handlers for backup system
+ipcMain.handle('backup:create', async (event, projectName: string) => {
+  try {
+    const backupPath = await createBackup(projectName);
+    return { success: true, path: backupPath };
+  } catch (error) {
+    console.error('Error creating backup:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup:list', async (event, projectName: string | null = null) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    if (projectName) {
+      const backupDir = getBackupPath(projectName);
+      if (!fs.existsSync(backupDir)) {
+        return [];
+      }
+      
+      const files = fs.readdirSync(backupDir);
+      return files
+        .filter((file: string) => file.endsWith('.json'))
+        .map((file: string) => {
+          const filePath = path.join(backupDir, file);
+          const stats = fs.statSync(filePath);
+          return {
+            name: file,
+            path: filePath,
+            projectName,
+            size: stats.size,
+            created: stats.birthtime.toISOString(),
+            modified: stats.mtime.toISOString(),
+          };
+        })
+        .sort((a: any, b: any) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    } else {
+      // List all backups
+      const allBackupsDir = getAllBackupsPath();
+      if (!fs.existsSync(allBackupsDir)) {
+        return [];
+      }
+      
+      const projects = fs.readdirSync(allBackupsDir);
+      const allBackups: any[] = [];
+      
+      for (const project of projects) {
+        const projectBackupDir = path.join(allBackupsDir, project);
+        if (fs.statSync(projectBackupDir).isDirectory()) {
+          const files = fs.readdirSync(projectBackupDir);
+          files
+            .filter((file: string) => file.endsWith('.json'))
+            .forEach((file: string) => {
+              const filePath = path.join(projectBackupDir, file);
+              const stats = fs.statSync(filePath);
+              allBackups.push({
+                name: file,
+                path: filePath,
+                projectName: project,
+                size: stats.size,
+                created: stats.birthtime.toISOString(),
+                modified: stats.mtime.toISOString(),
+              });
+            });
+        }
+      }
+      
+      return allBackups.sort((a: any, b: any) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    }
+  } catch (error) {
+    console.error('Error listing backups:', error);
+    return [];
+  }
+});
+
+ipcMain.handle('backup:restore', async (event, backupPath: string, projectName: string) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    if (!fs.existsSync(backupPath)) {
+      throw new Error(`Backup file not found: ${backupPath}`);
+    }
+    
+    const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
+      ? projectName
+      : path.join(__dirname, '../../banFlowProjects', `${projectName}.json`);
+    
+    // Create a safety backup before restoring
+    const safetyBackupPath = `${projectPath}.pre-restore-${Date.now()}`;
+    if (fs.existsSync(projectPath)) {
+      fs.copyFileSync(projectPath, safetyBackupPath);
+    }
+    
+    try {
+      // Restore the main project file
+      fs.copyFileSync(backupPath, projectPath);
+      
+      // Restore associated folders if they exist in the backup
+      const backupDir = path.dirname(backupPath);
+      const backupFileName = path.basename(backupPath, '.json');
+      const backupProjectFolder = path.join(backupDir, backupFileName);
+      
+      if (fs.existsSync(backupProjectFolder) && fs.statSync(backupProjectFolder).isDirectory()) {
+        const projectBasePath = path.dirname(projectPath);
+        const projectFolderName = path.basename(projectPath, '.json');
+        const projectFolder = path.join(projectBasePath, projectFolderName);
+        
+        // Remove existing project folder
+        if (fs.existsSync(projectFolder)) {
+          fs.rmSync(projectFolder, { recursive: true, force: true });
+        }
+        
+        // Copy backup folder
+        const copyDir = (src: string, dest: string) => {
+          if (!fs.existsSync(dest)) {
+            fs.mkdirSync(dest, { recursive: true });
+          }
+          const entries = fs.readdirSync(src, { withFileTypes: true });
+          for (const entry of entries) {
+            const srcPath = path.join(src, entry.name);
+            const destPath = path.join(dest, entry.name);
+            if (entry.isDirectory()) {
+              copyDir(srcPath, destPath);
+            } else {
+              fs.copyFileSync(srcPath, destPath);
+            }
+          }
+        };
+        
+        copyDir(backupProjectFolder, projectFolder);
+      }
+      
+      return { success: true, safetyBackup: safetyBackupPath };
+    } catch (error) {
+      // Restore safety backup if restore failed
+      if (fs.existsSync(safetyBackupPath)) {
+        fs.copyFileSync(safetyBackupPath, projectPath);
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error restoring backup:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup:delete', async (event, backupPath: string) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    if (!fs.existsSync(backupPath)) {
+      throw new Error(`Backup file not found: ${backupPath}`);
+    }
+    
+    fs.unlinkSync(backupPath);
+    
+    // Also delete associated folder if it exists
+    const backupDir = path.dirname(backupPath);
+    const backupFileName = path.basename(backupPath, '.json');
+    const backupProjectFolder = path.join(backupDir, backupFileName);
+    if (fs.existsSync(backupProjectFolder) && fs.statSync(backupProjectFolder).isDirectory()) {
+      fs.rmSync(backupProjectFolder, { recursive: true, force: true });
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting backup:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup:startSchedule', async (event, projectName: string, intervalHours: number, maxBackups: number) => {
+  try {
+    startBackupSchedule(projectName, intervalHours, maxBackups);
+    return { success: true };
+  } catch (error) {
+    console.error('Error starting backup schedule:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('backup:stopSchedule', async (event, projectName: string) => {
+  try {
+    stopBackupSchedule(projectName);
+    return { success: true };
+  } catch (error) {
+    console.error('Error stopping backup schedule:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Initialize backup schedules on app start based on saved settings
+// This will be called after app is ready
+const initializeBackupSchedules = () => {
+  const fs = require('fs');
+  const path = require('path');
+  
+  // Try to load settings from localStorage (stored in renderer)
+  // For now, we'll initialize based on default settings
+  // The renderer will update schedules when settings change
+  const projectsDir = path.join(__dirname, '../../banFlowProjects');
+  if (fs.existsSync(projectsDir)) {
+    const files = fs.readdirSync(projectsDir);
+    files.forEach((file: string) => {
+      if (file.endsWith('.json') && !file.startsWith('_') && file !== 'appSettings.json') {
+        const projectName = file.replace('.json', '');
+        // Default settings: enabled, 24 hours, 10 backups
+        // The renderer will update these when settings are loaded
+        startBackupSchedule(projectName, 24, 10);
+      }
+    });
+  }
+};
+
+app.whenReady().then(() => {
+  // Initialize backup schedules after a short delay to ensure everything is loaded
+  setTimeout(initializeBackupSchedules, 2000);
 });
 
 const setProjectState = (_event: any, values: any) => {

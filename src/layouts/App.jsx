@@ -93,13 +93,22 @@ function App(props) {
 
   const sidebarComponents = loadSidebarComponents(location.pathname);
 
+  // Get theme settings from localStorage
+  const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
+  const sidebarColor = appSettings.sidebarColor || '#001529';
+  const headerColor = appSettings.headerColor || '#001529';
+  const backgroundGradient = appSettings.backgroundGradient || ['#3a7bd5', '#e5e5e5'];
+  const backgroundStyle = backgroundGradient && Array.isArray(backgroundGradient) && backgroundGradient.length >= 2
+    ? `linear-gradient(to top, ${backgroundGradient[0]}, ${backgroundGradient[1]})`
+    : 'linear-gradient(to top, #3a7bd5, #e5e5e5)';
+
   return (
     <Layout
       style={{
         minHeight: '100vh',
       }}
     >
-      <Header>
+      <Header style={{ background: headerColor }}>
         <Menu theme="dark" defaultSelectedKeys={['1']} mode="horizontal">
           <Menu.Item
             icon={<DesktopOutlined />}
@@ -119,7 +128,7 @@ function App(props) {
           collapsible
           collapsed={collapsed}
           onCollapse={(value) => setCollapsed(value)}
-          style={{ background: `black` }}
+          style={{ background: sidebarColor }}
         >
           <div className="logo" />
           <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
@@ -129,7 +138,7 @@ function App(props) {
         <Content
           className="h-screen bg-gradient-to-t from-blue-700 to-gray-200 items-center justify-center"
           style={{
-            background: 'linear-gradient(to top, #3a7bd5, #e5e5e5)',
+            background: backgroundStyle,
           }}
         >
           <div
