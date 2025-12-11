@@ -1,21 +1,27 @@
 import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
-import kaplay from 'kaplay';
-
+import { Card, Button, Space, Typography, Tag, Row, Col, Alert, Divider } from 'antd';
 import Layout from '../../layouts/App';
+import gameService from '../../services/GameService';
+import eventSystem from '../../services/EventSystem';
+import playPlatformer from './games/Platformer';
 
-class SheetPage extends Component {
+const { Title, Paragraph, Text } = Typography;
+
+class GameLibraryPage extends Component {
   constructor(props) {
     super(props);
 
     this.currentProject = localStorage.getItem('currentProject');
-    this.trelloToken = localStorage.getItem('trelloToken');
-    this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
-    this.authLink = `https://trello.com/1/authorize?expiration=30days&scope=read,write&response_type=token&key=${this.trelloKey}`;
 
     this.state = {
       lokiLoaded: false,
       nodes: {},
+      selectedGame: 'platformer',
+      goldBalance: 0,
+      lastRunStats: null,
+      showLibrary: true,
+      canvasKey: 0,
     };
   }
 
@@ -28,92 +34,170 @@ class SheetPage extends Component {
     this.setState({
       ...this.state,
       ...newState,
+      goldBalance: gameService.getInventory().gold || 0,
+      lokiLoaded: true,
     });
   }
 
-  playGame = () => {
-    // Input handling and basic player movement
-
-    // Start kaboom
-    kaplay({
-      width: 640,
-      height: 640,
-      font: 'sans-serif',
-      canvas: document.querySelector('#mycanvas'),
-      background: [0, 0, 255],
+  awardGold = (amount, reason = 'game_reward', meta = {}) => {
+    if (!amount || amount <= 0) return;
+    gameService.inventory.gold += amount;
+    gameService.saveGameState();
+    this.setState({ goldBalance: gameService.getInventory().gold });
+    eventSystem.emit('game:reward', {
+      type: 'gold',
+      amount,
+      reason,
+      ...meta,
     });
-    setGravity(2400);
-    setBackground(0, 0, 0);
+  };
 
-    loadSprite(
-      'bean',
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAD0AAAA1CAYAAADyMeOEAAAAAXNSR0IArs4c6QAAAn5JREFUaIHdm7txAkEMhnUMBUAFEEPmcUgHhHRBQXThkA4IGTKIoQLoAEcw60PS6XkP/zNO7Nt/95O099hdV5Co2WTx9LS/PS5V1FhKhZt6QTlFBSHEJBOUkicAbugugEtZ4M3QUtjVbq32Pmz3quu14GpoCawFlJM0CFJ4FXQTcDQspqYASMDF0BxwG7B1UfBh0H0DLoXBN4E3QlPAXcOW0oKPOLMhAFPiqpOMxtCANXMczfTQgAF0Y/uIghWYe5R4gkX5Up6S+S2CxjrQvjVRPpS0/i9vNbQE2ALb5BnlLwVn797l4A7bfQgwNSju917fut7Q3C0+CpbzjAwoVkklH5lp6fy73s8h11jacX/nxj8C0H8TX+/n94+mjbYP63VU1bw40Uy3/TyuD9JaGVKxNzJK8+kS5tOluk3bopI39iz3SEEsAZJkm/LlKnU2WTxFmc4o9yZPSzVJfAGQ8qYaRYLXvaK8MR/sd6o5vdqt3QPMCqqm/djbgeSlQjog7jUywv8lE7SnQ42n9gtLKjd0prLeF0zP6aHrAzrj46Jv+veZxpI4vj0uVcQmXFsV4p3nt8elQjOtBWhzSkT0NQLI2/HvWlSAyDk99Bsat06W9pz++foO89qcjmFeAEWmPSXet00A12qop8SjsxOpP9BYtrue29rgSRb7w15OsBL3ZHtzOqLtI6bSB3R0tqnBR11fSrpPjd68PLuWmdNBux1E3ZxT9qejwa07pmpoAP9Zk+zNPq4P7hFsPnMiHRQ3sCxf90EbgG4OzHHighh6jgwg92ikRBEH5wCSjknW1bfzoekHYrPV6ingl7qEt34kDepkP0DMgkfqiklf/4fjF/Soc3nSQqqQAAAAAElFTkSuQmCC',
-    );
-
-    scene('nogamepad', () => {
-      add([
-        text('Gamepad not found.\nConnect a gamepad and press a button!', {
-          width: width() - 80,
-          align: 'center',
-        }),
-        pos(center()),
-        anchor('center'),
-      ]);
-      onGamepadConnect(() => {
-        go('game');
-      });
+  playSelectedGame = () => {
+    const { selectedGame, canvasKey } = this.state;
+    this.setState({ showLibrary: false, canvasKey: canvasKey + 1 }, () => {
+      this.startGame();
     });
+  };
 
-    scene('game', () => {
-      const player = add([
-        pos(center()),
-        anchor('center'),
-        sprite('bean'),
-        area(),
-        body(),
-      ]);
-
-      // platform
-      add([
-        pos(0, height()),
-        anchor('botleft'),
-        rect(width(), 140),
-        area(),
-        body({ isStatic: true }),
-      ]);
-
-      onGamepadButtonPress((b) => {
-        debug.log(b);
+  startGame = () => {
+    const { selectedGame } = this.state;
+    const canvas = document.querySelector('#game-canvas');
+    const width = canvas ? canvas.clientWidth : 960;
+    const height = canvas ? canvas.clientHeight : 540;
+    if (selectedGame === 'platformer') {
+      playPlatformer({
+        canvasId: '#game-canvas',
+        width,
+        height,
+        onComplete: ({ coinsCollected, duration, totalGold }) => {
+          this.awardGold(totalGold, 'platformer_level_complete', {
+            coinsCollected,
+            sessionDuration: duration,
+          });
+          this.setState({
+            lastRunStats: {
+              coinsCollected,
+              duration,
+              totalGold,
+            },
+            goldBalance: gameService.getInventory().gold,
+          });
+        },
       });
-
-      onGamepadButtonPress(['south', 'west'], () => {
-        player.jump();
-      });
-
-      onGamepadStick('left', (v) => {
-        player.move(v.x * 400, 0);
-      });
-
-      onGamepadDisconnect(() => {
-        go('nogamepad');
-      });
-    });
-
-    if (getGamepads().length > 0) {
-      go('game');
-    } else {
-      go('nogamepad');
     }
   };
+
+  renderGameLibrary() {
+    const { selectedGame, goldBalance, lastRunStats, showLibrary, canvasKey } = this.state;
+
+    const games = [
+      {
+        key: 'platformer',
+        title: 'Precision Platformer',
+        description:
+          'Tight controls, dash and jump across a single handcrafted level. Collect coins, avoid spikes, and reach the goal.',
+        tags: ['Platformer', 'Dash', 'One Level'],
+      },
+    ];
+
+    return (
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={3} style={{ margin: 0 }}>Game Library</Title>
+          <Tag color="gold" style={{ fontSize: 16, padding: '6px 10px' }}>
+            Gold: {goldBalance.toFixed(2)}
+          </Tag>
+        </div>
+
+        {showLibrary && (
+          <Row gutter={[16, 16]}>
+            {games.map((game) => (
+              <Col xs={24} md={12} lg={8} key={game.key}>
+                <Card
+                  title={game.title}
+                  bordered
+                  bodyStyle={{ minHeight: 160 }}
+                  extra={selectedGame === game.key ? <Tag color="blue">Selected</Tag> : null}
+                  onClick={() => this.setState({ selectedGame: game.key })}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <Paragraph>{game.description}</Paragraph>
+                  <Space wrap>
+                    {game.tags.map((t) => (
+                      <Tag key={t}>{t}</Tag>
+                    ))}
+                  </Space>
+                  <Divider />
+                  <Space>
+                    <Button
+                      type="primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        this.setState({ selectedGame: game.key }, this.playSelectedGame);
+                      }}
+                    >
+                      Play (Fullscreen)
+                    </Button>
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        this.setState({ selectedGame: game.key });
+                      }}
+                    >
+                      Details
+                    </Button>
+                  </Space>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
+
+        {!showLibrary && (
+          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+            <Text type="secondary">Playing: Precision Platformer</Text>
+            <Button onClick={() => this.setState({ showLibrary: true })}>Back to Library</Button>
+          </Space>
+        )}
+
+        {lastRunStats && (
+          <Alert
+            message="Last Run"
+            description={`Coins: ${lastRunStats.coinsCollected} • Time: ${lastRunStats.duration}s • Gold Earned: ${lastRunStats.totalGold}`}
+            type="success"
+            showIcon
+          />
+        )}
+        <div style={{ marginTop: 12 }}>
+          <canvas
+            key={`canvas-${canvasKey}`}
+            id="game-canvas"
+            width="1920"
+            height="1080"
+            style={{
+              width: '100%',
+              height: 'calc(100vh - 220px)',
+              borderRadius: 8,
+              border: '1px solid #d9d9d9',
+              background: '#111',
+            }}
+          />
+        </div>
+      </Space>
+    );
+  }
 
   render() {
     const { lokiLoaded } = this.state;
 
     return lokiLoaded ? (
       <Layout>
-        <h1 style={{ fontSize: 50 }}>{this.currentProject}'s Game</h1>
-        <button onClick={this.playGame}>Play Game</button>
-        <canvas id="mycanvas" width="320" height="240" />
+        <div style={{ padding: 24 }}>
+          <Title level={2} style={{ marginBottom: 16 }}>
+            {this.currentProject ? `${this.currentProject} Games` : 'Games'}
+          </Title>
+          {this.renderGameLibrary()}
+        </div>
       </Layout>
     ) : (
       <Layout>
@@ -123,4 +207,4 @@ class SheetPage extends Component {
   }
 }
 
-export default SheetPage;
+export default GameLibraryPage;

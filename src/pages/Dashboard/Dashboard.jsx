@@ -492,6 +492,17 @@ class Dashboard extends Component {
                             {selectedProject}
                           </Link>
                         }
+                        extra={[
+                          <Button
+                            key="open-project"
+                            type="primary"
+                            style={{ minWidth: 140 }}
+                          >
+                            <Link to={`/projectPage/${selectedProject}`} style={{ color: '#fff' }}>
+                              Open Project
+                            </Link>
+                          </Button>,
+                        ]}
                       >
                         {singleProjectStats && (
                           <StatisticsCards stats={singleProjectStats} />
