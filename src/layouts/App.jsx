@@ -17,6 +17,7 @@ import PropTypes from 'prop-types';
 import { useLocation, Link } from 'react-router-dom';
 import { ipcRenderer } from 'electron';
 import { Header } from 'antd/es/layout/layout';
+import GameNotification from '../components/GameNotification/GameNotification';
 
 const { Content, Sider } = Layout;
 
@@ -152,6 +153,7 @@ function App(props) {
         </Content>
       </Layout>
       {/* <Footer /> */}
+      <GameNotification />
     </Layout>
   );
 }

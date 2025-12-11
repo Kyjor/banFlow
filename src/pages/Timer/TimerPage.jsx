@@ -5,6 +5,7 @@ import Timer from '../../components/Timer/timer';
 import timerController from '../../api/timer/TimerController';
 import ISO8601ServiceInstance from '../../services/ISO8601Service';
 import NodeController from '../../api/nodes/NodeController';
+import eventSystem, { EVENTS } from '../../services/EventSystem';
 
 const titleBarStyle = {
   WebkitAppRegion: 'drag',
@@ -71,10 +72,11 @@ class TimerPage extends Component {
     const { currentNodeSelectedInTimer, nodes } = this.state;
     // add a new session to node session history
     const nodeHistory = nodes[currentNodeSelectedInTimer].sessionHistory;
+    const sessionLength = _seconds - nodeHistory[nodeHistory.length - 1].startingSeconds;
     nodeHistory[nodeHistory.length - 1] = {
       ...nodeHistory[nodeHistory.length - 1],
       finishDateTime: ISO8601ServiceInstance.getISO8601Time(),
-      length: _seconds - nodeHistory[nodeHistory.length - 1].startingSeconds,
+      length: sessionLength,
     };
 
     NodeController.updateNodeProperty(
@@ -83,6 +85,15 @@ class TimerPage extends Component {
       nodeHistory,
     );
     this.saveCurrentSelectedNodeTime();
+    
+    // Fire session completed event for game system
+    const node = nodes[currentNodeSelectedInTimer];
+    eventSystem.emit(EVENTS.SESSION_COMPLETED, {
+      duration: sessionLength,
+      nodeId: currentNodeSelectedInTimer,
+      nodeTitle: node?.title || '',
+    });
+    
     const newState = {
       ...this.state,
       isTimerRunning: false,

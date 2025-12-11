@@ -209,6 +209,40 @@ app
         });
       }
     }, 2000);
+    
+    // Game state IPC handlers
+    ipcMain.handle('game:getState', async () => {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const gameStatePath = path.join(__dirname, '../../banFlowProjects/_gameState.json');
+        if (fs.existsSync(gameStatePath)) {
+          const data = fs.readFileSync(gameStatePath, 'utf8');
+          return JSON.parse(data);
+        }
+        return null;
+      } catch (error) {
+        console.error('Error loading game state:', error);
+        return null;
+      }
+    });
+    
+    ipcMain.handle('game:saveState', async (event, state) => {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const projectsDir = path.join(__dirname, '../../banFlowProjects');
+        if (!fs.existsSync(projectsDir)) {
+          fs.mkdirSync(projectsDir, { recursive: true });
+        }
+        const gameStatePath = path.join(projectsDir, '_gameState.json');
+        fs.writeFileSync(gameStatePath, JSON.stringify(state, null, 2), 'utf8');
+        return true;
+      } catch (error) {
+        console.error('Error saving game state:', error);
+        return false;
+      }
+    });
   })
   .catch(console.log);
 

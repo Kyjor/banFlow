@@ -268,6 +268,13 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
     updateNodeProperty('sessionHistory', node.id, updatedSessions, false);
     updateNodeProperty('timeSpent', node.id, newTimeSpent, false);
 
+    // Fire session completed event for game system
+    eventSystem.emit(EVENTS.SESSION_COMPLETED, {
+      duration: length,
+      nodeId: node.id,
+      nodeTitle: node?.title || '',
+    });
+
     if (onSessionsChange) {
       onSessionsChange(updatedSessions, newTimeSpent);
     }

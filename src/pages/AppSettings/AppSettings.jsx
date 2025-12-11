@@ -31,10 +31,12 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   HistoryOutlined,
+  PlayCircleOutlined,
 } from '@ant-design/icons';
 import Layout from '../../layouts/App';
 import APIKeyInput from '../../components/APIKeyInput/APIKeyInput';
 import { ipcRenderer } from 'electron';
+import gameService from '../../services/GameService';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -80,6 +82,9 @@ class AppSettings extends Component {
       debugMode: appSettings.debugMode || false,
       devTools: appSettings.devTools || false,
       
+      // Game
+      gameModeEnabled: appSettings.gameModeEnabled || false,
+      
       // UI State
       activeTab: 'appearance',
       saving: false,
@@ -91,6 +96,14 @@ class AppSettings extends Component {
     ipcRenderer.invoke('app:getDataPath').then((path) => {
       if (path) {
         this.setState({ dataPath: path });
+      }
+    });
+    
+    // Load game mode state
+    ipcRenderer.invoke('game:getState').then((state) => {
+      if (state) {
+        this.setState({ gameModeEnabled: state.isEnabled || false });
+        gameService.setEnabled(state.isEnabled || false);
       }
     });
     
@@ -112,6 +125,16 @@ class AppSettings extends Component {
     // Update backup schedule when backup settings change
     if (key === 'backupEnabled' || key === 'backupInterval' || key === 'maxBackups') {
       this.updateBackupSchedule();
+    }
+    
+    // Update game service when game mode changes
+    if (key === 'gameModeEnabled') {
+      gameService.setEnabled(value);
+      ipcRenderer.invoke('game:saveState', {
+        ...gameService.getInventory(),
+        stats: gameService.getStats(),
+        isEnabled: value,
+      });
     }
   };
   
@@ -192,6 +215,7 @@ class AppSettings extends Component {
       maxBackups: this.state.maxBackups,
       debugMode: this.state.debugMode,
       devTools: this.state.devTools,
+      gameModeEnabled: this.state.gameModeEnabled,
     };
     
     localStorage.setItem('appSettings', JSON.stringify(appSettings));
@@ -223,6 +247,7 @@ class AppSettings extends Component {
       maxBackups: 10,
       debugMode: false,
       devTools: false,
+      gameModeEnabled: false,
     });
     message.info('Settings reset to defaults');
   };
@@ -265,6 +290,7 @@ class AppSettings extends Component {
       maxBackups,
       debugMode,
       devTools,
+      gameModeEnabled,
       activeTab,
       saving,
     } = this.state;
@@ -694,6 +720,60 @@ class AppSettings extends Component {
             </Card>
             <Card title="Backup Management" size="small">
               <BackupManager />
+            </Card>
+          </Space>
+        ),
+      },
+      {
+        key: 'game',
+        label: (
+          <span>
+            <PlayCircleOutlined /> Game
+          </span>
+        ),
+        children: (
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <Card title="Game Mode" size="small">
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Alert
+                  message="Game Mode"
+                  description="Enable game mode to earn rewards for completing tasks and sessions. Your productivity actions will earn you gold and items!"
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <Text strong>Enable Game Mode</Text>
+                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                      Turn on rewards and gamification features
+                    </Paragraph>
+                  </div>
+                  <Switch
+                    checked={gameModeEnabled}
+                    onChange={(checked) => this.saveSetting('gameModeEnabled', checked)}
+                  />
+                </div>
+                {gameModeEnabled && (
+                  <Card size="small" style={{ marginTop: 16, background: '#f0f2f5' }}>
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                      <Text strong>Current Stats</Text>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Text>Gold:</Text>
+                        <Text strong>{gameService.getInventory().gold.toFixed(2)}</Text>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Text>Total Sessions:</Text>
+                        <Text strong>{gameService.getStats().totalSessions}</Text>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Text>Tasks Completed:</Text>
+                        <Text strong>{gameService.getStats().totalTasksCompleted}</Text>
+                      </div>
+                    </Space>
+                  </Card>
+                )}
+              </Space>
             </Card>
           </Space>
         ),
