@@ -72,6 +72,7 @@ function EnhancedDiffViewer({
     currentDiff,
     modifiedFiles,
     stagedFiles,
+    deletedFiles,
     getDiff,
     isLoading,
     operationInProgress,
@@ -117,6 +118,9 @@ function EnhancedDiffViewer({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedHistoryCommit, setSelectedHistoryCommit] = useState(null);
   const [historicalContent, setHistoricalContent] = useState(null);
+  const [originalImage, setOriginalImage] = useState(null);
+  const [modifiedImage, setModifiedImage] = useState(null);
+  const [loadingImages, setLoadingImages] = useState(false);
   const editorRef = useRef(null);
   const fileSearchInputRef = useRef(null);
   const inlineEditInputRef = useRef(null);
@@ -160,6 +164,48 @@ function EnhancedDiffViewer({
       setSelectedDiff(null);
     }
   }, [currentDiff, selectedFile, diffData]);
+
+  // Load images when an image file is selected
+  useEffect(() => {
+    const loadImages = async () => {
+      if (!selectedFile || !currentRepository || !isImageFile(selectedFile)) {
+        setOriginalImage(null);
+        setModifiedImage(null);
+        return;
+      }
+
+      setLoadingImages(true);
+      try {
+        // Load modified/current version
+        const currentResult = await ipcRenderer.invoke('git:readImageFile', currentRepository, selectedFile);
+        if (currentResult.success) {
+          setModifiedImage(currentResult.dataUrl);
+        } else {
+          setModifiedImage(null);
+        }
+
+        // Load original version from Git
+        // For staged files, compare with HEAD (what was there before staging)
+        // For unstaged files, also compare with HEAD (what's in the last commit)
+        const gitRef = 'HEAD';
+        const originalResult = await ipcRenderer.invoke('git:getImageFromGit', currentRepository, selectedFile, gitRef);
+        if (originalResult.success) {
+          setOriginalImage(originalResult.dataUrl);
+        } else {
+          // File might be new (doesn't exist in Git)
+          setOriginalImage(null);
+        }
+      } catch (error) {
+        console.error('Failed to load images:', error);
+        setOriginalImage(null);
+        setModifiedImage(null);
+      } finally {
+        setLoadingImages(false);
+      }
+    };
+
+    loadImages();
+  }, [selectedFile, currentRepository, staged]);
 
   const loadDiff = async (filename) => {
     try {
@@ -312,6 +358,13 @@ function EnhancedDiffViewer({
     const term = fileSearchTerm.toLowerCase();
     return allFiles.filter(f => f.toLowerCase().includes(term)).slice(0, 50);
   }, [allFiles, fileSearchTerm]);
+
+  const isImageFile = (filename) => {
+    if (!filename) return false;
+    const extension = filename.split('.').pop()?.toLowerCase();
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'];
+    return imageExtensions.includes(extension);
+  };
 
   const getLanguageFromFilename = (filename) => {
     if (!filename) return 'text';
@@ -1094,7 +1147,133 @@ function EnhancedDiffViewer({
     );
   };
 
-  const availableFiles = staged ? stagedFiles : [...(modifiedFiles || []), ...(stagedFiles || [])];
+  const renderImageDiff = () => {
+    if (loadingImages) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 16 }}>
+            <Text type="secondary">Loading images...</Text>
+          </div>
+        </div>
+      );
+    }
+
+    const isNewImage = !originalImage && modifiedImage;
+    const isDeletedImage = originalImage && !modifiedImage;
+    const isModifiedImage = originalImage && modifiedImage;
+
+    return (
+      <div className="image-diff-container" style={{ padding: '20px' }}>
+        <Row gutter={16}>
+          <Col span={isNewImage || isDeletedImage ? 24 : 12}>
+            <Card 
+              size="small" 
+              title={
+                <Space>
+                  <Text strong>Original</Text>
+                  {isDeletedImage && <Tag color="red">Deleted</Tag>}
+                  {isNewImage && <Tag color="blue">New File</Tag>}
+                </Space>
+              }
+            >
+              {originalImage ? (
+                <div style={{ textAlign: 'center' }}>
+                  <img 
+                    src={originalImage} 
+                    alt="Original" 
+                    style={{ 
+                      maxWidth: '100%', 
+                      maxHeight: '500px', 
+                      objectFit: 'contain',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '4px'
+                    }} 
+                  />
+                </div>
+              ) : (
+                <Empty 
+                  description={isNewImage ? "New image file" : "No original version"} 
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              )}
+            </Card>
+          </Col>
+          
+          {!isNewImage && !isDeletedImage && (
+            <Col span={12}>
+              <Card 
+                size="small" 
+                title={
+                  <Space>
+                    <Text strong>Modified</Text>
+                    {isModifiedImage && <Tag color="green">Changed</Tag>}
+                  </Space>
+                }
+              >
+                {modifiedImage ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <img 
+                      src={modifiedImage} 
+                      alt="Modified" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '500px', 
+                        objectFit: 'contain',
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '4px'
+                      }} 
+                    />
+                  </div>
+                ) : (
+                  <Empty 
+                    description="No modified version" 
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
+                )}
+              </Card>
+            </Col>
+          )}
+
+          {isNewImage && (
+            <Col span={12}>
+              <Card 
+                size="small" 
+                title={
+                  <Space>
+                    <Text strong>New Image</Text>
+                    <Tag color="green">Added</Tag>
+                  </Space>
+                }
+              >
+                {modifiedImage ? (
+                  <div style={{ textAlign: 'center' }}>
+                    <img 
+                      src={modifiedImage} 
+                      alt="New" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '500px', 
+                        objectFit: 'contain',
+                        border: '1px solid #d9d9d9',
+                        borderRadius: '4px'
+                      }} 
+                    />
+                  </div>
+                ) : (
+                  <Empty description="Loading..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                )}
+              </Card>
+            </Col>
+          )}
+        </Row>
+      </div>
+    );
+  };
+
+  const availableFiles = staged 
+    ? [...(stagedFiles || []), ...(deletedFiles || [])]
+    : [...(modifiedFiles || []), ...(stagedFiles || []), ...(deletedFiles || [])];
 
   if (!currentRepository) {
     return (
@@ -1628,6 +1807,10 @@ function EnhancedDiffViewer({
                       {fullFileContent || '// Loading...'}
                     </SyntaxHighlighter>
                   </div>
+                </div>
+              ) : isImageFile(selectedFile) ? (
+                <div className="diff-content-wrapper">
+                  {renderImageDiff()}
                 </div>
               ) : (
                 <div className="diff-content-wrapper">

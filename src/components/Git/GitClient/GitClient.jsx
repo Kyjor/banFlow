@@ -45,11 +45,15 @@ import {
   SyncOutlined,
   CopyOutlined,
   FileSearchOutlined,
-  SearchOutlined
+  SearchOutlined,
+  MergeOutlined
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import EnhancedDiffViewer from '../EnhancedDiffViewer/EnhancedDiffViewer';
 import MergeConflictResolver from '../MergeConflictResolver/MergeConflictResolver';
+import PRList from '../PullRequests/PRList';
+import PRCreate from '../PullRequests/PRCreate';
+import PRReview from '../PullRequests/PRReview';
 import './GitClient.scss';
 
 const { Header, Sider, Content } = Layout;
@@ -66,6 +70,7 @@ function GitClient() {
     stagedFiles,
     modifiedFiles,
     untrackedFiles,
+    deletedFiles,
     conflictedFiles,
     commitHistory,
     isLoading,
@@ -83,6 +88,7 @@ function GitClient() {
     switchRepository,
     selectRepository,
     switchBranch,
+    mergeBranch,
     getBranchesWithDates,
     getCommitHistory,
     getCommitFiles,
@@ -92,7 +98,22 @@ function GitClient() {
     createBranch,
     cloneRepository,
     initRepository,
-    selectDirectory
+    selectDirectory,
+    // GitHub integration
+    isGitHubAuthenticated,
+    githubUser,
+    githubRepositories,
+    githubRepoInfo,
+    authenticateGitHub,
+    loadGitHubRepositories,
+    logoutGitHub,
+    loadGitHubRepoInfo,
+    // Pull Requests
+    pullRequests,
+    currentPullRequest,
+    loadPullRequests,
+    getPullRequest,
+    createPullRequest
   } = useGit();
 
   // UI State
@@ -114,6 +135,9 @@ function GitClient() {
   const [loadingCommitFiles, setLoadingCommitFiles] = useState(false);
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [allFiles, setAllFiles] = useState([]);
+  const [showPRView, setShowPRView] = useState(false);
+  const [showPRCreate, setShowPRCreate] = useState(false);
+  const [selectedPR, setSelectedPR] = useState(null);
   const [fileSearchTerm, setFileSearchTerm] = useState('');
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [editingFile, setEditingFile] = useState(null);
@@ -126,6 +150,17 @@ function GitClient() {
   const [cloneTargetPath, setCloneTargetPath] = useState('');
   const [initTargetPath, setInitTargetPath] = useState('');
   const fileSearchInputRef = useRef(null);
+  const [showGitHubModal, setShowGitHubModal] = useState(false);
+  const [authenticatingGitHub, setAuthenticatingGitHub] = useState(false);
+  const [githubRepoSearchTerm, setGithubRepoSearchTerm] = useState('');
+  const [personalAccessToken, setPersonalAccessToken] = useState('');
+
+  // Load GitHub repo info when repository changes
+  useEffect(() => {
+    if (currentRepository && isGitHubAuthenticated) {
+      loadGitHubRepoInfo();
+    }
+  }, [currentRepository, isGitHubAuthenticated, loadGitHubRepoInfo]);
 
   // Load recent repositories from localStorage
   useEffect(() => {
@@ -203,7 +238,7 @@ function GitClient() {
     loadBranches();
   }, [currentRepository, currentBranch, getBranchesWithDates]);
 
-  // Unstaged files - only show files that have unstaged changes
+  // Unstaged files - show modified, untracked, conflicted, and deleted files
   const unstagedFiles = useMemo(() => {
     const files = [];
     (modifiedFiles || []).forEach(f => {
@@ -215,8 +250,11 @@ function GitClient() {
     (conflictedFiles || []).forEach(f => {
       files.push({ path: f, status: 'conflicted' });
     });
+    (deletedFiles || []).forEach(f => {
+      files.push({ path: f, status: 'deleted' });
+    });
     return files;
-  }, [modifiedFiles, untrackedFiles, conflictedFiles]);
+  }, [modifiedFiles, untrackedFiles, conflictedFiles, deletedFiles]);
 
   const hasChanges = (stagedFiles?.length > 0) || (unstagedFiles.length > 0);
   const hasStagedChanges = stagedFiles && stagedFiles.length > 0;
@@ -340,20 +378,22 @@ function GitClient() {
   const handlePull = useCallback(async () => {
     try {
       await pull('origin', null, pullStrategy);
+      await refreshRepositoryStatus();
       await getCommitHistory({ maxCount: 100 });
     } catch (error) {
       console.error('Failed to pull:', error);
     }
-  }, [pull, pullStrategy, getCommitHistory]);
+  }, [pull, pullStrategy, refreshRepositoryStatus, getCommitHistory]);
 
   const handlePush = useCallback(async () => {
     try {
       await push();
+      await refreshRepositoryStatus();
       await getCommitHistory({ maxCount: 100 });
     } catch (error) {
       console.error('Failed to push:', error);
     }
-  }, [push, getCommitHistory]);
+  }, [push, refreshRepositoryStatus, getCommitHistory]);
 
   const handleDiscard = useCallback(async (filePath) => {
     try {
@@ -470,6 +510,17 @@ function GitClient() {
     return allFiles.filter(f => f.toLowerCase().includes(term)).slice(0, 50);
   }, [allFiles, fileSearchTerm]);
 
+  const filteredGitHubRepos = useMemo(() => {
+    if (!githubRepositories || githubRepositories.length === 0) return [];
+    if (!githubRepoSearchTerm.trim()) return githubRepositories;
+    const term = githubRepoSearchTerm.toLowerCase();
+    return githubRepositories.filter(repo => 
+      (repo.name && repo.name.toLowerCase().includes(term)) ||
+      (repo.full_name && repo.full_name.toLowerCase().includes(term)) ||
+      (repo.description && repo.description.toLowerCase().includes(term))
+    );
+  }, [githubRepositories, githubRepoSearchTerm]);
+
   const hasUnsavedChanges = editingFile && editedContent !== originalContent;
 
   // Focus search input when file picker opens
@@ -543,6 +594,7 @@ function GitClient() {
       case 'staged': return <CheckOutlined style={{ color: '#52c41a' }} />;
       case 'modified': return <SyncOutlined style={{ color: '#fa8c16' }} />;
       case 'untracked': return <PlusOutlined style={{ color: '#1890ff' }} />;
+      case 'deleted': return <MinusOutlined style={{ color: '#f5222d' }} />;
       case 'conflicted': return <WarningOutlined style={{ color: '#f5222d' }} />;
       default: return <FileTextOutlined />;
     }
@@ -672,6 +724,27 @@ function GitClient() {
       </div>
 
       <div className="toolbar-right">
+        {githubRepoInfo && isGitHubAuthenticated && (
+          <Tooltip title="Pull Requests">
+            <Button
+              icon={<MergeOutlined />}
+              onClick={() => setShowPRView(!showPRView)}
+              type={showPRView ? 'primary' : 'default'}
+            >
+              Pull Requests
+            </Button>
+          </Tooltip>
+        )}
+        <Tooltip title={isGitHubAuthenticated ? 'GitHub connected' : 'Connect to GitHub'}>
+          <Button
+            icon={<GitlabOutlined />}
+            onClick={() => setShowGitHubModal(true)}
+          >
+            {isGitHubAuthenticated && githubUser?.login
+              ? githubUser.login
+              : 'GitHub'}
+          </Button>
+        </Tooltip>
         <Tooltip title="Refresh">
           <Button 
             icon={<ReloadOutlined />} 
@@ -1133,7 +1206,26 @@ function GitClient() {
 
         <Content className="middle-content">
           <Spin spinning={operationInProgress}>
-            {renderMiddlePanel()}
+            {showPRView ? (
+              selectedPR ? (
+                <PRReview 
+                  pr={selectedPR} 
+                  onClose={() => setSelectedPR(null)}
+                  onRefresh={() => {
+                    if (githubRepoInfo) {
+                      loadPullRequests(githubRepoInfo.owner, githubRepoInfo.repo);
+                    }
+                  }}
+                />
+              ) : (
+                <PRList
+                  onCreatePR={() => setShowPRCreate(true)}
+                  onViewPR={(pr) => setSelectedPR(pr)}
+                />
+              )
+            ) : (
+              renderMiddlePanel()
+            )}
           </Spin>
         </Content>
 
@@ -1173,6 +1265,32 @@ function GitClient() {
           renderItem={branch => (
             <List.Item
               actions={[
+                branch.name !== currentBranch && (
+                  <Popconfirm
+                    key="merge"
+                    title={`Merge "${branch.name}" into "${currentBranch}"?`}
+                    description="This will merge the selected branch into your current branch."
+                    onConfirm={async () => {
+                      try {
+                        await mergeBranch(branch.name);
+                        await refreshRepositoryStatus();
+                        setShowBranchModal(false);
+                      } catch (error) {
+                        // Error handled by context
+                      }
+                    }}
+                    okText="Merge"
+                    cancelText="Cancel"
+                  >
+                    <Button
+                      size="small"
+                      icon={<MergeOutlined />}
+                      loading={operationInProgress}
+                    >
+                      Merge
+                    </Button>
+                  </Popconfirm>
+                ),
                 <Button 
                   key="checkout"
                   type={branch.name === currentBranch ? 'primary' : 'default'}
@@ -1181,7 +1299,7 @@ function GitClient() {
                 >
                   {branch.name === currentBranch ? 'Current' : 'Checkout'}
                 </Button>
-              ]}
+              ].filter(Boolean)}
             >
               <List.Item.Meta
                 avatar={<BranchesOutlined />}
@@ -1191,6 +1309,202 @@ function GitClient() {
             </List.Item>
           )}
         />
+      </Modal>
+
+      {/* GitHub Integration Modal */}
+      <Modal
+        title={
+          <Space>
+            <GitlabOutlined />
+            <span>GitHub Repositories</span>
+          </Space>
+        }
+        open={showGitHubModal}
+        onCancel={() => {
+          setShowGitHubModal(false);
+          setGithubRepoSearchTerm('');
+        }}
+        footer={null}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          {!isGitHubAuthenticated && (
+            <>
+              <Text>
+                Connect to GitHub using OAuth to list your repositories, create pull requests, and more.
+              </Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                This will open your browser to authorize banFlow. No personal access token needed.
+              </Text>
+              <Button
+                type="primary"
+                size="large"
+                block
+                loading={authenticatingGitHub || isLoading}
+                onClick={async () => {
+                  setAuthenticatingGitHub(true);
+                  try {
+                    await startOAuthFlow();
+                    await loadGitHubRepositories();
+                  } catch (error) {
+                    // errors are surfaced via context message
+                  } finally {
+                    setAuthenticatingGitHub(false);
+                  }
+                }}
+                icon={<GitlabOutlined />}
+              >
+                Connect with GitHub
+              </Button>
+              <Divider>OR</Divider>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Prefer using a personal access token?
+              </Text>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Input.Password
+                  placeholder="Enter GitHub Personal Access Token"
+                  value={personalAccessToken}
+                  onChange={(e) => setPersonalAccessToken(e.target.value)}
+                  onPressEnter={async () => {
+                    if (!personalAccessToken.trim()) return;
+                    setAuthenticatingGitHub(true);
+                    try {
+                      await authenticateGitHub(personalAccessToken.trim());
+                      await loadGitHubRepositories();
+                    } catch {
+                      // errors are surfaced via context message
+                    } finally {
+                      setAuthenticatingGitHub(false);
+                    }
+                  }}
+                />
+                <Button
+                  block
+                  type="primary"
+                  loading={authenticatingGitHub || isLoading}
+                  disabled={!personalAccessToken.trim()}
+                  onClick={async () => {
+                    if (!personalAccessToken.trim()) return;
+                    setAuthenticatingGitHub(true);
+                    try {
+                      await authenticateGitHub(personalAccessToken.trim());
+                      await loadGitHubRepositories();
+                    } catch {
+                      // errors are surfaced via context message
+                    } finally {
+                      setAuthenticatingGitHub(false);
+                    }
+                  }}
+                >
+                  Use Personal Access Token
+                </Button>
+              </Space>
+            </>
+          )}
+
+          {isGitHubAuthenticated && (
+            <>
+              <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Space align="center">
+                  <Avatar src={githubUser?.avatar_url} icon={<UserOutlined />} />
+                  <div>
+                    <Text strong>{githubUser?.login || 'GitHub User'}</Text>
+                    {githubUser?.name && (
+                      <div>
+                        <Text type="secondary">{githubUser.name}</Text>
+                      </div>
+                    )}
+                  </div>
+                </Space>
+                <Button
+                  size="small"
+                  danger
+                  onClick={async () => {
+                    await logoutGitHub();
+                    setGithubRepoSearchTerm('');
+                  }}
+                >
+                  Logout
+                </Button>
+              </Space>
+
+              <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                <Text type="secondary">
+                  Repositories ({filteredGitHubRepos?.length || 0}
+                  {githubRepoSearchTerm && githubRepositories?.length > 0 && ` of ${githubRepositories.length}`})
+                </Text>
+                <Button
+                  size="small"
+                  onClick={async () => {
+                    try {
+                      await loadGitHubRepositories();
+                    } catch (e) {
+                      // handled via context
+                    }
+                  }}
+                  loading={isLoading}
+                  icon={<ReloadOutlined />}
+                >
+                  Refresh
+                </Button>
+              </Space>
+
+              <Input
+                placeholder="Search repositories by name or description..."
+                prefix={<SearchOutlined />}
+                value={githubRepoSearchTerm}
+                onChange={(e) => setGithubRepoSearchTerm(e.target.value)}
+                allowClear
+                style={{ marginBottom: 8 }}
+              />
+
+              <div style={{ maxHeight: 300, overflow: 'auto' }}>
+                {filteredGitHubRepos && filteredGitHubRepos.length > 0 ? (
+                  <List
+                    size="small"
+                    dataSource={filteredGitHubRepos}
+                    renderItem={(repo) => (
+                      <List.Item
+                        key={repo.id}
+                        actions={[
+                          <Button
+                            key="clone"
+                            size="small"
+                            type="link"
+                            onClick={() => {
+                              setCloneUrl(repo.clone_url || repo.ssh_url || '');
+                              setShowGitHubModal(false);
+                              setShowCloneModal(true);
+                            }}
+                          >
+                            Clone
+                          </Button>,
+                        ]}
+                      >
+                        <List.Item.Meta
+                          title={repo.full_name || repo.name}
+                          description={
+                            <Text type="secondary">
+                              {repo.description || 'No description'}
+                            </Text>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                ) : (
+                  <Empty
+                    description={
+                      githubRepoSearchTerm && githubRepositories?.length > 0
+                        ? `No repositories match "${githubRepoSearchTerm}"`
+                        : 'No repositories loaded'
+                    }
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
+                )}
+              </div>
+            </>
+          )}
+        </Space>
       </Modal>
 
       {/* Quick Open File Modal */}
@@ -1291,6 +1605,17 @@ function GitClient() {
           </div>
         </Space>
       </Modal>
+
+      {/* Pull Request Create Modal */}
+      <PRCreate
+        visible={showPRCreate}
+        onCancel={() => setShowPRCreate(false)}
+        onSuccess={(pr) => {
+          setShowPRCreate(false);
+          setSelectedPR(pr);
+          setShowPRView(true);
+        }}
+      />
 
       {/* Init Repository Modal */}
       <Modal

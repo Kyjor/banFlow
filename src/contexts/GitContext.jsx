@@ -36,6 +36,13 @@ const initialState = {
   isGitHubAuthenticated: false,
   githubUser: null,
   githubRepositories: [],
+  githubRepoInfo: null, // { owner, repo, fullName }
+  
+  // Pull Requests
+  pullRequests: [],
+  currentPullRequest: null,
+  pullRequestLoading: false,
+  pullRequestError: null,
   
   // Diff and Comparison
   currentDiff: null,
@@ -73,6 +80,11 @@ const GitActionTypes = {
   // GitHub Integration
   SET_GITHUB_AUTH: 'SET_GITHUB_AUTH',
   SET_GITHUB_REPOSITORIES: 'SET_GITHUB_REPOSITORIES',
+  SET_GITHUB_REPO_INFO: 'SET_GITHUB_REPO_INFO',
+  SET_PULL_REQUESTS: 'SET_PULL_REQUESTS',
+  SET_CURRENT_PULL_REQUEST: 'SET_CURRENT_PULL_REQUEST',
+  SET_PULL_REQUEST_LOADING: 'SET_PULL_REQUEST_LOADING',
+  SET_PULL_REQUEST_ERROR: 'SET_PULL_REQUEST_ERROR',
   
   // Diff Operations
   SET_CURRENT_DIFF: 'SET_CURRENT_DIFF',
@@ -151,6 +163,21 @@ function gitReducer(state, action) {
       
     case GitActionTypes.SET_GITHUB_REPOSITORIES:
       return { ...state, githubRepositories: action.payload };
+      
+    case GitActionTypes.SET_GITHUB_REPO_INFO:
+      return { ...state, githubRepoInfo: action.payload };
+      
+    case GitActionTypes.SET_PULL_REQUESTS:
+      return { ...state, pullRequests: action.payload };
+      
+    case GitActionTypes.SET_CURRENT_PULL_REQUEST:
+      return { ...state, currentPullRequest: action.payload };
+      
+    case GitActionTypes.SET_PULL_REQUEST_LOADING:
+      return { ...state, pullRequestLoading: action.payload };
+      
+    case GitActionTypes.SET_PULL_REQUEST_ERROR:
+      return { ...state, pullRequestError: action.payload };
       
     case GitActionTypes.SET_CURRENT_DIFF:
       return { ...state, currentDiff: action.payload };
@@ -266,6 +293,21 @@ export function GitProvider({ children }) {
       throw error;
     }
   }, [addRepository, handleError]);
+
+  // Operation History
+  const loadOperationHistory = useCallback(async () => {
+    try {
+      const history = await ipcRenderer.invoke('git:getOperationHistory');
+      dispatch({
+        type: GitActionTypes.SET_OPERATION_HISTORY,
+        payload: history || []
+      });
+      return history;
+    } catch (error) {
+      handleError(error, 'load operation history');
+      throw error;
+    }
+  }, [handleError]);
 
   const refreshRepositoryStatus = useCallback(async () => {
     try {
@@ -430,6 +472,21 @@ export function GitProvider({ children }) {
     }
   }, [handleError, showSuccess]);
 
+  const mergeBranch = useCallback(async (branchName, options = {}) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:mergeBranch', branchName, options);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Merged branch', branchName);
+      return result;
+    } catch (error) {
+      handleError(error, 'merge branch');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
   // Stash Operations
   const stashChanges = useCallback(async (message = null) => {
     try {
@@ -581,6 +638,279 @@ export function GitProvider({ children }) {
     }
   }, [handleError, showSuccess]);
 
+  const startOAuthFlow = useCallback(async () => {
+    try {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+      const { state, authUrl } = await ipcRenderer.invoke('git:startOAuthFlow');
+      
+      // Listen for OAuth callback
+      return new Promise((resolve, reject) => {
+        const handleCallback = async (event, { code, state: callbackState, error }) => {
+          ipcRenderer.removeListener('github:oauth-callback', handleCallback);
+          
+          if (error) {
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+            reject(new Error(`OAuth error: ${error}`));
+            return;
+          }
+          
+          if (callbackState !== state) {
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+            reject(new Error('OAuth state mismatch'));
+            return;
+          }
+          
+          try {
+            const result = await ipcRenderer.invoke('git:completeOAuthFlow', code, callbackState);
+            dispatch({ type: GitActionTypes.SET_GITHUB_AUTH, payload: result });
+            showSuccess('GitHub authenticated', result.user?.login);
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          } finally {
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+          }
+        };
+        
+        ipcRenderer.on('github:oauth-callback', handleCallback);
+        
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          ipcRenderer.removeListener('github:oauth-callback', handleCallback);
+          dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+          reject(new Error('OAuth flow timed out'));
+        }, 5 * 60 * 1000);
+      });
+    } catch (error) {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+      handleError(error, 'start OAuth flow');
+      throw error;
+    }
+  }, [handleError, showSuccess]);
+
+  const loadGitHubRepositories = useCallback(async () => {
+    try {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+      const repos = await ipcRenderer.invoke('git:getGitHubRepositories');
+      dispatch({
+        type: GitActionTypes.SET_GITHUB_REPOSITORIES,
+        payload: repos || []
+      });
+      return repos;
+    } catch (error) {
+      handleError(error, 'load GitHub repositories');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+    }
+  }, [handleError]);
+
+  const logoutGitHub = useCallback(async () => {
+    try {
+      await ipcRenderer.invoke('git:logoutGitHub');
+      dispatch({ 
+        type: GitActionTypes.SET_GITHUB_AUTH, 
+        payload: { authenticated: false, user: null } 
+      });
+      dispatch({ type: GitActionTypes.SET_GITHUB_REPOSITORIES, payload: [] });
+      showSuccess('GitHub logged out');
+    } catch (error) {
+      handleError(error, 'logout GitHub');
+    }
+  }, [handleError, showSuccess]);
+
+  const restoreGitHubAuth = useCallback(async () => {
+    try {
+      const result = await ipcRenderer.invoke('git:restoreGitHubAuth');
+      if (result.authenticated) {
+        dispatch({ type: GitActionTypes.SET_GITHUB_AUTH, payload: result });
+        // Optionally load repositories on restore
+        try {
+          await loadGitHubRepositories();
+        } catch (e) {
+          // Silent fail - repos will load when user opens modal
+        }
+      }
+      return result;
+    } catch (error) {
+      // Silent fail on restore - user can authenticate manually
+      return { authenticated: false, user: null };
+    }
+  }, [loadGitHubRepositories]);
+
+  // GitHub Repository Info
+  const loadGitHubRepoInfo = useCallback(async () => {
+    try {
+      const info = await ipcRenderer.invoke('git:getGitHubRepoInfo');
+      dispatch({ type: GitActionTypes.SET_GITHUB_REPO_INFO, payload: info });
+      return info;
+    } catch (error) {
+      dispatch({ type: GitActionTypes.SET_GITHUB_REPO_INFO, payload: null });
+      return null;
+    }
+  }, []);
+
+  // Pull Request Operations
+  const loadPullRequests = useCallback(async (owner, repo, filters = {}) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: true });
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_ERROR, payload: null });
+      const prs = await ipcRenderer.invoke('git:getPullRequests', owner, repo, filters);
+      dispatch({ type: GitActionTypes.SET_PULL_REQUESTS, payload: prs || [] });
+      return prs;
+    } catch (error) {
+      handleError(error, 'load pull requests');
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_ERROR, payload: error.message });
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: false });
+    }
+  }, [handleError]);
+
+  const getPullRequest = useCallback(async (owner, repo, pullNumber) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: true });
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_ERROR, payload: null });
+      const pr = await ipcRenderer.invoke('git:getPullRequest', owner, repo, pullNumber);
+      dispatch({ type: GitActionTypes.SET_CURRENT_PULL_REQUEST, payload: pr });
+      return pr;
+    } catch (error) {
+      handleError(error, 'get pull request');
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_ERROR, payload: error.message });
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: false });
+    }
+  }, [handleError]);
+
+  const createPullRequest = useCallback(async (owner, repo, title, body, head, base, draft = false) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: true });
+      const pr = await ipcRenderer.invoke('git:createPullRequest', owner, repo, title, body, head, base, draft);
+      showSuccess('Pull request created', `#${pr.number}`);
+      // Reload PRs list
+      try {
+        await loadPullRequests(owner, repo);
+      } catch (e) {
+        // Silent fail
+      }
+      return pr;
+    } catch (error) {
+      handleError(error, 'create pull request');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: false });
+    }
+  }, [handleError, showSuccess, loadPullRequests]);
+
+  const mergePullRequest = useCallback(async (owner, repo, pullNumber, mergeMethod = 'merge', commitTitle = null, commitMessage = null) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: true });
+      const result = await ipcRenderer.invoke('git:mergePullRequest', owner, repo, pullNumber, mergeMethod, commitTitle, commitMessage);
+      showSuccess('Pull request merged', `#${pullNumber}`);
+      // Reload PRs list and current PR
+      try {
+        await loadPullRequests(owner, repo);
+        await getPullRequest(owner, repo, pullNumber);
+      } catch (e) {
+        // Silent fail
+      }
+      return result;
+    } catch (error) {
+      handleError(error, 'merge pull request');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: false });
+    }
+  }, [handleError, showSuccess, loadPullRequests, getPullRequest]);
+
+  const closePullRequest = useCallback(async (owner, repo, pullNumber) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: true });
+      await ipcRenderer.invoke('git:closePullRequest', owner, repo, pullNumber);
+      showSuccess('Pull request closed', `#${pullNumber}`);
+      // Reload PRs list
+      try {
+        await loadPullRequests(owner, repo);
+      } catch (e) {
+        // Silent fail
+      }
+    } catch (error) {
+      handleError(error, 'close pull request');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: false });
+    }
+  }, [handleError, showSuccess, loadPullRequests]);
+
+  const updatePullRequest = useCallback(async (owner, repo, pullNumber, updates) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: true });
+      const pr = await ipcRenderer.invoke('git:updatePullRequest', owner, repo, pullNumber, updates);
+      showSuccess('Pull request updated', `#${pullNumber}`);
+      // Reload PRs list and current PR
+      try {
+        await loadPullRequests(owner, repo);
+        await getPullRequest(owner, repo, pullNumber);
+      } catch (e) {
+        // Silent fail
+      }
+      return pr;
+    } catch (error) {
+      handleError(error, 'update pull request');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: false });
+    }
+  }, [handleError, showSuccess, loadPullRequests, getPullRequest]);
+
+  const addPullRequestComment = useCallback(async (owner, repo, pullNumber, body) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: true });
+      const comment = await ipcRenderer.invoke('git:addPullRequestComment', owner, repo, pullNumber, body);
+      showSuccess('Comment added');
+      // Reload current PR to get updated comments
+      try {
+        await getPullRequest(owner, repo, pullNumber);
+      } catch (e) {
+        // Silent fail
+      }
+      return comment;
+    } catch (error) {
+      handleError(error, 'add pull request comment');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_PULL_REQUEST_LOADING, payload: false });
+    }
+  }, [handleError, showSuccess, getPullRequest]);
+
+  const getPullRequestFiles = useCallback(async (owner, repo, pullNumber) => {
+    try {
+      return await ipcRenderer.invoke('git:getPullRequestFiles', owner, repo, pullNumber);
+    } catch (error) {
+      handleError(error, 'get pull request files');
+      throw error;
+    }
+  }, [handleError]);
+
+  const getPullRequestCommits = useCallback(async (owner, repo, pullNumber) => {
+    try {
+      return await ipcRenderer.invoke('git:getPullRequestCommits', owner, repo, pullNumber);
+    } catch (error) {
+      handleError(error, 'get pull request commits');
+      throw error;
+    }
+  }, [handleError]);
+
+  const getPullRequestReviews = useCallback(async (owner, repo, pullNumber) => {
+    try {
+      return await ipcRenderer.invoke('git:getPullRequestReviews', owner, repo, pullNumber);
+    } catch (error) {
+      handleError(error, 'get pull request reviews');
+      throw error;
+    }
+  }, [handleError]);
+
   const cloneRepository = useCallback(async (repoUrl, targetPath) => {
     try {
       dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
@@ -673,6 +1003,11 @@ export function GitProvider({ children }) {
 
     loadRepositories();
   }, []);
+
+  // Restore GitHub authentication on mount
+  useEffect(() => {
+    restoreGitHubAuth();
+  }, [restoreGitHubAuth]);
 
   // Heartbeat: Periodically check for repository status changes
   useEffect(() => {
@@ -840,6 +1175,7 @@ export function GitProvider({ children }) {
     switchBranch,
     deleteBranch,
     getBranchesWithDates,
+    mergeBranch,
     stageFiles,
     unstageFiles,
     commit,
@@ -860,13 +1196,30 @@ export function GitProvider({ children }) {
     getCommitDiff,
     getFileHistory,
     getFileAtCommit,
+    loadOperationHistory,
     
     // Undo System
     undoLastOperation,
     
     // GitHub Integration
     authenticateGitHub,
+    startOAuthFlow,
+    loadGitHubRepositories,
+    logoutGitHub,
+    loadGitHubRepoInfo,
     cloneRepository,
+    
+    // Pull Request Operations
+    loadPullRequests,
+    getPullRequest,
+    createPullRequest,
+    mergePullRequest,
+    closePullRequest,
+    updatePullRequest,
+    addPullRequestComment,
+    getPullRequestFiles,
+    getPullRequestCommits,
+    getPullRequestReviews,
     initRepository,
     selectDirectory,
     

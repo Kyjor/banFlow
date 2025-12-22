@@ -71,6 +71,7 @@ function GitOperations({ onViewDiff }) {
     createBranch,
     switchBranch,
     deleteBranch,
+    mergeBranch,
     stashChanges,
     applyStash,
     popStash,
@@ -92,6 +93,13 @@ function GitOperations({ onViewDiff }) {
   const [stashMessage, setStashMessage] = useState('');
   const [pullStrategy, setPullStrategy] = useState('merge');
 
+  // Load operation history when repository changes
+  useEffect(() => {
+    if (currentRepository && typeof loadOperationHistory === 'function') {
+      loadOperationHistory().catch(() => {});
+    }
+  }, [currentRepository, loadOperationHistory]);
+
   useEffect(() => {
     if (currentRepository) {
       getStashList();
@@ -102,6 +110,9 @@ function GitOperations({ onViewDiff }) {
     try {
       await stageFiles(files);
       setSelectedFiles([]);
+      if (currentRepository && typeof loadOperationHistory === 'function') {
+        loadOperationHistory().catch(() => {});
+      }
     } catch (error) {
       // Error handled by context
     }
@@ -110,6 +121,9 @@ function GitOperations({ onViewDiff }) {
   const handleUnstageFiles = async (files) => {
     try {
       await unstageFiles(files);
+      if (currentRepository && typeof loadOperationHistory === 'function') {
+        loadOperationHistory().catch(() => {});
+      }
     } catch (error) {
       // Error handled by context
     }
@@ -118,6 +132,9 @@ function GitOperations({ onViewDiff }) {
   const handleDiscardChanges = async (files) => {
     try {
       await discardChanges(files);
+      if (currentRepository && typeof loadOperationHistory === 'function') {
+        loadOperationHistory().catch(() => {});
+      }
     } catch (error) {
       // Error handled by context
     }
@@ -126,6 +143,9 @@ function GitOperations({ onViewDiff }) {
   const handleDeleteUntracked = async (files) => {
     try {
       await deleteUntrackedFiles(files);
+      if (currentRepository && typeof loadOperationHistory === 'function') {
+        loadOperationHistory().catch(() => {});
+      }
     } catch (error) {
       // Error handled by context
     }
@@ -136,6 +156,9 @@ function GitOperations({ onViewDiff }) {
       await commit(values.message, values.description);
       commitForm.resetFields();
       setShowCommitModal(false);
+      if (currentRepository && typeof loadOperationHistory === 'function') {
+        loadOperationHistory().catch(() => {});
+      }
     } catch (error) {
       // Error handled by context
     }
@@ -146,6 +169,9 @@ function GitOperations({ onViewDiff }) {
       await createBranch(values.branchName, values.startPoint);
       branchForm.resetFields();
       setShowBranchModal(false);
+      if (currentRepository && typeof loadOperationHistory === 'function') {
+        loadOperationHistory().catch(() => {});
+      }
     } catch (error) {
       // Error handled by context
     }
@@ -156,6 +182,9 @@ function GitOperations({ onViewDiff }) {
       await stashChanges(stashMessage || null);
       setStashMessage('');
       setShowStashModal(false);
+      if (currentRepository && typeof loadOperationHistory === 'function') {
+        loadOperationHistory().catch(() => {});
+      }
     } catch (error) {
       // Error handled by context
     }
@@ -326,7 +355,16 @@ function GitOperations({ onViewDiff }) {
             <Tooltip title="Undo last operation">
               <Button
                 icon={<UndoOutlined />}
-                onClick={undoLastOperation}
+                        onClick={async () => {
+                          try {
+                            await undoLastOperation();
+                            if (currentRepository && typeof loadOperationHistory === 'function') {
+                              await loadOperationHistory();
+                            }
+                          } catch (e) {
+                            // errors are handled in context
+                          }
+                        }}
                 disabled={operationHistory.length === 0}
                 loading={operationInProgress}
               />
@@ -569,6 +607,28 @@ function GitOperations({ onViewDiff }) {
                           >
                             Switch
                           </Button>,
+                          <Popconfirm
+                            title={`Merge "${branch}" into "${currentBranch}"?`}
+                            description="This will merge the selected branch into your current branch."
+                            onConfirm={async () => {
+                              try {
+                                await mergeBranch(branch);
+                                await refreshRepositoryStatus();
+                              } catch (error) {
+                                // Error handled by context
+                              }
+                            }}
+                            okText="Merge"
+                            cancelText="Cancel"
+                          >
+                            <Button
+                              size="small"
+                              icon={<MergeOutlined />}
+                              loading={operationInProgress}
+                            >
+                              Merge
+                            </Button>
+                          </Popconfirm>,
                           <Popconfirm
                             title="Delete this branch?"
                             onConfirm={() => deleteBranch(branch)}

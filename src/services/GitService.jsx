@@ -1,5 +1,4 @@
 const simpleGit = require('simple-git');
-const { Octokit } = require('@octokit/rest');
 const path = require('path');
 const fs = require('fs');
 
@@ -9,10 +8,97 @@ export default class GitService {
     this.currentRepo = null;
     this.repositories = new Map();
     this.operationHistory = [];
-    this.octokit = null;
     this.isAuthenticated = false;
+    this.octokit = null;
+    this.githubToken = null;
     this.gitRepositoryService = null;
     this.currentProject = null;
+    
+    // Try to restore GitHub token from secure storage on initialization
+    this.restoreGitHubToken();
+  }
+
+  // Secure storage for GitHub token using Electron's safeStorage (OS keychain)
+  saveGitHubToken(token) {
+    try {
+      const { safeStorage, app } = require('electron');
+      if (safeStorage.isEncryptionAvailable()) {
+        const encrypted = safeStorage.encryptString(token);
+        // Store encrypted token in a simple file (encrypted by OS keychain)
+        const path = require('path');
+        const fs = require('fs');
+        const userDataPath = app.getPath('userData');
+        const tokenPath = path.join(userDataPath, 'github_token.encrypted');
+        fs.writeFileSync(tokenPath, encrypted);
+        return true;
+      } else {
+        console.warn('Encryption not available, token will not be persisted');
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to save GitHub token:', error);
+      return false;
+    }
+  }
+
+  loadGitHubToken() {
+    try {
+      const { safeStorage, app } = require('electron');
+      if (!safeStorage.isEncryptionAvailable()) {
+        return null;
+      }
+      const path = require('path');
+      const fs = require('fs');
+      const userDataPath = app.getPath('userData');
+      const tokenPath = path.join(userDataPath, 'github_token.encrypted');
+      
+      if (!fs.existsSync(tokenPath)) {
+        return null;
+      }
+      
+      const encrypted = fs.readFileSync(tokenPath);
+      const token = safeStorage.decryptString(encrypted);
+      return token;
+    } catch (error) {
+      console.error('Failed to load GitHub token:', error);
+      return null;
+    }
+  }
+
+  clearGitHubToken() {
+    try {
+      const { app } = require('electron');
+      const path = require('path');
+      const fs = require('fs');
+      const userDataPath = app.getPath('userData');
+      const tokenPath = path.join(userDataPath, 'github_token.encrypted');
+      
+      if (fs.existsSync(tokenPath)) {
+        fs.unlinkSync(tokenPath);
+      }
+      this.githubToken = null;
+      this.isAuthenticated = false;
+      return true;
+    } catch (error) {
+      console.error('Failed to clear GitHub token:', error);
+      return false;
+    }
+  }
+
+  async restoreGitHubToken() {
+    try {
+      const token = this.loadGitHubToken();
+      if (token) {
+        // Verify token is still valid by authenticating
+        const result = await this.authenticateGitHub(token);
+        return result; // Returns { authenticated: true, user: {...} }
+      }
+    } catch (error) {
+      // Token might be invalid/expired, clear it
+      console.warn('Stored GitHub token is invalid, clearing:', error.message);
+      this.clearGitHubToken();
+    }
+    return { authenticated: false, user: null };
   }
 
   setProjectContext(projectName, gitRepositoryService) {
@@ -333,11 +419,46 @@ export default class GitService {
     if (!this.git) throw new Error('No repository selected');
     
     try {
-      const fetchOptions = prune ? ['--prune'] : [];
-      const result = await this.git.fetch(remote, fetchOptions);
+      let useGitHubToken = false;
+      let authUrl = null;
+      let fetchResult;
+
+      // If we have a GitHub token and the remote is a GitHub HTTPS URL,
+      // construct an authenticated URL to avoid interactive prompts.
+      if (this.githubToken) {
+        try {
+          const remotes = await this.git.getRemotes(true);
+          const remoteInfo = remotes.find(r => r.name === remote);
+          const remoteUrl = remoteInfo?.refs?.fetch || remoteInfo?.refs?.push || null;
+
+          if (remoteUrl && remoteUrl.startsWith('http')) {
+            const { URL } = require('url');
+            const url = new URL(remoteUrl);
+
+            if (url.hostname === 'github.com') {
+              url.username = 'x-access-token';
+              url.password = this.githubToken;
+              authUrl = url.toString();
+              useGitHubToken = true;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to prepare GitHub authenticated fetch URL:', e.message);
+        }
+      }
+
+      if (useGitHubToken && authUrl) {
+        // Use authenticated URL for this one-off fetch
+        const fetchArgs = ['-c', 'credential.helper=', 'fetch', authUrl];
+        if (prune) fetchArgs.push('--prune');
+        fetchResult = await this.git.raw(fetchArgs);
+      } else {
+        const fetchOptions = prune ? ['--prune'] : [];
+        fetchResult = await this.git.fetch(remote, fetchOptions);
+      }
       
       return {
-        ...result,
+        ...fetchResult,
         status: await this.getRepositoryStatus()
       };
     } catch (error) {
@@ -352,6 +473,9 @@ export default class GitService {
     try {
       const currentBranch = (await this.git.branch()).current;
       const pullBranch = branch || currentBranch;
+      let useGitHubToken = false;
+      let authUrl = null;
+      let pullResult;
       
       const operation = {
         type: 'PULL',
@@ -371,11 +495,46 @@ export default class GitService {
         pullOptions['--no-rebase'] = true;
       }
 
-      const result = await this.git.pull(remote, pullBranch, pullOptions);
+      // If we have a GitHub token and the remote is a GitHub HTTPS URL,
+      // construct an authenticated URL to avoid interactive prompts.
+      if (this.githubToken) {
+        try {
+          const remotes = await this.git.getRemotes(true);
+          const remoteInfo = remotes.find(r => r.name === remote);
+          const remoteUrl = remoteInfo?.refs?.fetch || remoteInfo?.refs?.push || null;
+
+          if (remoteUrl && remoteUrl.startsWith('http')) {
+            const { URL } = require('url');
+            const url = new URL(remoteUrl);
+
+            if (url.hostname === 'github.com') {
+              url.username = 'x-access-token';
+              url.password = this.githubToken;
+              authUrl = url.toString();
+              useGitHubToken = true;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to prepare GitHub authenticated pull URL:', e.message);
+        }
+      }
+
+      if (useGitHubToken && authUrl) {
+        const args = ['-c', 'credential.helper=', 'pull', authUrl, pullBranch];
+        // Convert pullOptions object into flags
+        Object.keys(pullOptions).forEach(flag => {
+          if (pullOptions[flag]) args.push(flag);
+        });
+        await this.git.raw(args);
+        pullResult = { pulled: true, remote, branch: pullBranch, strategy };
+      } else {
+        pullResult = await this.git.pull(remote, pullBranch, pullOptions);
+      }
+
       this.operationHistory.push(operation);
       
       return {
-        ...result,
+        ...pullResult,
         status: await this.getRepositoryStatus()
       };
     } catch (error) {
@@ -390,6 +549,37 @@ export default class GitService {
     try {
       const currentBranch = (await this.git.branch()).current;
       const pushBranch = branch || currentBranch;
+      let useGitHubToken = false;
+      let authUrl = null;
+      let pushResult;
+
+      // If we have a GitHub token and the remote is a GitHub HTTPS URL,
+      // construct an authenticated URL for this one-off push to avoid
+      // interactive username/password prompts.
+      if (this.githubToken) {
+        try {
+          const remotes = await this.git.getRemotes(true);
+          const remoteInfo = remotes.find(r => r.name === remote);
+          const remoteUrl = remoteInfo?.refs?.push || remoteInfo?.refs?.fetch || null;
+
+          if (remoteUrl && remoteUrl.startsWith('http')) {
+            const { URL } = require('url');
+            const url = new URL(remoteUrl);
+
+            if (url.hostname === 'github.com') {
+              // Use PAT via basic auth: username can be anything, password is the token.
+              // We do NOT persist this URL in git config; it's only used for this call.
+              url.username = 'x-access-token';
+              url.password = this.githubToken;
+              authUrl = url.toString();
+              useGitHubToken = true;
+            }
+          }
+        } catch (e) {
+          // If anything goes wrong, fall back to normal push which may prompt.
+          console.warn('Failed to prepare GitHub authenticated push URL:', e.message);
+        }
+      }
       
       const operation = {
         type: 'PUSH',
@@ -398,11 +588,20 @@ export default class GitService {
         repoPath: this.currentRepo
       };
 
-      const result = await this.git.push(remote, pushBranch);
+      if (useGitHubToken && authUrl) {
+        // Use raw git command with an inline credential config so Git
+        // respects the embedded PAT and does not invoke external helpers
+        // that would trigger interactive username/password prompts.
+        await this.git.raw(['-c', 'credential.helper=', 'push', authUrl, pushBranch]);
+        pushResult = { pushed: true, remote, branch: pushBranch };
+      } else {
+        pushResult = await this.git.push(remote, pushBranch);
+      }
+
       this.operationHistory.push(operation);
       
       return {
-        ...result,
+        ...pushResult,
         status: await this.getRepositoryStatus()
       };
     } catch (error) {
@@ -1186,24 +1385,189 @@ export default class GitService {
     }
   }
 
+  // GitHub OAuth Integration
+  generateOAuthState() {
+    const crypto = require('crypto');
+    return crypto.randomBytes(32).toString('hex');
+  }
+
+  generatePKCE() {
+    const crypto = require('crypto');
+    // Generate code verifier (base64url encoded random bytes)
+    const codeVerifier = crypto.randomBytes(32).toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    
+    // Generate code challenge (SHA256 hash of verifier, base64url encoded)
+    const codeChallenge = crypto.createHash('sha256')
+      .update(codeVerifier)
+      .digest('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+    
+    return { codeVerifier, codeChallenge };
+  }
+
+  getOAuthUrl(state, codeChallenge) {
+    // Using GitHub's public OAuth app for now
+    // Users can register their own app at https://github.com/settings/developers
+    const clientId = process.env.GITHUB_CLIENT_ID || 'Iv1.8a61f9b7a7f766c5'; // GitHub's public OAuth app
+    const redirectUri = 'banflow://oauth/callback';
+    const scope = 'repo user';
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      scope: scope,
+      state: state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256'
+    });
+    return `https://github.com/login/oauth/authorize?${params.toString()}`;
+  }
+
+  async exchangeOAuthCode(code, codeVerifier, state) {
+    const https = require('https');
+    const { URL } = require('url');
+    const crypto = require('crypto');
+
+    return new Promise((resolve, reject) => {
+      const clientId = process.env.GITHUB_CLIENT_ID || 'Iv1.8a61f9b7a7f766c5';
+      const clientSecret = process.env.GITHUB_CLIENT_SECRET || ''; // Only needed for server-side apps
+      const redirectUri = 'banflow://oauth/callback';
+
+      const url = new URL('https://github.com/login/oauth/access_token');
+      const postData = JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret || undefined,
+        code: code,
+        redirect_uri: redirectUri,
+        code_verifier: codeVerifier
+      });
+
+      const options = {
+        hostname: url.hostname,
+        path: url.pathname,
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+          'User-Agent': 'banFlow-git-client'
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            reject(new Error(
+              `OAuth token exchange failed (status ${res.statusCode}): ${data || res.statusMessage}`
+            ));
+            return;
+          }
+
+          try {
+            const response = JSON.parse(data);
+            if (response.error) {
+              reject(new Error(`OAuth error: ${response.error_description || response.error}`));
+              return;
+            }
+
+            if (!response.access_token) {
+              reject(new Error('No access token in OAuth response'));
+              return;
+            }
+
+            resolve(response.access_token);
+          } catch (parseError) {
+            reject(new Error(`Failed to parse OAuth response: ${parseError.message}`));
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(error);
+      });
+
+      req.write(postData);
+      req.end();
+    });
+  }
+
   // GitHub Integration for Solo Developers
   async authenticateGitHub(token) {
     try {
-      this.octokit = new Octokit({ auth: token });
-      
-      // Test authentication
-      const { data: user } = await this.octokit.rest.users.getAuthenticated();
-      this.isAuthenticated = true;
-      
-      return {
-        authenticated: true,
-        user: {
-          login: user.login || '',
-          name: user.name || '',
-          email: user.email || '',
-          avatar_url: user.avatar_url || ''
-        }
-      };
+      // Use Node's native https module to avoid undici/fetch compatibility issues
+      const https = require('https');
+      const { URL } = require('url');
+
+      return new Promise((resolve, reject) => {
+        const url = new URL('https://api.github.com/user');
+        const options = {
+          hostname: url.hostname,
+          path: url.pathname,
+          method: 'GET',
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': `token ${token}`,
+            'User-Agent': 'banFlow-git-client'
+          }
+        };
+
+        const req = https.request(options, (res) => {
+          let data = '';
+
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+
+          res.on('end', () => {
+            if (res.statusCode !== 200) {
+              reject(new Error(
+                `GitHub authentication failed with status ${res.statusCode}: ${data || res.statusMessage}`
+              ));
+              return;
+            }
+
+            try {
+              const user = JSON.parse(data);
+              this.isAuthenticated = true;
+              this.githubToken = token;
+              this.octokit = null; // not used when we rely on direct https calls
+
+              // Save token to secure storage
+              this.saveGitHubToken(token);
+
+              resolve({
+                authenticated: true,
+                user: {
+                  login: user.login || '',
+                  name: user.name || '',
+                  email: user.email || '',
+                  avatar_url: user.avatar_url || ''
+                }
+              });
+            } catch (parseError) {
+              reject(new Error(`Failed to parse GitHub response: ${parseError.message}`));
+            }
+          });
+        });
+
+        req.on('error', (error) => {
+          console.error('GitHub authentication request failed:', error);
+          this.isAuthenticated = false;
+          reject(error);
+        });
+
+        req.end();
+      });
     } catch (error) {
       console.error('GitHub authentication failed:', error);
       this.isAuthenticated = false;
@@ -1253,31 +1617,239 @@ export default class GitService {
     }
   }
 
+  // Extract GitHub owner and repo from remote URL
+  async getGitHubRepoInfo() {
+    if (!this.git) throw new Error('No repository selected');
+    
+    try {
+      const remotes = await this.git.getRemotes(true);
+      const origin = remotes.find(r => r.name === 'origin');
+      if (!origin) {
+        return null;
+      }
+      
+      const remoteUrl = origin.refs?.fetch || origin.refs?.push || '';
+      if (!remoteUrl) {
+        return null;
+      }
+      
+      // Match both HTTPS and SSH formats
+      // https://github.com/owner/repo.git
+      // git@github.com:owner/repo.git
+      const httpsMatch = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?$/);
+      const sshMatch = remoteUrl.match(/git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/);
+      
+      const match = httpsMatch || sshMatch;
+      if (!match) {
+        return null;
+      }
+      
+      return {
+        owner: match[1],
+        repo: match[2].replace(/\.git$/, ''),
+        fullName: `${match[1]}/${match[2].replace(/\.git$/, '')}`
+      };
+    } catch (error) {
+      console.error('Error extracting GitHub repo info:', error);
+      return null;
+    }
+  }
+
+  // GitHub API helper
+  async githubApiRequest(endpoint, method = 'GET', body = null) {
+    if (!this.isAuthenticated || !this.githubToken) {
+      throw new Error('Not authenticated with GitHub');
+    }
+
+    const https = require('https');
+    const { URL } = require('url');
+
+    return new Promise((resolve, reject) => {
+      const url = new URL(`https://api.github.com${endpoint}`);
+      const options = {
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: method,
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'Authorization': `token ${this.githubToken}`,
+          'User-Agent': 'banFlow-git-client',
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              resolve(JSON.parse(data || '{}'));
+            } catch (parseError) {
+              resolve(data || {});
+            }
+          } else {
+            reject(new Error(
+              `GitHub API error (${res.statusCode}): ${data || res.statusMessage}`
+            ));
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(error);
+      });
+
+      if (body) {
+        req.write(JSON.stringify(body));
+      }
+
+      req.end();
+    });
+  }
+
   async getGitHubRepositories() {
-    if (!this.isAuthenticated) {
+    if (!this.isAuthenticated || !this.githubToken) {
       throw new Error('Not authenticated with GitHub');
     }
 
     try {
-      const { data: repos } = await this.octokit.rest.repos.listForAuthenticatedUser({
-        sort: 'updated',
-        per_page: 100
-      });
+      // Use Node's native https module to avoid undici/fetch compatibility issues
+      const https = require('https');
+      const { URL } = require('url');
 
-      return (repos || []).map(repo => ({
-        id: repo.id || 0,
-        name: repo.name || '',
-        full_name: repo.full_name || '',
-        clone_url: repo.clone_url || '',
-        ssh_url: repo.ssh_url || '',
-        description: repo.description || '',
-        private: repo.private || false,
-        updated_at: repo.updated_at || ''
-      }));
+      return new Promise((resolve, reject) => {
+        const url = new URL('https://api.github.com/user/repos');
+        url.searchParams.set('per_page', '100');
+        url.searchParams.set('sort', 'updated');
+
+        const options = {
+          hostname: url.hostname,
+          path: url.pathname + url.search,
+          method: 'GET',
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': `token ${this.githubToken}`,
+            'User-Agent': 'banFlow-git-client'
+          }
+        };
+
+        const req = https.request(options, (res) => {
+          let data = '';
+
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+
+          res.on('end', () => {
+            if (res.statusCode !== 200) {
+              reject(new Error(
+                `Failed to load GitHub repositories (status ${res.statusCode}): ${data || res.statusMessage}`
+              ));
+              return;
+            }
+
+            try {
+              const repos = JSON.parse(data);
+              resolve((repos || []).map(repo => ({
+                id: repo.id || 0,
+                name: repo.name || '',
+                full_name: repo.full_name || '',
+                clone_url: repo.clone_url || '',
+                ssh_url: repo.ssh_url || '',
+                description: repo.description || '',
+                private: repo.private || false,
+                updated_at: repo.updated_at || ''
+              })));
+            } catch (parseError) {
+              reject(new Error(`Failed to parse GitHub repositories response: ${parseError.message}`));
+            }
+          });
+        });
+
+        req.on('error', (error) => {
+          console.error('Error fetching GitHub repositories:', error);
+          reject(error);
+        });
+
+        req.end();
+      });
     } catch (error) {
       console.error('Error fetching GitHub repositories:', error);
       throw error;
     }
+  }
+
+  // GitHub Pull Request Operations
+  async createPullRequest(owner, repo, title, body, head, base, draft = false) {
+    return await this.githubApiRequest(
+      `/repos/${owner}/${repo}/pulls`,
+      'POST',
+      { title, body, head, base, draft }
+    );
+  }
+
+  async getPullRequests(owner, repo, filters = {}) {
+    const { state = 'open', head = null, base = null, sort = 'created', direction = 'desc' } = filters;
+    let endpoint = `/repos/${owner}/${repo}/pulls?state=${state}&sort=${sort}&direction=${direction}`;
+    if (head) endpoint += `&head=${head}`;
+    if (base) endpoint += `&base=${base}`;
+    return await this.githubApiRequest(endpoint);
+  }
+
+  async getPullRequest(owner, repo, pullNumber) {
+    return await this.githubApiRequest(`/repos/${owner}/${repo}/pulls/${pullNumber}`);
+  }
+
+  async mergePullRequest(owner, repo, pullNumber, mergeMethod = 'merge', commitTitle = null, commitMessage = null) {
+    const body = { merge_method: mergeMethod };
+    if (commitTitle) body.commit_title = commitTitle;
+    if (commitMessage) body.commit_message = commitMessage;
+    return await this.githubApiRequest(
+      `/repos/${owner}/${repo}/pulls/${pullNumber}/merge`,
+      'PUT',
+      body
+    );
+  }
+
+  async closePullRequest(owner, repo, pullNumber) {
+    return await this.githubApiRequest(
+      `/repos/${owner}/${repo}/pulls/${pullNumber}`,
+      'PATCH',
+      { state: 'closed' }
+    );
+  }
+
+  async updatePullRequest(owner, repo, pullNumber, updates) {
+    return await this.githubApiRequest(
+      `/repos/${owner}/${repo}/pulls/${pullNumber}`,
+      'PATCH',
+      updates
+    );
+  }
+
+  async addPullRequestComment(owner, repo, pullNumber, body) {
+    return await this.githubApiRequest(
+      `/repos/${owner}/${repo}/pulls/${pullNumber}/comments`,
+      'POST',
+      { body }
+    );
+  }
+
+  async getPullRequestFiles(owner, repo, pullNumber) {
+    return await this.githubApiRequest(`/repos/${owner}/${repo}/pulls/${pullNumber}/files`);
+  }
+
+  async getPullRequestCommits(owner, repo, pullNumber) {
+    return await this.githubApiRequest(`/repos/${owner}/${repo}/pulls/${pullNumber}/commits`);
+  }
+
+  async getPullRequestReviews(owner, repo, pullNumber) {
+    return await this.githubApiRequest(`/repos/${owner}/${repo}/pulls/${pullNumber}/reviews`);
   }
 
   // Utility Methods
@@ -1286,25 +1858,37 @@ export default class GitService {
     const files = [];
     let currentFile = null;
     let currentHunk = null;
+    let isDeletedFile = false;
 
     for (const line of lines) {
       if (line.startsWith('diff --git')) {
         if (currentFile) files.push(currentFile);
         
+        // Extract filename from "diff --git a/path b/path" or "diff --git a/path b/dev/null"
+        const match = line.match(/diff --git a\/(.+?)(?:\s+b\/(.+?))?$/);
+        const fileName = match ? (match[2] && match[2] !== '/dev/null' ? match[2] : match[1]) : line.split(' b/')[1] || line.split(' a/')[1];
+        
         currentFile = {
-          name: line.split(' b/')[1],
+          name: fileName,
           hunks: [],
           added: 0,
-          deleted: 0
+          deleted: 0,
+          isDeleted: false
         };
+        isDeletedFile = false;
+      } else if (line.startsWith('deleted file mode')) {
+        isDeletedFile = true;
+        if (currentFile) currentFile.isDeleted = true;
+      } else if (line.startsWith('new file mode')) {
+        if (currentFile) currentFile.isDeleted = false;
       } else if (line.startsWith('@@')) {
-        if (currentHunk) currentFile.hunks.push(currentHunk);
+        if (currentHunk && currentFile) currentFile.hunks.push(currentHunk);
         
         currentHunk = {
           header: line,
           lines: []
         };
-      } else if (currentHunk) {
+      } else if (currentHunk && currentFile) {
         currentHunk.lines.push({
           content: line,
           type: line.startsWith('+') ? 'added' : line.startsWith('-') ? 'deleted' : 'context'
@@ -1315,7 +1899,7 @@ export default class GitService {
       }
     }
 
-    if (currentHunk) currentFile.hunks.push(currentHunk);
+    if (currentHunk && currentFile) currentFile.hunks.push(currentHunk);
     if (currentFile) files.push(currentFile);
 
     return files;
