@@ -167,15 +167,24 @@ const createWindow = async () => {
  * Add event listeners...
  */
 
-app.on('window-all-closed', () => {
-  // Respect the OSX convention of having the application in memory even
-  // after all windows have been closed
-  if (process.platform !== 'darwin') {
-    app.quit();
+function handleOAuthCallback(url: string) {
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname === 'oauth' && urlObj.pathname === '/callback') {
+      const code = urlObj.searchParams.get('code');
+      const state = urlObj.searchParams.get('state');
+      const error = urlObj.searchParams.get('error');
+      
+      if (mainWindow) {
+        mainWindow.webContents.send('github:oauth-callback', { code, state, error });
+      }
+    }
+  } catch (error) {
+    console.error('Error handling OAuth callback:', error);
   }
-});
+}
 
-// Handle OAuth callback when app is opened via custom protocol
+// Handle OAuth callback on macOS (open-url event)
 app.on('open-url', (event, url) => {
   event.preventDefault();
   handleOAuthCallback(url);
@@ -201,27 +210,58 @@ if (!gotTheLock) {
   });
 }
 
-function handleOAuthCallback(url: string) {
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.hostname === 'oauth' && urlObj.pathname === '/callback') {
-      const code = urlObj.searchParams.get('code');
-      const state = urlObj.searchParams.get('state');
-      const error = urlObj.searchParams.get('error');
-      
-      if (mainWindow) {
-        mainWindow.webContents.send('github:oauth-callback', { code, state, error });
-      }
-    }
-  } catch (error) {
-    console.error('Error handling OAuth callback:', error);
+app.on('window-all-closed', () => {
+  // Respect the OSX convention of having the application in memory even
+  // after all windows have been closed
+  if (process.platform !== 'darwin') {
+    app.quit();
   }
-}
+});
 
 app
   .whenReady()
   .then(() => {
-    // Register custom protocol for OAuth callback
+    // Start localhost HTTP server for OAuth callback (more reliable in development)
+    const http = require('http');
+    const OAUTH_PORT = 3001;
+    const oauthServer = http.createServer((req, res) => {
+      try {
+        const url = new URL(req.url || '', `http://localhost:${OAUTH_PORT}`);
+        if (url.pathname === '/oauth/callback') {
+          const code = url.searchParams.get('code');
+          const state = url.searchParams.get('state');
+          const error = url.searchParams.get('error');
+          
+          if (mainWindow) {
+            mainWindow.webContents.send('github:oauth-callback', { code, state, error });
+          }
+          
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end('<html><body><h1>Authorization complete!</h1><p>You can close this window and return to banFlow.</p></body></html>');
+        } else {
+          res.writeHead(404);
+          res.end('Not found');
+        }
+      } catch (error) {
+        console.error('Error handling OAuth callback:', error);
+        res.writeHead(500);
+        res.end('<html><body>Error processing authorization.</body></html>');
+      }
+    });
+    
+    oauthServer.listen(OAUTH_PORT, 'localhost', () => {
+      console.log(`OAuth callback server listening on http://localhost:${OAUTH_PORT}`);
+    });
+    
+    oauthServer.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`Port ${OAUTH_PORT} already in use, OAuth server may already be running`);
+      } else {
+        console.error('OAuth server error:', err);
+      }
+    });
+
+    // Register custom protocol for OAuth callback (for production/packaged apps)
     protocol.registerStringProtocol('banflow', (request, callback) => {
       try {
         const url = new URL(request.url);
@@ -243,10 +283,12 @@ app
     });
 
     // Set app as default protocol client for OAuth callback
+    const protocolRegistered = app.setAsDefaultProtocolClient('banflow');
+    console.log('Protocol client registration result:', protocolRegistered);
     if (!app.isDefaultProtocolClient('banflow')) {
-      app.setAsDefaultProtocolClient('banflow');
+      console.log('Warning: App is not the default protocol client for banflow://');
     }
-    
+
     installExtension(REACT_DEVELOPER_TOOLS)
       .then((name) => console.log(`Added Extension:  ${name}`))
       .catch((err) => console.log('An error occurred: ', err));
@@ -1174,7 +1216,6 @@ const initializeBackupSchedules = () => {
   }
 };
 
-// This whenReady is for backup schedules - keep it separate
 app.whenReady().then(() => {
   // Initialize backup schedules after a short delay to ensure everything is loaded
   setTimeout(initializeBackupSchedules, 2000);
@@ -1395,14 +1436,6 @@ ipcMain.handle('git:push', async (event, remote, branch) => {
   }
 });
 
-ipcMain.handle('git:mergeBranch', async (event, branchName, options = {}) => {
-  try {
-    return await gitService.merge(branchName, options);
-  } catch (error) {
-    throw error;
-  }
-});
-
 // Stash Operations
 ipcMain.handle('git:stashChanges', async (event, message) => {
   try {
@@ -1532,45 +1565,6 @@ ipcMain.handle('git:authenticateGitHub', async (event, token) => {
   }
 });
 
-ipcMain.handle('git:startOAuthFlow', async () => {
-  try {
-    const state = gitService.generateOAuthState();
-    const { codeVerifier, codeChallenge } = gitService.generatePKCE();
-    const authUrl = gitService.getOAuthUrl(state, codeChallenge);
-    
-    // Store state and codeVerifier temporarily (in memory)
-    // In production, you'd want to store this more securely
-    (gitService as any).pendingOAuth = { state, codeVerifier };
-    
-    // Open browser
-    const { shell } = require('electron');
-    shell.openExternal(authUrl);
-    
-    return { state, authUrl };
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:completeOAuthFlow', async (event, code, state) => {
-  try {
-    const pending = (gitService as any).pendingOAuth;
-    if (!pending || pending.state !== state) {
-      throw new Error('Invalid OAuth state');
-    }
-    
-    const token = await gitService.exchangeOAuthCode(code, pending.codeVerifier, state);
-    
-    // Clear pending OAuth
-    delete (gitService as any).pendingOAuth;
-    
-    // Authenticate with the token
-    return await gitService.authenticateGitHub(token);
-  } catch (error) {
-    throw error;
-  }
-});
-
 ipcMain.handle('git:cloneRepository', async (event, repoUrl, targetPath) => {
   try {
     return await gitService.cloneRepository(repoUrl, targetPath);
@@ -1604,113 +1598,6 @@ ipcMain.handle('git:getGitHubRepositories', async () => {
     return await gitService.getGitHubRepositories();
   } catch (error) {
     throw error;
-  }
-});
-
-ipcMain.handle('git:getGitHubRepoInfo', async () => {
-  try {
-    return await gitService.getGitHubRepoInfo();
-  } catch (error) {
-    throw error;
-  }
-});
-
-// GitHub Pull Request Operations
-ipcMain.handle('git:createPullRequest', async (event, owner, repo, title, body, head, base, draft) => {
-  try {
-    return await gitService.createPullRequest(owner, repo, title, body, head, base, draft);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:getPullRequests', async (event, owner, repo, filters) => {
-  try {
-    return await gitService.getPullRequests(owner, repo, filters);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:getPullRequest', async (event, owner, repo, pullNumber) => {
-  try {
-    return await gitService.getPullRequest(owner, repo, pullNumber);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:mergePullRequest', async (event, owner, repo, pullNumber, mergeMethod, commitTitle, commitMessage) => {
-  try {
-    return await gitService.mergePullRequest(owner, repo, pullNumber, mergeMethod, commitTitle, commitMessage);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:closePullRequest', async (event, owner, repo, pullNumber) => {
-  try {
-    return await gitService.closePullRequest(owner, repo, pullNumber);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:updatePullRequest', async (event, owner, repo, pullNumber, updates) => {
-  try {
-    return await gitService.updatePullRequest(owner, repo, pullNumber, updates);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:addPullRequestComment', async (event, owner, repo, pullNumber, body) => {
-  try {
-    return await gitService.addPullRequestComment(owner, repo, pullNumber, body);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:getPullRequestFiles', async (event, owner, repo, pullNumber) => {
-  try {
-    return await gitService.getPullRequestFiles(owner, repo, pullNumber);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:getPullRequestCommits', async (event, owner, repo, pullNumber) => {
-  try {
-    return await gitService.getPullRequestCommits(owner, repo, pullNumber);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:getPullRequestReviews', async (event, owner, repo, pullNumber) => {
-  try {
-    return await gitService.getPullRequestReviews(owner, repo, pullNumber);
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:logoutGitHub', async () => {
-  try {
-    gitService.clearGitHubToken();
-    return { success: true };
-  } catch (error) {
-    throw error;
-  }
-});
-
-ipcMain.handle('git:restoreGitHubAuth', async () => {
-  try {
-    const result = await gitService.restoreGitHubToken();
-    return result; // Returns { authenticated: true/false, user: {...} or null }
-  } catch (error) {
-    return { authenticated: false, user: null };
   }
 });
 
@@ -1755,6 +1642,54 @@ ipcMain.handle('git:loadProjectRepositories', async () => {
     return await gitService.loadProjectRepositories();
   } catch (error) {
     console.error('Error loading project repositories:', error);
+    throw error;
+  }
+});
+
+// GitHub OAuth Integration
+ipcMain.handle('git:startOAuthFlow', async () => {
+  try {
+    console.log('git:startOAuthFlow handler called');
+    const state = gitService.generateOAuthState();
+    const { codeVerifier, codeChallenge } = gitService.generatePKCE();
+    const authUrl = gitService.getOAuthUrl(state, codeChallenge);
+    
+    console.log('Generated OAuth URL:', authUrl);
+    
+    // Store state and codeVerifier temporarily (in memory)
+    // In production, you'd want to store this more securely
+    (gitService as any).pendingOAuth = { state, codeVerifier };
+    
+    // Open browser with the OAuth URL
+    console.log('Opening browser with URL:', authUrl);
+    log.info('Opening OAuth URL in browser:', authUrl);
+    const result = await shell.openExternal(authUrl);
+    console.log('shell.openExternal result:', result);
+    log.info('Browser opened successfully');
+    
+    return { state, authUrl };
+  } catch (error) {
+    console.error('Failed to start OAuth flow:', error);
+    log.error('Failed to start OAuth flow:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('git:completeOAuthFlow', async (event, code, state) => {
+  try {
+    const pending = (gitService as any).pendingOAuth;
+    if (!pending || pending.state !== state) {
+      throw new Error('Invalid OAuth state');
+    }
+    
+    const token = await gitService.exchangeOAuthCode(code, pending.codeVerifier, state);
+    
+    // Clear pending OAuth
+    delete (gitService as any).pendingOAuth;
+    
+    // Authenticate with the token
+    return await gitService.authenticateGitHub(token);
+  } catch (error) {
     throw error;
   }
 });
@@ -1940,115 +1875,6 @@ ipcMain.handle('git:readFile', async (event, repoPath, filePath) => {
   } catch (error) {
     console.error('Error reading file:', error);
     throw error;
-  }
-});
-
-ipcMain.handle('git:readImageFile', async (event, repoPath, filePath) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    // Resolve file path relative to repository root
-    const fullPath = path.join(repoPath, filePath);
-    
-    // Check if file exists
-    if (!fs.existsSync(fullPath)) {
-      return { success: false, error: `File not found: ${filePath}` };
-    }
-    
-    // Read file as buffer and convert to base64
-    const buffer = fs.readFileSync(fullPath);
-    const base64 = buffer.toString('base64');
-    const ext = path.extname(filePath).toLowerCase();
-    
-    // Determine MIME type
-    const mimeTypes: Record<string, string> = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.svg': 'image/svg+xml',
-      '.bmp': 'image/bmp',
-      '.ico': 'image/x-icon'
-    };
-    
-    const mimeType = mimeTypes[ext] || 'image/png';
-    const dataUrl = `data:${mimeType};base64,${base64}`;
-    
-    return {
-      success: true,
-      dataUrl: dataUrl,
-      mimeType: mimeType,
-      path: fullPath
-    };
-  } catch (error) {
-    console.error('Error reading image file:', error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('git:getFileFromGit', async (event, repoPath, filePath, ref = 'HEAD') => {
-  try {
-    const simpleGit = require('simple-git');
-    const git = simpleGit(repoPath);
-    
-    // Get file content from Git at specified ref
-    const content = await git.show([`${ref}:${filePath}`]);
-    
-    return {
-      success: true,
-      content: content
-    };
-  } catch (error) {
-    // File might not exist in that ref (e.g., new file)
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle('git:getImageFromGit', async (event, repoPath, filePath, ref = 'HEAD') => {
-  try {
-    const simpleGit = require('simple-git');
-    const git = simpleGit(repoPath);
-    const path = require('path');
-    const { execSync } = require('child_process');
-    
-    // Use git show to get binary file content
-    const buffer = execSync(`git show ${ref}:${filePath}`, { 
-      cwd: repoPath,
-      encoding: null // Get as buffer
-    });
-    
-    if (!buffer || buffer.length === 0) {
-      return { success: false, error: 'File not found in Git' };
-    }
-    
-    const base64 = buffer.toString('base64');
-    const ext = path.extname(filePath).toLowerCase();
-    
-    // Determine MIME type
-    const mimeTypes: Record<string, string> = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.svg': 'image/svg+xml',
-      '.bmp': 'image/bmp',
-      '.ico': 'image/x-icon'
-    };
-    
-    const mimeType = mimeTypes[ext] || 'image/png';
-    const dataUrl = `data:${mimeType};base64,${base64}`;
-    
-    return {
-      success: true,
-      dataUrl: dataUrl,
-      mimeType: mimeType
-    };
-  } catch (error) {
-    // File might not exist in that ref (e.g., new file)
-    return { success: false, error: error.message };
   }
 });
 
