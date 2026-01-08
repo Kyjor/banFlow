@@ -446,6 +446,21 @@ export function GitProvider({ children }) {
     }
   }, [handleError, showSuccess]);
 
+  const stashFiles = useCallback(async (files, message = null) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:stashFiles', files, message);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess(`${files.length} file${files.length > 1 ? 's' : ''} stashed`);
+      return result;
+    } catch (error) {
+      handleError(error, 'stash selected files');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
   const getStashList = useCallback(async () => {
     try {
       const stashList = await ipcRenderer.invoke('git:getStashList');
@@ -454,6 +469,24 @@ export function GitProvider({ children }) {
     } catch (error) {
       handleError(error, 'get stash list');
       throw error;
+    }
+  }, [handleError]);
+
+  const getStashFiles = useCallback(async (stashIndex = 0) => {
+    try {
+      return await ipcRenderer.invoke('git:getStashFiles', stashIndex);
+    } catch (error) {
+      handleError(error, 'get stash files');
+      return { files: [], stat: '' };
+    }
+  }, [handleError]);
+
+  const getStashFileDiff = useCallback(async (stashIndex = 0, filename) => {
+    try {
+      return await ipcRenderer.invoke('git:getStashFileDiff', stashIndex, filename);
+    } catch (error) {
+      handleError(error, 'get stash file diff');
+      return '';
     }
   }, [handleError]);
 
@@ -481,6 +514,21 @@ export function GitProvider({ children }) {
       return result;
     } catch (error) {
       handleError(error, 'pop stash');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
+    }
+  }, [handleError, showSuccess]);
+
+  const dropStash = useCallback(async (stashIndex = 0) => {
+    try {
+      dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: true });
+      const result = await ipcRenderer.invoke('git:dropStash', stashIndex);
+      dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: result.status });
+      showSuccess('Stash deleted', `stash@{${stashIndex}}`);
+      return result;
+    } catch (error) {
+      handleError(error, 'drop stash');
       throw error;
     } finally {
       dispatch({ type: GitActionTypes.SET_OPERATION_IN_PROGRESS, payload: false });
@@ -938,9 +986,13 @@ export function GitProvider({ children }) {
     
     // Stash Operations
     stashChanges,
+    stashFiles,
     getStashList,
+    getStashFiles,
+    getStashFileDiff,
     applyStash,
     popStash,
+    dropStash,
     
     // Diff and History
     getDiff,

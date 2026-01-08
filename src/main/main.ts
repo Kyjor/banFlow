@@ -1445,9 +1445,33 @@ ipcMain.handle('git:stashChanges', async (event, message) => {
   }
 });
 
+ipcMain.handle('git:stashFiles', async (event, files, message) => {
+  try {
+    return await gitService.stashFiles(files, message);
+  } catch (error) {
+    throw error;
+  }
+});
+
 ipcMain.handle('git:getStashList', async () => {
   try {
     return await gitService.getStashList();
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getStashFiles', async (event, stashIndex) => {
+  try {
+    return await gitService.getStashFiles(stashIndex);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:getStashFileDiff', async (event, stashIndex, filename) => {
+  try {
+    return await gitService.getStashFileDiff(stashIndex, filename);
   } catch (error) {
     throw error;
   }
@@ -1464,6 +1488,14 @@ ipcMain.handle('git:applyStash', async (event, stashIndex) => {
 ipcMain.handle('git:popStash', async (event, stashIndex) => {
   try {
     return await gitService.popStash(stashIndex);
+  } catch (error) {
+    throw error;
+  }
+});
+
+ipcMain.handle('git:dropStash', async (event, stashIndex) => {
+  try {
+    return await gitService.dropStash(stashIndex);
   } catch (error) {
     throw error;
   }

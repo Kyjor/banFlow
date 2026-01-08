@@ -413,7 +413,7 @@ export default class GitService {
   // Stash Operations for Solo Development
   async stashChanges(message = null) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'STASH',
@@ -422,10 +422,10 @@ export default class GitService {
         repoPath: this.currentRepo
       };
 
-      const result = message 
+      const result = message
         ? await this.git.stash(['save', message])
         : await this.git.stash();
-      
+
       this.operationHistory.push(operation);
       return {
         ...result,
@@ -437,9 +437,51 @@ export default class GitService {
     }
   }
 
+  async stashFiles(files, message = null) {
+    if (!this.git) throw new Error('No repository selected');
+    if (!files || files.length === 0) throw new Error('No files specified for stashing');
+
+    try {
+      const operation = {
+        type: 'STASH_FILES',
+        timestamp: new Date().toISOString(),
+        data: { files, message },
+        repoPath: this.currentRepo
+      };
+
+      // Debug: log the files being stashed
+      console.log('Stashing files:', files);
+      console.log('Files array length:', files.length);
+      files.forEach((file, index) => {
+        console.log(`File ${index}: "${file}" (length: ${file.length})`);
+      });
+
+      // Use git.raw() with array of arguments for better control
+      const args = ['stash', 'push'];
+      if (message) {
+        args.push('-m', message);
+      }
+      args.push('--');
+      // Add files individually - git.raw() will handle proper escaping
+      args.push(...files);
+
+      console.log('Executing stash with args:', args);
+      const result = await this.git.raw(args);
+
+      this.operationHistory.push(operation);
+      return {
+        ...result,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error stashing selected files:', error);
+      throw error;
+    }
+  }
+
   async getStashList() {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const stashList = await this.git.stashList();
       return (stashList.all || []).map(stash => ({
@@ -453,6 +495,72 @@ export default class GitService {
       console.error('Error getting stash list:', error);
       throw error;
     }
+  }
+
+  async getStashFiles(stashIndex = 0) {
+    if (!this.git) throw new Error('No repository selected');
+
+    try {
+      // Get detailed information about the stash including files
+      const showResult = await this.git.stash(['show', '--name-status', `stash@{${stashIndex}}`]);
+      const statResult = await this.git.stash(['show', '--stat', `stash@{${stashIndex}}`]);
+
+      // Parse the name-status output to get file changes
+      const files = showResult.split('\n')
+        .filter(line => line.trim())
+        .map(line => {
+          const match = line.match(/^([MADRCU])\s+(.+)$/);
+          if (match) {
+            const [, status, filename] = match;
+            return {
+              status: this.parseStatus(status),
+              filename,
+              statusCode: status
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      return {
+        files,
+        stat: statResult
+      };
+    } catch (error) {
+      console.error('Error getting stash files:', error);
+      throw error;
+    }
+  }
+
+  async getStashFileDiff(stashIndex = 0, filename) {
+    if (!this.git) throw new Error('No repository selected');
+
+    try {
+      // Get the diff for a specific file in the stash
+      // Use diff command: git diff stash@{index}^ stash@{index} -- filename
+      const diffResult = await this.git.diff([
+        `stash@{${stashIndex}}^`,
+        `stash@{${stashIndex}}`,
+        '--',
+        filename
+      ]);
+      return diffResult;
+    } catch (error) {
+      console.error('Error getting stash file diff:', error);
+      throw error;
+    }
+  }
+
+  parseStatus(statusCode) {
+    const statusMap = {
+      'M': 'modified',
+      'A': 'added',
+      'D': 'deleted',
+      'R': 'renamed',
+      'C': 'copied',
+      'U': 'unmerged'
+    };
+    return statusMap[statusCode] || 'unknown';
   }
 
   async applyStash(stashIndex = 0) {
@@ -499,6 +607,30 @@ export default class GitService {
       };
     } catch (error) {
       console.error('Error popping stash:', error);
+      throw error;
+    }
+  }
+
+  async dropStash(stashIndex = 0) {
+    if (!this.git) throw new Error('No repository selected');
+    
+    try {
+      const operation = {
+        type: 'DROP_STASH',
+        timestamp: new Date().toISOString(),
+        data: { stashIndex },
+        repoPath: this.currentRepo
+      };
+
+      const result = await this.git.stash(['drop', `stash@{${stashIndex}}`]);
+      this.operationHistory.push(operation);
+      
+      return {
+        ...result,
+        status: await this.getRepositoryStatus()
+      };
+    } catch (error) {
+      console.error('Error dropping stash:', error);
       throw error;
     }
   }

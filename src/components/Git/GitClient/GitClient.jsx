@@ -18,7 +18,8 @@ import {
   Avatar,
   List,
   Popconfirm,
-  Modal
+  Modal,
+  Collapse
 } from 'antd';
 import {
   BranchesOutlined,
@@ -46,7 +47,10 @@ import {
   CopyOutlined,
   FileSearchOutlined,
   SearchOutlined,
-  MergeOutlined
+  MergeOutlined,
+  FileAddOutlined,
+  EditOutlined,
+  FileExcelOutlined
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import EnhancedDiffViewer from '../EnhancedDiffViewer/EnhancedDiffViewer';
@@ -54,11 +58,104 @@ import MergeConflictResolver from '../MergeConflictResolver/MergeConflictResolve
 import PRList from '../PullRequests/PRList';
 import PRCreate from '../PullRequests/PRCreate';
 import PRReview from '../PullRequests/PRReview';
+import StashModal from '../StashModal/StashModal';
 import './GitClient.scss';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 const { Option } = Select;
+
+// DiffViewer component for displaying color-coded diffs
+const DiffViewer = ({ diff }) => {
+  const renderDiffLine = (line, index) => {
+    const style = {
+      fontFamily: 'monospace',
+      fontSize: '12px',
+      lineHeight: '1.45',
+      whiteSpace: 'pre',
+      margin: 0,
+      padding: '2px 4px',
+      borderRadius: '3px',
+    };
+
+    if (line.startsWith('+') && !line.startsWith('+++')) {
+      // Addition (green)
+      return (
+        <div key={index} style={{
+          ...style,
+          backgroundColor: '#f0f9f0',
+          color: '#22863a',
+          borderLeft: '3px solid #28a745'
+        }}>
+          {line}
+        </div>
+      );
+    } else if (line.startsWith('-') && !line.startsWith('---')) {
+      // Deletion (red)
+      return (
+        <div key={index} style={{
+          ...style,
+          backgroundColor: '#ffeef0',
+          color: '#cb2431',
+          borderLeft: '3px solid #cb2431'
+        }}>
+          {line}
+        </div>
+      );
+    } else if (line.startsWith('@@')) {
+      // Hunk header (blue)
+      return (
+        <div key={index} style={{
+          ...style,
+          backgroundColor: '#f1f8ff',
+          color: '#0366d6',
+          borderLeft: '3px solid #0366d6',
+          fontWeight: 'bold'
+        }}>
+          {line}
+        </div>
+      );
+    } else if (line.startsWith('diff --git') || line.startsWith('index ') || line.startsWith('---') || line.startsWith('+++')) {
+      // Metadata (gray)
+      return (
+        <div key={index} style={{
+          ...style,
+          backgroundColor: '#f6f8fa',
+          color: '#586069',
+          borderLeft: '3px solid #d1d9e0'
+        }}>
+          {line}
+        </div>
+      );
+    } else {
+      // Context lines (neutral)
+      return (
+        <div key={index} style={{
+          ...style,
+          backgroundColor: 'transparent',
+          color: '#24292e',
+          borderLeft: '3px solid transparent'
+        }}>
+          {line}
+        </div>
+      );
+    }
+  };
+
+  const diffLines = diff.split('\n').filter(line => line.trim() !== '');
+
+  return (
+    <div style={{
+      background: '#ffffff',
+      border: '1px solid #d1d9e0',
+      borderRadius: '6px',
+      overflow: 'auto',
+      maxHeight: '400px'
+    }}>
+      {diffLines.map((line, index) => renderDiffLine(line, index))}
+    </div>
+  );
+};
 const { TextArea } = Input;
 
 function GitClient() {
@@ -83,6 +180,12 @@ function GitClient() {
     push,
     stashChanges,
     popStash,
+    applyStash,
+    dropStash,
+    getStashList,
+    getStashFiles,
+    getStashFileDiff,
+    stashList,
     discardChanges,
     deleteUntrackedFiles,
     switchRepository,
@@ -128,6 +231,12 @@ function GitClient() {
   const [hasTriedAutoOpen, setHasTriedAutoOpen] = useState(false);
   const [pullStrategy, setPullStrategy] = useState('merge');
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [showStashModal, setShowStashModal] = useState(false);
+  const [showPopStashModal, setShowPopStashModal] = useState(false);
+  const [popStashFiles, setPopStashFiles] = useState({});
+  const [expandedPopStashes, setExpandedPopStashes] = useState(new Set());
+  const [stashFileDiffs, setStashFileDiffs] = useState({});
+  const [expandedFileDiffs, setExpandedFileDiffs] = useState(new Set());
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchError, setNewBranchError] = useState('');
   const [commitFiles, setCommitFiles] = useState([]);
@@ -709,10 +818,13 @@ function GitClient() {
             <Button icon={<BranchesOutlined />} onClick={() => setShowBranchModal(true)} />
           </Tooltip>
           <Tooltip title="Stash">
-            <Button icon={<InboxOutlined />} onClick={() => stashChanges()} disabled={!hasChanges || operationInProgress} />
+            <Button icon={<InboxOutlined />} onClick={() => setShowStashModal(true)} disabled={!hasChanges || operationInProgress} />
           </Tooltip>
           <Tooltip title="Pop Stash">
-            <Button icon={<ExportOutlined />} onClick={() => popStash()} disabled={operationInProgress} />
+            <Button icon={<ExportOutlined />} onClick={() => {
+              getStashList();
+              setShowPopStashModal(true);
+            }} disabled={operationInProgress} />
           </Tooltip>
 
           <Divider type="vertical" />
@@ -1650,6 +1762,160 @@ function GitClient() {
             </Text>
           </div>
         </Space>
+      </Modal>
+
+      {/* Stash Modal */}
+      <StashModal
+        visible={showStashModal}
+        onCancel={() => setShowStashModal(false)}
+        onSuccess={() => setShowStashModal(false)}
+      />
+
+      {/* Pop Stash Modal */}
+      <Modal
+        title="Stash List"
+        open={showPopStashModal}
+        onCancel={() => {
+          setShowPopStashModal(false);
+          setPopStashFiles({});
+          setExpandedPopStashes(new Set());
+          setStashFileDiffs({});
+          setExpandedFileDiffs(new Set());
+        }}
+        footer={null}
+        width={700}
+      >
+        {stashList && stashList.length > 0 ? (
+          <Collapse
+            accordion
+            onChange={async (key) => {
+              if (key && !popStashFiles[key]) {
+                try {
+                  const files = await getStashFiles(parseInt(key));
+                  setPopStashFiles(prev => ({ ...prev, [key]: files }));
+                } catch (e) {
+                  console.error('Failed to load stash files:', e);
+                }
+              }
+            }}
+          >
+            {stashList.map((stash, index) => (
+              <Collapse.Panel
+                key={index}
+                header={
+                  <Space direction="vertical" size={0} style={{ width: '100%' }}>
+                    <Text strong>{stash.message || `stash@{${index}}`}</Text>
+                    <Space size="small">
+                      <Text type="secondary" style={{ fontSize: 12 }}>{stash.date}</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>by {stash.author_name}</Text>
+                    </Space>
+                  </Space>
+                }
+                extra={
+                  <Space onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        applyStash(index);
+                        getStashList();
+                        setStashFileDiffs({});
+                      }}
+                      loading={operationInProgress}
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      size="small"
+                      type="primary"
+                      onClick={() => {
+                        popStash(index);
+                        setShowPopStashModal(false);
+                        setPopStashFiles({});
+                        setStashFileDiffs({});
+                      }}
+                      loading={operationInProgress}
+                    >
+                      Pop
+                    </Button>
+                    <Popconfirm
+                      title="Delete this stash?"
+                      description="This will permanently delete the stash. This action cannot be undone."
+                      onConfirm={() => {
+                        dropStash(index).then(() => {
+                          getStashList();
+                          setPopStashFiles({});
+                          setStashFileDiffs({});
+                        });
+                      }}
+                      okText="Delete"
+                      cancelText="Cancel"
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        loading={operationInProgress}
+                      />
+                    </Popconfirm>
+                  </Space>
+                }
+              >
+                {popStashFiles[index] ? (
+                  <Collapse
+                    size="small"
+                    ghost
+                    onChange={async (keys) => {
+                      // Handle file diff expansion
+                      for (const key of keys) {
+                        if (!stashFileDiffs[`${index}-${key}`]) {
+                          try {
+                            const diff = await getStashFileDiff(index, key);
+                            setStashFileDiffs(prev => ({ ...prev, [`${index}-${key}`]: diff }));
+                          } catch (e) {
+                            console.error('Failed to load file diff:', e);
+                          }
+                        }
+                      }
+                    }}
+                  >
+                    {(popStashFiles[index].files || []).map((file, fileIndex) => (
+                      <Collapse.Panel
+                        key={file.filename}
+                        header={
+                          <Space>
+                            {file.status === 'added' && <FileAddOutlined style={{ color: '#52c41a' }} />}
+                            {file.status === 'modified' && <EditOutlined style={{ color: '#faad14' }} />}
+                            {file.status === 'deleted' && <FileExcelOutlined style={{ color: '#ff4d4f' }} />}
+                            {!['added', 'modified', 'deleted'].includes(file.status) && <FileTextOutlined />}
+                            <Tag size="small" color={
+                              file.status === 'added' ? 'success' :
+                              file.status === 'modified' ? 'warning' :
+                              file.status === 'deleted' ? 'error' : 'default'
+                            }>
+                              {file.status}
+                            </Tag>
+                            <Text>{file.filename}</Text>
+                          </Space>
+                        }
+                      >
+                        {stashFileDiffs[`${index}-${file.filename}`] ? (
+                          <DiffViewer diff={stashFileDiffs[`${index}-${file.filename}`]} />
+                        ) : (
+                          <Spin size="small" />
+                        )}
+                      </Collapse.Panel>
+                    ))}
+                  </Collapse>
+                ) : (
+                  <Spin size="small" />
+                )}
+              </Collapse.Panel>
+            ))}
+          </Collapse>
+        ) : (
+          <Empty description="No stashes found" />
+        )}
       </Modal>
     </div>
   );

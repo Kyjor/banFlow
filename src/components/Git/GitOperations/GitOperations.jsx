@@ -37,7 +37,10 @@ import {
   CodeOutlined,
   HistoryOutlined,
   InboxOutlined,
-  EyeOutlined
+  EyeOutlined,
+  FileAddOutlined,
+  FileDeleteOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import './GitOperations.scss';
@@ -76,6 +79,7 @@ function GitOperations({ onViewDiff }) {
     applyStash,
     popStash,
     getStashList,
+    getStashFiles,
     undoLastOperation,
     refreshRepositoryStatus,
     discardChanges,
@@ -92,6 +96,8 @@ function GitOperations({ onViewDiff }) {
   const [showStashModal, setShowStashModal] = useState(false);
   const [stashMessage, setStashMessage] = useState('');
   const [pullStrategy, setPullStrategy] = useState('merge');
+  const [expandedStashes, setExpandedStashes] = useState(new Set());
+  const [stashFiles, setStashFiles] = useState({});
 
   // Load operation history when repository changes
   useEffect(() => {
@@ -188,6 +194,31 @@ function GitOperations({ onViewDiff }) {
     } catch (error) {
       // Error handled by context
     }
+  };
+
+  const loadStashFiles = async (stashIndex) => {
+    if (stashFiles[stashIndex]) return; // Already loaded
+
+    try {
+      const files = await getStashFiles(stashIndex);
+      setStashFiles(prev => ({
+        ...prev,
+        [stashIndex]: files
+      }));
+    } catch (error) {
+      console.error('Failed to load stash files:', error);
+    }
+  };
+
+  const handleStashExpand = (stashIndex, expanded) => {
+    const newExpanded = new Set(expandedStashes);
+    if (expanded) {
+      newExpanded.add(stashIndex);
+      loadStashFiles(stashIndex);
+    } else {
+      newExpanded.delete(stashIndex);
+    }
+    setExpandedStashes(newExpanded);
   };
 
   const getFileIcon = (filename) => {
@@ -678,41 +709,87 @@ function GitOperations({ onViewDiff }) {
                 </Button>
               }
             >
-              <List
-                dataSource={stashList}
-                renderItem={(stash, index) => (
-                  <List.Item
-                    key={stash.index}
-                    actions={[
-                      <Button
-                        size="small"
-                        onClick={() => applyStash(index)}
-                        loading={operationInProgress}
-                      >
-                        Apply
-                      </Button>,
-                      <Button
-                        size="small"
-                        type="primary"
-                        onClick={() => popStash(index)}
-                        loading={operationInProgress}
-                      >
-                        Pop
-                      </Button>
-                    ]}
-                  >
-                    <List.Item.Meta
-                      title={<Text>{stash.message || `stash@{${index}}`}</Text>}
-                      description={
-                        <Space>
+              <Collapse
+                ghost
+                onChange={(keys) => handleStashExpand(keys)}
+                expandIcon={({ isActive }) => <EyeOutlined rotate={isActive ? 90 : 0} />}
+              >
+                {stashList.map((stash, index) => (
+                  <Panel
+                    key={index}
+                    header={
+                      <Space direction="vertical" size={0}>
+                        <Text strong>{stash.message || `stash@{${index}}`}</Text>
+                        <Space size="small">
                           <Text type="secondary">{stash.date}</Text>
                           <Text type="secondary">by {stash.author_name}</Text>
+                          {stashFiles[index] && (
+                            <Text type="secondary">
+                              ({stashFiles[index].files.length} files)
+                            </Text>
+                          )}
                         </Space>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
+                      </Space>
+                    }
+                    extra={
+                      <Space>
+                        <Button
+                          size="small"
+                          onClick={() => applyStash(index)}
+                          loading={operationInProgress}
+                        >
+                          Apply
+                        </Button>
+                        <Button
+                          size="small"
+                          type="primary"
+                          onClick={() => popStash(index)}
+                          loading={operationInProgress}
+                        >
+                          Pop
+                        </Button>
+                      </Space>
+                    }
+                  >
+                    {stashFiles[index] ? (
+                      <div>
+                        <List
+                          size="small"
+                          dataSource={stashFiles[index].files}
+                          renderItem={(file) => (
+                            <List.Item>
+                              <Space>
+                                {file.status === 'added' && <FileAddOutlined style={{ color: '#52c41a' }} />}
+                                {file.status === 'modified' && <EditOutlined style={{ color: '#faad14' }} />}
+                                {file.status === 'deleted' && <FileDeleteOutlined style={{ color: '#ff4d4f' }} />}
+                                {file.status === 'renamed' && <FileTextOutlined style={{ color: '#1890ff' }} />}
+                                <Tag size="small" color={
+                                  file.status === 'added' ? 'success' :
+                                  file.status === 'modified' ? 'warning' :
+                                  file.status === 'deleted' ? 'error' :
+                                  'default'
+                                }>
+                                  {file.status}
+                                </Tag>
+                                <Text>{file.filename}</Text>
+                              </Space>
+                            </List.Item>
+                          )}
+                        />
+                        {stashFiles[index].stat && (
+                          <div style={{ marginTop: 16 }}>
+                            <Text type="secondary" style={{ fontSize: '12px', fontFamily: 'monospace' }}>
+                              {stashFiles[index].stat}
+                            </Text>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Text type="secondary">Loading files...</Text>
+                    )}
+                  </Panel>
+                ))}
+              </Collapse>
             </Card>
           </TabPane>
 
