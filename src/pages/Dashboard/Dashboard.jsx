@@ -21,18 +21,14 @@ import {
   Space,
   Tooltip,
   Tag,
+  Typography,
 } from 'antd';
-import {
-  PlusOutlined,
-} from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import dateFormat from 'dateformat';
 import moment from 'moment';
 import { ipcRenderer } from 'electron';
 import TabPane from 'antd/lib/tabs/TabPane';
 import Layout from '../../layouts/App';
-import { Typography } from 'antd';
-
-const { Text } = Typography;
 // Components
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
 import DayByDayCalendar from '../../components/DayByDayCalendar/DayByDayCalendar';
@@ -44,13 +40,18 @@ import TagController from '../../api/tag/TagController';
 // New Components
 import StatisticsCards from './components/StatisticsCards/StatisticsCards';
 import AggregateView from './components/AggregateView/AggregateView';
-import { loadMultipleProjectsData, getAllProjectNames } from './utils/projectDataLoader';
+import {
+  loadMultipleProjectsData,
+  getAllProjectNames,
+} from './utils/projectDataLoader';
 import {
   calculateProjectHealth,
   calculateNodeStats,
   calculateTotalTimeSpent,
   formatTimeHuman,
 } from './utils/statisticsCalculations';
+
+const { Text } = Typography;
 
 /**
  * Home
@@ -63,10 +64,12 @@ class Dashboard extends Component {
     super(props);
 
     // Load selected projects from localStorage, default to all
-    const savedSelectedProjects = localStorage.getItem('dashboardSelectedProjects');
+    const savedSelectedProjects = localStorage.getItem(
+      'dashboardSelectedProjects',
+    );
     const allProjects = getAllProjectNames();
-    const initialSelectedProjects = savedSelectedProjects 
-      ? JSON.parse(savedSelectedProjects) 
+    const initialSelectedProjects = savedSelectedProjects
+      ? JSON.parse(savedSelectedProjects)
       : allProjects; // Default to all projects
 
     this.state = {
@@ -98,12 +101,15 @@ class Dashboard extends Component {
     // Load all projects by default
     const allProjects = getAllProjectNames();
     if (allProjects.length > 0) {
-      this.setState({ 
-        availableProjects: allProjects,
-        selectedProjects: allProjects,
-      }, () => {
-        this.loadProjectsData(allProjects);
-      });
+      this.setState(
+        {
+          availableProjects: allProjects,
+          selectedProjects: allProjects,
+        },
+        () => {
+          this.loadProjectsData(allProjects);
+        },
+      );
     }
   }
 
@@ -133,7 +139,9 @@ class Dashboard extends Component {
     // Normalize project name - remove .json extension if present
     let normalizedProjectName = projectName ? projectName.trim() : '';
     if (normalizedProjectName.endsWith('.json')) {
-      normalizedProjectName = normalizedProjectName.slice(0, normalizedProjectName.lastIndexOf('.json')).trim();
+      normalizedProjectName = normalizedProjectName
+        .slice(0, normalizedProjectName.lastIndexOf('.json'))
+        .trim();
     }
 
     const newState = {
@@ -178,10 +186,10 @@ class Dashboard extends Component {
       const listData = [];
       // eslint-disable-next-line no-underscore-dangle
       const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-      
+
       // Get todos from all projects in projectsData
       const { projectsData } = this.state;
-      
+
       if (projectsData && projectsData.length > 0) {
         projectsData.forEach((project) => {
           const nodes = project.nodes || [];
@@ -193,15 +201,15 @@ class Dashboard extends Component {
             } else if (node.estimatedDate) {
               nodeDate = dateFormat(node.estimatedDate, 'yyyy-mm-dd');
             }
-            
+
             if (nodeDate === cellDate) {
-              listData.push({ 
-                type: node.isComplete ? 'default' : 'success', 
+              listData.push({
+                type: node.isComplete ? 'default' : 'success',
                 content: node.title,
                 projectName: project.projectName,
                 isComplete: node.isComplete,
                 nodeId: node.id,
-                node: node, // Store full node data
+                node, // Store full node data
               });
             }
           });
@@ -220,8 +228,8 @@ class Dashboard extends Component {
     if (projectName) {
       const normalizedName = projectName.trim();
       // Reset loading state when selecting a new project
-      this.setState({ 
-        selectedProject: normalizedName, 
+      this.setState({
+        selectedProject: normalizedName,
         viewMode: 'single',
         isLokiLoaded: false,
         nodes: null,
@@ -243,8 +251,11 @@ class Dashboard extends Component {
 
   handleProjectSelectionChange = (selectedProjects) => {
     this.setState({ selectedProjects, isLoadingProjects: true });
-    localStorage.setItem('dashboardSelectedProjects', JSON.stringify(selectedProjects));
-    
+    localStorage.setItem(
+      'dashboardSelectedProjects',
+      JSON.stringify(selectedProjects),
+    );
+
     if (selectedProjects.length > 0) {
       this.loadProjectsData(selectedProjects);
     } else {
@@ -285,20 +296,20 @@ class Dashboard extends Component {
     // Check if this date is from a different month
     const cellMoment = moment(value);
     const currentMonth = moment(this.state.selectedDate || moment());
-    
+
     // If date is from a different month, return null to hide it
     if (!cellMoment.isSame(currentMonth, 'month')) {
       return null;
     }
-    
+
     const listData = this.getListData(value);
     return (
       <ul className="events">
         {listData.map((item, index) => (
           <li key={`${item.content}-${index}`}>
             <Tooltip title={`${item.content} - ${item.projectName}`}>
-              <Badge 
-                status={item.type} 
+              <Badge
+                status={item.type}
                 text={item.content}
                 style={{ cursor: 'pointer' }}
                 onClick={(e) => {
@@ -321,10 +332,10 @@ class Dashboard extends Component {
       const listData = [];
       // eslint-disable-next-line no-underscore-dangle
       const cellDate = dateFormat(value._d, 'yyyy-mm-dd');
-      
+
       // Get todos from all projects in projectsData
       const { projectsData } = this.state;
-      
+
       if (projectsData && projectsData.length > 0) {
         projectsData.forEach((project) => {
           const nodes = project.nodes || [];
@@ -336,7 +347,7 @@ class Dashboard extends Component {
             } else if (node.estimatedDate) {
               nodeDate = dateFormat(node.estimatedDate, 'yyyy-mm-dd');
             }
-            
+
             if (nodeDate === cellDate) {
               listData.push({
                 type: node.isComplete ? 'default' : 'success',
@@ -344,7 +355,7 @@ class Dashboard extends Component {
                 projectName: project.projectName,
                 isComplete: node.isComplete,
                 nodeId: node.id,
-                node: node, // Store full node data
+                node, // Store full node data
               });
             }
           });
@@ -359,7 +370,7 @@ class Dashboard extends Component {
           dataSource={listData}
           renderItem={(item) => (
             <List.Item
-              style={{ 
+              style={{
                 cursor: 'pointer',
                 padding: '8px',
                 backgroundColor: item.isComplete ? '#f0f0f0' : 'transparent',
@@ -379,8 +390,8 @@ class Dashboard extends Component {
               <Tooltip title={`Project: ${item.projectName}`}>
                 <span style={{ flex: 1 }}>{item.content}</span>
               </Tooltip>
-              <Badge 
-                text={item.projectName} 
+              <Badge
+                text={item.projectName}
                 style={{ fontSize: '11px', color: '#999' }}
               />
             </List.Item>
@@ -402,12 +413,12 @@ class Dashboard extends Component {
   };
 
   render() {
-    const { 
-      selectedProject, 
-      viewMode, 
-      availableProjects, 
-      selectedProjects, 
-      projectsData, 
+    const {
+      selectedProject,
+      viewMode,
+      availableProjects,
+      selectedProjects,
+      projectsData,
       isLoadingProjects,
       nodes,
       parents,
@@ -423,7 +434,7 @@ class Dashboard extends Component {
         const nodeStats = calculateNodeStats(nodesArray);
         const totalTime = calculateTotalTimeSpent(nodesArray);
         const health = calculateProjectHealth(nodesArray, parentsArray);
-        
+
         singleProjectStats = {
           totalTimeSpent: totalTime,
           totalNodes: nodeStats.total,
@@ -448,16 +459,24 @@ class Dashboard extends Component {
               />
             </div>
             <div className="dashboard-content">
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{
+                  marginBottom: '16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 {/* Quick Add button temporarily hidden */}
                 {false && (
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
                     onClick={() => {
-                      this.setState({ 
+                      this.setState({
                         quickAddModalVisible: true,
-                        quickAddProject: this.state.availableProjects[0] || null,
+                        quickAddProject:
+                          this.state.availableProjects[0] || null,
                         quickAddTitle: '',
                         quickAddDueDate: null,
                       });
@@ -467,8 +486,8 @@ class Dashboard extends Component {
                   </Button>
                 )}
               </div>
-              <Tabs 
-                activeKey={viewMode} 
+              <Tabs
+                activeKey={viewMode}
                 onChange={this.handleViewModeChange}
                 defaultActiveKey="aggregate"
               >
@@ -498,7 +517,10 @@ class Dashboard extends Component {
                             type="primary"
                             style={{ minWidth: 140 }}
                           >
-                            <Link to={`/projectPage/${selectedProject}`} style={{ color: '#fff' }}>
+                            <Link
+                              to={`/projectPage/${selectedProject}`}
+                              style={{ color: '#fff' }}
+                            >
                               Open Project
                             </Link>
                           </Button>,
@@ -511,25 +533,31 @@ class Dashboard extends Component {
                       {isLokiLoaded ? (
                         <div style={{ marginTop: '24px' }}>
                           {/* Bottom section with two calendars */}
-                          <div style={{ 
-                            display: 'flex', 
-                            gap: '16px',
-                            marginTop: '24px',
-                          }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: '16px',
+                              marginTop: '24px',
+                            }}
+                          >
                             {/* Left: Full Calendar */}
-                            <div style={{ 
-                              width: '50%',
-                              paddingRight: '8px',
-                            }}>
-                              <div style={{
-                                background: 'rgba(255, 255, 255, 0.95)',
-                                borderRadius: '12px',
-                                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
-                                padding: '20px',
-                                border: '1px solid rgba(0, 0, 0, 0.06)',
-                                height: '400px',
-                                overflow: 'auto',
-                              }}>
+                            <div
+                              style={{
+                                width: '50%',
+                                paddingRight: '8px',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.95)',
+                                  borderRadius: '12px',
+                                  boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
+                                  padding: '20px',
+                                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                                  height: '400px',
+                                  overflow: 'auto',
+                                }}
+                              >
                                 <Calendar
                                   value={moment(this.state.selectedDate)}
                                   onSelect={(date) => {
@@ -538,17 +566,23 @@ class Dashboard extends Component {
                                   dateCellRender={this.dateCellRender}
                                   fullscreen={false}
                                   validRange={[
-                                    moment(this.state.selectedDate).startOf('month'),
-                                    moment(this.state.selectedDate).endOf('month')
+                                    moment(this.state.selectedDate).startOf(
+                                      'month',
+                                    ),
+                                    moment(this.state.selectedDate).endOf(
+                                      'month',
+                                    ),
                                   ]}
                                 />
                               </div>
                             </div>
                             {/* Right: Day by Day Calendar */}
-                            <div style={{ 
-                              width: '50%',
-                              paddingLeft: '8px',
-                            }}>
+                            <div
+                              style={{
+                                width: '50%',
+                                paddingLeft: '8px',
+                              }}
+                            >
                               <DayByDayCalendar
                                 dayCellRender={this.dayCellRender}
                                 currentDate={this.state.selectedDate}
@@ -562,18 +596,26 @@ class Dashboard extends Component {
                       ) : (
                         <div style={{ textAlign: 'center', padding: '40px' }}>
                           <Spin size="large" />
-                          <div style={{ marginTop: '16px', color: '#666' }}>Loading project data...</div>
+                          <div style={{ marginTop: '16px', color: '#666' }}>
+                            Loading project data...
+                          </div>
                         </div>
                       )}
                     </>
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        padding: '40px',
+                        color: '#999',
+                      }}
+                    >
                       Select a project to view details
                     </div>
                   )}
                 </TabPane>
               </Tabs>
-              
+
               {/* Quick Add Modal */}
               <Modal
                 title="Quick Add Todo"
@@ -583,12 +625,18 @@ class Dashboard extends Component {
                 okText="Add"
                 cancelText="Cancel"
               >
-                <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <Space
+                  direction="vertical"
+                  style={{ width: '100%' }}
+                  size="middle"
+                >
                   <div>
                     <Text strong>Project</Text>
                     <Select
                       value={this.state.quickAddProject}
-                      onChange={(value) => this.setState({ quickAddProject: value })}
+                      onChange={(value) =>
+                        this.setState({ quickAddProject: value })
+                      }
                       style={{ width: '100%', marginTop: 8 }}
                       placeholder="Select project"
                     >
@@ -603,7 +651,9 @@ class Dashboard extends Component {
                     <Text strong>Title</Text>
                     <Input
                       value={this.state.quickAddTitle}
-                      onChange={(e) => this.setState({ quickAddTitle: e.target.value })}
+                      onChange={(e) =>
+                        this.setState({ quickAddTitle: e.target.value })
+                      }
                       placeholder="Enter todo title"
                       style={{ marginTop: 8 }}
                       onPressEnter={this.handleQuickAdd}
@@ -613,19 +663,26 @@ class Dashboard extends Component {
                     <Text strong>Due Date (Optional)</Text>
                     <DatePicker
                       value={this.state.quickAddDueDate}
-                      onChange={(date) => this.setState({ quickAddDueDate: date })}
+                      onChange={(date) =>
+                        this.setState({ quickAddDueDate: date })
+                      }
                       style={{ width: '100%', marginTop: 8 }}
                       showTime={false}
                     />
                   </div>
                 </Space>
               </Modal>
-              
+
               {/* Calendar Item Detail Modal */}
               <Modal
                 title="Todo Details"
                 open={this.state.calendarItemModalVisible}
-                onCancel={() => this.setState({ calendarItemModalVisible: false, selectedCalendarItem: null })}
+                onCancel={() =>
+                  this.setState({
+                    calendarItemModalVisible: false,
+                    selectedCalendarItem: null,
+                  })
+                }
                 footer={[
                   <Button
                     key="open"
@@ -633,9 +690,15 @@ class Dashboard extends Component {
                     onClick={() => {
                       const item = this.state.selectedCalendarItem;
                       if (item) {
-                        const projectName = item.projectName.replace(/\//g, '@');
+                        const projectName = item.projectName.replace(
+                          /\//g,
+                          '@',
+                        );
                         window.location.hash = `#/projectPage/${projectName}?node=${item.nodeId}`;
-                        this.setState({ calendarItemModalVisible: false, selectedCalendarItem: null });
+                        this.setState({
+                          calendarItemModalVisible: false,
+                          selectedCalendarItem: null,
+                        });
                       }
                     }}
                   >
@@ -643,82 +706,95 @@ class Dashboard extends Component {
                   </Button>,
                   <Button
                     key="close"
-                    onClick={() => this.setState({ calendarItemModalVisible: false, selectedCalendarItem: null })}
+                    onClick={() =>
+                      this.setState({
+                        calendarItemModalVisible: false,
+                        selectedCalendarItem: null,
+                      })
+                    }
                   >
                     Close
                   </Button>,
                 ]}
                 width={600}
               >
-                {this.state.selectedCalendarItem && (() => {
-                  const item = this.state.selectedCalendarItem;
-                  const node = item.node || {};
-                  
-                  // Format date
-                  const formatDate = (dateStr) => {
-                    if (!dateStr) return 'Not set';
-                    try {
-                      return dateFormat(new Date(dateStr), 'mmmm dd, yyyy');
-                    } catch {
-                      return dateStr;
-                    }
-                  };
-                  
-                  return (
-                    <Descriptions column={1} bordered>
-                      <Descriptions.Item label="Title">
-                        {item.content}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Project">
-                        <Tag color="blue">{item.projectName}</Tag>
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Status">
-                        <Badge 
-                          status={item.isComplete ? 'success' : 'processing'} 
-                          text={item.isComplete ? 'Completed' : 'In Progress'} 
-                        />
-                      </Descriptions.Item>
-                      {node.description && (
-                        <Descriptions.Item label="Description">
-                          {node.description}
+                {this.state.selectedCalendarItem &&
+                  (() => {
+                    const item = this.state.selectedCalendarItem;
+                    const node = item.node || {};
+
+                    // Format date
+                    const formatDate = (dateStr) => {
+                      if (!dateStr) return 'Not set';
+                      try {
+                        return dateFormat(new Date(dateStr), 'mmmm dd, yyyy');
+                      } catch {
+                        return dateStr;
+                      }
+                    };
+
+                    return (
+                      <Descriptions column={1} bordered>
+                        <Descriptions.Item label="Title">
+                          {item.content}
                         </Descriptions.Item>
-                      )}
-                      {node.timeSpent > 0 && (
-                        <Descriptions.Item label="Time Spent">
-                          {formatTimeHuman(node.timeSpent)}
+                        <Descriptions.Item label="Project">
+                          <Tag color="blue">{item.projectName}</Tag>
                         </Descriptions.Item>
-                      )}
-                      {node.dueDate && (
-                        <Descriptions.Item label="Due Date">
-                          {formatDate(node.dueDate)}
+                        <Descriptions.Item label="Status">
+                          <Badge
+                            status={item.isComplete ? 'success' : 'processing'}
+                            text={item.isComplete ? 'Completed' : 'In Progress'}
+                          />
                         </Descriptions.Item>
-                      )}
-                      {node.estimatedTime > 0 && (
-                        <Descriptions.Item label="Estimated Time">
-                          {formatTimeHuman(node.estimatedTime)}
-                        </Descriptions.Item>
-                      )}
-                      {node.tags && node.tags.length > 0 && (
-                        <Descriptions.Item label="Tags">
-                          {node.tags.map((tag, idx) => {
-                            const tagName = typeof tag === 'string' ? tag : (tag.title || tag.name || tag);
-                            return <Tag key={idx} color={tag.color || 'default'}>{tagName}</Tag>;
-                          })}
-                        </Descriptions.Item>
-                      )}
-                      {node.nodeState && (
-                        <Descriptions.Item label="State">
-                          {node.nodeState}
-                        </Descriptions.Item>
-                      )}
-                      {node.parent && (
-                        <Descriptions.Item label="Parent Column">
-                          {node.parent}
-                        </Descriptions.Item>
-                      )}
-                    </Descriptions>
-                  );
-                })()}
+                        {node.description && (
+                          <Descriptions.Item label="Description">
+                            {node.description}
+                          </Descriptions.Item>
+                        )}
+                        {node.timeSpent > 0 && (
+                          <Descriptions.Item label="Time Spent">
+                            {formatTimeHuman(node.timeSpent)}
+                          </Descriptions.Item>
+                        )}
+                        {node.dueDate && (
+                          <Descriptions.Item label="Due Date">
+                            {formatDate(node.dueDate)}
+                          </Descriptions.Item>
+                        )}
+                        {node.estimatedTime > 0 && (
+                          <Descriptions.Item label="Estimated Time">
+                            {formatTimeHuman(node.estimatedTime)}
+                          </Descriptions.Item>
+                        )}
+                        {node.tags && node.tags.length > 0 && (
+                          <Descriptions.Item label="Tags">
+                            {node.tags.map((tag, idx) => {
+                              const tagName =
+                                typeof tag === 'string'
+                                  ? tag
+                                  : tag.title || tag.name || tag;
+                              return (
+                                <Tag key={idx} color={tag.color || 'default'}>
+                                  {tagName}
+                                </Tag>
+                              );
+                            })}
+                          </Descriptions.Item>
+                        )}
+                        {node.nodeState && (
+                          <Descriptions.Item label="State">
+                            {node.nodeState}
+                          </Descriptions.Item>
+                        )}
+                        {node.parent && (
+                          <Descriptions.Item label="Parent Column">
+                            {node.parent}
+                          </Descriptions.Item>
+                        )}
+                      </Descriptions>
+                    );
+                  })()}
               </Modal>
             </div>
           </div>
@@ -729,7 +805,7 @@ class Dashboard extends Component {
 
   handleQuickAdd = async () => {
     const { quickAddProject, quickAddTitle, quickAddDueDate } = this.state;
-    
+
     if (!quickAddProject || !quickAddTitle.trim()) {
       message.warning('Please select a project and enter a title');
       return;
@@ -738,19 +814,24 @@ class Dashboard extends Component {
     try {
       // Open the project first
       ProjectController.openProject(quickAddProject);
-      
+
       // Wait a bit for project to load
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       // Get the first parent (or default parent)
       const parents = ParentController.getParents();
       const parentOrder = ParentController.getParentOrder();
-      const firstParentId = parentOrder && parentOrder.length > 0 
-        ? parentOrder[0].id 
-        : (parents && Object.keys(parents).length > 0 ? Object.keys(parents)[0] : null);
-      
+      const firstParentId =
+        parentOrder && parentOrder.length > 0
+          ? parentOrder[0].id
+          : parents && Object.keys(parents).length > 0
+            ? Object.keys(parents)[0]
+            : null;
+
       if (!firstParentId) {
-        message.error('No parent column found in project. Please create one first.');
+        message.error(
+          'No parent column found in project. Please create one first.',
+        );
         return;
       }
 
@@ -764,15 +845,18 @@ class Dashboard extends Component {
 
       // If due date is set, update it
       if (quickAddDueDate) {
-        const dueDateStr = dateFormat(quickAddDueDate._d || quickAddDueDate, 'yyyy-mm-dd');
+        const dueDateStr = dateFormat(
+          quickAddDueDate._d || quickAddDueDate,
+          'yyyy-mm-dd',
+        );
         NodeController.updateNodeProperty('dueDate', node.id, dueDateStr);
       }
 
       message.success('Todo added successfully!');
-      
+
       // Refresh projects data
       this.loadProjectsData(this.state.selectedProjects);
-      
+
       // Close modal and reset
       this.setState({
         quickAddModalVisible: false,

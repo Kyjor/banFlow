@@ -72,7 +72,8 @@ class TimerPage extends Component {
     const { currentNodeSelectedInTimer, nodes } = this.state;
     // add a new session to node session history
     const nodeHistory = nodes[currentNodeSelectedInTimer].sessionHistory;
-    const sessionLength = _seconds - nodeHistory[nodeHistory.length - 1].startingSeconds;
+    const sessionLength =
+      _seconds - nodeHistory[nodeHistory.length - 1].startingSeconds;
     nodeHistory[nodeHistory.length - 1] = {
       ...nodeHistory[nodeHistory.length - 1],
       finishDateTime: ISO8601ServiceInstance.getISO8601Time(),
@@ -85,7 +86,7 @@ class TimerPage extends Component {
       nodeHistory,
     );
     this.saveCurrentSelectedNodeTime();
-    
+
     // Fire session completed event for game system
     const node = nodes[currentNodeSelectedInTimer];
     eventSystem.emit(EVENTS.SESSION_COMPLETED, {
@@ -93,7 +94,7 @@ class TimerPage extends Component {
       nodeId: currentNodeSelectedInTimer,
       nodeTitle: node?.title || '',
     });
-    
+
     const newState = {
       ...this.state,
       isTimerRunning: false,

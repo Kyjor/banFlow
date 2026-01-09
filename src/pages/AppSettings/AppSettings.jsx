@@ -33,9 +33,9 @@ import {
   HistoryOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons';
+import { ipcRenderer } from 'electron';
 import Layout from '../../layouts/App';
 import APIKeyInput from '../../components/APIKeyInput/APIKeyInput';
-import { ipcRenderer } from 'electron';
 import gameService from '../../services/GameService';
 
 const { Title, Text, Paragraph } = Typography;
@@ -50,16 +50,19 @@ class AppSettings extends Component {
 
     // Load app settings from localStorage
     const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
-    
+
     this.state = {
       // Appearance
       theme: appSettings.theme || 'light',
       primaryColor: appSettings.primaryColor || '#1890ff',
       sidebarColor: appSettings.sidebarColor || '#001529',
       headerColor: appSettings.headerColor || '#001529',
-      backgroundGradient: appSettings.backgroundGradient || ['#3a7bd5', '#e5e5e5'],
+      backgroundGradient: appSettings.backgroundGradient || [
+        '#3a7bd5',
+        '#e5e5e5',
+      ],
       customCSS: appSettings.customCSS || '',
-      
+
       // General
       defaultPage: appSettings.defaultPage || 'dashboard',
       autoSave: appSettings.autoSave !== false,
@@ -67,24 +70,24 @@ class AppSettings extends Component {
       showNotifications: appSettings.showNotifications !== false,
       minimizeToTray: appSettings.minimizeToTray !== false,
       startMinimized: appSettings.startMinimized || false,
-      
+
       // Integrations
       trelloToken: localStorage.getItem('trelloToken') || '',
       trelloEnabled: appSettings.trelloEnabled !== false,
-      
+
       // Data & Storage
       dataPath: appSettings.dataPath || '',
       backupEnabled: appSettings.backupEnabled !== false,
       backupInterval: appSettings.backupInterval || 24,
       maxBackups: appSettings.maxBackups || 10,
-      
+
       // Advanced
       debugMode: appSettings.debugMode || false,
       devTools: appSettings.devTools || false,
-      
+
       // Game
       gameModeEnabled: appSettings.gameModeEnabled || false,
-      
+
       // UI State
       activeTab: 'appearance',
       saving: false,
@@ -98,7 +101,7 @@ class AppSettings extends Component {
         this.setState({ dataPath: path });
       }
     });
-    
+
     // Load game mode state
     ipcRenderer.invoke('game:getState').then((state) => {
       if (state) {
@@ -106,7 +109,7 @@ class AppSettings extends Component {
         gameService.setEnabled(state.isEnabled || false);
       }
     });
-    
+
     // Apply theme on mount
     this.applyTheme();
   }
@@ -116,17 +119,27 @@ class AppSettings extends Component {
     appSettings[key] = value;
     localStorage.setItem('appSettings', JSON.stringify(appSettings));
     this.setState({ [key]: value });
-    
+
     // Apply theme changes immediately
-    if (key === 'primaryColor' || key === 'sidebarColor' || key === 'headerColor' || key === 'backgroundGradient' || key === 'theme') {
+    if (
+      key === 'primaryColor' ||
+      key === 'sidebarColor' ||
+      key === 'headerColor' ||
+      key === 'backgroundGradient' ||
+      key === 'theme'
+    ) {
       this.applyTheme();
     }
-    
+
     // Update backup schedule when backup settings change
-    if (key === 'backupEnabled' || key === 'backupInterval' || key === 'maxBackups') {
+    if (
+      key === 'backupEnabled' ||
+      key === 'backupInterval' ||
+      key === 'maxBackups'
+    ) {
       this.updateBackupSchedule();
     }
-    
+
     // Update game service when game mode changes
     if (key === 'gameModeEnabled') {
       gameService.setEnabled(value);
@@ -137,19 +150,24 @@ class AppSettings extends Component {
       });
     }
   };
-  
+
   updateBackupSchedule = async () => {
     const { backupEnabled, backupInterval, maxBackups } = this.state;
-    
+
     if (backupEnabled && backupInterval && maxBackups) {
       // Get all projects and start/update backup schedules
       try {
-        const projects = await ipcRenderer.invoke('api:getProjects') || [];
+        const projects = (await ipcRenderer.invoke('api:getProjects')) || [];
         for (const project of projects) {
           const projectName = project.text || project.name || project;
           if (projectName && !projectName.startsWith('_')) {
             await ipcRenderer.invoke('backup:stopSchedule', projectName);
-            await ipcRenderer.invoke('backup:startSchedule', projectName, backupInterval, maxBackups);
+            await ipcRenderer.invoke(
+              'backup:startSchedule',
+              projectName,
+              backupInterval,
+              maxBackups,
+            );
           }
         }
       } catch (error) {
@@ -158,7 +176,7 @@ class AppSettings extends Component {
     } else {
       // Stop all backup schedules
       try {
-        const projects = await ipcRenderer.invoke('api:getProjects') || [];
+        const projects = (await ipcRenderer.invoke('api:getProjects')) || [];
         for (const project of projects) {
           const projectName = project.text || project.name || project;
           if (projectName && !projectName.startsWith('_')) {
@@ -172,20 +190,30 @@ class AppSettings extends Component {
   };
 
   applyTheme = () => {
-    const { primaryColor, sidebarColor, headerColor, backgroundGradient, theme } = this.state;
-    
+    const {
+      primaryColor,
+      sidebarColor,
+      headerColor,
+      backgroundGradient,
+      theme,
+    } = this.state;
+
     // Apply CSS variables
     document.documentElement.style.setProperty('--primary-color', primaryColor);
     document.documentElement.style.setProperty('--sidebar-color', sidebarColor);
     document.documentElement.style.setProperty('--header-color', headerColor);
-    
-    if (backgroundGradient && Array.isArray(backgroundGradient) && backgroundGradient.length >= 2) {
+
+    if (
+      backgroundGradient &&
+      Array.isArray(backgroundGradient) &&
+      backgroundGradient.length >= 2
+    ) {
       document.documentElement.style.setProperty(
         '--background-gradient',
-        `linear-gradient(to top, ${backgroundGradient[0]}, ${backgroundGradient[1]})`
+        `linear-gradient(to top, ${backgroundGradient[0]}, ${backgroundGradient[1]})`,
       );
     }
-    
+
     // Apply theme class
     document.body.className = document.body.className.replace(/theme-\w+/g, '');
     document.body.classList.add(`theme-${theme}`);
@@ -193,7 +221,7 @@ class AppSettings extends Component {
 
   handleSaveAll = () => {
     this.setState({ saving: true });
-    
+
     // Save all settings
     const appSettings = {
       theme: this.state.theme,
@@ -217,10 +245,10 @@ class AppSettings extends Component {
       devTools: this.state.devTools,
       gameModeEnabled: this.state.gameModeEnabled,
     };
-    
+
     localStorage.setItem('appSettings', JSON.stringify(appSettings));
     this.applyTheme();
-    
+
     setTimeout(() => {
       this.setState({ saving: false });
       message.success('Settings saved successfully!');
@@ -326,7 +354,9 @@ class AppSettings extends Component {
                       <Text strong>Primary Color</Text>
                       <Select
                         value={primaryColor}
-                        onChange={(value) => this.saveSetting('primaryColor', value)}
+                        onChange={(value) =>
+                          this.saveSetting('primaryColor', value)
+                        }
                         style={{ width: '100%' }}
                       >
                         <Option value="#1890ff">Blue (Default)</Option>
@@ -345,7 +375,9 @@ class AppSettings extends Component {
                       <Text strong>Sidebar Color</Text>
                       <Select
                         value={sidebarColor}
-                        onChange={(value) => this.saveSetting('sidebarColor', value)}
+                        onChange={(value) =>
+                          this.saveSetting('sidebarColor', value)
+                        }
                         style={{ width: '100%' }}
                       >
                         <Option value="#001529">Dark (Default)</Option>
@@ -362,7 +394,9 @@ class AppSettings extends Component {
                       <Text strong>Header Color</Text>
                       <Select
                         value={headerColor}
-                        onChange={(value) => this.saveSetting('headerColor', value)}
+                        onChange={(value) =>
+                          this.saveSetting('headerColor', value)
+                        }
                         style={{ width: '100%' }}
                       >
                         <Option value="#001529">Dark (Default)</Option>
@@ -381,7 +415,9 @@ class AppSettings extends Component {
                         <Text>Top:</Text>
                         <Select
                           value={backgroundGradient[0]}
-                          onChange={(value) => this.handleGradientChange(0, value)}
+                          onChange={(value) =>
+                            this.handleGradientChange(0, value)
+                          }
                           style={{ width: 150 }}
                         >
                           <Option value="#3a7bd5">Blue</Option>
@@ -400,7 +436,9 @@ class AppSettings extends Component {
                         <Text>Bottom:</Text>
                         <Select
                           value={backgroundGradient[1]}
-                          onChange={(value) => this.handleGradientChange(1, value)}
+                          onChange={(value) =>
+                            this.handleGradientChange(1, value)
+                          }
                           style={{ width: 150 }}
                         >
                           <Option value="#e5e5e5">Light Gray</Option>
@@ -424,12 +462,17 @@ class AppSettings extends Component {
                 <Divider />
                 <div>
                   <Text strong>Custom CSS</Text>
-                  <Paragraph type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
+                  <Paragraph
+                    type="secondary"
+                    style={{ fontSize: 12, marginTop: 4 }}
+                  >
                     Add custom CSS to override default styles
                   </Paragraph>
                   <TextArea
                     value={customCSS}
-                    onChange={(e) => this.saveSetting('customCSS', e.target.value)}
+                    onChange={(e) =>
+                      this.saveSetting('customCSS', e.target.value)
+                    }
                     rows={6}
                     placeholder="/* Your custom CSS here */"
                     style={{ fontFamily: 'monospace', marginTop: 8 }}
@@ -451,10 +494,19 @@ class AppSettings extends Component {
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <Card title="Startup & Navigation" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Default Page</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Page to open when app starts
                     </Paragraph>
                   </div>
@@ -469,57 +521,101 @@ class AppSettings extends Component {
                   </Select>
                 </div>
                 <Divider />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Start Minimized</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Start app in system tray
                     </Paragraph>
                   </div>
                   <Switch
                     checked={startMinimized}
-                    onChange={(checked) => this.saveSetting('startMinimized', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('startMinimized', checked)
+                    }
                   />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Minimize to Tray</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Minimize to system tray instead of taskbar
                     </Paragraph>
                   </div>
                   <Switch
                     checked={minimizeToTray}
-                    onChange={(checked) => this.saveSetting('minimizeToTray', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('minimizeToTray', checked)
+                    }
                   />
                 </div>
               </Space>
             </Card>
             <Card title="Auto-Save" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Enable Auto-Save</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Automatically save changes
                     </Paragraph>
                   </div>
                   <Switch
                     checked={autoSave}
-                    onChange={(checked) => this.saveSetting('autoSave', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('autoSave', checked)
+                    }
                   />
                 </div>
                 {autoSave && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <div>
                       <Text strong>Save Interval (seconds)</Text>
-                      <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                      <Paragraph
+                        type="secondary"
+                        style={{ margin: 0, fontSize: 12 }}
+                      >
                         How often to auto-save
                       </Paragraph>
                     </div>
                     <InputNumber
                       value={saveInterval}
-                      onChange={(value) => this.saveSetting('saveInterval', value)}
+                      onChange={(value) =>
+                        this.saveSetting('saveInterval', value)
+                      }
                       min={10}
                       max={3600}
                       step={10}
@@ -530,16 +626,27 @@ class AppSettings extends Component {
             </Card>
             <Card title="Notifications" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Show Notifications</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Enable desktop notifications
                     </Paragraph>
                   </div>
                   <Switch
                     checked={showNotifications}
-                    onChange={(checked) => this.saveSetting('showNotifications', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('showNotifications', checked)
+                    }
                   />
                 </div>
               </Space>
@@ -558,16 +665,27 @@ class AppSettings extends Component {
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <Card title="Trello" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Enable Trello Integration</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Sync with Trello boards
                     </Paragraph>
                   </div>
                   <Switch
                     checked={trelloEnabled}
-                    onChange={(checked) => this.saveSetting('trelloEnabled', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('trelloEnabled', checked)
+                    }
                   />
                 </div>
                 {trelloEnabled && (
@@ -608,7 +726,10 @@ class AppSettings extends Component {
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text strong>Data Path</Text>
-                  <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                  <Paragraph
+                    type="secondary"
+                    style={{ margin: 0, fontSize: 12 }}
+                  >
                     Location where project data is stored
                   </Paragraph>
                   <Input
@@ -633,44 +754,77 @@ class AppSettings extends Component {
             </Card>
             <Card title="Backups" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Enable Automatic Backups</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Automatically backup project data
                     </Paragraph>
                   </div>
                   <Switch
                     checked={backupEnabled}
-                    onChange={(checked) => this.saveSetting('backupEnabled', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('backupEnabled', checked)
+                    }
                   />
                 </div>
                 {backupEnabled && (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <div>
                         <Text strong>Backup Interval (hours)</Text>
-                        <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                        <Paragraph
+                          type="secondary"
+                          style={{ margin: 0, fontSize: 12 }}
+                        >
                           How often to create backups
                         </Paragraph>
                       </div>
                       <InputNumber
                         value={backupInterval}
-                        onChange={(value) => this.saveSetting('backupInterval', value)}
+                        onChange={(value) =>
+                          this.saveSetting('backupInterval', value)
+                        }
                         min={1}
                         max={168}
                       />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <div>
                         <Text strong>Maximum Backups</Text>
-                        <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                        <Paragraph
+                          type="secondary"
+                          style={{ margin: 0, fontSize: 12 }}
+                        >
                           Number of backups to keep
                         </Paragraph>
                       </div>
                       <InputNumber
                         value={maxBackups}
-                        onChange={(value) => this.saveSetting('maxBackups', value)}
+                        onChange={(value) =>
+                          this.saveSetting('maxBackups', value)
+                        }
                         min={1}
                         max={100}
                       />
@@ -681,15 +835,20 @@ class AppSettings extends Component {
                       onClick={async () => {
                         try {
                           // Get all projects and backup each
-                          const projects = await ipcRenderer.invoke('api:getProjects') || [];
+                          const projects =
+                            (await ipcRenderer.invoke('api:getProjects')) || [];
                           let successCount = 0;
                           let failCount = 0;
-                          
+
                           for (const project of projects) {
-                            const projectName = project.text || project.name || project;
+                            const projectName =
+                              project.text || project.name || project;
                             if (projectName && !projectName.startsWith('_')) {
                               try {
-                                const result = await ipcRenderer.invoke('backup:create', projectName);
+                                const result = await ipcRenderer.invoke(
+                                  'backup:create',
+                                  projectName,
+                                );
                                 if (result.success) {
                                   successCount++;
                                 } else {
@@ -700,12 +859,16 @@ class AppSettings extends Component {
                               }
                             }
                           }
-                          
+
                           if (successCount > 0) {
-                            message.success(`Created backups for ${successCount} project(s)`);
+                            message.success(
+                              `Created backups for ${successCount} project(s)`,
+                            );
                           }
                           if (failCount > 0) {
-                            message.warning(`Failed to backup ${failCount} project(s)`);
+                            message.warning(
+                              `Failed to backup ${failCount} project(s)`,
+                            );
                           }
                         } catch (error) {
                           message.error('Error creating backups');
@@ -742,33 +905,68 @@ class AppSettings extends Component {
                   showIcon
                   style={{ marginBottom: 16 }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Enable Game Mode</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Turn on rewards and gamification features
                     </Paragraph>
                   </div>
                   <Switch
                     checked={gameModeEnabled}
-                    onChange={(checked) => this.saveSetting('gameModeEnabled', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('gameModeEnabled', checked)
+                    }
                   />
                 </div>
                 {gameModeEnabled && (
-                  <Card size="small" style={{ marginTop: 16, background: '#f0f2f5' }}>
+                  <Card
+                    size="small"
+                    style={{ marginTop: 16, background: '#f0f2f5' }}
+                  >
                     <Space direction="vertical" style={{ width: '100%' }}>
                       <Text strong>Current Stats</Text>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                        }}
+                      >
                         <Text>Gold:</Text>
-                        <Text strong>{gameService.getInventory().gold.toFixed(2)}</Text>
+                        <Text strong>
+                          {gameService.getInventory().gold.toFixed(2)}
+                        </Text>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                        }}
+                      >
                         <Text>Total Sessions:</Text>
-                        <Text strong>{gameService.getStats().totalSessions}</Text>
+                        <Text strong>
+                          {gameService.getStats().totalSessions}
+                        </Text>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                        }}
+                      >
                         <Text>Tasks Completed:</Text>
-                        <Text strong>{gameService.getStats().totalTasksCompleted}</Text>
+                        <Text strong>
+                          {gameService.getStats().totalTasksCompleted}
+                        </Text>
                       </div>
                     </Space>
                   </Card>
@@ -789,33 +987,59 @@ class AppSettings extends Component {
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <Card title="Developer Options" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Debug Mode</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Enable debug logging
                     </Paragraph>
                   </div>
                   <Switch
                     checked={debugMode}
-                    onChange={(checked) => this.saveSetting('debugMode', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('debugMode', checked)
+                    }
                   />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Developer Tools</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Enable DevTools menu
                     </Paragraph>
                   </div>
                   <Switch
                     checked={devTools}
-                    onChange={(checked) => this.saveSetting('devTools', checked)}
+                    onChange={(checked) =>
+                      this.saveSetting('devTools', checked)
+                    }
                   />
                 </div>
               </Space>
             </Card>
-            <Card title="Danger Zone" size="small" style={{ borderColor: '#ff4d4f' }}>
+            <Card
+              title="Danger Zone"
+              size="small"
+              style={{ borderColor: '#ff4d4f' }}
+            >
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Alert
                   message="Reset All Settings"
@@ -839,7 +1063,13 @@ class AppSettings extends Component {
       <Layout>
         <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <Title level={2} style={{ margin: 0 }}>
                 <SettingOutlined /> App Settings
               </Title>
@@ -857,7 +1087,7 @@ class AppSettings extends Component {
                 </Button>
               </Space>
             </div>
-            
+
             <Tabs
               activeKey={activeTab}
               onChange={(key) => this.setState({ activeTab: key })}
@@ -907,7 +1137,11 @@ class BackupManager extends Component {
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          const result = await ipcRenderer.invoke('backup:restore', backup.path, backup.projectName);
+          const result = await ipcRenderer.invoke(
+            'backup:restore',
+            backup.path,
+            backup.projectName,
+          );
           if (result.success) {
             message.success('Backup restored successfully');
             this.loadBackups();
@@ -940,7 +1174,7 @@ class BackupManager extends Component {
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
   };
 
   render() {
@@ -988,11 +1222,7 @@ class BackupManager extends Component {
               okText="Yes"
               cancelText="No"
             >
-              <Button
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-              >
+              <Button danger size="small" icon={<DeleteOutlined />}>
                 Delete
               </Button>
             </Popconfirm>
@@ -1003,7 +1233,13 @@ class BackupManager extends Component {
 
     return (
       <Space direction="vertical" style={{ width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <Text strong>Available Backups</Text>
           <Button icon={<HistoryOutlined />} onClick={this.loadBackups}>
             Refresh

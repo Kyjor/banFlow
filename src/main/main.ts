@@ -174,9 +174,13 @@ function handleOAuthCallback(url: string) {
       const code = urlObj.searchParams.get('code');
       const state = urlObj.searchParams.get('state');
       const error = urlObj.searchParams.get('error');
-      
+
       if (mainWindow) {
-        mainWindow.webContents.send('github:oauth-callback', { code, state, error });
+        mainWindow.webContents.send('github:oauth-callback', {
+          code,
+          state,
+          error,
+        });
       }
     }
   } catch (error) {
@@ -201,9 +205,9 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
-    
+
     // Check for OAuth callback in command line
-    const url = commandLine.find(arg => arg.startsWith('banflow://'));
+    const url = commandLine.find((arg) => arg.startsWith('banflow://'));
     if (url) {
       handleOAuthCallback(url);
     }
@@ -231,13 +235,19 @@ app
           const code = url.searchParams.get('code');
           const state = url.searchParams.get('state');
           const error = url.searchParams.get('error');
-          
+
           if (mainWindow) {
-            mainWindow.webContents.send('github:oauth-callback', { code, state, error });
+            mainWindow.webContents.send('github:oauth-callback', {
+              code,
+              state,
+              error,
+            });
           }
-          
+
           res.writeHead(200, { 'Content-Type': 'text/html' });
-          res.end('<html><body><h1>Authorization complete!</h1><p>You can close this window and return to banFlow.</p></body></html>');
+          res.end(
+            '<html><body><h1>Authorization complete!</h1><p>You can close this window and return to banFlow.</p></body></html>',
+          );
         } else {
           res.writeHead(404);
           res.end('Not found');
@@ -248,14 +258,18 @@ app
         res.end('<html><body>Error processing authorization.</body></html>');
       }
     });
-    
+
     oauthServer.listen(OAUTH_PORT, 'localhost', () => {
-      console.log(`OAuth callback server listening on http://localhost:${OAUTH_PORT}`);
+      console.log(
+        `OAuth callback server listening on http://localhost:${OAUTH_PORT}`,
+      );
     });
-    
+
     oauthServer.on('error', (err: any) => {
       if (err.code === 'EADDRINUSE') {
-        console.log(`Port ${OAUTH_PORT} already in use, OAuth server may already be running`);
+        console.log(
+          `Port ${OAUTH_PORT} already in use, OAuth server may already be running`,
+        );
       } else {
         console.error('OAuth server error:', err);
       }
@@ -270,15 +284,25 @@ app
           const code = url.searchParams.get('code');
           const state = url.searchParams.get('state');
           const error = url.searchParams.get('error');
-          
+
           if (mainWindow) {
-            mainWindow.webContents.send('github:oauth-callback', { code, state, error });
+            mainWindow.webContents.send('github:oauth-callback', {
+              code,
+              state,
+              error,
+            });
           }
         }
-        callback({ mimeType: 'text/html', data: '<html><body>Authorization complete. You can close this window.</body></html>' });
+        callback({
+          mimeType: 'text/html',
+          data: '<html><body>Authorization complete. You can close this window.</body></html>',
+        });
       } catch (error) {
         console.error('Error handling OAuth callback:', error);
-        callback({ mimeType: 'text/html', data: '<html><body>Error processing authorization.</body></html>' });
+        callback({
+          mimeType: 'text/html',
+          data: '<html><body>Error processing authorization.</body></html>',
+        });
       }
     });
 
@@ -286,7 +310,9 @@ app
     const protocolRegistered = app.setAsDefaultProtocolClient('banflow');
     console.log('Protocol client registration result:', protocolRegistered);
     if (!app.isDefaultProtocolClient('banflow')) {
-      console.log('Warning: App is not the default protocol client for banflow://');
+      console.log(
+        'Warning: App is not the default protocol client for banflow://',
+      );
     }
 
     installExtension(REACT_DEVELOPER_TOOLS)
@@ -302,7 +328,7 @@ app
     ipcMain.handle('api:setProjectState', setProjectState);
     ipcMain.handle('api:createNode', createNode);
     ipcMain.handle('api:initializeProjectState', initializeProjectState);
-    
+
     // Initialize backup schedules after a short delay to ensure everything is loaded
     setTimeout(() => {
       const fs = require('fs');
@@ -311,7 +337,11 @@ app
       if (fs.existsSync(projectsDir)) {
         const files = fs.readdirSync(projectsDir);
         files.forEach((file: string) => {
-          if (file.endsWith('.json') && !file.startsWith('_') && file !== 'appSettings.json') {
+          if (
+            file.endsWith('.json') &&
+            !file.startsWith('_') &&
+            file !== 'appSettings.json'
+          ) {
             const projectName = file.replace('.json', '');
             // Default settings: enabled, 24 hours, 10 backups
             // The renderer will update these when settings are loaded
@@ -320,13 +350,16 @@ app
         });
       }
     }, 2000);
-    
+
     // Game state IPC handlers
     ipcMain.handle('game:getState', async () => {
       try {
         const fs = require('fs');
         const path = require('path');
-        const gameStatePath = path.join(__dirname, '../../banFlowProjects/_gameState.json');
+        const gameStatePath = path.join(
+          __dirname,
+          '../../banFlowProjects/_gameState.json',
+        );
         if (fs.existsSync(gameStatePath)) {
           const data = fs.readFileSync(gameStatePath, 'utf8');
           return JSON.parse(data);
@@ -337,7 +370,7 @@ app
         return null;
       }
     });
-    
+
     ipcMain.handle('game:saveState', async (event, state) => {
       try {
         const fs = require('fs');
@@ -526,7 +559,10 @@ ipcMain.on('api:getNodesWithQuery', (event, query) => {
     return;
   }
   try {
-    event.returnValue = NodeService.getNodesWithQuery(currentLokiService, query);
+    event.returnValue = NodeService.getNodesWithQuery(
+      currentLokiService,
+      query,
+    );
   } catch (error) {
     console.error('Error in api:getNodesWithQuery:', error);
     event.returnValue = {};
@@ -773,53 +809,63 @@ ipcMain.on('api:getProjectSettings', (event) => {
   event.returnValue = ProjectService.getProjectSettings(currentLokiService);
 });
 
-ipcMain.handle('api:updateProjectSettings', async (event, projectName: string, settings: any) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const Loki = require('lokijs');
-    
-    const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
-      ? projectName
-      : path.join(__dirname, '../../banFlowProjects', `${projectName}.json`);
-    
-    return new Promise((resolve, reject) => {
-      const db = new Loki(projectPath, {
-        autoload: true,
-        autosave: true,
-        verbose: false,
-        autoloadCallback: () => {
-          try {
-            let projectSettings = db.getCollection('projectSettings');
-            if (!projectSettings) {
-              projectSettings = db.addCollection('projectSettings');
-            }
-            
-            const existing = projectSettings.findOne({});
-            if (existing) {
-              projectSettings.update({ ...existing, ...settings });
-            } else {
-              projectSettings.insert(settings);
-            }
-            
-            db.saveDatabase((err) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve({ success: true });
+ipcMain.handle(
+  'api:updateProjectSettings',
+  async (event, projectName: string, settings: any) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const Loki = require('lokijs');
+
+      const projectPath =
+        projectName.includes('/') ||
+        projectName.includes('\\') ||
+        projectName.includes(':')
+          ? projectName
+          : path.join(
+              __dirname,
+              '../../banFlowProjects',
+              `${projectName}.json`,
+            );
+
+      return new Promise((resolve, reject) => {
+        const db = new Loki(projectPath, {
+          autoload: true,
+          autosave: true,
+          verbose: false,
+          autoloadCallback: () => {
+            try {
+              let projectSettings = db.getCollection('projectSettings');
+              if (!projectSettings) {
+                projectSettings = db.addCollection('projectSettings');
               }
-            });
-          } catch (error) {
-            reject(error);
-          }
-        },
+
+              const existing = projectSettings.findOne({});
+              if (existing) {
+                projectSettings.update({ ...existing, ...settings });
+              } else {
+                projectSettings.insert(settings);
+              }
+
+              db.saveDatabase((err) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve({ success: true });
+                }
+              });
+            } catch (error) {
+              reject(error);
+            }
+          },
+        });
       });
-    });
-  } catch (error) {
-    console.error('Error updating project settings:', error);
-    throw error;
-  }
-});
+    } catch (error) {
+      console.error('Error updating project settings:', error);
+      throw error;
+    }
+  },
+);
 
 ipcMain.handle('app:getDataPath', async () => {
   const path = require('path');
@@ -836,13 +882,18 @@ ipcMain.handle('app:openDataPath', async () => {
 
 // ==================== BACKUP & RECOVERY SYSTEM ====================
 
-let backupIntervals: Map<string, NodeJS.Timeout> = new Map();
-let backupTimers: Map<string, NodeJS.Timeout> = new Map();
+const backupIntervals: Map<string, NodeJS.Timeout> = new Map();
+const backupTimers: Map<string, NodeJS.Timeout> = new Map();
 
 const getBackupPath = (projectName: string) => {
   const fs = require('fs');
   const path = require('path');
-  const backupDir = path.join(__dirname, '../../banFlowProjects', '_backups', projectName);
+  const backupDir = path.join(
+    __dirname,
+    '../../banFlowProjects',
+    '_backups',
+    projectName,
+  );
   if (!fs.existsSync(backupDir)) {
     fs.mkdirSync(backupDir, { recursive: true });
   }
@@ -862,36 +913,45 @@ const getAllBackupsPath = () => {
 const createBackup = async (projectName: string): Promise<string> => {
   const fs = require('fs');
   const path = require('path');
-  
+
   try {
-    const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
-      ? projectName
-      : path.join(__dirname, '../../banFlowProjects', `${projectName}.json`);
-    
+    const projectPath =
+      projectName.includes('/') ||
+      projectName.includes('\\') ||
+      projectName.includes(':')
+        ? projectName
+        : path.join(__dirname, '../../banFlowProjects', `${projectName}.json`);
+
     if (!fs.existsSync(projectPath)) {
       throw new Error(`Project file not found: ${projectPath}`);
     }
-    
+
     const backupDir = getBackupPath(projectName);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupFileName = `${projectName}_${timestamp}.json`;
     const backupPath = path.join(backupDir, backupFileName);
-    
+
     // Copy the project file
     fs.copyFileSync(projectPath, backupPath);
-    
+
     // Also backup associated folders (docs, images, diagrams) if they exist
     const projectBasePath = path.dirname(projectPath);
     const projectFolderName = path.basename(projectPath, '.json');
     const projectFolder = path.join(projectBasePath, projectFolderName);
-    
-    if (fs.existsSync(projectFolder) && fs.statSync(projectFolder).isDirectory()) {
-      const backupProjectFolder = path.join(backupDir, `${projectFolderName}_${timestamp}`);
+
+    if (
+      fs.existsSync(projectFolder) &&
+      fs.statSync(projectFolder).isDirectory()
+    ) {
+      const backupProjectFolder = path.join(
+        backupDir,
+        `${projectFolderName}_${timestamp}`,
+      );
       if (fs.existsSync(backupProjectFolder)) {
         fs.rmSync(backupProjectFolder, { recursive: true, force: true });
       }
       fs.mkdirSync(backupProjectFolder, { recursive: true });
-      
+
       // Copy all subdirectories
       const copyDir = (src: string, dest: string) => {
         if (!fs.existsSync(dest)) {
@@ -908,10 +968,10 @@ const createBackup = async (projectName: string): Promise<string> => {
           }
         }
       };
-      
+
       copyDir(projectFolder, backupProjectFolder);
     }
-    
+
     return backupPath;
   } catch (error) {
     console.error('Error creating backup:', error);
@@ -922,13 +982,13 @@ const createBackup = async (projectName: string): Promise<string> => {
 const cleanupOldBackups = async (projectName: string, maxBackups: number) => {
   const fs = require('fs');
   const path = require('path');
-  
+
   try {
     const backupDir = getBackupPath(projectName);
     if (!fs.existsSync(backupDir)) {
       return;
     }
-    
+
     const files = fs.readdirSync(backupDir);
     const backupFiles = files
       .filter((file: string) => file.endsWith('.json'))
@@ -942,7 +1002,7 @@ const cleanupOldBackups = async (projectName: string, maxBackups: number) => {
         };
       })
       .sort((a: any, b: any) => b.created.getTime() - a.created.getTime());
-    
+
     // Keep only the most recent maxBackups
     if (backupFiles.length > maxBackups) {
       const toDelete = backupFiles.slice(maxBackups);
@@ -952,7 +1012,10 @@ const cleanupOldBackups = async (projectName: string, maxBackups: number) => {
           // Also delete associated folder if it exists
           const folderName = backup.name.replace('.json', '');
           const folderPath = path.join(backupDir, folderName);
-          if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+          if (
+            fs.existsSync(folderPath) &&
+            fs.statSync(folderPath).isDirectory()
+          ) {
             fs.rmSync(folderPath, { recursive: true, force: true });
           }
         } catch (err) {
@@ -965,14 +1028,18 @@ const cleanupOldBackups = async (projectName: string, maxBackups: number) => {
   }
 };
 
-const startBackupSchedule = (projectName: string, intervalHours: number, maxBackups: number) => {
+const startBackupSchedule = (
+  projectName: string,
+  intervalHours: number,
+  maxBackups: number,
+) => {
   // Clear existing interval if any
   if (backupIntervals.has(projectName)) {
     clearInterval(backupIntervals.get(projectName)!);
   }
-  
+
   const intervalMs = intervalHours * 60 * 60 * 1000;
-  
+
   const performBackup = async () => {
     try {
       await createBackup(projectName);
@@ -982,10 +1049,10 @@ const startBackupSchedule = (projectName: string, intervalHours: number, maxBack
       console.error(`Error in scheduled backup for ${projectName}:`, error);
     }
   };
-  
+
   // Perform initial backup
   performBackup();
-  
+
   // Schedule recurring backups
   const interval = setInterval(performBackup, intervalMs);
   backupIntervals.set(projectName, interval);
@@ -1009,43 +1076,48 @@ ipcMain.handle('backup:create', async (event, projectName: string) => {
   }
 });
 
-ipcMain.handle('backup:list', async (event, projectName: string | null = null) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    if (projectName) {
-      const backupDir = getBackupPath(projectName);
-      if (!fs.existsSync(backupDir)) {
-        return [];
+ipcMain.handle(
+  'backup:list',
+  async (event, projectName: string | null = null) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      if (projectName) {
+        const backupDir = getBackupPath(projectName);
+        if (!fs.existsSync(backupDir)) {
+          return [];
+        }
+
+        const files = fs.readdirSync(backupDir);
+        return files
+          .filter((file: string) => file.endsWith('.json'))
+          .map((file: string) => {
+            const filePath = path.join(backupDir, file);
+            const stats = fs.statSync(filePath);
+            return {
+              name: file,
+              path: filePath,
+              projectName,
+              size: stats.size,
+              created: stats.birthtime.toISOString(),
+              modified: stats.mtime.toISOString(),
+            };
+          })
+          .sort(
+            (a: any, b: any) =>
+              new Date(b.created).getTime() - new Date(a.created).getTime(),
+          );
       }
-      
-      const files = fs.readdirSync(backupDir);
-      return files
-        .filter((file: string) => file.endsWith('.json'))
-        .map((file: string) => {
-          const filePath = path.join(backupDir, file);
-          const stats = fs.statSync(filePath);
-          return {
-            name: file,
-            path: filePath,
-            projectName,
-            size: stats.size,
-            created: stats.birthtime.toISOString(),
-            modified: stats.mtime.toISOString(),
-          };
-        })
-        .sort((a: any, b: any) => new Date(b.created).getTime() - new Date(a.created).getTime());
-    } else {
       // List all backups
       const allBackupsDir = getAllBackupsPath();
       if (!fs.existsSync(allBackupsDir)) {
         return [];
       }
-      
+
       const projects = fs.readdirSync(allBackupsDir);
       const allBackups: any[] = [];
-      
+
       for (const project of projects) {
         const projectBackupDir = path.join(allBackupsDir, project);
         if (fs.statSync(projectBackupDir).isDirectory()) {
@@ -1066,106 +1138,125 @@ ipcMain.handle('backup:list', async (event, projectName: string | null = null) =
             });
         }
       }
-      
-      return allBackups.sort((a: any, b: any) => new Date(b.created).getTime() - new Date(a.created).getTime());
-    }
-  } catch (error) {
-    console.error('Error listing backups:', error);
-    return [];
-  }
-});
 
-ipcMain.handle('backup:restore', async (event, backupPath: string, projectName: string) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    if (!fs.existsSync(backupPath)) {
-      throw new Error(`Backup file not found: ${backupPath}`);
-    }
-    
-    const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
-      ? projectName
-      : path.join(__dirname, '../../banFlowProjects', `${projectName}.json`);
-    
-    // Create a safety backup before restoring
-    const safetyBackupPath = `${projectPath}.pre-restore-${Date.now()}`;
-    if (fs.existsSync(projectPath)) {
-      fs.copyFileSync(projectPath, safetyBackupPath);
-    }
-    
-    try {
-      // Restore the main project file
-      fs.copyFileSync(backupPath, projectPath);
-      
-      // Restore associated folders if they exist in the backup
-      const backupDir = path.dirname(backupPath);
-      const backupFileName = path.basename(backupPath, '.json');
-      const backupProjectFolder = path.join(backupDir, backupFileName);
-      
-      if (fs.existsSync(backupProjectFolder) && fs.statSync(backupProjectFolder).isDirectory()) {
-        const projectBasePath = path.dirname(projectPath);
-        const projectFolderName = path.basename(projectPath, '.json');
-        const projectFolder = path.join(projectBasePath, projectFolderName);
-        
-        // Remove existing project folder
-        if (fs.existsSync(projectFolder)) {
-          fs.rmSync(projectFolder, { recursive: true, force: true });
-        }
-        
-        // Copy backup folder
-        const copyDir = (src: string, dest: string) => {
-          if (!fs.existsSync(dest)) {
-            fs.mkdirSync(dest, { recursive: true });
-          }
-          const entries = fs.readdirSync(src, { withFileTypes: true });
-          for (const entry of entries) {
-            const srcPath = path.join(src, entry.name);
-            const destPath = path.join(dest, entry.name);
-            if (entry.isDirectory()) {
-              copyDir(srcPath, destPath);
-            } else {
-              fs.copyFileSync(srcPath, destPath);
-            }
-          }
-        };
-        
-        copyDir(backupProjectFolder, projectFolder);
-      }
-      
-      return { success: true, safetyBackup: safetyBackupPath };
+      return allBackups.sort(
+        (a: any, b: any) =>
+          new Date(b.created).getTime() - new Date(a.created).getTime(),
+      );
     } catch (error) {
-      // Restore safety backup if restore failed
-      if (fs.existsSync(safetyBackupPath)) {
-        fs.copyFileSync(safetyBackupPath, projectPath);
-      }
-      throw error;
+      console.error('Error listing backups:', error);
+      return [];
     }
-  } catch (error) {
-    console.error('Error restoring backup:', error);
-    return { success: false, error: error.message };
-  }
-});
+  },
+);
+
+ipcMain.handle(
+  'backup:restore',
+  async (event, backupPath: string, projectName: string) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      if (!fs.existsSync(backupPath)) {
+        throw new Error(`Backup file not found: ${backupPath}`);
+      }
+
+      const projectPath =
+        projectName.includes('/') ||
+        projectName.includes('\\') ||
+        projectName.includes(':')
+          ? projectName
+          : path.join(
+              __dirname,
+              '../../banFlowProjects',
+              `${projectName}.json`,
+            );
+
+      // Create a safety backup before restoring
+      const safetyBackupPath = `${projectPath}.pre-restore-${Date.now()}`;
+      if (fs.existsSync(projectPath)) {
+        fs.copyFileSync(projectPath, safetyBackupPath);
+      }
+
+      try {
+        // Restore the main project file
+        fs.copyFileSync(backupPath, projectPath);
+
+        // Restore associated folders if they exist in the backup
+        const backupDir = path.dirname(backupPath);
+        const backupFileName = path.basename(backupPath, '.json');
+        const backupProjectFolder = path.join(backupDir, backupFileName);
+
+        if (
+          fs.existsSync(backupProjectFolder) &&
+          fs.statSync(backupProjectFolder).isDirectory()
+        ) {
+          const projectBasePath = path.dirname(projectPath);
+          const projectFolderName = path.basename(projectPath, '.json');
+          const projectFolder = path.join(projectBasePath, projectFolderName);
+
+          // Remove existing project folder
+          if (fs.existsSync(projectFolder)) {
+            fs.rmSync(projectFolder, { recursive: true, force: true });
+          }
+
+          // Copy backup folder
+          const copyDir = (src: string, dest: string) => {
+            if (!fs.existsSync(dest)) {
+              fs.mkdirSync(dest, { recursive: true });
+            }
+            const entries = fs.readdirSync(src, { withFileTypes: true });
+            for (const entry of entries) {
+              const srcPath = path.join(src, entry.name);
+              const destPath = path.join(dest, entry.name);
+              if (entry.isDirectory()) {
+                copyDir(srcPath, destPath);
+              } else {
+                fs.copyFileSync(srcPath, destPath);
+              }
+            }
+          };
+
+          copyDir(backupProjectFolder, projectFolder);
+        }
+
+        return { success: true, safetyBackup: safetyBackupPath };
+      } catch (error) {
+        // Restore safety backup if restore failed
+        if (fs.existsSync(safetyBackupPath)) {
+          fs.copyFileSync(safetyBackupPath, projectPath);
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error restoring backup:', error);
+      return { success: false, error: error.message };
+    }
+  },
+);
 
 ipcMain.handle('backup:delete', async (event, backupPath: string) => {
   try {
     const fs = require('fs');
     const path = require('path');
-    
+
     if (!fs.existsSync(backupPath)) {
       throw new Error(`Backup file not found: ${backupPath}`);
     }
-    
+
     fs.unlinkSync(backupPath);
-    
+
     // Also delete associated folder if it exists
     const backupDir = path.dirname(backupPath);
     const backupFileName = path.basename(backupPath, '.json');
     const backupProjectFolder = path.join(backupDir, backupFileName);
-    if (fs.existsSync(backupProjectFolder) && fs.statSync(backupProjectFolder).isDirectory()) {
+    if (
+      fs.existsSync(backupProjectFolder) &&
+      fs.statSync(backupProjectFolder).isDirectory()
+    ) {
       fs.rmSync(backupProjectFolder, { recursive: true, force: true });
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error('Error deleting backup:', error);
@@ -1173,15 +1264,23 @@ ipcMain.handle('backup:delete', async (event, backupPath: string) => {
   }
 });
 
-ipcMain.handle('backup:startSchedule', async (event, projectName: string, intervalHours: number, maxBackups: number) => {
-  try {
-    startBackupSchedule(projectName, intervalHours, maxBackups);
-    return { success: true };
-  } catch (error) {
-    console.error('Error starting backup schedule:', error);
-    return { success: false, error: error.message };
-  }
-});
+ipcMain.handle(
+  'backup:startSchedule',
+  async (
+    event,
+    projectName: string,
+    intervalHours: number,
+    maxBackups: number,
+  ) => {
+    try {
+      startBackupSchedule(projectName, intervalHours, maxBackups);
+      return { success: true };
+    } catch (error) {
+      console.error('Error starting backup schedule:', error);
+      return { success: false, error: error.message };
+    }
+  },
+);
 
 ipcMain.handle('backup:stopSchedule', async (event, projectName: string) => {
   try {
@@ -1198,7 +1297,7 @@ ipcMain.handle('backup:stopSchedule', async (event, projectName: string) => {
 const initializeBackupSchedules = () => {
   const fs = require('fs');
   const path = require('path');
-  
+
   // Try to load settings from localStorage (stored in renderer)
   // For now, we'll initialize based on default settings
   // The renderer will update schedules when settings change
@@ -1206,7 +1305,11 @@ const initializeBackupSchedules = () => {
   if (fs.existsSync(projectsDir)) {
     const files = fs.readdirSync(projectsDir);
     files.forEach((file: string) => {
-      if (file.endsWith('.json') && !file.startsWith('_') && file !== 'appSettings.json') {
+      if (
+        file.endsWith('.json') &&
+        !file.startsWith('_') &&
+        file !== 'appSettings.json'
+      ) {
         const projectName = file.replace('.json', '');
         // Default settings: enabled, 24 hours, 10 backups
         // The renderer will update these when settings are loaded
@@ -1276,13 +1379,16 @@ const initializeProjectState = (_event: any, projectName: any) => {
   if (currentLokiService) {
     gitRepositoryService = new GitRepositoryService(currentLokiService);
     gitService.setProjectContext(projectName, gitRepositoryService);
-    
+
     // Load project repositories
-    gitService.loadProjectRepositories().then(() => {
-      console.log('Project repositories loaded for:', projectName);
-    }).catch(error => {
-      console.error('Error loading project repositories:', error);
-    });
+    gitService
+      .loadProjectRepositories()
+      .then(() => {
+        console.log('Project repositories loaded for:', projectName);
+      })
+      .catch((error) => {
+        console.error('Error loading project repositories:', error);
+      });
   }
 
   if (mainWindow) {
@@ -1617,7 +1723,7 @@ ipcMain.handle('git:selectDirectory', async () => {
   const { dialog } = require('electron');
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory', 'createDirectory'],
-    title: 'Select Directory'
+    title: 'Select Directory',
   });
   if (result.canceled || result.filePaths.length === 0) {
     return null;
@@ -1638,9 +1744,9 @@ ipcMain.handle('git:selectRepository', async () => {
   try {
     const result = dialog.showOpenDialogSync(mainWindow, {
       properties: ['openDirectory'],
-      title: 'Select Git Repository Folder'
+      title: 'Select Git Repository Folder',
     });
-    
+
     if (result && result.length > 0) {
       return result[0];
     }
@@ -1685,20 +1791,20 @@ ipcMain.handle('git:startOAuthFlow', async () => {
     const state = gitService.generateOAuthState();
     const { codeVerifier, codeChallenge } = gitService.generatePKCE();
     const authUrl = gitService.getOAuthUrl(state, codeChallenge);
-    
+
     console.log('Generated OAuth URL:', authUrl);
-    
+
     // Store state and codeVerifier temporarily (in memory)
     // In production, you'd want to store this more securely
     (gitService as any).pendingOAuth = { state, codeVerifier };
-    
+
     // Open browser with the OAuth URL
     console.log('Opening browser with URL:', authUrl);
     log.info('Opening OAuth URL in browser:', authUrl);
     const result = await shell.openExternal(authUrl);
     console.log('shell.openExternal result:', result);
     log.info('Browser opened successfully');
-    
+
     return { state, authUrl };
   } catch (error) {
     console.error('Failed to start OAuth flow:', error);
@@ -1713,12 +1819,16 @@ ipcMain.handle('git:completeOAuthFlow', async (event, code, state) => {
     if (!pending || pending.state !== state) {
       throw new Error('Invalid OAuth state');
     }
-    
-    const token = await gitService.exchangeOAuthCode(code, pending.codeVerifier, state);
-    
+
+    const token = await gitService.exchangeOAuthCode(
+      code,
+      pending.codeVerifier,
+      state,
+    );
+
     // Clear pending OAuth
     delete (gitService as any).pendingOAuth;
-    
+
     // Authenticate with the token
     return await gitService.authenticateGitHub(token);
   } catch (error) {
@@ -1759,15 +1869,18 @@ ipcMain.handle('dashboard:loadProjectData', async (event, projectName) => {
   try {
     const fs = require('fs');
     const Loki = require('lokijs');
-    
-    const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
-      ? projectName
-      : `../banFlowProjects/${projectName}.json`;
-    
+
+    const projectPath =
+      projectName.includes('/') ||
+      projectName.includes('\\') ||
+      projectName.includes(':')
+        ? projectName
+        : `../banFlowProjects/${projectName}.json`;
+
     if (!fs.existsSync(projectPath)) {
       throw new Error(`Project file not found: ${projectPath}`);
     }
-    
+
     return new Promise((resolve, reject) => {
       const db = new Loki(projectPath, {
         autoload: true,
@@ -1780,7 +1893,7 @@ ipcMain.handle('dashboard:loadProjectData', async (event, projectName) => {
             const parentOrder = db.getCollection('parentOrder');
             const iterations = db.getCollection('iterations');
             const tags = db.getCollection('tags');
-            
+
             const projectData = {
               projectName: projectName.replace('.json', ''),
               nodes: nodes ? nodes.data : [],
@@ -1789,7 +1902,7 @@ ipcMain.handle('dashboard:loadProjectData', async (event, projectName) => {
               iterations: iterations ? iterations.data : [],
               tags: tags ? tags.data : [],
             };
-            
+
             resolve(projectData);
           } catch (error) {
             reject(error);
@@ -1803,79 +1916,85 @@ ipcMain.handle('dashboard:loadProjectData', async (event, projectName) => {
   }
 });
 
-ipcMain.handle('dashboard:loadMultipleProjectsData', async (event, projectNames) => {
-  try {
-    const fs = require('fs');
-    const Loki = require('lokijs');
-    
-    const loadProject = (projectName) => {
-      return new Promise((resolve) => {
-        try {
-          const projectPath = projectName.includes('/') || projectName.includes('\\') || projectName.includes(':')
-            ? projectName
-            : `../banFlowProjects/${projectName}.json`;
-          
-          if (!fs.existsSync(projectPath)) {
+ipcMain.handle(
+  'dashboard:loadMultipleProjectsData',
+  async (event, projectNames) => {
+    try {
+      const fs = require('fs');
+      const Loki = require('lokijs');
+
+      const loadProject = (projectName) => {
+        return new Promise((resolve) => {
+          try {
+            const projectPath =
+              projectName.includes('/') ||
+              projectName.includes('\\') ||
+              projectName.includes(':')
+                ? projectName
+                : `../banFlowProjects/${projectName}.json`;
+
+            if (!fs.existsSync(projectPath)) {
+              resolve(null);
+              return;
+            }
+
+            const db = new Loki(projectPath, {
+              autoload: true,
+              autosave: false,
+              verbose: false,
+              autoloadCallback: () => {
+                try {
+                  const nodes = db.getCollection('nodes');
+                  const parents = db.getCollection('parents');
+                  const parentOrder = db.getCollection('parentOrder');
+                  const iterations = db.getCollection('iterations');
+                  const tags = db.getCollection('tags');
+
+                  resolve({
+                    projectName: projectName.replace('.json', ''),
+                    nodes: nodes ? nodes.data : [],
+                    parents: parents ? parents.data : [],
+                    parentOrder: parentOrder ? parentOrder.data : [],
+                    iterations: iterations ? iterations.data : [],
+                    tags: tags ? tags.data : [],
+                  });
+                } catch (err) {
+                  console.error(`Error processing ${projectName}:`, err);
+                  resolve(null);
+                }
+              },
+            });
+          } catch (error) {
+            console.error(`Error loading project ${projectName}:`, error);
             resolve(null);
-            return;
           }
-          
-          const db = new Loki(projectPath, {
-            autoload: true,
-            autosave: false,
-            verbose: false,
-            autoloadCallback: () => {
-              try {
-                const nodes = db.getCollection('nodes');
-                const parents = db.getCollection('parents');
-                const parentOrder = db.getCollection('parentOrder');
-                const iterations = db.getCollection('iterations');
-                const tags = db.getCollection('tags');
-                
-                resolve({
-                  projectName: projectName.replace('.json', ''),
-                  nodes: nodes ? nodes.data : [],
-                  parents: parents ? parents.data : [],
-                  parentOrder: parentOrder ? parentOrder.data : [],
-                  iterations: iterations ? iterations.data : [],
-                  tags: tags ? tags.data : [],
-                });
-              } catch (err) {
-                console.error(`Error processing ${projectName}:`, err);
-                resolve(null);
-              }
-            },
-          });
-        } catch (error) {
-          console.error(`Error loading project ${projectName}:`, error);
-          resolve(null);
-        }
-      });
-    };
-    
-    const results = await Promise.all(projectNames.map(loadProject));
-    return results.filter(result => result !== null);
-  } catch (error) {
-    console.error('Error loading multiple projects:', error);
-    throw error;
-  }
-});
+        });
+      };
+
+      const results = await Promise.all(projectNames.map(loadProject));
+      return results.filter((result) => result !== null);
+    } catch (error) {
+      console.error('Error loading multiple projects:', error);
+      throw error;
+    }
+  },
+);
 
 ipcMain.on('dashboard:getAllProjectNames', (event) => {
   try {
     const fs = require('fs');
     const projectFolder = '../banFlowProjects';
-    
+
     if (!fs.existsSync(projectFolder)) {
       event.returnValue = [];
       return;
     }
-    
+
     const files = fs.readdirSync(projectFolder);
     const projectNames = files
-      .filter(file => file.endsWith('.json') && !file.endsWith('.json~'))
-      .map(file => file.replace('.json', ''));
-    
+      .filter((file) => file.endsWith('.json') && !file.endsWith('.json~'))
+      .map((file) => file.replace('.json', ''));
+
     event.returnValue = projectNames;
   } catch (error) {
     console.error('Error getting project names:', error);
@@ -1888,21 +2007,21 @@ ipcMain.handle('git:readFile', async (event, repoPath, filePath) => {
   try {
     const fs = require('fs');
     const path = require('path');
-    
+
     // Resolve file path relative to repository root
     const fullPath = path.join(repoPath, filePath);
-    
+
     // Check if file exists
     if (!fs.existsSync(fullPath)) {
       throw new Error(`File not found: ${filePath}`);
     }
-    
+
     // Read file content
     const content = fs.readFileSync(fullPath, 'utf-8');
     return {
       success: true,
-      content: content,
-      path: fullPath
+      content,
+      path: fullPath,
     };
   } catch (error) {
     console.error('Error reading file:', error);
@@ -1914,23 +2033,23 @@ ipcMain.handle('git:writeFile', async (event, repoPath, filePath, content) => {
   try {
     const fs = require('fs');
     const path = require('path');
-    
+
     // Resolve file path relative to repository root
     const fullPath = path.join(repoPath, filePath);
-    
+
     // Ensure directory exists
     const dir = path.dirname(fullPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    
+
     // Write file content
     fs.writeFileSync(fullPath, content, 'utf-8');
-    
+
     return {
       success: true,
       path: fullPath,
-      message: 'File saved successfully'
+      message: 'File saved successfully',
     };
   } catch (error) {
     console.error('Error writing file:', error);
@@ -1942,16 +2061,25 @@ ipcMain.handle('git:listFiles', async (event, repoPath) => {
   try {
     const path = require('path');
     const fs = require('fs');
-    
+
     const files: string[] = [];
-    const ignoreDirs = new Set(['.git', 'node_modules', 'dist', 'build', '.next', '__pycache__', '.venv', 'venv']);
-    
+    const ignoreDirs = new Set([
+      '.git',
+      'node_modules',
+      'dist',
+      'build',
+      '.next',
+      '__pycache__',
+      '.venv',
+      'venv',
+    ]);
+
     function walkDir(dir: string, prefix = '') {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.name.startsWith('.') && entry.name !== '.env') continue;
         if (ignoreDirs.has(entry.name)) continue;
-        
+
         const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
         if (entry.isDirectory()) {
           walkDir(path.join(dir, entry.name), relativePath);
@@ -1960,7 +2088,7 @@ ipcMain.handle('git:listFiles', async (event, repoPath) => {
         }
       }
     }
-    
+
     walkDir(repoPath);
     return files.sort();
   } catch (error) {
@@ -1988,23 +2116,29 @@ ipcMain.handle('git:discardHunk', async (event, filePath, hunkIndex) => {
   }
 });
 
-ipcMain.handle('git:stageLines', async (event, filePath, hunkIndex, lineIndices) => {
-  try {
-    return await gitService.stageLines(filePath, hunkIndex, lineIndices);
-  } catch (error) {
-    console.error('Error staging lines:', error);
-    throw error;
-  }
-});
+ipcMain.handle(
+  'git:stageLines',
+  async (event, filePath, hunkIndex, lineIndices) => {
+    try {
+      return await gitService.stageLines(filePath, hunkIndex, lineIndices);
+    } catch (error) {
+      console.error('Error staging lines:', error);
+      throw error;
+    }
+  },
+);
 
-ipcMain.handle('git:discardLines', async (event, filePath, hunkIndex, lineIndices) => {
-  try {
-    return await gitService.discardLines(filePath, hunkIndex, lineIndices);
-  } catch (error) {
-    console.error('Error discarding lines:', error);
-    throw error;
-  }
-});
+ipcMain.handle(
+  'git:discardLines',
+  async (event, filePath, hunkIndex, lineIndices) => {
+    try {
+      return await gitService.discardLines(filePath, hunkIndex, lineIndices);
+    } catch (error) {
+      console.error('Error discarding lines:', error);
+      throw error;
+    }
+  },
+);
 
 ipcMain.handle('git:applyPatch', async (event, patchContent, options = {}) => {
   try {
@@ -2024,12 +2158,12 @@ const getProjectDocsPath = (projectName: string) => {
   const basePath = path.join(__dirname, '../../banFlowProjects', projectName);
   const docsPath = path.join(basePath, 'docs');
   const imagesPath = path.join(basePath, 'images');
-  
+
   // Ensure directories exist
   if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
   if (!fs.existsSync(docsPath)) fs.mkdirSync(docsPath, { recursive: true });
   if (!fs.existsSync(imagesPath)) fs.mkdirSync(imagesPath, { recursive: true });
-  
+
   return { docsPath, imagesPath, basePath };
 };
 
@@ -2039,279 +2173,372 @@ const getGlobalDocsPath = () => {
   const basePath = path.join(__dirname, '../../banFlowProjects', 'global');
   const docsPath = path.join(basePath, 'docs');
   const imagesPath = path.join(basePath, 'images');
-  
+
   // Ensure directories exist
   if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
   if (!fs.existsSync(docsPath)) fs.mkdirSync(docsPath, { recursive: true });
   if (!fs.existsSync(imagesPath)) fs.mkdirSync(imagesPath, { recursive: true });
-  
+
   return { docsPath, imagesPath, basePath };
 };
 
 // List documents
-ipcMain.handle('docs:list', async (event, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    
-    const listFiles = (dir: string, baseDir: string = ''): any[] => {
-      const items: any[] = [];
-      if (!fs.existsSync(dir)) return items;
-      
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        const relativePath = baseDir ? path.join(baseDir, entry.name) : entry.name;
-        
-        if (entry.isDirectory()) {
-          items.push({
-            name: entry.name,
-            path: relativePath,
-            type: 'folder',
-            children: listFiles(fullPath, relativePath),
-          });
-        } else if (entry.name.endsWith('.md')) {
+ipcMain.handle(
+  'docs:list',
+  async (event, projectName: string | null, isGlobal: boolean = false) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { docsPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+
+      const listFiles = (dir: string, baseDir: string = ''): any[] => {
+        const items: any[] = [];
+        if (!fs.existsSync(dir)) return items;
+
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          const relativePath = baseDir
+            ? path.join(baseDir, entry.name)
+            : entry.name;
+
+          if (entry.isDirectory()) {
+            items.push({
+              name: entry.name,
+              path: relativePath,
+              type: 'folder',
+              children: listFiles(fullPath, relativePath),
+            });
+          } else if (entry.name.endsWith('.md')) {
+            const stats = fs.statSync(fullPath);
+            items.push({
+              name: entry.name.replace('.md', ''),
+              path: relativePath,
+              type: 'file',
+              fullPath,
+              size: stats.size,
+              created: stats.birthtime,
+              modified: stats.mtime,
+            });
+          }
+        }
+
+        return items.sort((a, b) => {
+          if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+      };
+
+      return listFiles(docsPath);
+    } catch (error) {
+      console.error('Error listing docs:', error);
+      throw error;
+    }
+  },
+);
+
+// Read document
+ipcMain.handle(
+  'docs:read',
+  async (
+    event,
+    docPath: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { docsPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+      const fullPath = path.join(
+        docsPath,
+        docPath.endsWith('.md') ? docPath : `${docPath}.md`,
+      );
+
+      if (!fs.existsSync(fullPath)) {
+        throw new Error(`Document not found: ${docPath}`);
+      }
+
+      const content = fs.readFileSync(fullPath, 'utf-8');
+      const stats = fs.statSync(fullPath);
+
+      return {
+        content,
+        path: docPath,
+        created: stats.birthtime,
+        modified: stats.mtime,
+        size: stats.size,
+      };
+    } catch (error) {
+      console.error('Error reading doc:', error);
+      throw error;
+    }
+  },
+);
+
+// Save document
+ipcMain.handle(
+  'docs:save',
+  async (
+    event,
+    docPath: string,
+    content: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { docsPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+      const fullPath = path.join(
+        docsPath,
+        docPath.endsWith('.md') ? docPath : `${docPath}.md`,
+      );
+
+      // Ensure parent directories exist
+      const dir = path.dirname(fullPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      fs.writeFileSync(fullPath, content, 'utf-8');
+
+      const stats = fs.statSync(fullPath);
+      return {
+        path: docPath,
+        created: stats.birthtime,
+        modified: stats.mtime,
+        size: stats.size,
+      };
+    } catch (error) {
+      console.error('Error saving doc:', error);
+      throw error;
+    }
+  },
+);
+
+// Delete document
+ipcMain.handle(
+  'docs:delete',
+  async (
+    event,
+    docPath: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { docsPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+      const fullPath = path.join(
+        docsPath,
+        docPath.endsWith('.md') ? docPath : `${docPath}.md`,
+      );
+
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+        return { success: true };
+      }
+
+      throw new Error(`Document not found: ${docPath}`);
+    } catch (error) {
+      console.error('Error deleting doc:', error);
+      throw error;
+    }
+  },
+);
+
+// Create folder
+ipcMain.handle(
+  'docs:createFolder',
+  async (
+    event,
+    folderPath: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { docsPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+      const fullPath = path.join(docsPath, folderPath);
+
+      if (!fs.existsSync(fullPath)) {
+        fs.mkdirSync(fullPath, { recursive: true });
+      }
+
+      return { success: true, path: folderPath };
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      throw error;
+    }
+  },
+);
+
+// List images
+ipcMain.handle(
+  'docs:listImages',
+  async (event, projectName: string | null, isGlobal: boolean = false) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { imagesPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+
+      if (!fs.existsSync(imagesPath)) return [];
+
+      const files = fs.readdirSync(imagesPath);
+      const images = files
+        .filter((file: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file))
+        .map((file: string) => {
+          const fullPath = path.join(imagesPath, file);
           const stats = fs.statSync(fullPath);
-          items.push({
-            name: entry.name.replace('.md', ''),
-            path: relativePath,
-            type: 'file',
+          return {
+            name: file,
+            path: file,
             fullPath,
             size: stats.size,
             created: stats.birthtime,
             modified: stats.mtime,
-          });
-        }
-      }
-      
-      return items.sort((a, b) => {
-        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
-    };
-    
-    return listFiles(docsPath);
-  } catch (error) {
-    console.error('Error listing docs:', error);
-    throw error;
-  }
-});
+          };
+        });
 
-// Read document
-ipcMain.handle('docs:read', async (event, docPath: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    const fullPath = path.join(docsPath, docPath.endsWith('.md') ? docPath : `${docPath}.md`);
-    
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`Document not found: ${docPath}`);
+      return images;
+    } catch (error) {
+      console.error('Error listing images:', error);
+      throw error;
     }
-    
-    const content = fs.readFileSync(fullPath, 'utf-8');
-    const stats = fs.statSync(fullPath);
-    
-    return {
-      content,
-      path: docPath,
-      created: stats.birthtime,
-      modified: stats.mtime,
-      size: stats.size,
-    };
-  } catch (error) {
-    console.error('Error reading doc:', error);
-    throw error;
-  }
-});
-
-// Save document
-ipcMain.handle('docs:save', async (event, docPath: string, content: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    const fullPath = path.join(docsPath, docPath.endsWith('.md') ? docPath : `${docPath}.md`);
-    
-    // Ensure parent directories exist
-    const dir = path.dirname(fullPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    
-    fs.writeFileSync(fullPath, content, 'utf-8');
-    
-    const stats = fs.statSync(fullPath);
-    return {
-      path: docPath,
-      created: stats.birthtime,
-      modified: stats.mtime,
-      size: stats.size,
-    };
-  } catch (error) {
-    console.error('Error saving doc:', error);
-    throw error;
-  }
-});
-
-// Delete document
-ipcMain.handle('docs:delete', async (event, docPath: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    const fullPath = path.join(docsPath, docPath.endsWith('.md') ? docPath : `${docPath}.md`);
-    
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-      return { success: true };
-    }
-    
-    throw new Error(`Document not found: ${docPath}`);
-  } catch (error) {
-    console.error('Error deleting doc:', error);
-    throw error;
-  }
-});
-
-// Create folder
-ipcMain.handle('docs:createFolder', async (event, folderPath: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { docsPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    const fullPath = path.join(docsPath, folderPath);
-    
-    if (!fs.existsSync(fullPath)) {
-      fs.mkdirSync(fullPath, { recursive: true });
-    }
-    
-    return { success: true, path: folderPath };
-  } catch (error) {
-    console.error('Error creating folder:', error);
-    throw error;
-  }
-});
-
-// List images
-ipcMain.handle('docs:listImages', async (event, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { imagesPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    
-    if (!fs.existsSync(imagesPath)) return [];
-    
-    const files = fs.readdirSync(imagesPath);
-    const images = files
-      .filter((file: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file))
-      .map((file: string) => {
-        const fullPath = path.join(imagesPath, file);
-        const stats = fs.statSync(fullPath);
-        return {
-          name: file,
-          path: file,
-          fullPath,
-          size: stats.size,
-          created: stats.birthtime,
-          modified: stats.mtime,
-        };
-      });
-    
-    return images;
-  } catch (error) {
-    console.error('Error listing images:', error);
-    throw error;
-  }
-});
+  },
+);
 
 // Get image data URL
-ipcMain.handle('docs:getImage', async (event, imagePath: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { imagesPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    const fullPath = path.join(imagesPath, imagePath);
-    
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`Image not found: ${imagePath}`);
+ipcMain.handle(
+  'docs:getImage',
+  async (
+    event,
+    imagePath: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { imagesPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+      const fullPath = path.join(imagesPath, imagePath);
+
+      if (!fs.existsSync(fullPath)) {
+        throw new Error(`Image not found: ${imagePath}`);
+      }
+
+      const imageBuffer = fs.readFileSync(fullPath);
+      const ext = path.extname(imagePath).toLowerCase().slice(1);
+      const mimeType = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
+      const base64 = imageBuffer.toString('base64');
+
+      return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+      console.error('Error getting image:', error);
+      throw error;
     }
-    
-    const imageBuffer = fs.readFileSync(fullPath);
-    const ext = path.extname(imagePath).toLowerCase().slice(1);
-    const mimeType = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
-    const base64 = imageBuffer.toString('base64');
-    
-    return `data:${mimeType};base64,${base64}`;
-  } catch (error) {
-    console.error('Error getting image:', error);
-    throw error;
-  }
-});
+  },
+);
 
 // Save image (from base64 or buffer)
-ipcMain.handle('docs:saveImage', async (event, imageName: string, imageData: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { imagesPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    const fullPath = path.join(imagesPath, imageName);
-    
-    // Handle base64 data URL
-    let buffer: Buffer;
-    if (imageData.startsWith('data:')) {
-      const base64Data = imageData.split(',')[1];
-      buffer = Buffer.from(base64Data, 'base64');
-    } else {
-      buffer = Buffer.from(imageData, 'base64');
+ipcMain.handle(
+  'docs:saveImage',
+  async (
+    event,
+    imageName: string,
+    imageData: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { imagesPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+      const fullPath = path.join(imagesPath, imageName);
+
+      // Handle base64 data URL
+      let buffer: Buffer;
+      if (imageData.startsWith('data:')) {
+        const base64Data = imageData.split(',')[1];
+        buffer = Buffer.from(base64Data, 'base64');
+      } else {
+        buffer = Buffer.from(imageData, 'base64');
+      }
+
+      fs.writeFileSync(fullPath, buffer);
+
+      const stats = fs.statSync(fullPath);
+      return {
+        name: imageName,
+        path: imageName,
+        size: stats.size,
+        created: stats.birthtime,
+        modified: stats.mtime,
+      };
+    } catch (error) {
+      console.error('Error saving image:', error);
+      throw error;
     }
-    
-    fs.writeFileSync(fullPath, buffer);
-    
-    const stats = fs.statSync(fullPath);
-    return {
-      name: imageName,
-      path: imageName,
-      size: stats.size,
-      created: stats.birthtime,
-      modified: stats.mtime,
-    };
-  } catch (error) {
-    console.error('Error saving image:', error);
-    throw error;
-  }
-});
+  },
+);
 
 // Delete image
-ipcMain.handle('docs:deleteImage', async (event, imagePath: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { imagesPath } = isGlobal ? getGlobalDocsPath() : getProjectDocsPath(projectName || '');
-    const fullPath = path.join(imagesPath, imagePath);
-    
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-      return { success: true };
+ipcMain.handle(
+  'docs:deleteImage',
+  async (
+    event,
+    imagePath: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { imagesPath } = isGlobal
+        ? getGlobalDocsPath()
+        : getProjectDocsPath(projectName || '');
+      const fullPath = path.join(imagesPath, imagePath);
+
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+        return { success: true };
+      }
+
+      throw new Error(`Image not found: ${imagePath}`);
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      throw error;
     }
-    
-    throw new Error(`Image not found: ${imagePath}`);
-  } catch (error) {
-    console.error('Error deleting image:', error);
-    throw error;
-  }
-});
+  },
+);
 
 // ==================== DIAGRAMS MANAGEMENT ====================
 
@@ -2321,11 +2548,12 @@ const getProjectDiagramsPath = (projectName: string) => {
   const path = require('path');
   const basePath = path.join(__dirname, '../../banFlowProjects', projectName);
   const diagramsPath = path.join(basePath, 'diagrams');
-  
+
   // Ensure directories exist
   if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
-  if (!fs.existsSync(diagramsPath)) fs.mkdirSync(diagramsPath, { recursive: true });
-  
+  if (!fs.existsSync(diagramsPath))
+    fs.mkdirSync(diagramsPath, { recursive: true });
+
   return { diagramsPath, basePath };
 };
 
@@ -2334,156 +2562,214 @@ const getGlobalDiagramsPath = () => {
   const path = require('path');
   const basePath = path.join(__dirname, '../../banFlowProjects', 'global');
   const diagramsPath = path.join(basePath, 'diagrams');
-  
+
   // Ensure directories exist
   if (!fs.existsSync(basePath)) fs.mkdirSync(basePath, { recursive: true });
-  if (!fs.existsSync(diagramsPath)) fs.mkdirSync(diagramsPath, { recursive: true });
-  
+  if (!fs.existsSync(diagramsPath))
+    fs.mkdirSync(diagramsPath, { recursive: true });
+
   return { diagramsPath, basePath };
 };
 
 // List diagrams
-ipcMain.handle('diagrams:list', async (event, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
-    
-    const listFiles = (dir: string, baseDir: string = ''): any[] => {
-      const items: any[] = [];
-      if (!fs.existsSync(dir)) return items;
-      
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        const relativePath = baseDir ? path.join(baseDir, entry.name) : entry.name;
-        
-        if (entry.isDirectory()) {
-          items.push({
-            name: entry.name,
-            path: relativePath,
-            type: 'folder',
-            children: listFiles(fullPath, relativePath),
-          });
-        } else if (entry.name.endsWith('.json')) {
-          const stats = fs.statSync(fullPath);
-          items.push({
-            name: entry.name.replace('.json', ''),
-            path: relativePath,
-            type: 'file',
-            size: stats.size,
-            created: stats.birthtime.toISOString(),
-            modified: stats.mtime.toISOString(),
-          });
+ipcMain.handle(
+  'diagrams:list',
+  async (event, projectName: string | null, isGlobal: boolean = false) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { diagramsPath } = isGlobal
+        ? getGlobalDiagramsPath()
+        : getProjectDiagramsPath(projectName || '');
+
+      const listFiles = (dir: string, baseDir: string = ''): any[] => {
+        const items: any[] = [];
+        if (!fs.existsSync(dir)) return items;
+
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+          const relativePath = baseDir
+            ? path.join(baseDir, entry.name)
+            : entry.name;
+
+          if (entry.isDirectory()) {
+            items.push({
+              name: entry.name,
+              path: relativePath,
+              type: 'folder',
+              children: listFiles(fullPath, relativePath),
+            });
+          } else if (entry.name.endsWith('.json')) {
+            const stats = fs.statSync(fullPath);
+            items.push({
+              name: entry.name.replace('.json', ''),
+              path: relativePath,
+              type: 'file',
+              size: stats.size,
+              created: stats.birthtime.toISOString(),
+              modified: stats.mtime.toISOString(),
+            });
+          }
         }
-      }
-      
-      return items.sort((a, b) => {
-        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
-    };
-    
-    return listFiles(diagramsPath);
-  } catch (error) {
-    console.error('Error listing diagrams:', error);
-    throw error;
-  }
-});
+
+        return items.sort((a, b) => {
+          if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+      };
+
+      return listFiles(diagramsPath);
+    } catch (error) {
+      console.error('Error listing diagrams:', error);
+      throw error;
+    }
+  },
+);
 
 // Read diagram
-ipcMain.handle('diagrams:read', async (event, diagramPath: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
-    const fullPath = path.join(diagramsPath, diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`);
-    
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`Diagram not found: ${diagramPath}`);
+ipcMain.handle(
+  'diagrams:read',
+  async (
+    event,
+    diagramPath: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { diagramsPath } = isGlobal
+        ? getGlobalDiagramsPath()
+        : getProjectDiagramsPath(projectName || '');
+      const fullPath = path.join(
+        diagramsPath,
+        diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
+      );
+
+      if (!fs.existsSync(fullPath)) {
+        throw new Error(`Diagram not found: ${diagramPath}`);
+      }
+
+      const content = fs.readFileSync(fullPath, 'utf-8');
+      const stats = fs.statSync(fullPath);
+
+      return {
+        content: JSON.parse(content),
+        path: diagramPath,
+        name: path.basename(diagramPath, '.json'),
+        size: stats.size,
+        created: stats.birthtime.toISOString(),
+        modified: stats.mtime.toISOString(),
+      };
+    } catch (error) {
+      console.error('Error reading diagram:', error);
+      throw error;
     }
-    
-    const content = fs.readFileSync(fullPath, 'utf-8');
-    const stats = fs.statSync(fullPath);
-    
-    return {
-      content: JSON.parse(content),
-      path: diagramPath,
-      name: path.basename(diagramPath, '.json'),
-      size: stats.size,
-      created: stats.birthtime.toISOString(),
-      modified: stats.mtime.toISOString(),
-    };
-  } catch (error) {
-    console.error('Error reading diagram:', error);
-    throw error;
-  }
-});
+  },
+);
 
 // Save diagram
-ipcMain.handle('diagrams:save', async (event, diagramPath: string, content: any, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
-    const fullPath = path.join(diagramsPath, diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`);
-    
-    // Ensure parent directories exist
-    const dir = path.dirname(fullPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+ipcMain.handle(
+  'diagrams:save',
+  async (
+    event,
+    diagramPath: string,
+    content: any,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { diagramsPath } = isGlobal
+        ? getGlobalDiagramsPath()
+        : getProjectDiagramsPath(projectName || '');
+      const fullPath = path.join(
+        diagramsPath,
+        diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
+      );
+
+      // Ensure parent directories exist
+      const dir = path.dirname(fullPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      fs.writeFileSync(fullPath, JSON.stringify(content, null, 2), 'utf-8');
+
+      return { success: true, path: diagramPath };
+    } catch (error) {
+      console.error('Error saving diagram:', error);
+      throw error;
     }
-    
-    fs.writeFileSync(fullPath, JSON.stringify(content, null, 2), 'utf-8');
-    
-    return { success: true, path: diagramPath };
-  } catch (error) {
-    console.error('Error saving diagram:', error);
-    throw error;
-  }
-});
+  },
+);
 
 // Delete diagram
-ipcMain.handle('diagrams:delete', async (event, diagramPath: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
-    const fullPath = path.join(diagramsPath, diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`);
-    
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-      return { success: true };
+ipcMain.handle(
+  'diagrams:delete',
+  async (
+    event,
+    diagramPath: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { diagramsPath } = isGlobal
+        ? getGlobalDiagramsPath()
+        : getProjectDiagramsPath(projectName || '');
+      const fullPath = path.join(
+        diagramsPath,
+        diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
+      );
+
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+        return { success: true };
+      }
+
+      throw new Error(`Diagram not found: ${diagramPath}`);
+    } catch (error) {
+      console.error('Error deleting diagram:', error);
+      throw error;
     }
-    
-    throw new Error(`Diagram not found: ${diagramPath}`);
-  } catch (error) {
-    console.error('Error deleting diagram:', error);
-    throw error;
-  }
-});
+  },
+);
 
 // Create folder
-ipcMain.handle('diagrams:createFolder', async (event, folderPath: string, projectName: string | null, isGlobal: boolean = false) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const { diagramsPath } = isGlobal ? getGlobalDiagramsPath() : getProjectDiagramsPath(projectName || '');
-    const fullPath = path.join(diagramsPath, folderPath);
-    
-    if (!fs.existsSync(fullPath)) {
-      fs.mkdirSync(fullPath, { recursive: true });
+ipcMain.handle(
+  'diagrams:createFolder',
+  async (
+    event,
+    folderPath: string,
+    projectName: string | null,
+    isGlobal: boolean = false,
+  ) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+
+      const { diagramsPath } = isGlobal
+        ? getGlobalDiagramsPath()
+        : getProjectDiagramsPath(projectName || '');
+      const fullPath = path.join(diagramsPath, folderPath);
+
+      if (!fs.existsSync(fullPath)) {
+        fs.mkdirSync(fullPath, { recursive: true });
+      }
+
+      return { success: true, path: folderPath };
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      throw error;
     }
-    
-    return { success: true, path: folderPath };
-  } catch (error) {
-    console.error('Error creating folder:', error);
-    throw error;
-  }
-});
+  },
+);

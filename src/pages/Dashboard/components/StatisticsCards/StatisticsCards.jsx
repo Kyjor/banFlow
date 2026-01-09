@@ -48,7 +48,13 @@ function StatisticsCards({ stats, isAggregate = false }) {
         <Progress
           percent={completionRate}
           size="small"
-          strokeColor={completionRate >= 75 ? '#52c41a' : completionRate >= 50 ? '#faad14' : '#ff4d4f'}
+          strokeColor={
+            completionRate >= 75
+              ? '#52c41a'
+              : completionRate >= 50
+                ? '#faad14'
+                : '#ff4d4f'
+          }
           showInfo={false}
           style={{ marginTop: '8px' }}
         />
@@ -59,11 +65,12 @@ function StatisticsCards({ stats, isAggregate = false }) {
       value: isAggregate ? activeProjects : completed,
       icon: isAggregate ? <ProjectOutlined /> : <CheckCircleOutlined />,
       color: isAggregate ? '#13c2c2' : '#52c41a',
-      suffix: isAggregate && projectCount > 0 
-        ? `of ${projectCount} total`
-        : incomplete > 0 
-          ? `(${incomplete} remaining)`
-          : '',
+      suffix:
+        isAggregate && projectCount > 0
+          ? `of ${projectCount} total`
+          : incomplete > 0
+            ? `(${incomplete} remaining)`
+            : '',
     },
   ];
 
@@ -119,4 +126,3 @@ StatisticsCards.defaultProps = {
 };
 
 export default StatisticsCards;
-

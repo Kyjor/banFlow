@@ -17,7 +17,7 @@ import {
   Divider,
   Badge,
   Popconfirm,
-  message
+  message,
 } from 'antd';
 import {
   PlusOutlined,
@@ -33,18 +33,18 @@ import {
   ExclamationCircleOutlined,
   CaretRightOutlined,
   CaretDownOutlined,
-  DragOutlined
+  DragOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import './ChunkStaging.scss';
 
 const { Title, Text, Paragraph } = Typography;
 
-function ChunkStaging({ 
+function ChunkStaging({
   file = null,
   onStagingChange = null,
   showPreview = true,
-  compact = false
+  compact = false,
 }) {
   const {
     currentRepository,
@@ -56,7 +56,7 @@ function ChunkStaging({
     stageFiles,
     unstageFiles,
     isLoading,
-    operationInProgress
+    operationInProgress,
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -76,7 +76,7 @@ function ChunkStaging({
 
   useEffect(() => {
     if (currentDiff && currentDiff.length > 0) {
-      const fileDiff = currentDiff.find(diff => diff.name === selectedFile);
+      const fileDiff = currentDiff.find((diff) => diff.name === selectedFile);
       if (fileDiff) {
         initializeChunkStates(fileDiff);
       }
@@ -93,176 +93,186 @@ function ChunkStaging({
 
   const initializeChunkStates = (fileDiff) => {
     if (!fileDiff || !fileDiff.hunks) return;
-    
+
     const allChunks = new Set();
     fileDiff.hunks.forEach((hunk, hunkIndex) => {
       allChunks.add(`hunk-${hunkIndex}`);
     });
-    
+
     setUnstagedChunks(allChunks);
     setStagedChunks(new Set());
   };
 
   const getFileDiff = () => {
     if (!currentDiff || !selectedFile) return null;
-    return currentDiff.find(diff => diff.name === selectedFile);
+    return currentDiff.find((diff) => diff.name === selectedFile);
   };
 
   const getChunkInfo = (hunkIndex) => {
     const fileDiff = getFileDiff();
     if (!fileDiff || !fileDiff.hunks[hunkIndex]) return null;
-    
+
     const hunk = fileDiff.hunks[hunkIndex];
-    const addedLines = hunk.lines.filter(line => line.type === 'added').length;
-    const deletedLines = hunk.lines.filter(line => line.type === 'deleted').length;
-    
+    const addedLines = hunk.lines.filter(
+      (line) => line.type === 'added',
+    ).length;
+    const deletedLines = hunk.lines.filter(
+      (line) => line.type === 'deleted',
+    ).length;
+
     return {
       added: addedLines,
       deleted: deletedLines,
       total: hunk.lines.length,
-      header: hunk.header
+      header: hunk.header,
     };
   };
 
-  const stageChunk = useCallback((hunkIndex) => {
-    const chunkId = `hunk-${hunkIndex}`;
-    
-    setStagingHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push({
-        action: 'stage',
-        chunkId,
-        hunkIndex,
-        timestamp: Date.now()
-      });
-      return newHistory;
-    });
-    setHistoryIndex(prev => prev + 1);
-    
-    setUnstagedChunks(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(chunkId);
-      return newSet;
-    });
-    
-    setStagedChunks(prev => {
-      const newSet = new Set(prev);
-      newSet.add(chunkId);
-      return newSet;
-    });
-    
-    if (onStagingChange) {
-      onStagingChange({
-        staged: Array.from(stagedChunks).concat([chunkId]),
-        unstaged: Array.from(unstagedChunks).filter(id => id !== chunkId)
-      });
-    }
-    
-    message.success('Chunk staged successfully');
-  }, [stagedChunks, unstagedChunks, historyIndex, onStagingChange]);
+  const stageChunk = useCallback(
+    (hunkIndex) => {
+      const chunkId = `hunk-${hunkIndex}`;
 
-  const unstageChunk = useCallback((hunkIndex) => {
-    const chunkId = `hunk-${hunkIndex}`;
-    
-    setStagingHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push({
-        action: 'unstage',
-        chunkId,
-        hunkIndex,
-        timestamp: Date.now()
+      setStagingHistory((prev) => {
+        const newHistory = prev.slice(0, historyIndex + 1);
+        newHistory.push({
+          action: 'stage',
+          chunkId,
+          hunkIndex,
+          timestamp: Date.now(),
+        });
+        return newHistory;
       });
-      return newHistory;
-    });
-    setHistoryIndex(prev => prev + 1);
-    
-    setStagedChunks(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(chunkId);
-      return newSet;
-    });
-    
-    setUnstagedChunks(prev => {
-      const newSet = new Set(prev);
-      newSet.add(chunkId);
-      return newSet;
-    });
-    
-    if (onStagingChange) {
-      onStagingChange({
-        staged: Array.from(stagedChunks).filter(id => id !== chunkId),
-        unstaged: Array.from(unstagedChunks).concat([chunkId])
+      setHistoryIndex((prev) => prev + 1);
+
+      setUnstagedChunks((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(chunkId);
+        return newSet;
       });
-    }
-    
-    message.success('Chunk unstaged successfully');
-  }, [stagedChunks, unstagedChunks, historyIndex, onStagingChange]);
+
+      setStagedChunks((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(chunkId);
+        return newSet;
+      });
+
+      if (onStagingChange) {
+        onStagingChange({
+          staged: Array.from(stagedChunks).concat([chunkId]),
+          unstaged: Array.from(unstagedChunks).filter((id) => id !== chunkId),
+        });
+      }
+
+      message.success('Chunk staged successfully');
+    },
+    [stagedChunks, unstagedChunks, historyIndex, onStagingChange],
+  );
+
+  const unstageChunk = useCallback(
+    (hunkIndex) => {
+      const chunkId = `hunk-${hunkIndex}`;
+
+      setStagingHistory((prev) => {
+        const newHistory = prev.slice(0, historyIndex + 1);
+        newHistory.push({
+          action: 'unstage',
+          chunkId,
+          hunkIndex,
+          timestamp: Date.now(),
+        });
+        return newHistory;
+      });
+      setHistoryIndex((prev) => prev + 1);
+
+      setStagedChunks((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(chunkId);
+        return newSet;
+      });
+
+      setUnstagedChunks((prev) => {
+        const newSet = new Set(prev);
+        newSet.add(chunkId);
+        return newSet;
+      });
+
+      if (onStagingChange) {
+        onStagingChange({
+          staged: Array.from(stagedChunks).filter((id) => id !== chunkId),
+          unstaged: Array.from(unstagedChunks).concat([chunkId]),
+        });
+      }
+
+      message.success('Chunk unstaged successfully');
+    },
+    [stagedChunks, unstagedChunks, historyIndex, onStagingChange],
+  );
 
   const stageAllChunks = useCallback(() => {
     const fileDiff = getFileDiff();
     if (!fileDiff) return;
-    
+
     const allChunkIds = fileDiff.hunks.map((_, index) => `hunk-${index}`);
-    
-    setStagingHistory(prev => {
+
+    setStagingHistory((prev) => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push({
         action: 'stageAll',
         chunkIds: allChunkIds,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       return newHistory;
     });
-    setHistoryIndex(prev => prev + 1);
-    
+    setHistoryIndex((prev) => prev + 1);
+
     setStagedChunks(new Set(allChunkIds));
     setUnstagedChunks(new Set());
-    
+
     if (onStagingChange) {
       onStagingChange({
         staged: allChunkIds,
-        unstaged: []
+        unstaged: [],
       });
     }
-    
+
     message.success('All chunks staged successfully');
   }, [historyIndex, onStagingChange]);
 
   const unstageAllChunks = useCallback(() => {
     const fileDiff = getFileDiff();
     if (!fileDiff) return;
-    
+
     const allChunkIds = fileDiff.hunks.map((_, index) => `hunk-${index}`);
-    
-    setStagingHistory(prev => {
+
+    setStagingHistory((prev) => {
       const newHistory = prev.slice(0, historyIndex + 1);
       newHistory.push({
         action: 'unstageAll',
         chunkIds: allChunkIds,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       return newHistory;
     });
-    setHistoryIndex(prev => prev + 1);
-    
+    setHistoryIndex((prev) => prev + 1);
+
     setUnstagedChunks(new Set(allChunkIds));
     setStagedChunks(new Set());
-    
+
     if (onStagingChange) {
       onStagingChange({
         staged: [],
-        unstaged: allChunkIds
+        unstaged: allChunkIds,
       });
     }
-    
+
     message.success('All chunks unstaged successfully');
   }, [historyIndex, onStagingChange]);
 
   const undoStaging = useCallback(() => {
     if (historyIndex < 0) return;
-    
+
     const lastAction = stagingHistory[historyIndex];
-    
+
     switch (lastAction.action) {
       case 'stage':
         unstageChunk(lastAction.hunkIndex);
@@ -277,15 +287,22 @@ function ChunkStaging({
         stageAllChunks();
         break;
     }
-    
-    setHistoryIndex(prev => prev - 1);
-  }, [historyIndex, stagingHistory, stageChunk, unstageChunk, stageAllChunks, unstageAllChunks]);
+
+    setHistoryIndex((prev) => prev - 1);
+  }, [
+    historyIndex,
+    stagingHistory,
+    stageChunk,
+    unstageChunk,
+    stageAllChunks,
+    unstageAllChunks,
+  ]);
 
   const redoStaging = useCallback(() => {
     if (historyIndex >= stagingHistory.length - 1) return;
-    
+
     const nextAction = stagingHistory[historyIndex + 1];
-    
+
     switch (nextAction.action) {
       case 'stage':
         stageChunk(nextAction.hunkIndex);
@@ -300,13 +317,20 @@ function ChunkStaging({
         unstageAllChunks();
         break;
     }
-    
-    setHistoryIndex(prev => prev + 1);
-  }, [historyIndex, stagingHistory, stageChunk, unstageChunk, stageAllChunks, unstageAllChunks]);
+
+    setHistoryIndex((prev) => prev + 1);
+  }, [
+    historyIndex,
+    stagingHistory,
+    stageChunk,
+    unstageChunk,
+    stageAllChunks,
+    unstageAllChunks,
+  ]);
 
   const toggleChunkSelection = useCallback((hunkIndex) => {
     const chunkId = `hunk-${hunkIndex}`;
-    setSelectedChunks(prev => {
+    setSelectedChunks((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(chunkId)) {
         newSet.delete(chunkId);
@@ -318,7 +342,7 @@ function ChunkStaging({
   }, []);
 
   const stageSelectedChunks = useCallback(() => {
-    selectedChunks.forEach(chunkId => {
+    selectedChunks.forEach((chunkId) => {
       const hunkIndex = parseInt(chunkId.split('-')[1]);
       stageChunk(hunkIndex);
     });
@@ -326,7 +350,7 @@ function ChunkStaging({
   }, [selectedChunks, stageChunk]);
 
   const unstageSelectedChunks = useCallback(() => {
-    selectedChunks.forEach(chunkId => {
+    selectedChunks.forEach((chunkId) => {
       const hunkIndex = parseInt(chunkId.split('-')[1]);
       unstageChunk(hunkIndex);
     });
@@ -339,9 +363,9 @@ function ChunkStaging({
     const isStaged = stagedChunks.has(chunkId);
     const isUnstaged = unstagedChunks.has(chunkId);
     const isSelected = selectedChunks.has(chunkId);
-    
+
     if (!chunkInfo) return null;
-    
+
     return (
       <Card
         key={chunkId}
@@ -357,15 +381,21 @@ function ChunkStaging({
               onChange={() => toggleChunkSelection(hunkIndex)}
               onClick={(e) => e.stopPropagation()}
             />
-            <Text code style={{ fontSize: '11px' }}>{chunkInfo.header}</Text>
-            <Tag color="green" size="small">+{chunkInfo.added}</Tag>
-            <Tag color="red" size="small">-{chunkInfo.deleted}</Tag>
+            <Text code style={{ fontSize: '11px' }}>
+              {chunkInfo.header}
+            </Text>
+            <Tag color="green" size="small">
+              +{chunkInfo.added}
+            </Tag>
+            <Tag color="red" size="small">
+              -{chunkInfo.deleted}
+            </Tag>
             <Tag color={isStaged ? 'success' : 'warning'} size="small">
               {isStaged ? 'Staged' : 'Unstaged'}
             </Tag>
           </Space>
         </div>
-        
+
         <div className="chunk-actions">
           <Space>
             {isStaged ? (
@@ -398,7 +428,7 @@ function ChunkStaging({
                 </Button>
               </Tooltip>
             )}
-            
+
             {showPreview && (
               <Tooltip title="Preview chunk changes">
                 <Button
@@ -427,7 +457,9 @@ function ChunkStaging({
     return (
       <Card>
         <Empty
-          image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+          image={
+            <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+          }
           description="No repository selected"
         />
       </Card>
@@ -438,7 +470,9 @@ function ChunkStaging({
     return (
       <Card>
         <Empty
-          image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+          image={
+            <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+          }
           description="Select a file to view chunks"
         />
       </Card>
@@ -473,10 +507,10 @@ function ChunkStaging({
         title={
           <Space>
             <FileTextOutlined />
-            <Title level={4} style={{ margin: 0 }}>Chunk Staging</Title>
-            {selectedFile && (
-              <Tag>{selectedFile}</Tag>
-            )}
+            <Title level={4} style={{ margin: 0 }}>
+              Chunk Staging
+            </Title>
+            {selectedFile && <Tag>{selectedFile}</Tag>}
           </Space>
         }
         extra={
@@ -517,7 +551,10 @@ function ChunkStaging({
                     <Card size="small" className="summary-card">
                       <div className="summary-item">
                         <Text strong>Total Chunks</Text>
-                        <Badge count={totalChunks} style={{ backgroundColor: '#1890ff' }} />
+                        <Badge
+                          count={totalChunks}
+                          style={{ backgroundColor: '#1890ff' }}
+                        />
                       </div>
                     </Card>
                   </Col>
@@ -525,7 +562,10 @@ function ChunkStaging({
                     <Card size="small" className="summary-card staged">
                       <div className="summary-item">
                         <Text strong>Staged</Text>
-                        <Badge count={stagedCount} style={{ backgroundColor: '#52c41a' }} />
+                        <Badge
+                          count={stagedCount}
+                          style={{ backgroundColor: '#52c41a' }}
+                        />
                       </div>
                     </Card>
                   </Col>
@@ -533,17 +573,24 @@ function ChunkStaging({
                     <Card size="small" className="summary-card unstaged">
                       <div className="summary-item">
                         <Text strong>Unstaged</Text>
-                        <Badge count={unstagedCount} style={{ backgroundColor: '#faad14' }} />
+                        <Badge
+                          count={unstagedCount}
+                          style={{ backgroundColor: '#faad14' }}
+                        />
                       </div>
                     </Card>
                   </Col>
                 </Row>
-                
+
                 <Progress
-                  percent={totalChunks > 0 ? (stagedCount / totalChunks) * 100 : 0}
+                  percent={
+                    totalChunks > 0 ? (stagedCount / totalChunks) * 100 : 0
+                  }
                   strokeColor="#52c41a"
-                  showInfo={true}
-                  format={(percent) => `${stagedCount}/${totalChunks} chunks staged`}
+                  showInfo
+                  format={(percent) =>
+                    `${stagedCount}/${totalChunks} chunks staged`
+                  }
                 />
               </div>
 
@@ -593,7 +640,7 @@ function ChunkStaging({
                       Stage All
                     </Button>
                   </Popconfirm>
-                  
+
                   <Popconfirm
                     title="Unstage all chunks?"
                     onConfirm={unstageAllChunks}
@@ -615,12 +662,16 @@ function ChunkStaging({
 
               {/* Chunk List */}
               <div className="chunk-list">
-                {fileDiff.hunks.map((_, hunkIndex) => renderChunkCard(hunkIndex))}
+                {fileDiff.hunks.map((_, hunkIndex) =>
+                  renderChunkCard(hunkIndex),
+                )}
               </div>
             </div>
           ) : (
             <Empty
-              image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+              image={
+                <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+              }
               description="No changes found in this file"
             />
           )}
@@ -640,29 +691,51 @@ function ChunkStaging({
             <div>
               <Title level={5}>What is Chunk Staging?</Title>
               <Paragraph>
-                Chunk staging allows you to stage specific parts of your changes instead of entire files. 
-                This gives you fine-grained control over what gets committed.
+                Chunk staging allows you to stage specific parts of your changes
+                instead of entire files. This gives you fine-grained control
+                over what gets committed.
               </Paragraph>
             </div>
-            
+
             <div>
               <Title level={5}>How to Use:</Title>
               <ul>
-                <li><strong>Click a chunk</strong> to select it (checkbox will appear)</li>
-                <li><strong>Stage button</strong> - adds the chunk to your commit</li>
-                <li><strong>Unstage button</strong> - removes the chunk from your commit</li>
-                <li><strong>Bulk actions</strong> - stage/unstage multiple chunks at once</li>
-                <li><strong>Undo/Redo</strong> - reverse your staging decisions</li>
+                <li>
+                  <strong>Click a chunk</strong> to select it (checkbox will
+                  appear)
+                </li>
+                <li>
+                  <strong>Stage button</strong> - adds the chunk to your commit
+                </li>
+                <li>
+                  <strong>Unstage button</strong> - removes the chunk from your
+                  commit
+                </li>
+                <li>
+                  <strong>Bulk actions</strong> - stage/unstage multiple chunks
+                  at once
+                </li>
+                <li>
+                  <strong>Undo/Redo</strong> - reverse your staging decisions
+                </li>
               </ul>
             </div>
-            
+
             <div>
               <Title level={5}>Visual Indicators:</Title>
               <Space direction="vertical">
-                <Space><Tag color="success">Staged</Tag> - Ready to be committed</Space>
-                <Space><Tag color="warning">Unstaged</Tag> - Not included in commit</Space>
-                <Space><Tag color="green">+N</Tag> - N lines added</Space>
-                <Space><Tag color="red">-N</Tag> - N lines deleted</Space>
+                <Space>
+                  <Tag color="success">Staged</Tag> - Ready to be committed
+                </Space>
+                <Space>
+                  <Tag color="warning">Unstaged</Tag> - Not included in commit
+                </Space>
+                <Space>
+                  <Tag color="green">+N</Tag> - N lines added
+                </Space>
+                <Space>
+                  <Tag color="red">-N</Tag> - N lines deleted
+                </Space>
               </Space>
             </div>
           </Space>

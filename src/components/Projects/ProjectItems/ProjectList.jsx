@@ -1,7 +1,16 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import { Button, Card, List, Popconfirm, Typography, Empty, Tag, Space } from 'antd';
+import {
+  Button,
+  Card,
+  List,
+  Popconfirm,
+  Typography,
+  Empty,
+  Tag,
+  Space,
+} from 'antd';
 import '../ProjectListContainer.scss';
 import {
   CalendarOutlined,
@@ -47,7 +56,7 @@ const getTimeAgo = (timestamp) => {
   if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
   if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  return dateFormat(date, "mmm d, yyyy");
+  return dateFormat(date, 'mmm d, yyyy');
 };
 
 function ProjectList(props) {
@@ -66,27 +75,27 @@ function ProjectList(props) {
     if (!item.text.endsWith('.json') || item.text.endsWith('.json~')) {
       return null;
     }
-    
+
     // Extract project name (remove .json extension)
     const projectName = item.text.slice(0, item.text.lastIndexOf('.json'));
-    
+
     // Skip items with empty or invalid project names
     if (!projectName || !projectName.trim()) {
       return null;
     }
-    
+
     const trimmedName = projectName.trim();
     const lowerName = trimmedName.toLowerCase();
-    
+
     // Filter out system files
     const systemFiles = ['.ds_store', 'thumbs.db', '.gitignore', '.gitkeep'];
     if (systemFiles.includes(lowerName)) {
       return null;
     }
-    
+
     const lastOpened = localStorage.getItem(`projectLastOpened_${trimmedName}`);
     const lastOpenedFormatted = lastOpened
-      ? dateFormat(new Date(parseInt(lastOpened, 10)), "mmm d, yyyy h:MM TT")
+      ? dateFormat(new Date(parseInt(lastOpened, 10)), 'mmm d, yyyy h:MM TT')
       : null;
     const timeAgo = getTimeAgo(lastOpened);
     const projectColor = getProjectColor(trimmedName);
@@ -106,7 +115,7 @@ function ProjectList(props) {
     const items1 = items
       .map(createTasks)
       .filter((item) => item !== null && item.name); // Remove null items and items without names
-    
+
     // Deduplicate by project name (case-insensitive)
     const uniqueItemsMap = new Map();
     items1.forEach((item) => {
@@ -118,7 +127,7 @@ function ProjectList(props) {
         }
       }
     });
-    
+
     setListItems(Array.from(uniqueItemsMap.values()));
   }, [items]);
 
@@ -131,7 +140,14 @@ function ProjectList(props) {
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={
             <div>
-              <Text strong style={{ fontSize: '16px', display: 'block', marginBottom: '8px' }}>
+              <Text
+                strong
+                style={{
+                  fontSize: '16px',
+                  display: 'block',
+                  marginBottom: '8px',
+                }}
+              >
                 No projects yet
               </Text>
               <Text type="secondary">
@@ -157,99 +173,111 @@ function ProjectList(props) {
         }}
         renderItem={(item) => {
           // Normalize comparison - case-insensitive and trimmed
-          const normalizedSelected = selectedProject ? selectedProject.trim().toLowerCase() : '';
-          const normalizedItemName = item.name ? item.name.trim().toLowerCase() : '';
-          const isSelected = normalizedSelected && normalizedItemName && 
+          const normalizedSelected = selectedProject
+            ? selectedProject.trim().toLowerCase()
+            : '';
+          const normalizedItemName = item.name
+            ? item.name.trim().toLowerCase()
+            : '';
+          const isSelected =
+            normalizedSelected &&
+            normalizedItemName &&
             normalizedSelected === normalizedItemName;
-          
+
           return (
-            <List.Item key={`project-${item.name}`} className="project-list-item">
+            <List.Item
+              key={`project-${item.name}`}
+              className="project-list-item"
+            >
               <Card
                 className={`project-card ${isSelected ? 'project-card-selected' : ''}`}
                 hoverable
                 onClick={() => {
-                  localStorage.setItem(`projectLastOpened_${item.name}`, Date.now().toString());
+                  localStorage.setItem(
+                    `projectLastOpened_${item.name}`,
+                    Date.now().toString(),
+                  );
                   openProjectDetails(item.name);
                 }}
-              actions={[
-                <Button
-                  key="edit"
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  title="Rename project"
-                />,
-                <Popconfirm
-                  key="delete"
-                  title="Delete this project?"
-                  description="This action cannot be undone."
-                  onConfirm={(e) => {
-                    e?.stopPropagation();
-                    deleteProject(item.name);
-                  }}
-                  onCancel={(e) => {
-                    e?.stopPropagation();
-                  }}
-                  okText="Delete"
-                  cancelText="Cancel"
-                  okButtonProps={{ danger: true }}
-                >
+                actions={[
                   <Button
+                    key="edit"
                     type="text"
-                    danger
-                    icon={<DeleteTwoTone twoToneColor="#ff4d4f" />}
+                    icon={<EditOutlined />}
                     onClick={(e) => {
                       e.stopPropagation();
                     }}
-                    title="Delete project"
-                  />
-                </Popconfirm>,
-              ]}
-            >
-              <div className="project-card-content">
-                <div className="project-card-header">
-                  <div
-                    className="project-icon"
-                    style={{
-                      backgroundColor: `${item.color}15`,
-                      color: item.color,
+                    title="Rename project"
+                  />,
+                  <Popconfirm
+                    key="delete"
+                    title="Delete this project?"
+                    description="This action cannot be undone."
+                    onConfirm={(e) => {
+                      e?.stopPropagation();
+                      deleteProject(item.name);
                     }}
+                    onCancel={(e) => {
+                      e?.stopPropagation();
+                    }}
+                    okText="Delete"
+                    cancelText="Cancel"
+                    okButtonProps={{ danger: true }}
                   >
-                    <FolderOutlined style={{ fontSize: '24px' }} />
-                  </div>
-                  <div className="project-title-wrapper">
-                    <Paragraph
-                      className="project-title"
-                      editable={{
-                        onChange: (str) => onChange(item.name, str),
-                        tooltip: 'Click to edit',
-                        triggerType: ['icon'],
-                      }}
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteTwoTone twoToneColor="#ff4d4f" />}
                       onClick={(e) => {
                         e.stopPropagation();
                       }}
+                      title="Delete project"
+                    />
+                  </Popconfirm>,
+                ]}
+              >
+                <div className="project-card-content">
+                  <div className="project-card-header">
+                    <div
+                      className="project-icon"
+                      style={{
+                        backgroundColor: `${item.color}15`,
+                        color: item.color,
+                      }}
                     >
-                      {item.name}
-                    </Paragraph>
+                      <FolderOutlined style={{ fontSize: '24px' }} />
+                    </div>
+                    <div className="project-title-wrapper">
+                      <Paragraph
+                        className="project-title"
+                        editable={{
+                          onChange: (str) => onChange(item.name, str),
+                          tooltip: 'Click to edit',
+                          triggerType: ['icon'],
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        {item.name}
+                      </Paragraph>
+                    </div>
+                  </div>
+                  <div className="project-card-meta">
+                    <Space size="small" wrap>
+                      <Tag icon={<ClockCircleOutlined />} color="default">
+                        {item.timeAgo}
+                      </Tag>
+                      {item.lastOpened && (
+                        <Tag icon={<CalendarOutlined />} color="default">
+                          {item.lastOpened}
+                        </Tag>
+                      )}
+                    </Space>
                   </div>
                 </div>
-                <div className="project-card-meta">
-                  <Space size="small" wrap>
-                    <Tag icon={<ClockCircleOutlined />} color="default">
-                      {item.timeAgo}
-                    </Tag>
-                    {item.lastOpened && (
-                      <Tag icon={<CalendarOutlined />} color="default">
-                        {item.lastOpened}
-                      </Tag>
-                    )}
-                  </Space>
-                </div>
-              </div>
-            </Card>
-          </List.Item>
+              </Card>
+            </List.Item>
           );
         }}
       />

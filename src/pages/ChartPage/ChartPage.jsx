@@ -2,13 +2,13 @@
 import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
 import {
-  Layout, 
-  Card, 
-  Tree, 
-  Input, 
-  Button, 
-  Space, 
-  Modal, 
+  Layout,
+  Card,
+  Tree,
+  Input,
+  Button,
+  Space,
+  Modal,
   message,
   Tag,
   Typography,
@@ -58,10 +58,10 @@ const { Text, Title } = Typography;
 const { Option } = Select;
 
 // Custom Node Component with Node/Parent Reference
-const CustomNode = ({ data, selected, onClick }) => {
+function CustomNode({ data, selected, onClick }) {
   const node = data.referencedNode;
   const parent = data.referencedParent;
-  
+
   const handleNodeClick = (e, nodeId) => {
     e.stopPropagation();
     const projectName = data.projectName?.replace(/\//g, '@') || '';
@@ -73,39 +73,41 @@ const CustomNode = ({ data, selected, onClick }) => {
     const projectName = data.projectName?.replace(/\//g, '@') || '';
     window.location.hash = `#/projectPage/${projectName}?parent=${parentId}`;
   };
-  
+
   return (
-    <div 
-      className={`custom-node ${selected ? 'selected' : ''}`} 
-      style={{ 
+    <div
+      className={`custom-node ${selected ? 'selected' : ''}`}
+      style={{
         background: data.color || '#fff',
         border: `2px solid ${selected ? '#1890ff' : data.borderColor || '#d9d9d9'}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '150px',
         cursor: 'pointer',
-        boxShadow: selected ? '0 4px 12px rgba(24, 144, 255, 0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+        boxShadow: selected
+          ? '0 4px 12px rgba(24, 144, 255, 0.3)'
+          : '0 2px 8px rgba(0,0,0,0.1)',
       }}
     >
       {data.image && (
-        <img 
-          src={data.image} 
-          alt="" 
-          style={{ 
-            width: '100%', 
-            height: '100px', 
-            objectFit: 'cover', 
+        <img
+          src={data.image}
+          alt=""
+          style={{
+            width: '100%',
+            height: '100px',
+            objectFit: 'cover',
             borderRadius: '4px',
             marginBottom: '8px',
-          }} 
+          }}
         />
       )}
       <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
         {data.label || 'Node'}
       </div>
       {node && (
-        <Tag 
-          color="blue" 
+        <Tag
+          color="blue"
           style={{ marginTop: '4px', cursor: 'pointer' }}
           onClick={(e) => handleNodeClick(e, node.id)}
         >
@@ -113,8 +115,8 @@ const CustomNode = ({ data, selected, onClick }) => {
         </Tag>
       )}
       {parent && (
-        <Tag 
-          color="green" 
+        <Tag
+          color="green"
           style={{ marginTop: '4px', cursor: 'pointer' }}
           onClick={(e) => handleParentClick(e, parent.id)}
         >
@@ -128,7 +130,7 @@ const CustomNode = ({ data, selected, onClick }) => {
       )}
     </div>
   );
-};
+}
 
 const nodeTypes = {
   custom: CustomNode,
@@ -137,15 +139,15 @@ const nodeTypes = {
 class ChartPage extends Component {
   constructor(props) {
     super(props);
-    
+
     const location = window.location.href;
     this.projectName = location.split('/').pop();
     // Remove query parameters
     this.projectName = this.projectName.split('?')[0];
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
-    
-    this.  state = {
+
+    this.state = {
       lokiLoaded: false,
       nodes: {},
       parents: {},
@@ -186,14 +188,17 @@ class ChartPage extends Component {
       this.projectName,
     );
 
-    this.setState({
-      ...this.state,
-      ...newState,
-      lokiLoaded: true,
-    }, () => {
-      this.loadDiagrams();
-      this.loadImages();
-    });
+    this.setState(
+      {
+        ...this.state,
+        ...newState,
+        lokiLoaded: true,
+      },
+      () => {
+        this.loadDiagrams();
+        this.loadImages();
+      },
+    );
 
     ipcRenderer.on('UpdateProjectPageState', this.handleStateUpdate);
   }
@@ -212,7 +217,11 @@ class ChartPage extends Component {
 
   loadDiagrams = async () => {
     try {
-      const diagrams = await ipcRenderer.invoke('diagrams:list', this.projectName, this.state.isGlobal);
+      const diagrams = await ipcRenderer.invoke(
+        'diagrams:list',
+        this.projectName,
+        this.state.isGlobal,
+      );
       this.setState({ diagrams });
     } catch (error) {
       console.error('Error loading diagrams:', error);
@@ -222,31 +231,44 @@ class ChartPage extends Component {
 
   loadDiagram = async (diagramPath) => {
     try {
-      const diagram = await ipcRenderer.invoke('diagrams:read', diagramPath, this.projectName, this.state.isGlobal);
-      
+      const diagram = await ipcRenderer.invoke(
+        'diagrams:read',
+        diagramPath,
+        this.projectName,
+        this.state.isGlobal,
+      );
+
       // Restore node/parent references from IDs
-      const restoredNodes = (diagram.content.nodes || []).map(node => {
+      const restoredNodes = (diagram.content.nodes || []).map((node) => {
         const restoredData = { ...node.data };
-        
+
         // Restore node reference
-        if (node.data.nodeReferenceId && this.state.nodes[node.data.nodeReferenceId]) {
-          restoredData.referencedNode = this.state.nodes[node.data.nodeReferenceId];
+        if (
+          node.data.nodeReferenceId &&
+          this.state.nodes[node.data.nodeReferenceId]
+        ) {
+          restoredData.referencedNode =
+            this.state.nodes[node.data.nodeReferenceId];
         }
-        
+
         // Restore parent reference
-        if (node.data.parentReferenceId && this.state.parents[node.data.parentReferenceId]) {
-          restoredData.referencedParent = this.state.parents[node.data.parentReferenceId];
+        if (
+          node.data.parentReferenceId &&
+          this.state.parents[node.data.parentReferenceId]
+        ) {
+          restoredData.referencedParent =
+            this.state.parents[node.data.parentReferenceId];
         }
-        
+
         // Ensure projectName is set
         restoredData.projectName = this.projectName;
-        
+
         return {
           ...node,
           data: restoredData,
         };
       });
-      
+
       this.setState({
         currentDiagram: diagramPath,
         diagramData: {
@@ -275,7 +297,7 @@ class ChartPage extends Component {
       // Save only IDs for references, not full objects
       const dataToSave = {
         ...this.state.diagramData,
-        nodes: (this.state.diagramData.nodes || []).map(node => ({
+        nodes: (this.state.diagramData.nodes || []).map((node) => ({
           ...node,
           data: {
             ...node.data,
@@ -292,7 +314,7 @@ class ChartPage extends Component {
         this.state.currentDiagram,
         dataToSave,
         this.projectName,
-        this.state.isGlobal
+        this.state.isGlobal,
       );
       this.setState({ isDirty: false });
       if (showMessage) {
@@ -317,7 +339,11 @@ class ChartPage extends Component {
 
     // Set new timer for autosave (2 seconds after last change)
     const timer = setTimeout(() => {
-      if (this.state.isDirty && this.state.currentDiagram && this.state.autosaveEnabled) {
+      if (
+        this.state.isDirty &&
+        this.state.currentDiagram &&
+        this.state.autosaveEnabled
+      ) {
         this.saveDiagram(false); // Save without showing message
       }
     }, 2000);
@@ -332,10 +358,10 @@ class ChartPage extends Component {
     }
 
     try {
-      const diagramPath = this.state.newDiagramName.endsWith('.json') 
-        ? this.state.newDiagramName 
+      const diagramPath = this.state.newDiagramName.endsWith('.json')
+        ? this.state.newDiagramName
         : `${this.state.newDiagramName}.json`;
-      
+
       const initialData = {
         nodes: [],
         edges: [],
@@ -347,16 +373,19 @@ class ChartPage extends Component {
         diagramPath,
         initialData,
         this.projectName,
-        this.state.isGlobal
+        this.state.isGlobal,
       );
 
-      this.setState({
-        createDiagramModalVisible: false,
-        newDiagramName: '',
-      }, () => {
-        this.loadDiagrams();
-        this.loadDiagram(diagramPath);
-      });
+      this.setState(
+        {
+          createDiagramModalVisible: false,
+          newDiagramName: '',
+        },
+        () => {
+          this.loadDiagrams();
+          this.loadDiagram(diagramPath);
+        },
+      );
 
       message.success('Diagram created successfully');
     } catch (error) {
@@ -376,15 +405,18 @@ class ChartPage extends Component {
         'diagrams:createFolder',
         this.state.newFolderName,
         this.projectName,
-        this.state.isGlobal
+        this.state.isGlobal,
       );
 
-      this.setState({
-        createFolderModalVisible: false,
-        newFolderName: '',
-      }, () => {
-        this.loadDiagrams();
-      });
+      this.setState(
+        {
+          createFolderModalVisible: false,
+          newFolderName: '',
+        },
+        () => {
+          this.loadDiagrams();
+        },
+      );
 
       message.success('Folder created successfully');
     } catch (error) {
@@ -405,7 +437,7 @@ class ChartPage extends Component {
         'diagrams:delete',
         item.path,
         this.projectName,
-        this.state.isGlobal
+        this.state.isGlobal,
       );
 
       if (this.state.currentDiagram === item.path) {
@@ -434,41 +466,44 @@ class ChartPage extends Component {
 
   onNodesChange = (changes) => {
     if (!this.state.diagramData) return;
-    
+
     const newNodes = [...this.state.diagramData.nodes];
     let shouldUpdateState = false;
-    
+
     changes.forEach((change) => {
       if (change.type === 'position' && change.position) {
-        const node = newNodes.find(n => n.id === change.id);
+        const node = newNodes.find((n) => n.id === change.id);
         if (node) {
           node.position = change.position;
           shouldUpdateState = true;
         }
       } else if (change.type === 'remove') {
-        const index = newNodes.findIndex(n => n.id === change.id);
+        const index = newNodes.findIndex((n) => n.id === change.id);
         if (index !== -1) {
           newNodes.splice(index, 1);
           if (this.state.selectedNodeId === change.id) {
-            this.setState({ selectedNodeId: null, nodeEditPanelVisible: false });
+            this.setState({
+              selectedNodeId: null,
+              nodeEditPanelVisible: false,
+            });
           }
           shouldUpdateState = true;
         }
       } else if (change.type === 'select') {
         // Handle node selection
         if (change.selected) {
-          this.setState({ 
+          this.setState({
             selectedNodeId: change.id,
             nodeEditPanelVisible: true,
           });
         } else if (this.state.selectedNodeId === change.id) {
-          this.setState({ 
+          this.setState({
             selectedNodeId: null,
             nodeEditPanelVisible: false,
           });
         }
       } else if (change.type === 'dimensions' && change.dimensions) {
-        const node = newNodes.find(n => n.id === change.id);
+        const node = newNodes.find((n) => n.id === change.id);
         if (node) {
           node.width = change.dimensions.width;
           node.height = change.dimensions.height;
@@ -478,40 +513,46 @@ class ChartPage extends Component {
     });
 
     if (shouldUpdateState) {
-      this.setState({
-        diagramData: {
-          ...this.state.diagramData,
-          nodes: newNodes,
+      this.setState(
+        {
+          diagramData: {
+            ...this.state.diagramData,
+            nodes: newNodes,
+          },
+          isDirty: true,
         },
-        isDirty: true,
-      }, () => {
-        this.autosaveDiagram();
-      });
+        () => {
+          this.autosaveDiagram();
+        },
+      );
     }
   };
 
   onEdgesChange = (changes) => {
     if (!this.state.diagramData) return;
-    
+
     const newEdges = [...this.state.diagramData.edges];
     changes.forEach((change) => {
       if (change.type === 'remove') {
-        const index = newEdges.findIndex(e => e.id === change.id);
+        const index = newEdges.findIndex((e) => e.id === change.id);
         if (index !== -1) {
           newEdges.splice(index, 1);
         }
       }
     });
 
-    this.setState({
-      diagramData: {
-        ...this.state.diagramData,
-        edges: newEdges,
+    this.setState(
+      {
+        diagramData: {
+          ...this.state.diagramData,
+          edges: newEdges,
+        },
+        isDirty: true,
       },
-      isDirty: true,
-    }, () => {
-      this.autosaveDiagram();
-    });
+      () => {
+        this.autosaveDiagram();
+      },
+    );
   };
 
   onConnect = (params) => {
@@ -527,29 +568,35 @@ class ChartPage extends Component {
       },
     };
 
-    this.setState({
-      diagramData: {
-        ...this.state.diagramData,
-        edges: [...this.state.diagramData.edges, newEdge],
+    this.setState(
+      {
+        diagramData: {
+          ...this.state.diagramData,
+          edges: [...this.state.diagramData.edges, newEdge],
+        },
+        isDirty: true,
       },
-      isDirty: true,
-    }, () => {
-      this.autosaveDiagram();
-    });
+      () => {
+        this.autosaveDiagram();
+      },
+    );
   };
 
   onMove = (event, viewport) => {
     if (!this.state.diagramData) return;
 
-    this.setState({
-      diagramData: {
-        ...this.state.diagramData,
-        viewport,
+    this.setState(
+      {
+        diagramData: {
+          ...this.state.diagramData,
+          viewport,
+        },
+        isDirty: true,
       },
-      isDirty: true,
-    }, () => {
-      this.autosaveDiagram();
-    });
+      () => {
+        this.autosaveDiagram();
+      },
+    );
   };
 
   addNode = (type = 'custom') => {
@@ -567,22 +614,29 @@ class ChartPage extends Component {
       },
     };
 
-    this.setState({
-      diagramData: {
-        ...this.state.diagramData,
-        nodes: [...this.state.diagramData.nodes, newNode],
+    this.setState(
+      {
+        diagramData: {
+          ...this.state.diagramData,
+          nodes: [...this.state.diagramData.nodes, newNode],
+        },
+        selectedNodeId: newNode.id,
+        nodeEditPanelVisible: true,
+        isDirty: true,
       },
-      selectedNodeId: newNode.id,
-      nodeEditPanelVisible: true,
-      isDirty: true,
-    }, () => {
-      this.autosaveDiagram();
-    });
+      () => {
+        this.autosaveDiagram();
+      },
+    );
   };
 
   loadImages = async () => {
     try {
-      const images = await ipcRenderer.invoke('docs:listImages', this.projectName, this.state.isGlobal);
+      const images = await ipcRenderer.invoke(
+        'docs:listImages',
+        this.projectName,
+        this.state.isGlobal,
+      );
       this.setState({ images });
     } catch (error) {
       console.error('Error loading images:', error);
@@ -595,15 +649,15 @@ class ChartPage extends Component {
       reader.onload = async (e) => {
         const base64 = e.target.result;
         const imageName = file.name;
-        
+
         await ipcRenderer.invoke(
           'docs:saveImage',
           imageName,
           base64,
           this.projectName,
-          this.state.isGlobal
+          this.state.isGlobal,
         );
-        
+
         await this.loadImages();
         message.success('Image uploaded successfully');
       };
@@ -618,7 +672,8 @@ class ChartPage extends Component {
   handleImageSelect = (imagePath) => {
     if (!this.state.selectedNodeId || !this.state.diagramData) return;
 
-    ipcRenderer.invoke('docs:getImage', imagePath, this.projectName, this.state.isGlobal)
+    ipcRenderer
+      .invoke('docs:getImage', imagePath, this.projectName, this.state.isGlobal)
       .then((imageData) => {
         this.updateNodeData(this.state.selectedNodeId, { image: imageData });
         this.setState({ imageUploadVisible: false });
@@ -633,7 +688,7 @@ class ChartPage extends Component {
   updateNodeData = (nodeId, newData) => {
     if (!this.state.diagramData) return;
 
-    const newNodes = this.state.diagramData.nodes.map(node => {
+    const newNodes = this.state.diagramData.nodes.map((node) => {
       if (node.id === nodeId) {
         return {
           ...node,
@@ -646,40 +701,48 @@ class ChartPage extends Component {
       return node;
     });
 
-    this.setState({
-      diagramData: {
-        ...this.state.diagramData,
-        nodes: newNodes,
+    this.setState(
+      {
+        diagramData: {
+          ...this.state.diagramData,
+          nodes: newNodes,
+        },
+        isDirty: true,
       },
-      isDirty: true,
-    }, () => {
-      this.autosaveDiagram();
-    });
+      () => {
+        this.autosaveDiagram();
+      },
+    );
   };
 
   getNodeSuggestions = (query) => {
     const { nodes } = this.state;
     const queryLower = query.toLowerCase();
     return Object.values(nodes || {})
-      .filter(node => node.title && node.title.toLowerCase().includes(queryLower))
+      .filter(
+        (node) => node.title && node.title.toLowerCase().includes(queryLower),
+      )
       .slice(0, 10)
-      .map(node => ({ value: node.id, label: node.title, node }));
+      .map((node) => ({ value: node.id, label: node.title, node }));
   };
 
   getParentSuggestions = (query) => {
     const { parents } = this.state;
     const queryLower = query.toLowerCase();
     return Object.values(parents || {})
-      .filter(parent => parent.title && parent.title.toLowerCase().includes(queryLower))
+      .filter(
+        (parent) =>
+          parent.title && parent.title.toLowerCase().includes(queryLower),
+      )
       .slice(0, 10)
-      .map(parent => ({ value: parent.id, label: parent.title, parent }));
+      .map((parent) => ({ value: parent.id, label: parent.title, parent }));
   };
 
   handleNodeReferenceSelect = (nodeId) => {
     if (!this.state.selectedNodeId) return;
     const node = this.state.nodes[nodeId];
     if (node) {
-      this.updateNodeData(this.state.selectedNodeId, { 
+      this.updateNodeData(this.state.selectedNodeId, {
         referencedNode: node,
         nodeReferenceId: nodeId,
       });
@@ -690,7 +753,7 @@ class ChartPage extends Component {
     if (!this.state.selectedNodeId) return;
     const parent = this.state.parents[parentId];
     if (parent) {
-      this.updateNodeData(this.state.selectedNodeId, { 
+      this.updateNodeData(this.state.selectedNodeId, {
         referencedParent: parent,
         parentReferenceId: parentId,
       });
@@ -699,7 +762,7 @@ class ChartPage extends Component {
 
   removeNodeReference = () => {
     if (!this.state.selectedNodeId) return;
-    this.updateNodeData(this.state.selectedNodeId, { 
+    this.updateNodeData(this.state.selectedNodeId, {
       referencedNode: null,
       nodeReferenceId: null,
     });
@@ -707,7 +770,7 @@ class ChartPage extends Component {
 
   removeParentReference = () => {
     if (!this.state.selectedNodeId) return;
-    this.updateNodeData(this.state.selectedNodeId, { 
+    this.updateNodeData(this.state.selectedNodeId, {
       referencedParent: null,
       parentReferenceId: null,
     });
@@ -749,17 +812,26 @@ class ChartPage extends Component {
     // Build tree data
     const buildTreeData = (items) => {
       return items
-        .filter(item => {
+        .filter((item) => {
           if (!searchText) return true;
           const searchLower = searchText.toLowerCase();
-          return item.name.toLowerCase().includes(searchLower) ||
-                 (item.children && item.children.some(child => 
-                   child.name.toLowerCase().includes(searchLower)
-                 ));
+          return (
+            item.name.toLowerCase().includes(searchLower) ||
+            (item.children &&
+              item.children.some((child) =>
+                child.name.toLowerCase().includes(searchLower),
+              ))
+          );
         })
-        .map(item => ({
+        .map((item) => ({
           title: (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <span>
                 {item.type === 'folder' ? <FolderOutlined /> : <FileOutlined />}
                 <span style={{ marginLeft: '8px' }}>{item.name}</span>
@@ -810,12 +882,24 @@ class ChartPage extends Component {
             width={250}
             collapsible
             collapsed={sidebarCollapsed}
-            onCollapse={(collapsed) => this.setState({ sidebarCollapsed: collapsed })}
+            onCollapse={(collapsed) =>
+              this.setState({ sidebarCollapsed: collapsed })
+            }
             style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}
           >
             <div style={{ padding: '16px' }}>
-              <Space direction="vertical" style={{ width: '100%' }} size="small">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Space
+                direction="vertical"
+                style={{ width: '100%' }}
+                size="small"
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <Title level={5} style={{ margin: 0 }}>
                     {isGlobal ? 'Global' : 'Project'} Diagrams
                   </Title>
@@ -827,21 +911,29 @@ class ChartPage extends Component {
                     title={isGlobal ? 'Switch to Project' : 'Switch to Global'}
                   />
                 </div>
-                
+
                 <Input
                   placeholder="Search diagrams..."
                   prefix={<SearchOutlined />}
                   value={searchText}
-                  onChange={(e) => this.setState({ searchText: e.target.value })}
+                  onChange={(e) =>
+                    this.setState({ searchText: e.target.value })
+                  }
                   size="small"
                 />
-                
-                <Space direction="vertical" style={{ width: '100%' }} size="small">
+
+                <Space
+                  direction="vertical"
+                  style={{ width: '100%' }}
+                  size="small"
+                >
                   <Button
                     type="dashed"
                     icon={<FileAddOutlined />}
                     size="small"
-                    onClick={() => this.setState({ createDiagramModalVisible: true })}
+                    onClick={() =>
+                      this.setState({ createDiagramModalVisible: true })
+                    }
                     block
                   >
                     New Diagram
@@ -850,7 +942,9 @@ class ChartPage extends Component {
                     type="dashed"
                     icon={<FolderAddOutlined />}
                     size="small"
-                    onClick={() => this.setState({ createFolderModalVisible: true })}
+                    onClick={() =>
+                      this.setState({ createFolderModalVisible: true })
+                    }
                     block
                   >
                     New Folder
@@ -858,7 +952,7 @@ class ChartPage extends Component {
                 </Space>
               </Space>
             </div>
-            
+
             <div style={{ flex: 1, overflow: 'auto', padding: '0 8px' }}>
               <Tree
                 treeData={buildTreeData(diagrams)}
@@ -875,17 +969,33 @@ class ChartPage extends Component {
             </div>
           </Sider>
 
-          <Content style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Content
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
             {currentDiagram && diagramData ? (
               <>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid #f0f0f0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <Space>
                     <Text strong>{currentDiagram.replace('.json', '')}</Text>
                     {isDirty && <Tag color="orange">Unsaved</Tag>}
                   </Space>
                   <Space>
                     <Space>
-                      <Text type="secondary" style={{ fontSize: '12px' }}>Autosave</Text>
+                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                        Autosave
+                      </Text>
                       <Switch
                         checked={this.state.autosaveEnabled}
                         onChange={(checked) => {
@@ -914,7 +1024,7 @@ class ChartPage extends Component {
                     </Button>
                   </Space>
                 </div>
-                
+
                 <div style={{ flex: 1, position: 'relative', display: 'flex' }}>
                   <div style={{ flex: 1, position: 'relative' }}>
                     <ReactFlow
@@ -931,7 +1041,9 @@ class ChartPage extends Component {
                         });
                       }}
                       nodeTypes={nodeTypes}
-                      defaultViewport={diagramData.viewport || { x: 0, y: 0, zoom: 1 }}
+                      defaultViewport={
+                        diagramData.viewport || { x: 0, y: 0, zoom: 1 }
+                      }
                       fitView
                     >
                       <Background />
@@ -939,211 +1051,294 @@ class ChartPage extends Component {
                       <MiniMap />
                     </ReactFlow>
                   </div>
-                  
-                  {this.state.nodeEditPanelVisible && this.state.selectedNodeId && (() => {
-                    const selectedNode = (diagramData.nodes || []).find(n => n.id === this.state.selectedNodeId);
-                    if (!selectedNode) return null;
-                    
-                    return (
-                      <Drawer
-                        title="Edit Node"
-                        placement="right"
-                        width={350}
-                        onClose={() => this.setState({ nodeEditPanelVisible: false, selectedNodeId: null })}
-                        visible={this.state.nodeEditPanelVisible}
-                      >
-                        <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                          <div>
-                            <Text strong>Label</Text>
-                            <Input
-                              value={selectedNode.data?.label || ''}
-                              onChange={(e) => this.updateNodeData(this.state.selectedNodeId, { label: e.target.value })}
-                              placeholder="Node label"
-                            />
-                          </div>
-                          
-                          <div>
-                            <Text strong>Description</Text>
-                            <Input.TextArea
-                              value={selectedNode.data?.description || ''}
-                              onChange={(e) => this.updateNodeData(this.state.selectedNodeId, { description: e.target.value })}
-                              placeholder="Node description"
-                              rows={3}
-                            />
-                          </div>
-                          
-                          <Divider />
-                          
-                          <div>
-                            <Text strong>Background Color</Text>
-                            <Input
-                              type="color"
-                              value={selectedNode.data?.color || '#ffffff'}
-                              onChange={(e) => this.updateNodeData(this.state.selectedNodeId, { color: e.target.value })}
-                              style={{ width: '100%', height: '40px' }}
-                            />
-                          </div>
-                          
-                          <div>
-                            <Text strong>Border Color</Text>
-                            <Input
-                              type="color"
-                              value={selectedNode.data?.borderColor || '#d9d9d9'}
-                              onChange={(e) => this.updateNodeData(this.state.selectedNodeId, { borderColor: e.target.value })}
-                              style={{ width: '100%', height: '40px' }}
-                            />
-                          </div>
-                          
-                          <Divider />
-                          
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                              <Text strong>Image</Text>
-                              <Space>
-                                <Button
-                                  size="small"
-                                  icon={<PictureOutlined />}
-                                  onClick={() => this.setState({ imageUploadVisible: true })}
-                                >
-                                  {selectedNode.data?.image ? 'Change' : 'Add'} Image
-                                </Button>
-                                {selectedNode.data?.image && (
+
+                  {this.state.nodeEditPanelVisible &&
+                    this.state.selectedNodeId &&
+                    (() => {
+                      const selectedNode = (diagramData.nodes || []).find(
+                        (n) => n.id === this.state.selectedNodeId,
+                      );
+                      if (!selectedNode) return null;
+
+                      return (
+                        <Drawer
+                          title="Edit Node"
+                          placement="right"
+                          width={350}
+                          onClose={() =>
+                            this.setState({
+                              nodeEditPanelVisible: false,
+                              selectedNodeId: null,
+                            })
+                          }
+                          visible={this.state.nodeEditPanelVisible}
+                        >
+                          <Space
+                            direction="vertical"
+                            style={{ width: '100%' }}
+                            size="middle"
+                          >
+                            <div>
+                              <Text strong>Label</Text>
+                              <Input
+                                value={selectedNode.data?.label || ''}
+                                onChange={(e) =>
+                                  this.updateNodeData(
+                                    this.state.selectedNodeId,
+                                    { label: e.target.value },
+                                  )
+                                }
+                                placeholder="Node label"
+                              />
+                            </div>
+
+                            <div>
+                              <Text strong>Description</Text>
+                              <Input.TextArea
+                                value={selectedNode.data?.description || ''}
+                                onChange={(e) =>
+                                  this.updateNodeData(
+                                    this.state.selectedNodeId,
+                                    { description: e.target.value },
+                                  )
+                                }
+                                placeholder="Node description"
+                                rows={3}
+                              />
+                            </div>
+
+                            <Divider />
+
+                            <div>
+                              <Text strong>Background Color</Text>
+                              <Input
+                                type="color"
+                                value={selectedNode.data?.color || '#ffffff'}
+                                onChange={(e) =>
+                                  this.updateNodeData(
+                                    this.state.selectedNodeId,
+                                    { color: e.target.value },
+                                  )
+                                }
+                                style={{ width: '100%', height: '40px' }}
+                              />
+                            </div>
+
+                            <div>
+                              <Text strong>Border Color</Text>
+                              <Input
+                                type="color"
+                                value={
+                                  selectedNode.data?.borderColor || '#d9d9d9'
+                                }
+                                onChange={(e) =>
+                                  this.updateNodeData(
+                                    this.state.selectedNodeId,
+                                    { borderColor: e.target.value },
+                                  )
+                                }
+                                style={{ width: '100%', height: '40px' }}
+                              />
+                            </div>
+
+                            <Divider />
+
+                            <div>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  marginBottom: '8px',
+                                }}
+                              >
+                                <Text strong>Image</Text>
+                                <Space>
+                                  <Button
+                                    size="small"
+                                    icon={<PictureOutlined />}
+                                    onClick={() =>
+                                      this.setState({
+                                        imageUploadVisible: true,
+                                      })
+                                    }
+                                  >
+                                    {selectedNode.data?.image
+                                      ? 'Change'
+                                      : 'Add'}{' '}
+                                    Image
+                                  </Button>
+                                  {selectedNode.data?.image && (
+                                    <Button
+                                      size="small"
+                                      danger
+                                      icon={<CloseOutlined />}
+                                      onClick={this.removeImage}
+                                    >
+                                      Remove
+                                    </Button>
+                                  )}
+                                </Space>
+                              </div>
+                              {selectedNode.data?.image && (
+                                <img
+                                  src={selectedNode.data.image}
+                                  alt="Node"
+                                  style={{
+                                    width: '100%',
+                                    maxHeight: '200px',
+                                    objectFit: 'contain',
+                                    borderRadius: '4px',
+                                    border: '1px solid #d9d9d9',
+                                  }}
+                                />
+                              )}
+                            </div>
+
+                            <Divider />
+
+                            <div>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  marginBottom: '8px',
+                                }}
+                              >
+                                <Text strong>Node Reference</Text>
+                                {selectedNode.data?.referencedNode && (
                                   <Button
                                     size="small"
                                     danger
                                     icon={<CloseOutlined />}
-                                    onClick={this.removeImage}
+                                    onClick={this.removeNodeReference}
                                   >
                                     Remove
                                   </Button>
                                 )}
-                              </Space>
-                            </div>
-                            {selectedNode.data?.image && (
-                              <img 
-                                src={selectedNode.data.image} 
-                                alt="Node" 
-                                style={{ 
-                                  width: '100%', 
-                                  maxHeight: '200px', 
-                                  objectFit: 'contain',
-                                  borderRadius: '4px',
-                                  border: '1px solid #d9d9d9',
-                                }} 
-                              />
-                            )}
-                          </div>
-                          
-                          <Divider />
-                          
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                              <Text strong>Node Reference</Text>
-                              {selectedNode.data?.referencedNode && (
-                                <Button
-                                  size="small"
-                                  danger
-                                  icon={<CloseOutlined />}
-                                  onClick={this.removeNodeReference}
+                              </div>
+                              {selectedNode.data?.referencedNode ? (
+                                <Tag
+                                  color="blue"
+                                  style={{ cursor: 'pointer' }}
+                                  onClick={() => {
+                                    const projectName =
+                                      this.projectName.replace(/\//g, '@');
+                                    window.location.hash = `#/projectPage/${projectName}?node=${selectedNode.data.referencedNode.id}`;
+                                  }}
                                 >
-                                  Remove
-                                </Button>
+                                  @{selectedNode.data.referencedNode.title}
+                                </Tag>
+                              ) : (
+                                <AutoComplete
+                                  style={{ width: '100%' }}
+                                  options={this.getNodeSuggestions('')}
+                                  onSelect={(value, option) =>
+                                    this.handleNodeReferenceSelect(value)
+                                  }
+                                  onSearch={(text) =>
+                                    this.getNodeSuggestions(text)
+                                  }
+                                  placeholder="Search for a node..."
+                                  filterOption={(inputValue, option) =>
+                                    option.label
+                                      .toLowerCase()
+                                      .includes(inputValue.toLowerCase())
+                                  }
+                                />
                               )}
                             </div>
-                            {selectedNode.data?.referencedNode ? (
-                              <Tag 
-                                color="blue" 
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => {
-                                  const projectName = this.projectName.replace(/\//g, '@');
-                                  window.location.hash = `#/projectPage/${projectName}?node=${selectedNode.data.referencedNode.id}`;
+
+                            <div>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  marginBottom: '8px',
                                 }}
                               >
-                                @{selectedNode.data.referencedNode.title}
-                              </Tag>
-                            ) : (
-                              <AutoComplete
-                                style={{ width: '100%' }}
-                                options={this.getNodeSuggestions('')}
-                                onSelect={(value, option) => this.handleNodeReferenceSelect(value)}
-                                onSearch={(text) => this.getNodeSuggestions(text)}
-                                placeholder="Search for a node..."
-                                filterOption={(inputValue, option) =>
-                                  option.label.toLowerCase().includes(inputValue.toLowerCase())
-                                }
-                              />
-                            )}
-                          </div>
-                          
-                          <div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                              <Text strong>Parent Reference</Text>
-                              {selectedNode.data?.referencedParent && (
-                                <Button
-                                  size="small"
-                                  danger
-                                  icon={<CloseOutlined />}
-                                  onClick={this.removeParentReference}
+                                <Text strong>Parent Reference</Text>
+                                {selectedNode.data?.referencedParent && (
+                                  <Button
+                                    size="small"
+                                    danger
+                                    icon={<CloseOutlined />}
+                                    onClick={this.removeParentReference}
+                                  >
+                                    Remove
+                                  </Button>
+                                )}
+                              </div>
+                              {selectedNode.data?.referencedParent ? (
+                                <Tag
+                                  color="green"
+                                  style={{ cursor: 'pointer' }}
+                                  onClick={() => {
+                                    const projectName =
+                                      this.projectName.replace(/\//g, '@');
+                                    window.location.hash = `#/projectPage/${projectName}?parent=${selectedNode.data.referencedParent.id}`;
+                                  }}
                                 >
-                                  Remove
-                                </Button>
+                                  @{selectedNode.data.referencedParent.title}
+                                </Tag>
+                              ) : (
+                                <AutoComplete
+                                  style={{ width: '100%' }}
+                                  options={this.getParentSuggestions('')}
+                                  onSelect={(value, option) =>
+                                    this.handleParentReferenceSelect(value)
+                                  }
+                                  onSearch={(text) =>
+                                    this.getParentSuggestions(text)
+                                  }
+                                  placeholder="Search for a parent..."
+                                  filterOption={(inputValue, option) =>
+                                    option.label
+                                      .toLowerCase()
+                                      .includes(inputValue.toLowerCase())
+                                  }
+                                />
                               )}
                             </div>
-                            {selectedNode.data?.referencedParent ? (
-                              <Tag 
-                                color="green" 
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => {
-                                  const projectName = this.projectName.replace(/\//g, '@');
-                                  window.location.hash = `#/projectPage/${projectName}?parent=${selectedNode.data.referencedParent.id}`;
-                                }}
-                              >
-                                @{selectedNode.data.referencedParent.title}
-                              </Tag>
-                            ) : (
-                              <AutoComplete
-                                style={{ width: '100%' }}
-                                options={this.getParentSuggestions('')}
-                                onSelect={(value, option) => this.handleParentReferenceSelect(value)}
-                                onSearch={(text) => this.getParentSuggestions(text)}
-                                placeholder="Search for a parent..."
-                                filterOption={(inputValue, option) =>
-                                  option.label.toLowerCase().includes(inputValue.toLowerCase())
-                                }
-                              />
-                            )}
-                          </div>
-                          
-                          <Divider />
-                          
-                          <Button
-                            danger
-                            block
-                            onClick={() => {
-                              if (!this.state.diagramData) return;
-                              const newNodes = (this.state.diagramData.nodes || []).filter(n => n.id !== this.state.selectedNodeId);
-                              this.setState({
-                                diagramData: {
-                                  ...this.state.diagramData,
-                                  nodes: newNodes,
-                                },
-                                selectedNodeId: null,
-                                nodeEditPanelVisible: false,
-                                isDirty: true,
-                              });
-                            }}
-                          >
-                            Delete Node
-                          </Button>
-                        </Space>
-                      </Drawer>
-                    );
-                  })()}
+
+                            <Divider />
+
+                            <Button
+                              danger
+                              block
+                              onClick={() => {
+                                if (!this.state.diagramData) return;
+                                const newNodes = (
+                                  this.state.diagramData.nodes || []
+                                ).filter(
+                                  (n) => n.id !== this.state.selectedNodeId,
+                                );
+                                this.setState({
+                                  diagramData: {
+                                    ...this.state.diagramData,
+                                    nodes: newNodes,
+                                  },
+                                  selectedNodeId: null,
+                                  nodeEditPanelVisible: false,
+                                  isDirty: true,
+                                });
+                              }}
+                            >
+                              Delete Node
+                            </Button>
+                          </Space>
+                        </Drawer>
+                      );
+                    })()}
                 </div>
               </>
             ) : (
               <div style={{ padding: '50px', textAlign: 'center' }}>
-                <Text type="secondary">Select a diagram from the sidebar or create a new one</Text>
+                <Text type="secondary">
+                  Select a diagram from the sidebar or create a new one
+                </Text>
               </div>
             )}
           </Content>
@@ -1154,7 +1349,12 @@ class ChartPage extends Component {
           title="Create New Diagram"
           visible={createDiagramModalVisible}
           onOk={this.createDiagram}
-          onCancel={() => this.setState({ createDiagramModalVisible: false, newDiagramName: '' })}
+          onCancel={() =>
+            this.setState({
+              createDiagramModalVisible: false,
+              newDiagramName: '',
+            })
+          }
         >
           <Input
             placeholder="Diagram name"
@@ -1169,7 +1369,12 @@ class ChartPage extends Component {
           title="Create New Folder"
           visible={createFolderModalVisible}
           onOk={this.createFolder}
-          onCancel={() => this.setState({ createFolderModalVisible: false, newFolderName: '' })}
+          onCancel={() =>
+            this.setState({
+              createFolderModalVisible: false,
+              newFolderName: '',
+            })
+          }
         >
           <Input
             placeholder="Folder name"
@@ -1200,12 +1405,18 @@ class ChartPage extends Component {
                 </Button>
               </Upload>
             </div>
-            
+
             <Divider />
-            
+
             <div>
               <Text strong>Select Existing Image</Text>
-              <div style={{ maxHeight: '400px', overflow: 'auto', marginTop: '12px' }}>
+              <div
+                style={{
+                  maxHeight: '400px',
+                  overflow: 'auto',
+                  marginTop: '12px',
+                }}
+              >
                 <List
                   grid={{ gutter: 16, column: 3 }}
                   dataSource={this.state.images}
@@ -1238,4 +1449,3 @@ class ChartPage extends Component {
 }
 
 export default ChartPage;
-

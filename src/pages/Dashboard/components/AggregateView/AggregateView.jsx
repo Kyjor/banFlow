@@ -1,22 +1,52 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Spin, message, DatePicker, Select, Space, Button, Tabs, Calendar, List, Checkbox, Badge, Collapse } from 'antd';
+import {
+  Row,
+  Col,
+  Spin,
+  message,
+  DatePicker,
+  Select,
+  Space,
+  Button,
+  Tabs,
+  Calendar,
+  List,
+  Checkbox,
+  Badge,
+  Collapse,
+} from 'antd';
 import TabPane from 'antd/lib/tabs/TabPane';
 import { ReloadOutlined, FilterOutlined } from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import moment from 'moment';
 import dateFormat from 'dateformat';
 import StatisticsCards from '../StatisticsCards/StatisticsCards';
-import { TimeDistributionChart, TimeTrendChart, ActivityHeatmap } from '../TimeCharts';
+import {
+  TimeDistributionChart,
+  TimeTrendChart,
+  ActivityHeatmap,
+} from '../TimeCharts';
 import ProjectComparison from '../ProjectComparison/ProjectComparison';
 import DayByDayCalendar from '../../../../components/DayByDayCalendar/DayByDayCalendar';
-import { aggregateProjectStats, compareProjects, getAggregateRecentActivity } from '../../utils/aggregateCalculations';
+import {
+  aggregateProjectStats,
+  compareProjects,
+  getAggregateRecentActivity,
+} from '../../utils/aggregateCalculations';
 import { calculateTimeInDateRange } from '../../utils/statisticsCalculations';
 import './AggregateView.scss';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoading, dayCellRender, dateCellRender }) {
+function AggregateView({
+  projectsData,
+  selectedProjects,
+  onProjectClick,
+  isLoading,
+  dayCellRender,
+  dateCellRender,
+}) {
   const [dateRange, setDateRange] = useState(null);
   const [selectedTag, setSelectedTag] = useState(null);
   const [selectedIteration, setSelectedIteration] = useState(null);
@@ -34,13 +64,18 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
 
     // Apply date range filter
     if (dateRange && dateRange[0] && dateRange[1]) {
-      filteredData = projectsData.map(project => {
-        const filteredNodes = project.nodes.filter(node => {
+      filteredData = projectsData.map((project) => {
+        const filteredNodes = project.nodes.filter((node) => {
           const sessions = node.sessionHistory || [];
-          return sessions.some(session => {
+          return sessions.some((session) => {
             if (!session.startDateTime) return false;
             const sessionDate = moment(session.startDateTime);
-            return sessionDate.isBetween(dateRange[0], dateRange[1], 'day', '[]');
+            return sessionDate.isBetween(
+              dateRange[0],
+              dateRange[1],
+              'day',
+              '[]',
+            );
           });
         });
         return { ...project, nodes: filteredNodes };
@@ -49,11 +84,12 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
 
     // Apply tag filter
     if (selectedTag) {
-      filteredData = filteredData.map(project => {
-        const filteredNodes = project.nodes.filter(node => {
+      filteredData = filteredData.map((project) => {
+        const filteredNodes = project.nodes.filter((node) => {
           const tags = node.tags || [];
-          return tags.some(tag => {
-            const tagName = typeof tag === 'string' ? tag : (tag.title || tag.name);
+          return tags.some((tag) => {
+            const tagName =
+              typeof tag === 'string' ? tag : tag.title || tag.name;
             return tagName === selectedTag;
           });
         });
@@ -63,8 +99,8 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
 
     // Apply iteration filter
     if (selectedIteration) {
-      filteredData = filteredData.map(project => {
-        const filteredNodes = project.nodes.filter(node => {
+      filteredData = filteredData.map((project) => {
+        const filteredNodes = project.nodes.filter((node) => {
           const iterationId = node.iterationId || node.iteration;
           return iterationId === selectedIteration;
         });
@@ -78,11 +114,11 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
   // Get all available tags
   const availableTags = useMemo(() => {
     const tagSet = new Set();
-    projectsData.forEach(project => {
-      project.nodes?.forEach(node => {
+    projectsData.forEach((project) => {
+      project.nodes?.forEach((node) => {
         const tags = node.tags || [];
-        tags.forEach(tag => {
-          const tagName = typeof tag === 'string' ? tag : (tag.title || tag.name);
+        tags.forEach((tag) => {
+          const tagName = typeof tag === 'string' ? tag : tag.title || tag.name;
           if (tagName) tagSet.add(tagName);
         });
       });
@@ -93,14 +129,17 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
   // Get all available iterations
   const availableIterations = useMemo(() => {
     const iterationMap = new Map();
-    projectsData.forEach(project => {
-      project.iterations?.forEach(iter => {
+    projectsData.forEach((project) => {
+      project.iterations?.forEach((iter) => {
         if (!iterationMap.has(iter.id)) {
           iterationMap.set(iter.id, iter.title || iter.id);
         }
       });
     });
-    return Array.from(iterationMap.entries()).map(([id, title]) => ({ id, title }));
+    return Array.from(iterationMap.entries()).map(([id, title]) => ({
+      id,
+      title,
+    }));
   }, [projectsData]);
 
   // Prepare chart data
@@ -111,10 +150,10 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
 
   const trendData = useMemo(() => {
     if (!projectsData || projectsData.length === 0) return [];
-    
+
     let daysToShow = 7;
     let dateFormat = 'MMM D';
-    
+
     if (trendPeriod === 'month') {
       daysToShow = 30;
       dateFormat = 'MMM D';
@@ -122,19 +161,19 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
       daysToShow = 90;
       dateFormat = 'MMM D';
     }
-    
+
     const days = [];
     const now = moment();
-    
+
     for (let i = daysToShow - 1; i >= 0; i--) {
       const date = moment(now).subtract(i, 'days');
       const dateStr = date.format('YYYY-MM-DD');
       let totalTime = 0;
 
-      projectsData.forEach(project => {
-        project.nodes?.forEach(node => {
+      projectsData.forEach((project) => {
+        project.nodes?.forEach((node) => {
           const sessions = node.sessionHistory || [];
-          sessions.forEach(session => {
+          sessions.forEach((session) => {
             if (session.startDateTime) {
               const sessionDate = moment(session.startDateTime);
               if (sessionDate.format('YYYY-MM-DD') === dateStr) {
@@ -157,16 +196,16 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
   const heatmapData = useMemo(() => {
     const data = {};
     const today = moment();
-    
+
     for (let i = 29; i >= 0; i--) {
       const date = today.clone().subtract(i, 'days');
       const dateStr = date.format('YYYY-MM-DD');
       let totalTime = 0;
 
-      projectsData.forEach(project => {
-        project.nodes?.forEach(node => {
+      projectsData.forEach((project) => {
+        project.nodes?.forEach((node) => {
           const sessions = node.sessionHistory || [];
-          sessions.forEach(session => {
+          sessions.forEach((session) => {
             if (session.startDateTime) {
               const sessionDate = moment(session.startDateTime);
               if (sessionDate.format('YYYY-MM-DD') === dateStr) {
@@ -197,7 +236,9 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
         <Spin size="large" />
-        <div style={{ marginTop: '16px', color: '#666' }}>Loading project data...</div>
+        <div style={{ marginTop: '16px', color: '#666' }}>
+          Loading project data...
+        </div>
       </div>
     );
   }
@@ -213,13 +254,13 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
   return (
     <div className="aggregate-view">
       {/* Top: Statistics Cards */}
-      <StatisticsCards 
+      <StatisticsCards
         stats={{
           ...aggregateStats,
           completed: aggregateStats.totalCompleted,
           incomplete: aggregateStats.totalIncomplete,
         }}
-        isAggregate={true}
+        isAggregate
       />
 
       {/* Calendars and Heatmap */}
@@ -229,15 +270,17 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
           <Row gutter={[16, 16]}>
             {/* Full Calendar */}
             <Col xs={24} sm={12}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.95)',
-                borderRadius: '12px',
-                boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
-                padding: '20px',
-                border: '1px solid rgba(0, 0, 0, 0.06)',
-                height: '400px',
-                overflow: 'auto',
-              }}>
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '12px',
+                  boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
+                  padding: '20px',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                  height: '400px',
+                  overflow: 'auto',
+                }}
+              >
                 {dateCellRender ? (
                   <Calendar
                     value={selectedDate}
@@ -255,7 +298,7 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
             {/* Day by Day Calendar */}
             <Col xs={24} sm={12}>
               {dayCellRender ? (
-                <DayByDayCalendar 
+                <DayByDayCalendar
                   dayCellRender={dayCellRender}
                   currentDate={selectedDate}
                   onDateChange={(date) => {
@@ -269,7 +312,7 @@ function AggregateView({ projectsData, selectedProjects, onProjectClick, isLoadi
           </Row>
           {/* Activity Heatmap under calendars */}
           <div>
-            <ActivityHeatmap 
+            <ActivityHeatmap
               data={heatmapData}
               title="Activity Heatmap (Last 30 Days)"
             />
@@ -288,7 +331,7 @@ AggregateView.propTypes = {
       parents: PropTypes.array,
       iterations: PropTypes.array,
       tags: PropTypes.array,
-    })
+    }),
   ).isRequired,
   selectedProjects: PropTypes.arrayOf(PropTypes.string).isRequired,
   onProjectClick: PropTypes.func,
@@ -302,4 +345,3 @@ AggregateView.defaultProps = {
 };
 
 export default AggregateView;
-

@@ -69,7 +69,9 @@ function ProjectComparison({ projects, onProjectClick }) {
           <Progress
             percent={rate}
             size="small"
-            strokeColor={rate >= 75 ? '#52c41a' : rate >= 50 ? '#faad14' : '#ff4d4f'}
+            strokeColor={
+              rate >= 75 ? '#52c41a' : rate >= 50 ? '#faad14' : '#ff4d4f'
+            }
             format={() => `${rate}%`}
           />
         </div>
@@ -80,13 +82,12 @@ function ProjectComparison({ projects, onProjectClick }) {
       title: 'Overdue',
       dataIndex: 'overdueCount',
       key: 'overdueCount',
-      render: (count) => (
+      render: (count) =>
         count > 0 ? (
           <Tag color="red">{count}</Tag>
         ) : (
           <Tag color="default">0</Tag>
-        )
-      ),
+        ),
       sorter: (a, b) => a.overdueCount - b.overdueCount,
     },
     {
@@ -94,9 +95,7 @@ function ProjectComparison({ projects, onProjectClick }) {
       dataIndex: 'recentActivityCount',
       key: 'recentActivityCount',
       render: (count) => (
-        <Tag color={count > 0 ? 'green' : 'default'}>
-          {count} sessions
-        </Tag>
+        <Tag color={count > 0 ? 'green' : 'default'}>{count} sessions</Tag>
       ),
       sorter: (a, b) => a.recentActivityCount - b.recentActivityCount,
     },
@@ -130,7 +129,7 @@ ProjectComparison.propTypes = {
       completionRate: PropTypes.number.isRequired,
       overdueCount: PropTypes.number.isRequired,
       recentActivityCount: PropTypes.number.isRequired,
-    })
+    }),
   ),
   onProjectClick: PropTypes.func,
 };
@@ -140,4 +139,3 @@ ProjectComparison.defaultProps = {
 };
 
 export default ProjectComparison;
-

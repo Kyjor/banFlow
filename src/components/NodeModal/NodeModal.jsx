@@ -1,8 +1,28 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { Button, DatePicker, Modal, Select, Tabs, TimePicker, Switch, Space, Tag, Input, AutoComplete, Popover } from 'antd';
+import {
+  Button,
+  DatePicker,
+  Modal,
+  Select,
+  Tabs,
+  TimePicker,
+  Switch,
+  Space,
+  Tag,
+  Input,
+  AutoComplete,
+  Popover,
+} from 'antd';
 import moment from 'moment';
 import dateFormat from 'dateformat';
-import { ClockCircleOutlined, InfoCircleOutlined, CheckCircleOutlined, PlusOutlined, CloseOutlined, BgColorsOutlined } from '@ant-design/icons';
+import {
+  ClockCircleOutlined,
+  InfoCircleOutlined,
+  CheckCircleOutlined,
+  PlusOutlined,
+  CloseOutlined,
+  BgColorsOutlined,
+} from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import EditableTextArea from '../EditableTextArea/EditableTextArea';
 import SessionManager from './SessionManager';
@@ -66,9 +86,11 @@ function NodeModal({
   useEffect(() => {
     // Load available tags from global tag list
     const globalTags = TagController.getTags();
-    const tagTitles = globalTags ? globalTags.map((tag) => tag.title || tag.id) : [];
+    const tagTitles = globalTags
+      ? globalTags.map((tag) => tag.title || tag.id)
+      : [];
     setAvailableTags(tagTitles);
-    
+
     // Build color map
     const colorMap = {};
     if (globalTags) {
@@ -101,7 +123,7 @@ function NodeModal({
       const newTags = [...tags, tagValue];
       setTags(newTags);
       updateNodeProperty('tags', node.id, newTags, true);
-      
+
       // Create global tag if it doesn't exist
       if (!availableTags.includes(tagValue)) {
         TagController.addTag(tagValue, color);
@@ -194,11 +216,28 @@ function NodeModal({
           }
           key="1"
         >
-          <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '8px' }}>
-            <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+          <div
+            style={{
+              marginBottom: '16px',
+              padding: '12px',
+              background: '#f5f5f5',
+              borderRadius: '8px',
+            }}
+          >
+            <Space
+              align="center"
+              style={{ width: '100%', justifyContent: 'space-between' }}
+            >
               <div>
-                <CheckCircleOutlined style={{ marginRight: '8px', color: node.isComplete ? '#52c41a' : '#999' }} />
-                <span style={{ fontWeight: 500, fontSize: '16px' }}>Completion Status</span>
+                <CheckCircleOutlined
+                  style={{
+                    marginRight: '8px',
+                    color: node.isComplete ? '#52c41a' : '#999',
+                  }}
+                />
+                <span style={{ fontWeight: 500, fontSize: '16px' }}>
+                  Completion Status
+                </span>
               </div>
               <Switch
                 checked={node.isComplete || false}
@@ -206,7 +245,12 @@ function NodeModal({
                   updateNodeProperty('isComplete', node.id, checked, true);
                   // Update completedDate when marking as complete/incomplete
                   if (checked) {
-                    updateNodeProperty('completedDate', node.id, new Date().toISOString(), true);
+                    updateNodeProperty(
+                      'completedDate',
+                      node.id,
+                      new Date().toISOString(),
+                      true,
+                    );
                   } else {
                     updateNodeProperty('completedDate', node.id, '', true);
                   }
@@ -217,8 +261,11 @@ function NodeModal({
               />
             </Space>
             {node.isComplete && node.completedDate && (
-              <div style={{ marginTop: '8px', color: '#666', fontSize: '12px' }}>
-                Completed on: {moment(node.completedDate).format('YYYY-MM-DD HH:mm')}
+              <div
+                style={{ marginTop: '8px', color: '#666', fontSize: '12px' }}
+              >
+                Completed on:{' '}
+                {moment(node.completedDate).format('YYYY-MM-DD HH:mm')}
               </div>
             )}
           </div>
@@ -253,7 +300,14 @@ function NodeModal({
           />
           <div style={{ marginBottom: '16px' }}>
             <div style={{ marginBottom: '8px', fontWeight: 500 }}>Tags</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                alignItems: 'center',
+              }}
+            >
               {tags.map((tag) => (
                 <Tag
                   key={tag}
@@ -266,11 +320,16 @@ function NodeModal({
                   <Popover
                     content={
                       <div style={{ padding: '8px', minWidth: '200px' }}>
-                        <div style={{ marginBottom: '8px', fontWeight: 500 }}>Tag Color:</div>
+                        <div style={{ marginBottom: '8px', fontWeight: 500 }}>
+                          Tag Color:
+                        </div>
                         <Select
                           value={tagColors[tag] || 'default'}
                           onChange={(color) => {
-                            handleTagColorChange(tag, color === 'default' ? '' : color);
+                            handleTagColorChange(
+                              tag,
+                              color === 'default' ? '' : color,
+                            );
                           }}
                           style={{ width: '100%' }}
                           size="small"
@@ -286,20 +345,22 @@ function NodeModal({
                           <Select.Option value="magenta">Magenta</Select.Option>
                           <Select.Option value="volcano">Volcano</Select.Option>
                           <Select.Option value="lime">Lime</Select.Option>
-                          <Select.Option value="geekblue">Geek Blue</Select.Option>
+                          <Select.Option value="geekblue">
+                            Geek Blue
+                          </Select.Option>
                         </Select>
                       </div>
                     }
                     trigger="click"
                     placement="bottom"
                   >
-                    <BgColorsOutlined 
-                      style={{ 
-                        marginLeft: '4px', 
+                    <BgColorsOutlined
+                      style={{
+                        marginLeft: '4px',
                         cursor: 'pointer',
-                        fontSize: '12px'
-                      }} 
-                      onClick={(e) => e.stopPropagation()} 
+                        fontSize: '12px',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </Popover>
                 </Tag>
@@ -308,11 +369,20 @@ function NodeModal({
                 <AutoComplete
                   dataSource={availableTags
                     .filter((t) => !tags.includes(t))
-                    .filter((t) => t.toUpperCase().includes(inputValue.toUpperCase()))}
+                    .filter((t) =>
+                      t.toUpperCase().includes(inputValue.toUpperCase()),
+                    )}
                   style={{ width: 150 }}
                   onSelect={handleSelectTag}
                   onBlur={handleInputConfirm}
-                  open={inputValue.length > 0 && availableTags.filter((t) => !tags.includes(t) && t.toUpperCase().includes(inputValue.toUpperCase())).length > 0}
+                  open={
+                    inputValue.length > 0 &&
+                    availableTags.filter(
+                      (t) =>
+                        !tags.includes(t) &&
+                        t.toUpperCase().includes(inputValue.toUpperCase()),
+                    ).length > 0
+                  }
                   filterOption={false}
                 >
                   <Input

@@ -27,7 +27,7 @@ const ProjectService = {
       if (file !== '') {
         const newItem = {
           text: file,
-          key: Date.now()
+          key: Date.now(),
         };
         fileList.push(newItem);
       }

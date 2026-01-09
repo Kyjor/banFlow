@@ -3,7 +3,11 @@ import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
 import PropTypes from 'prop-types';
 import { Input, Select, Space, Button, message } from 'antd';
-import { SearchOutlined, PlusOutlined, FolderOpenOutlined } from '@ant-design/icons';
+import {
+  SearchOutlined,
+  PlusOutlined,
+  FolderOpenOutlined,
+} from '@ant-design/icons';
 import ProjectList from './ProjectItems/ProjectList';
 import './ProjectListContainer.scss';
 import ProjectController from '../../api/project/ProjectController';
@@ -39,7 +43,10 @@ class ProjectListContainer extends Component {
 
     ipcRenderer.on('ReturnProjectFile', (e, fileName) => {
       if (!fileName) return;
-      localStorage.setItem(`projectLastOpened_${fileName}`, Date.now().toString());
+      localStorage.setItem(
+        `projectLastOpened_${fileName}`,
+        Date.now().toString(),
+      );
       self.props.openProjectDetails(fileName);
     });
   }
@@ -70,7 +77,7 @@ class ProjectListContainer extends Component {
   handleCreateProject = async (e) => {
     e.preventDefault();
     const { newProjectName } = this.state;
-    
+
     if (!newProjectName || !newProjectName.trim()) {
       message.warning('Please enter a project name');
       return;
@@ -78,15 +85,17 @@ class ProjectListContainer extends Component {
 
     this.setState({ isCreating: true });
     const created = ProjectController.createProject(newProjectName.trim());
-    
+
     if (created) {
-      message.success(`Project "${newProjectName.trim()}" created successfully!`);
+      message.success(
+        `Project "${newProjectName.trim()}" created successfully!`,
+      );
       this.setState({ newProjectName: '' });
       this.getProjects();
     } else {
       message.error('Failed to create project. Please check the project name.');
     }
-    
+
     this.setState({ isCreating: false });
   };
 
@@ -100,37 +109,37 @@ class ProjectListContainer extends Component {
 
   getFilteredAndSortedItems = () => {
     const { items, searchQuery, sortBy } = this.state;
-    
+
     // System files to exclude
     const systemFiles = ['.ds_store', 'thumbs.db', '.gitignore', '.gitkeep'];
-    
+
     // First, filter and extract project names
     const projectMap = new Map(); // Use Map to deduplicate by project name
-    
+
     items.forEach((item) => {
       const fileName = item.text;
-      
+
       // Only include files that end with .json (not .json~ backup files)
       if (!fileName.endsWith('.json') || fileName.endsWith('.json~')) {
         return;
       }
-      
+
       // Extract project name (remove .json extension)
       const projectName = fileName.slice(0, fileName.lastIndexOf('.json'));
-      
+
       // Filter out empty or whitespace-only project names
       if (!projectName || !projectName.trim()) {
         return;
       }
-      
+
       const trimmedName = projectName.trim();
       const lowerName = trimmedName.toLowerCase();
-      
+
       // Filter out system files
       if (systemFiles.includes(lowerName)) {
         return;
       }
-      
+
       // Deduplicate - keep first occurrence, but update if we find a newer one (based on file name)
       if (!projectMap.has(lowerName)) {
         projectMap.set(lowerName, {
@@ -150,7 +159,7 @@ class ProjectListContainer extends Component {
         }
       }
     });
-    
+
     // Convert back to array and apply search filter
     let filtered = Array.from(projectMap.values()).filter((item) => {
       return item.projectName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -164,10 +173,14 @@ class ProjectListContainer extends Component {
       if (sortBy === 'name') {
         return nameA.localeCompare(nameB);
       }
-      
+
       if (sortBy === 'lastOpened') {
-        const lastOpenedA = localStorage.getItem(`projectLastOpened_${nameA.trim()}`);
-        const lastOpenedB = localStorage.getItem(`projectLastOpened_${nameB.trim()}`);
+        const lastOpenedA = localStorage.getItem(
+          `projectLastOpened_${nameA.trim()}`,
+        );
+        const lastOpenedB = localStorage.getItem(
+          `projectLastOpened_${nameB.trim()}`,
+        );
         const timeA = lastOpenedA ? parseInt(lastOpenedA, 10) : 0;
         const timeB = lastOpenedB ? parseInt(lastOpenedB, 10) : 0;
         return timeB - timeA; // Newest first
@@ -189,9 +202,12 @@ class ProjectListContainer extends Component {
       <div className="project-list-container">
         <div className="project-list-header">
           <h2 className="project-list-title">Projects</h2>
-          
+
           {/* Create Project Form */}
-          <form onSubmit={this.handleCreateProject} className="create-project-form">
+          <form
+            onSubmit={this.handleCreateProject}
+            className="create-project-form"
+          >
             <Space.Compact style={{ width: '100%' }}>
               <Input
                 placeholder="Enter project name..."
@@ -250,7 +266,10 @@ class ProjectListContainer extends Component {
           selectedProject={selectedProject}
           openProjectDetails={(name) => {
             // Update last opened time before opening project
-            localStorage.setItem(`projectLastOpened_${name}`, Date.now().toString());
+            localStorage.setItem(
+              `projectLastOpened_${name}`,
+              Date.now().toString(),
+            );
             openProjectDetails(name);
           }}
         />

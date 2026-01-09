@@ -17,7 +17,7 @@ import {
   Divider,
   Badge,
   Popconfirm,
-  Alert
+  Alert,
 } from 'antd';
 import {
   SaveOutlined,
@@ -35,10 +35,10 @@ import {
   SettingOutlined,
   InfoCircleOutlined,
   BranchesOutlined,
-  HistoryOutlined
+  HistoryOutlined,
 } from '@ant-design/icons';
-import { useGit } from '../../../contexts/GitContext';
 import { ipcRenderer } from 'electron';
+import { useGit } from '../../../contexts/GitContext';
 import { useHeartbeat } from '../../../hooks/useHeartbeat';
 import './IntegratedEditor.scss';
 
@@ -46,12 +46,12 @@ const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-function IntegratedEditor({ 
+function IntegratedEditor({
   file = null,
   onFileChange = null,
   showStagingControls = true,
   autoSave = true,
-  theme = 'light'
+  theme = 'light',
 }) {
   const {
     currentRepository,
@@ -63,7 +63,7 @@ function IntegratedEditor({
     unstageFiles,
     refreshRepositoryStatus,
     isLoading,
-    operationInProgress
+    operationInProgress,
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -84,14 +84,14 @@ function IntegratedEditor({
     showLineNumbers: true,
     showWhitespace: false,
     autoIndent: true,
-    bracketMatching: true
+    bracketMatching: true,
   });
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
   const [isFileStaged, setIsFileStaged] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [diffMode, setDiffMode] = useState('inline'); // 'inline', 'side-by-side'
-  
+
   const editorRef = useRef(null);
   const autoSaveTimeoutRef = useRef(null);
   const lastFileContentRef = useRef(''); // Track last loaded content to detect external changes
@@ -99,7 +99,7 @@ function IntegratedEditor({
   const stateRefs = useRef({
     selectedFile: null,
     currentRepository: null,
-    hasUnsavedChanges: false
+    hasUnsavedChanges: false,
   });
 
   // Keep refs in sync with state
@@ -107,7 +107,7 @@ function IntegratedEditor({
     stateRefs.current = {
       selectedFile,
       currentRepository,
-      hasUnsavedChanges
+      hasUnsavedChanges,
     };
   }, [selectedFile, currentRepository, hasUnsavedChanges]);
 
@@ -121,8 +121,12 @@ function IntegratedEditor({
   // Periodically check if the file has changed on disk and reload if safe
   const checkForExternalChanges = async () => {
     const state = stateRefs.current;
-    
-    if (!state.selectedFile || !state.currentRepository || isReloadingRef.current) {
+
+    if (
+      !state.selectedFile ||
+      !state.currentRepository ||
+      isReloadingRef.current
+    ) {
       return;
     }
 
@@ -132,8 +136,12 @@ function IntegratedEditor({
     }
 
     try {
-      const result = await ipcRenderer.invoke('git:readFile', state.currentRepository, state.selectedFile);
-      
+      const result = await ipcRenderer.invoke(
+        'git:readFile',
+        state.currentRepository,
+        state.selectedFile,
+      );
+
       if (result.success && result.content !== lastFileContentRef.current) {
         // File has changed externally, reload it
         isReloadingRef.current = true;
@@ -143,7 +151,9 @@ function IntegratedEditor({
         setHasUnsavedChanges(false);
         setUndoStack([result.content]);
         setRedoStack([]);
-        message.info(`File "${state.selectedFile}" has been updated externally`);
+        message.info(
+          `File "${state.selectedFile}" has been updated externally`,
+        );
         isReloadingRef.current = false;
       }
     } catch (error) {
@@ -153,15 +163,16 @@ function IntegratedEditor({
   };
 
   // Use heartbeat to periodically check for external file changes
-  const heartbeatEnabled = !!selectedFile && !!currentRepository && !hasUnsavedChanges;
+  const heartbeatEnabled =
+    !!selectedFile && !!currentRepository && !hasUnsavedChanges;
   useHeartbeat(
     `editor-file-check-${selectedFile || 'none'}`,
     checkForExternalChanges,
     2000,
     {
       enabled: heartbeatEnabled,
-      immediate: true
-    }
+      immediate: true,
+    },
   );
 
   useEffect(() => {
@@ -169,12 +180,12 @@ function IntegratedEditor({
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
       }
-      
+
       autoSaveTimeoutRef.current = setTimeout(() => {
         saveFile();
       }, 2000); // Auto-save after 2 seconds of inactivity
     }
-    
+
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
@@ -186,10 +197,14 @@ function IntegratedEditor({
     if (!currentRepository || !filename) {
       return;
     }
-    
+
     try {
-      const result = await ipcRenderer.invoke('git:readFile', currentRepository, filename);
-      
+      const result = await ipcRenderer.invoke(
+        'git:readFile',
+        currentRepository,
+        filename,
+      );
+
       if (result.success) {
         setFileContent(result.content);
         setOriginalContent(result.content);
@@ -211,7 +226,9 @@ function IntegratedEditor({
         setRedoStack([]);
       } else {
         console.error('Failed to load file content:', error);
-        message.error(`Failed to load file: ${error.message || 'Unknown error'}`);
+        message.error(
+          `Failed to load file: ${error.message || 'Unknown error'}`,
+        );
       }
     }
   };
@@ -221,39 +238,47 @@ function IntegratedEditor({
     setIsFileStaged(isStaged);
   };
 
-  const handleContentChange = useCallback((newContent) => {
-    setFileContent(newContent);
-    setHasUnsavedChanges(newContent !== originalContent);
-    
-    // Add to undo stack (limit to last 50 states to prevent memory issues)
-    setUndoStack(prev => {
-      const newStack = [...prev, newContent];
-      return newStack.slice(-50);
-    });
-    setRedoStack([]);
-    
-    if (onFileChange) {
-      onFileChange(newContent, newContent !== originalContent);
-    }
-  }, [originalContent, onFileChange]);
+  const handleContentChange = useCallback(
+    (newContent) => {
+      setFileContent(newContent);
+      setHasUnsavedChanges(newContent !== originalContent);
+
+      // Add to undo stack (limit to last 50 states to prevent memory issues)
+      setUndoStack((prev) => {
+        const newStack = [...prev, newContent];
+        return newStack.slice(-50);
+      });
+      setRedoStack([]);
+
+      if (onFileChange) {
+        onFileChange(newContent, newContent !== originalContent);
+      }
+    },
+    [originalContent, onFileChange],
+  );
 
   const saveFile = useCallback(async () => {
     if (!currentRepository || !selectedFile) {
       message.error('No file selected or repository not available');
       return;
     }
-    
+
     try {
-      const result = await ipcRenderer.invoke('git:writeFile', currentRepository, selectedFile, fileContent);
-      
+      const result = await ipcRenderer.invoke(
+        'git:writeFile',
+        currentRepository,
+        selectedFile,
+        fileContent,
+      );
+
       if (result.success) {
         setOriginalContent(fileContent);
         setHasUnsavedChanges(false);
         message.success('File saved successfully');
-        
+
         // Refresh repository status to detect the file change
         await refreshRepositoryStatus();
-        
+
         if (onFileChange) {
           onFileChange(fileContent, false);
         }
@@ -264,13 +289,19 @@ function IntegratedEditor({
       console.error('Failed to save file:', error);
       message.error(`Failed to save file: ${error.message || 'Unknown error'}`);
     }
-  }, [fileContent, selectedFile, currentRepository, refreshRepositoryStatus, onFileChange]);
+  }, [
+    fileContent,
+    selectedFile,
+    currentRepository,
+    refreshRepositoryStatus,
+    onFileChange,
+  ]);
 
   const undo = useCallback(() => {
     if (undoStack.length > 1) {
       const previousContent = undoStack[undoStack.length - 2];
-      setRedoStack(prev => [...prev, fileContent]);
-      setUndoStack(prev => prev.slice(0, -1));
+      setRedoStack((prev) => [...prev, fileContent]);
+      setUndoStack((prev) => prev.slice(0, -1));
       setFileContent(previousContent);
       setHasUnsavedChanges(previousContent !== originalContent);
     }
@@ -279,8 +310,8 @@ function IntegratedEditor({
   const redo = useCallback(() => {
     if (redoStack.length > 0) {
       const nextContent = redoStack[redoStack.length - 1];
-      setUndoStack(prev => [...prev, nextContent]);
-      setRedoStack(prev => prev.slice(0, -1));
+      setUndoStack((prev) => [...prev, nextContent]);
+      setRedoStack((prev) => prev.slice(0, -1));
       setFileContent(nextContent);
       setHasUnsavedChanges(nextContent !== originalContent);
     }
@@ -288,47 +319,54 @@ function IntegratedEditor({
 
   const findAndReplace = useCallback(() => {
     if (!searchTerm) return;
-    
+
     const newContent = fileContent.replace(
       new RegExp(searchTerm, 'g'),
-      replaceTerm
+      replaceTerm,
     );
-    
+
     if (newContent !== fileContent) {
       handleContentChange(newContent);
-      message.success(`Replaced ${(fileContent.match(new RegExp(searchTerm, 'g')) || []).length} occurrences`);
+      message.success(
+        `Replaced ${(fileContent.match(new RegExp(searchTerm, 'g')) || []).length} occurrences`,
+      );
     } else {
       message.warning('No matches found');
     }
   }, [fileContent, searchTerm, replaceTerm, handleContentChange]);
 
-  const goToLine = useCallback((lineNumber) => {
-    const lineNum = parseInt(lineNumber);
-    if (isNaN(lineNum) || lineNum < 1) {
-      message.warning('Please enter a valid line number');
-      return;
-    }
-    
-    const lines = fileContent.split('\n');
-    if (lineNum > lines.length) {
-      message.warning(`Line ${lineNum} is beyond the end of the file (${lines.length} lines)`);
-      return;
-    }
-    
-    setCursorPosition({ line: lineNum, column: 1 });
-    setShowGoToLine(false);
-    message.info(`Jumped to line ${lineNum}`);
-    
-    // Scroll to line in textarea (basic implementation)
-    if (editorRef.current) {
-      const textarea = editorRef.current.resizableTextArea?.textArea;
-      if (textarea) {
-        const lineHeight = parseInt(editorSettings.fontSize) * 1.5;
-        textarea.scrollTop = (lineNum - 1) * lineHeight;
-        textarea.focus();
+  const goToLine = useCallback(
+    (lineNumber) => {
+      const lineNum = parseInt(lineNumber);
+      if (isNaN(lineNum) || lineNum < 1) {
+        message.warning('Please enter a valid line number');
+        return;
       }
-    }
-  }, [fileContent, editorSettings.fontSize]);
+
+      const lines = fileContent.split('\n');
+      if (lineNum > lines.length) {
+        message.warning(
+          `Line ${lineNum} is beyond the end of the file (${lines.length} lines)`,
+        );
+        return;
+      }
+
+      setCursorPosition({ line: lineNum, column: 1 });
+      setShowGoToLine(false);
+      message.info(`Jumped to line ${lineNum}`);
+
+      // Scroll to line in textarea (basic implementation)
+      if (editorRef.current) {
+        const textarea = editorRef.current.resizableTextArea?.textArea;
+        if (textarea) {
+          const lineHeight = parseInt(editorSettings.fontSize) * 1.5;
+          textarea.scrollTop = (lineNum - 1) * lineHeight;
+          textarea.focus();
+        }
+      }
+    },
+    [fileContent, editorSettings.fontSize],
+  );
 
   const stageFile = useCallback(async () => {
     try {
@@ -354,41 +392,41 @@ function IntegratedEditor({
 
   const getLanguageFromFilename = (filename) => {
     if (!filename) return 'text';
-    
+
     const extension = filename.split('.').pop()?.toLowerCase();
     const languageMap = {
-      'js': 'javascript',
-      'jsx': 'jsx',
-      'ts': 'typescript',
-      'tsx': 'tsx',
-      'py': 'python',
-      'java': 'java',
-      'cpp': 'cpp',
-      'c': 'c',
-      'cs': 'csharp',
-      'php': 'php',
-      'rb': 'ruby',
-      'go': 'go',
-      'rs': 'rust',
-      'html': 'markup',
-      'xml': 'markup',
-      'css': 'css',
-      'scss': 'scss',
-      'sass': 'sass',
-      'less': 'less',
-      'json': 'json',
-      'yaml': 'yaml',
-      'yml': 'yaml',
-      'md': 'markdown',
-      'sql': 'sql',
-      'sh': 'bash',
-      'bash': 'bash',
-      'zsh': 'bash',
-      'ps1': 'powershell',
-      'dockerfile': 'dockerfile',
-      'jl': 'julia'
+      js: 'javascript',
+      jsx: 'jsx',
+      ts: 'typescript',
+      tsx: 'tsx',
+      py: 'python',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+      cs: 'csharp',
+      php: 'php',
+      rb: 'ruby',
+      go: 'go',
+      rs: 'rust',
+      html: 'markup',
+      xml: 'markup',
+      css: 'css',
+      scss: 'scss',
+      sass: 'sass',
+      less: 'less',
+      json: 'json',
+      yaml: 'yaml',
+      yml: 'yaml',
+      md: 'markdown',
+      sql: 'sql',
+      sh: 'bash',
+      bash: 'bash',
+      zsh: 'bash',
+      ps1: 'powershell',
+      dockerfile: 'dockerfile',
+      jl: 'julia',
     };
-    
+
     return languageMap[extension] || 'text';
   };
 
@@ -448,7 +486,7 @@ function IntegratedEditor({
             </Button>
           </Space>
         </div>
-        
+
         {showSearchReplace && (
           <div className="search-replace-bar">
             <Space>
@@ -473,15 +511,11 @@ function IntegratedEditor({
               >
                 Replace All
               </Button>
-              <Button
-                onClick={() => setShowSearchReplace(false)}
-              >
-                Close
-              </Button>
+              <Button onClick={() => setShowSearchReplace(false)}>Close</Button>
             </Space>
           </div>
         )}
-        
+
         {showGoToLine && (
           <div className="go-to-line-bar">
             <Space>
@@ -494,10 +528,7 @@ function IntegratedEditor({
                 type="number"
                 min={1}
               />
-              <Button
-                type="primary"
-                onClick={() => goToLine(goToLineNumber)}
-              >
+              <Button type="primary" onClick={() => goToLine(goToLineNumber)}>
                 Go
               </Button>
               <Button
@@ -511,7 +542,7 @@ function IntegratedEditor({
             </Space>
           </div>
         )}
-        
+
         {showSettings && (
           <div className="editor-settings">
             <Row gutter={16}>
@@ -521,10 +552,12 @@ function IntegratedEditor({
                   <Input
                     type="number"
                     value={editorSettings.fontSize}
-                    onChange={(e) => setEditorSettings(prev => ({
-                      ...prev,
-                      fontSize: parseInt(e.target.value) || 14
-                    }))}
+                    onChange={(e) =>
+                      setEditorSettings((prev) => ({
+                        ...prev,
+                        fontSize: parseInt(e.target.value) || 14,
+                      }))
+                    }
                     min={10}
                     max={24}
                   />
@@ -536,10 +569,12 @@ function IntegratedEditor({
                   <Input
                     type="number"
                     value={editorSettings.tabSize}
-                    onChange={(e) => setEditorSettings(prev => ({
-                      ...prev,
-                      tabSize: parseInt(e.target.value) || 2
-                    }))}
+                    onChange={(e) =>
+                      setEditorSettings((prev) => ({
+                        ...prev,
+                        tabSize: parseInt(e.target.value) || 2,
+                      }))
+                    }
                     min={1}
                     max={8}
                   />
@@ -553,10 +588,12 @@ function IntegratedEditor({
                       <input
                         type="checkbox"
                         checked={editorSettings.wordWrap}
-                        onChange={(e) => setEditorSettings(prev => ({
-                          ...prev,
-                          wordWrap: e.target.checked
-                        }))}
+                        onChange={(e) =>
+                          setEditorSettings((prev) => ({
+                            ...prev,
+                            wordWrap: e.target.checked,
+                          }))
+                        }
                       />
                       Word Wrap
                     </label>
@@ -564,10 +601,12 @@ function IntegratedEditor({
                       <input
                         type="checkbox"
                         checked={editorSettings.showLineNumbers}
-                        onChange={(e) => setEditorSettings(prev => ({
-                          ...prev,
-                          showLineNumbers: e.target.checked
-                        }))}
+                        onChange={(e) =>
+                          setEditorSettings((prev) => ({
+                            ...prev,
+                            showLineNumbers: e.target.checked,
+                          }))
+                        }
                       />
                       Line Numbers
                     </label>
@@ -577,7 +616,7 @@ function IntegratedEditor({
             </Row>
           </div>
         )}
-        
+
         <div className="editor-content">
           <TextArea
             ref={editorRef}
@@ -586,7 +625,10 @@ function IntegratedEditor({
               handleContentChange(e.target.value);
               // Update cursor position
               const textarea = e.target;
-              const textBeforeCursor = textarea.value.substring(0, textarea.selectionStart);
+              const textBeforeCursor = textarea.value.substring(
+                0,
+                textarea.selectionStart,
+              );
               const lines = textBeforeCursor.split('\n');
               const currentLine = lines.length;
               const currentColumn = lines[lines.length - 1].length + 1;
@@ -594,7 +636,10 @@ function IntegratedEditor({
             }}
             onSelect={(e) => {
               const textarea = e.target;
-              const textBeforeCursor = textarea.value.substring(0, textarea.selectionStart);
+              const textBeforeCursor = textarea.value.substring(
+                0,
+                textarea.selectionStart,
+              );
               const lines = textBeforeCursor.split('\n');
               const currentLine = lines.length;
               const currentColumn = lines[lines.length - 1].length + 1;
@@ -602,30 +647,25 @@ function IntegratedEditor({
             }}
             placeholder="Start typing..."
             style={{
-              fontFamily: 'SF Mono, Monaco, Inconsolata, Roboto Mono, Courier New, monospace',
+              fontFamily:
+                'SF Mono, Monaco, Inconsolata, Roboto Mono, Courier New, monospace',
               fontSize: `${editorSettings.fontSize}px`,
               lineHeight: '1.5',
               minHeight: '400px',
-              resize: 'vertical'
+              resize: 'vertical',
             }}
             spellCheck={false}
           />
         </div>
-        
+
         <div className="editor-status">
           <Space>
             <Text type="secondary">
               Line {cursorPosition.line}, Column {cursorPosition.column}
             </Text>
-            <Text type="secondary">
-              {fileContent.length} characters
-            </Text>
-            <Text type="secondary">
-              {fileContent.split('\n').length} lines
-            </Text>
-            {hasUnsavedChanges && (
-              <Tag color="orange">Unsaved changes</Tag>
-            )}
+            <Text type="secondary">{fileContent.length} characters</Text>
+            <Text type="secondary">{fileContent.split('\n').length} lines</Text>
+            {hasUnsavedChanges && <Tag color="orange">Unsaved changes</Tag>}
           </Space>
         </div>
       </div>
@@ -634,7 +674,7 @@ function IntegratedEditor({
 
   const renderStagingControls = () => {
     if (!showStagingControls) return null;
-    
+
     return (
       <div className="staging-controls">
         <Space>
@@ -667,7 +707,7 @@ function IntegratedEditor({
 
   const renderDiffView = () => {
     if (!showDiff) return null;
-    
+
     return (
       <div className="diff-view">
         <div className="diff-header">
@@ -683,7 +723,7 @@ function IntegratedEditor({
             </Select>
           </Space>
         </div>
-        
+
         <div className="diff-content">
           {/* In a real implementation, this would show the actual diff */}
           <Alert
@@ -701,7 +741,9 @@ function IntegratedEditor({
     return (
       <Card>
         <Empty
-          image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+          image={
+            <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+          }
           description="No repository selected"
         />
       </Card>
@@ -712,7 +754,9 @@ function IntegratedEditor({
     return (
       <Card>
         <Empty
-          image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+          image={
+            <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+          }
           description="Select a file to edit"
         />
       </Card>
@@ -725,13 +769,11 @@ function IntegratedEditor({
         title={
           <Space>
             <EditOutlined />
-            <Title level={4} style={{ margin: 0 }}>Integrated Editor</Title>
-            {selectedFile && (
-              <Tag>{selectedFile}</Tag>
-            )}
-            {hasUnsavedChanges && (
-              <Tag color="orange">Unsaved</Tag>
-            )}
+            <Title level={4} style={{ margin: 0 }}>
+              Integrated Editor
+            </Title>
+            {selectedFile && <Tag>{selectedFile}</Tag>}
+            {hasUnsavedChanges && <Tag color="orange">Unsaved</Tag>}
           </Space>
         }
         extra={
@@ -757,11 +799,11 @@ function IntegratedEditor({
         <Spin spinning={isLoading}>
           <div className="editor-container">
             {renderStagingControls()}
-            
+
             <Divider />
-            
+
             {renderEditor()}
-            
+
             {renderDiffView()}
           </div>
         </Spin>

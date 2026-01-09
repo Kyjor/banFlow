@@ -1,7 +1,7 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import AppRoutes from './routes/Root';
 import TimerRoot from './routes/TimerRoot';
-import { useLocation } from 'react-router-dom';
 
 const App = AppRoutes;
 const Timer = TimerRoot;

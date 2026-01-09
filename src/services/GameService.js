@@ -3,8 +3,8 @@
  * This service listens to events and manages game state
  */
 
-import eventSystem, { EVENTS } from './EventSystem';
 import { ipcRenderer } from 'electron';
+import eventSystem, { EVENTS } from './EventSystem';
 
 class GameService {
   constructor() {
@@ -38,7 +38,7 @@ class GameService {
 
     // Load game state
     this.loadGameState();
-    
+
     // Subscribe to events
     this.setupEventListeners();
   }
@@ -228,4 +228,3 @@ class GameService {
 const gameService = new GameService();
 
 export default gameService;
-

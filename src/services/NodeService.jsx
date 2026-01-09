@@ -129,7 +129,8 @@ const NodeService = {
       // using trello data to create node
       nodeData.trello = trelloData;
       // Parse banflow:timeSpent from Trello description
-      const { description, timeSpent } = NodeService.extractBanflowTimeSpentFromDescription(trelloData.desc);
+      const { description, timeSpent } =
+        NodeService.extractBanflowTimeSpentFromDescription(trelloData.desc);
       nodeData.description = description;
       if (typeof timeSpent === 'number') nodeData.timeSpent = timeSpent;
       nodeData.labels = trelloData.labels || [];
@@ -250,25 +251,33 @@ const NodeService = {
     console.log(parent);
     if (nodeToReturn.trello && parent.trello && trelloAuth) {
       let url = `https://api.trello.com/1/cards/${nodeToReturn.trello.id}?key=${trelloAuth.key}&token=${trelloAuth.token}`;
-      
+
       // Build query parameters based on what's being updated
       const params = [];
-      
+
       if (propertyToUpdate === 'title') {
         params.push(`name=${encodeURIComponent(newValue)}`);
       }
       if (propertyToUpdate === 'timeSpent') {
         // Sync timeSpent to Trello description
-        const currentDesc = nodeToReturn.trello.desc || nodeToReturn.description || '';
-        const newDesc = NodeService.setBanflowTimeSpentInDescription(currentDesc, newValue);
+        const currentDesc =
+          nodeToReturn.trello.desc || nodeToReturn.description || '';
+        const newDesc = NodeService.setBanflowTimeSpentInDescription(
+          currentDesc,
+          newValue,
+        );
         params.push(`desc=${encodeURIComponent(newDesc)}`);
       }
       if (propertyToUpdate === 'description') {
         // Remove any old banflow:timeSpent line from the new description
-        const { description: cleanedDesc } = NodeService.extractBanflowTimeSpentFromDescription(newValue);
+        const { description: cleanedDesc } =
+          NodeService.extractBanflowTimeSpentFromDescription(newValue);
         // Append the current node's timeSpent value
         const timeSpentValue = nodeToReturn.timeSpent || 0;
-        const newDesc = NodeService.setBanflowTimeSpentInDescription(cleanedDesc, timeSpentValue);
+        const newDesc = NodeService.setBanflowTimeSpentInDescription(
+          cleanedDesc,
+          timeSpentValue,
+        );
         params.push(`desc=${encodeURIComponent(newDesc)}`);
       }
       if (propertyToUpdate === 'dueDate') {
@@ -279,10 +288,10 @@ const NodeService = {
       }
       if (propertyToUpdate === 'labels') {
         // For labels, we need to make a separate API call
-        const labelIds = newValue.map(label => label.id).join(',');
+        const labelIds = newValue.map((label) => label.id).join(',');
         params.push(`idLabels=${labelIds}`);
       }
-      
+
       url += `&${params.join('&')}`;
 
       axios
@@ -336,7 +345,7 @@ const NodeService = {
     const banflowLine = `banflow:timeSpent=${timeSpent}`;
     const lines = description ? description.split('\n') : [];
     // Remove any previous separator and banflow fields
-    const sepIndex = lines.findIndex(line => line.trim() === separator);
+    const sepIndex = lines.findIndex((line) => line.trim() === separator);
     const filtered = sepIndex === -1 ? lines : lines.slice(0, sepIndex);
     filtered.push(separator);
     filtered.push(banflowLine);
@@ -348,7 +357,7 @@ const NodeService = {
     if (!description) return { description: '', timeSpent: null };
     const separator = '---Banflow fields, do not edit this line or below it---';
     const lines = description.split('\n');
-    const sepIndex = lines.findIndex(line => line.trim() === separator);
+    const sepIndex = lines.findIndex((line) => line.trim() === separator);
     let timeSpent = null;
     if (sepIndex !== -1) {
       // Look for banflow:timeSpent in the lines after the separator

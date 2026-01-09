@@ -29,4 +29,4 @@ function GitPage() {
   );
 }
 
-export default GitPage; 
+export default GitPage;

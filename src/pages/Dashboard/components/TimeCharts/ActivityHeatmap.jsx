@@ -54,7 +54,7 @@ function ActivityHeatmap({ data, title = 'Activity Heatmap' }) {
             const intensity = getIntensity(date);
             const dateStr = date.toISOString().split('T')[0];
             const activity = data[dateStr] || 0;
-            
+
             return (
               <Tooltip
                 key={index}
@@ -97,7 +97,7 @@ function formatTime(seconds) {
   if (!seconds || seconds === 0) return 'No activity';
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  
+
   if (hours > 0) {
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
@@ -115,4 +115,3 @@ ActivityHeatmap.defaultProps = {
 };
 
 export default ActivityHeatmap;
-

@@ -1,6 +1,16 @@
 import React, { Component } from 'react';
 import { ipcRenderer } from 'electron';
-import { Card, Button, Space, Typography, Tag, Row, Col, Alert, Divider } from 'antd';
+import {
+  Card,
+  Button,
+  Space,
+  Typography,
+  Tag,
+  Row,
+  Col,
+  Alert,
+  Divider,
+} from 'antd';
 import Layout from '../../layouts/App';
 import gameService from '../../services/GameService';
 import eventSystem from '../../services/EventSystem';
@@ -88,7 +98,8 @@ class GameLibraryPage extends Component {
   };
 
   renderGameLibrary() {
-    const { selectedGame, goldBalance, lastRunStats, showLibrary, canvasKey } = this.state;
+    const { selectedGame, goldBalance, lastRunStats, showLibrary, canvasKey } =
+      this.state;
 
     const games = [
       {
@@ -102,8 +113,16 @@ class GameLibraryPage extends Component {
 
     return (
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={3} style={{ margin: 0 }}>Game Library</Title>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Title level={3} style={{ margin: 0 }}>
+            Game Library
+          </Title>
           <Tag color="gold" style={{ fontSize: 16, padding: '6px 10px' }}>
             Gold: {goldBalance.toFixed(2)}
           </Tag>
@@ -117,7 +136,11 @@ class GameLibraryPage extends Component {
                   title={game.title}
                   bordered
                   bodyStyle={{ minHeight: 160 }}
-                  extra={selectedGame === game.key ? <Tag color="blue">Selected</Tag> : null}
+                  extra={
+                    selectedGame === game.key ? (
+                      <Tag color="blue">Selected</Tag>
+                    ) : null
+                  }
                   onClick={() => this.setState({ selectedGame: game.key })}
                   style={{ cursor: 'pointer' }}
                 >
@@ -133,7 +156,10 @@ class GameLibraryPage extends Component {
                       type="primary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        this.setState({ selectedGame: game.key }, this.playSelectedGame);
+                        this.setState(
+                          { selectedGame: game.key },
+                          this.playSelectedGame,
+                        );
                       }}
                     >
                       Play (Fullscreen)
@@ -156,7 +182,9 @@ class GameLibraryPage extends Component {
         {!showLibrary && (
           <Space style={{ width: '100%', justifyContent: 'space-between' }}>
             <Text type="secondary">Playing: Precision Platformer</Text>
-            <Button onClick={() => this.setState({ showLibrary: true })}>Back to Library</Button>
+            <Button onClick={() => this.setState({ showLibrary: true })}>
+              Back to Library
+            </Button>
           </Space>
         )}
 

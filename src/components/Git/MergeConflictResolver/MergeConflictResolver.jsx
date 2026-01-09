@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { ipcRenderer } from 'electron';
 import {
   Card,
@@ -20,7 +26,7 @@ import {
   message,
   List,
   Segmented,
-  Switch
+  Switch,
 } from 'antd';
 import {
   CheckOutlined,
@@ -46,10 +52,13 @@ import {
   LeftOutlined,
   RightOutlined,
   CheckCircleOutlined,
-  SyncOutlined
+  SyncOutlined,
 } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {
+  tomorrow,
+  prism,
+} from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useGit } from '../../../contexts/GitContext';
 import './MergeConflictResolver.scss';
 
@@ -63,7 +72,7 @@ function parseConflicts(content) {
   let currentConflict = null;
   let lineNumber = 0;
   let conflictId = 0;
-  
+
   const nonConflictLines = [];
   let lastNonConflictEnd = 0;
 
@@ -89,9 +98,13 @@ function parseConflicts(content) {
         startIndex: i,
         endIndex: null,
         resolution: null, // 'ours', 'theirs', 'both', 'custom'
-        customContent: null
+        customContent: null,
       };
-      nonConflictLines.push({ start: lastNonConflictEnd, end: i, lines: lines.slice(lastNonConflictEnd, i) });
+      nonConflictLines.push({
+        start: lastNonConflictEnd,
+        end: i,
+        lines: lines.slice(lastNonConflictEnd, i),
+      });
     } else if (line.startsWith('=======') && currentConflict) {
       // Middle of conflict - switch from ours to theirs
       currentConflict.separator = lineNumber;
@@ -101,7 +114,10 @@ function parseConflicts(content) {
       currentConflict.theirsMarker = line;
       currentConflict.theirsBranchName = line.replace('>>>>>>>', '').trim();
       currentConflict.endIndex = i;
-      currentConflict.contextAfter = lines.slice(i + 1, Math.min(lines.length, i + 4));
+      currentConflict.contextAfter = lines.slice(
+        i + 1,
+        Math.min(lines.length, i + 4),
+      );
       conflicts.push(currentConflict);
       lastNonConflictEnd = i + 1;
       currentConflict = null;
@@ -121,11 +137,13 @@ function parseConflicts(content) {
 // Build the resolved file content
 function buildResolvedContent(originalContent, conflicts) {
   const lines = originalContent.split('\n');
-  let result = [];
+  const result = [];
   let lastProcessedLine = 0;
 
   // Sort conflicts by start index
-  const sortedConflicts = [...conflicts].sort((a, b) => a.startIndex - b.startIndex);
+  const sortedConflicts = [...conflicts].sort(
+    (a, b) => a.startIndex - b.startIndex,
+  );
 
   for (const conflict of sortedConflicts) {
     // Add lines before this conflict
@@ -162,11 +180,11 @@ function buildResolvedContent(originalContent, conflicts) {
   return result.join('\n');
 }
 
-function MergeConflictResolver({ 
+function MergeConflictResolver({
   file = null,
   onConflictResolved = null,
   onFileChange = null,
-  theme = 'light'
+  theme = 'light',
 }) {
   const {
     currentRepository,
@@ -174,7 +192,7 @@ function MergeConflictResolver({
     stageFiles,
     refreshRepositoryStatus,
     isLoading,
-    operationInProgress
+    operationInProgress,
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -209,7 +227,11 @@ function MergeConflictResolver({
       }
 
       try {
-        const result = await ipcRenderer.invoke('git:readFile', currentRepository, selectedFile);
+        const result = await ipcRenderer.invoke(
+          'git:readFile',
+          currentRepository,
+          selectedFile,
+        );
         if (result.success) {
           setFileContent(result.content);
           const parsedConflicts = parseConflicts(result.content);
@@ -242,7 +264,7 @@ function MergeConflictResolver({
   }, [conflicts, currentConflictIndex]);
 
   const resolvedCount = useMemo(() => {
-    return conflicts.filter(c => c.resolution).length;
+    return conflicts.filter((c) => c.resolution).length;
   }, [conflicts]);
 
   const isAllResolved = useMemo(() => {
@@ -253,110 +275,154 @@ function MergeConflictResolver({
     if (!filename) return 'text';
     const extension = filename.split('.').pop()?.toLowerCase();
     const languageMap = {
-      'js': 'javascript', 'jsx': 'jsx', 'ts': 'typescript', 'tsx': 'tsx',
-      'py': 'python', 'java': 'java', 'cpp': 'cpp', 'c': 'c', 'cs': 'csharp',
-      'php': 'php', 'rb': 'ruby', 'go': 'go', 'rs': 'rust',
-      'html': 'markup', 'xml': 'markup', 'css': 'css', 'scss': 'scss',
-      'json': 'json', 'yaml': 'yaml', 'yml': 'yaml', 'md': 'markdown',
-      'sql': 'sql', 'sh': 'bash', 'bash': 'bash'
+      js: 'javascript',
+      jsx: 'jsx',
+      ts: 'typescript',
+      tsx: 'tsx',
+      py: 'python',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+      cs: 'csharp',
+      php: 'php',
+      rb: 'ruby',
+      go: 'go',
+      rs: 'rust',
+      html: 'markup',
+      xml: 'markup',
+      css: 'css',
+      scss: 'scss',
+      json: 'json',
+      yaml: 'yaml',
+      yml: 'yaml',
+      md: 'markdown',
+      sql: 'sql',
+      sh: 'bash',
+      bash: 'bash',
     };
     return languageMap[extension] || 'text';
   };
 
-  const resolveConflict = useCallback((resolution, customText = null) => {
-    const conflict = getCurrentConflict();
-    if (!conflict) return;
+  const resolveConflict = useCallback(
+    (resolution, customText = null) => {
+      const conflict = getCurrentConflict();
+      if (!conflict) return;
 
-    // Save to history for undo
-    const previousState = { ...conflict };
-    setResolutionHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      newHistory.push({ conflictId: conflict.id, previousState, newResolution: resolution });
-      return newHistory;
-    });
-    setHistoryIndex(prev => prev + 1);
+      // Save to history for undo
+      const previousState = { ...conflict };
+      setResolutionHistory((prev) => {
+        const newHistory = prev.slice(0, historyIndex + 1);
+        newHistory.push({
+          conflictId: conflict.id,
+          previousState,
+          newResolution: resolution,
+        });
+        return newHistory;
+      });
+      setHistoryIndex((prev) => prev + 1);
 
-    // Update conflict resolution
-    setConflicts(prev => prev.map(c => {
-      if (c.id === conflict.id) {
-        return {
-          ...c,
-          resolution,
-          customContent: customText
-        };
-      }
-      return c;
-    }));
-
-    const resolutionLabels = {
-      'ours': 'current changes',
-      'theirs': 'incoming changes',
-      'both-ours-first': 'both (current first)',
-      'both-theirs-first': 'both (incoming first)',
-      'custom': 'custom resolution'
-    };
-    message.success(`Accepted ${resolutionLabels[resolution] || resolution}`);
-
-    // Auto-advance to next unresolved conflict
-    if (autoAdvance) {
-      const nextUnresolvedIndex = conflicts.findIndex((c, index) => 
-        index > currentConflictIndex && !c.resolution
+      // Update conflict resolution
+      setConflicts((prev) =>
+        prev.map((c) => {
+          if (c.id === conflict.id) {
+            return {
+              ...c,
+              resolution,
+              customContent: customText,
+            };
+          }
+          return c;
+        }),
       );
-      
-      if (nextUnresolvedIndex !== -1) {
-        setCurrentConflictIndex(nextUnresolvedIndex);
-      } else {
-        // Check if all resolved
-        const updatedConflicts = conflicts.map(c => 
-          c.id === conflict.id ? { ...c, resolution } : c
+
+      const resolutionLabels = {
+        ours: 'current changes',
+        theirs: 'incoming changes',
+        'both-ours-first': 'both (current first)',
+        'both-theirs-first': 'both (incoming first)',
+        custom: 'custom resolution',
+      };
+      message.success(`Accepted ${resolutionLabels[resolution] || resolution}`);
+
+      // Auto-advance to next unresolved conflict
+      if (autoAdvance) {
+        const nextUnresolvedIndex = conflicts.findIndex(
+          (c, index) => index > currentConflictIndex && !c.resolution,
         );
-        if (updatedConflicts.every(c => c.resolution)) {
-          message.success('All conflicts resolved! You can now save the file.');
+
+        if (nextUnresolvedIndex !== -1) {
+          setCurrentConflictIndex(nextUnresolvedIndex);
+        } else {
+          // Check if all resolved
+          const updatedConflicts = conflicts.map((c) =>
+            c.id === conflict.id ? { ...c, resolution } : c,
+          );
+          if (updatedConflicts.every((c) => c.resolution)) {
+            message.success(
+              'All conflicts resolved! You can now save the file.',
+            );
+          }
         }
       }
-    }
 
-    setEditMode(false);
-  }, [getCurrentConflict, conflicts, currentConflictIndex, historyIndex, autoAdvance]);
+      setEditMode(false);
+    },
+    [
+      getCurrentConflict,
+      conflicts,
+      currentConflictIndex,
+      historyIndex,
+      autoAdvance,
+    ],
+  );
 
   const undoResolution = useCallback(() => {
     if (historyIndex < 0) return;
-    
+
     const lastAction = resolutionHistory[historyIndex];
-    setConflicts(prev => prev.map(c => {
-      if (c.id === lastAction.conflictId) {
-        return lastAction.previousState;
-      }
-      return c;
-    }));
-    
-    setHistoryIndex(prev => prev - 1);
+    setConflicts((prev) =>
+      prev.map((c) => {
+        if (c.id === lastAction.conflictId) {
+          return lastAction.previousState;
+        }
+        return c;
+      }),
+    );
+
+    setHistoryIndex((prev) => prev - 1);
     message.info('Resolution undone');
   }, [historyIndex, resolutionHistory]);
 
   const redoResolution = useCallback(() => {
     if (historyIndex >= resolutionHistory.length - 1) return;
-    
+
     const nextAction = resolutionHistory[historyIndex + 1];
-    setConflicts(prev => prev.map(c => {
-      if (c.id === nextAction.conflictId) {
-        return { ...c, resolution: nextAction.newResolution };
-      }
-      return c;
-    }));
-    
-    setHistoryIndex(prev => prev + 1);
+    setConflicts((prev) =>
+      prev.map((c) => {
+        if (c.id === nextAction.conflictId) {
+          return { ...c, resolution: nextAction.newResolution };
+        }
+        return c;
+      }),
+    );
+
+    setHistoryIndex((prev) => prev + 1);
     message.info('Resolution redone');
   }, [historyIndex, resolutionHistory]);
 
-  const navigateConflict = useCallback((direction) => {
-    if (direction === 'prev') {
-      setCurrentConflictIndex(prev => Math.max(0, prev - 1));
-    } else {
-      setCurrentConflictIndex(prev => Math.min(conflicts.length - 1, prev + 1));
-    }
-    setEditMode(false);
-  }, [conflicts.length]);
+  const navigateConflict = useCallback(
+    (direction) => {
+      if (direction === 'prev') {
+        setCurrentConflictIndex((prev) => Math.max(0, prev - 1));
+      } else {
+        setCurrentConflictIndex((prev) =>
+          Math.min(conflicts.length - 1, prev + 1),
+        );
+      }
+      setEditMode(false);
+    },
+    [conflicts.length],
+  );
 
   const jumpToConflict = useCallback((index) => {
     setCurrentConflictIndex(index);
@@ -372,15 +438,20 @@ function MergeConflictResolver({
     setIsSaving(true);
     try {
       const resolvedContent = buildResolvedContent(fileContent, conflicts);
-      const result = await ipcRenderer.invoke('git:writeFile', currentRepository, selectedFile, resolvedContent);
-      
+      const result = await ipcRenderer.invoke(
+        'git:writeFile',
+        currentRepository,
+        selectedFile,
+        resolvedContent,
+      );
+
       if (result.success) {
         // Stage the file
         await stageFiles([selectedFile]);
         await refreshRepositoryStatus();
-        
+
         message.success('File saved and staged successfully!');
-        
+
         if (onConflictResolved) {
           onConflictResolved(conflicts.length);
         }
@@ -396,14 +467,26 @@ function MergeConflictResolver({
     } finally {
       setIsSaving(false);
     }
-  }, [isAllResolved, fileContent, conflicts, currentRepository, selectedFile, stageFiles, refreshRepositoryStatus, onConflictResolved, onFileChange]);
+  }, [
+    isAllResolved,
+    fileContent,
+    conflicts,
+    currentRepository,
+    selectedFile,
+    stageFiles,
+    refreshRepositoryStatus,
+    onConflictResolved,
+    onFileChange,
+  ]);
 
   const startCustomEdit = useCallback(() => {
     const conflict = getCurrentConflict();
     if (!conflict) return;
 
     // Pre-populate with merged content
-    const mergedContent = [...conflict.oursLines, ...conflict.theirsLines].join('\n');
+    const mergedContent = [...conflict.oursLines, ...conflict.theirsLines].join(
+      '\n',
+    );
     setCustomContent(mergedContent);
     setEditMode(true);
   }, [getCurrentConflict]);
@@ -413,18 +496,23 @@ function MergeConflictResolver({
     setEditMode(false);
   }, [resolveConflict, customContent]);
 
-  const copyToCustom = useCallback((source) => {
-    const conflict = getCurrentConflict();
-    if (!conflict) return;
+  const copyToCustom = useCallback(
+    (source) => {
+      const conflict = getCurrentConflict();
+      if (!conflict) return;
 
-    if (source === 'ours') {
-      setCustomContent(conflict.oursLines.join('\n'));
-    } else if (source === 'theirs') {
-      setCustomContent(conflict.theirsLines.join('\n'));
-    } else if (source === 'both') {
-      setCustomContent([...conflict.oursLines, ...conflict.theirsLines].join('\n'));
-    }
-  }, [getCurrentConflict]);
+      if (source === 'ours') {
+        setCustomContent(conflict.oursLines.join('\n'));
+      } else if (source === 'theirs') {
+        setCustomContent(conflict.theirsLines.join('\n'));
+      } else if (source === 'both') {
+        setCustomContent(
+          [...conflict.oursLines, ...conflict.theirsLines].join('\n'),
+        );
+      }
+    },
+    [getCurrentConflict],
+  );
 
   const renderFileSelector = () => {
     if (!conflictedFiles || conflictedFiles.length === 0) {
@@ -451,8 +539,10 @@ function MergeConflictResolver({
           renderItem={(filePath) => {
             const isSelected = filePath === selectedFile;
             const fileConflicts = filePath === selectedFile ? conflicts : [];
-            const fileResolved = fileConflicts.length > 0 && fileConflicts.every(c => c.resolution);
-            
+            const fileResolved =
+              fileConflicts.length > 0 &&
+              fileConflicts.every((c) => c.resolution);
+
             return (
               <List.Item
                 className={`file-item ${isSelected ? 'selected' : ''} ${fileResolved ? 'resolved' : ''}`}
@@ -480,13 +570,16 @@ function MergeConflictResolver({
 
     return (
       <div className="conflict-minimap">
-        <Text type="secondary" style={{ fontSize: 11, marginBottom: 4, display: 'block' }}>
+        <Text
+          type="secondary"
+          style={{ fontSize: 11, marginBottom: 4, display: 'block' }}
+        >
           Conflicts
         </Text>
         <div className="minimap-items">
           {conflicts.map((conflict, index) => (
-            <Tooltip 
-              key={conflict.id} 
+            <Tooltip
+              key={conflict.id}
               title={`Conflict ${index + 1} (Line ${conflict.startLine})`}
             >
               <div
@@ -506,7 +599,8 @@ function MergeConflictResolver({
     const conflict = getCurrentConflict();
     const isOurs = type === 'ours';
     const isTheirs = type === 'theirs';
-    const isSelected = conflict?.resolution === type || 
+    const isSelected =
+      conflict?.resolution === type ||
       (conflict?.resolution === 'both-ours-first' && isOurs) ||
       (conflict?.resolution === 'both-theirs-first' && isTheirs);
 
@@ -514,12 +608,16 @@ function MergeConflictResolver({
       <div className={`conflict-pane ${type} ${isSelected ? 'selected' : ''}`}>
         <div className="pane-header">
           <Space>
-            <Tag color={isOurs ? 'orange' : 'blue'}>{isOurs ? 'Current' : 'Incoming'}</Tag>
+            <Tag color={isOurs ? 'orange' : 'blue'}>
+              {isOurs ? 'Current' : 'Incoming'}
+            </Tag>
             <Text strong>{branchName}</Text>
             <Text type="secondary">({lines.length} lines)</Text>
           </Space>
           <Space>
-            <Tooltip title={`Accept ${isOurs ? 'current' : 'incoming'} changes`}>
+            <Tooltip
+              title={`Accept ${isOurs ? 'current' : 'incoming'} changes`}
+            >
               <Button
                 size="small"
                 type={isSelected ? 'primary' : 'default'}
@@ -553,7 +651,7 @@ function MergeConflictResolver({
               background: 'transparent',
               fontSize: '13px',
               lineHeight: '22px',
-              minHeight: '200px'
+              minHeight: '200px',
             }}
           >
             {lines.join('\n') || ' '}
@@ -574,7 +672,9 @@ function MergeConflictResolver({
           <div className="context-lines before">
             {conflict.contextBefore.map((line, i) => (
               <div key={`before-${i}`} className="context-line">
-                <span className="line-number">{conflict.startLine - conflict.contextBefore.length + i}</span>
+                <span className="line-number">
+                  {conflict.startLine - conflict.contextBefore.length + i}
+                </span>
                 <span className="line-content">{line}</span>
               </div>
             ))}
@@ -582,12 +682,14 @@ function MergeConflictResolver({
         )}
 
         {/* Ours Section */}
-        <div 
+        <div
           className={`conflict-section ours ${conflict.resolution === 'ours' || conflict.resolution?.includes('ours') ? 'selected' : ''}`}
           onClick={() => !conflict.resolution && resolveConflict('ours')}
         >
           <div className="section-header">
-            <Tag color="orange">Current Changes ({conflict.oursBranchName})</Tag>
+            <Tag color="orange">
+              Current Changes ({conflict.oursBranchName})
+            </Tag>
             {!conflict.resolution && (
               <Button size="small" type="primary" icon={<CheckOutlined />}>
                 Accept Current
@@ -603,12 +705,14 @@ function MergeConflictResolver({
         </div>
 
         {/* Theirs Section */}
-        <div 
+        <div
           className={`conflict-section theirs ${conflict.resolution === 'theirs' || conflict.resolution?.includes('theirs') ? 'selected' : ''}`}
           onClick={() => !conflict.resolution && resolveConflict('theirs')}
         >
           <div className="section-header">
-            <Tag color="blue">Incoming Changes ({conflict.theirsBranchName})</Tag>
+            <Tag color="blue">
+              Incoming Changes ({conflict.theirsBranchName})
+            </Tag>
             {!conflict.resolution && (
               <Button size="small" type="primary" icon={<CheckOutlined />}>
                 Accept Incoming
@@ -640,7 +744,7 @@ function MergeConflictResolver({
 
   const renderResultPreview = () => {
     const resolvedContent = buildResolvedContent(fileContent, conflicts);
-    
+
     return (
       <div className="result-preview">
         <div className="preview-header">
@@ -649,7 +753,9 @@ function MergeConflictResolver({
             <Text strong>Resolved File Preview</Text>
           </Space>
           {isAllResolved && (
-            <Tag color="success" icon={<CheckCircleOutlined />}>Ready to Save</Tag>
+            <Tag color="success" icon={<CheckCircleOutlined />}>
+              Ready to Save
+            </Tag>
           )}
         </div>
         <div className="preview-content">
@@ -664,7 +770,7 @@ function MergeConflictResolver({
               fontSize: '13px',
               lineHeight: '22px',
               maxHeight: '500px',
-              overflow: 'auto'
+              overflow: 'auto',
             }}
           >
             {resolvedContent}
@@ -706,7 +812,11 @@ function MergeConflictResolver({
           onChange={(e) => setCustomContent(e.target.value)}
           placeholder="Edit the merged content here..."
           autoSize={{ minRows: 10, maxRows: 25 }}
-          style={{ fontFamily: 'monospace', fontSize: '13px', lineHeight: '22px' }}
+          style={{
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            lineHeight: '22px',
+          }}
         />
         <div className="editor-actions">
           <Space>
@@ -718,9 +828,7 @@ function MergeConflictResolver({
             >
               Apply Custom Resolution
             </Button>
-            <Button onClick={() => setEditMode(false)}>
-              Cancel
-            </Button>
+            <Button onClick={() => setEditMode(false)}>Cancel</Button>
           </Space>
         </div>
       </div>
@@ -751,7 +859,9 @@ function MergeConflictResolver({
             Accept Incoming
           </Button>
           <Button
-            type={conflict.resolution === 'both-ours-first' ? 'primary' : 'default'}
+            type={
+              conflict.resolution === 'both-ours-first' ? 'primary' : 'default'
+            }
             icon={<MergeOutlined />}
             onClick={() => resolveConflict('both-ours-first')}
           >
@@ -765,24 +875,33 @@ function MergeConflictResolver({
             Edit Manually
           </Button>
         </div>
-        
+
         {conflict.resolution && (
           <div className="resolution-badge">
             <Tag color="success" icon={<CheckOutlined />}>
-              Resolved: {conflict.resolution === 'ours' ? 'Current' : 
-                         conflict.resolution === 'theirs' ? 'Incoming' :
-                         conflict.resolution === 'both-ours-first' ? 'Both (Current First)' :
-                         conflict.resolution === 'both-theirs-first' ? 'Both (Incoming First)' :
-                         'Custom'}
+              Resolved:{' '}
+              {conflict.resolution === 'ours'
+                ? 'Current'
+                : conflict.resolution === 'theirs'
+                  ? 'Incoming'
+                  : conflict.resolution === 'both-ours-first'
+                    ? 'Both (Current First)'
+                    : conflict.resolution === 'both-theirs-first'
+                      ? 'Both (Incoming First)'
+                      : 'Custom'}
             </Tag>
-            <Button 
-              size="small" 
-              type="link" 
-              danger 
+            <Button
+              size="small"
+              type="link"
+              danger
               onClick={() => {
-                setConflicts(prev => prev.map(c => 
-                  c.id === conflict.id ? { ...c, resolution: null, customContent: null } : c
-                ));
+                setConflicts((prev) =>
+                  prev.map((c) =>
+                    c.id === conflict.id
+                      ? { ...c, resolution: null, customContent: null }
+                      : c,
+                  ),
+                );
               }}
             >
               Reset
@@ -798,7 +917,9 @@ function MergeConflictResolver({
     return (
       <Card className="merge-conflict-resolver">
         <Empty
-          image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+          image={
+            <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+          }
           description="No repository selected"
         />
       </Card>
@@ -864,11 +985,15 @@ function MergeConflictResolver({
             <Col span={19}>
               {conflicts.length === 0 ? (
                 <Empty
-                  image={<CheckOutlined style={{ fontSize: '48px', color: '#52c41a' }} />}
+                  image={
+                    <CheckOutlined
+                      style={{ fontSize: '48px', color: '#52c41a' }}
+                    />
+                  }
                   description={
-                    selectedFile 
-                      ? "No conflicts found in this file" 
-                      : "Select a file to resolve conflicts"
+                    selectedFile
+                      ? 'No conflicts found in this file'
+                      : 'Select a file to resolve conflicts'
                   }
                 />
               ) : (
@@ -877,7 +1002,8 @@ function MergeConflictResolver({
                   <div className="progress-section">
                     <div className="progress-info">
                       <Text>
-                        <strong>{resolvedCount}</strong> of <strong>{conflicts.length}</strong> conflicts resolved
+                        <strong>{resolvedCount}</strong> of{' '}
+                        <strong>{conflicts.length}</strong> conflicts resolved
                       </Text>
                       {isAllResolved && (
                         <Button
@@ -891,7 +1017,9 @@ function MergeConflictResolver({
                       )}
                     </div>
                     <Progress
-                      percent={Math.round((resolvedCount / conflicts.length) * 100)}
+                      percent={Math.round(
+                        (resolvedCount / conflicts.length) * 100,
+                      )}
                       strokeColor={{
                         '0%': '#fa8c16',
                         '100%': '#52c41a',
@@ -933,7 +1061,7 @@ function MergeConflictResolver({
                       options={[
                         { label: 'Side by Side', value: 'side-by-side' },
                         { label: 'Inline', value: 'inline' },
-                        { label: 'Result Preview', value: 'result' }
+                        { label: 'Result Preview', value: 'result' },
                       ]}
                     />
                     <Switch
@@ -956,7 +1084,7 @@ function MergeConflictResolver({
                             'Current Changes',
                             getCurrentConflict()?.oursLines || [],
                             'ours',
-                            getCurrentConflict()?.oursBranchName || 'HEAD'
+                            getCurrentConflict()?.oursBranchName || 'HEAD',
                           )}
                         </Col>
                         <Col span={12}>
@@ -964,7 +1092,7 @@ function MergeConflictResolver({
                             'Incoming Changes',
                             getCurrentConflict()?.theirsLines || [],
                             'theirs',
-                            getCurrentConflict()?.theirsBranchName || ''
+                            getCurrentConflict()?.theirsBranchName || '',
                           )}
                         </Col>
                       </Row>
@@ -1007,21 +1135,25 @@ function MergeConflictResolver({
             <div className="step-content">
               <Text strong>Understand the Conflict</Text>
               <Paragraph type="secondary">
-                <Tag color="orange">Current</Tag> shows your local changes (HEAD).
-                <Tag color="blue">Incoming</Tag> shows changes from the branch being merged.
+                <Tag color="orange">Current</Tag> shows your local changes
+                (HEAD).
+                <Tag color="blue">Incoming</Tag> shows changes from the branch
+                being merged.
               </Paragraph>
             </div>
           </div>
-          
+
           <div className="tutorial-step">
             <div className="step-number">2</div>
             <div className="step-content">
               <Text strong>Choose a Resolution</Text>
               <Paragraph type="secondary">
-                • <strong>Accept Current</strong> – Keep your local changes<br/>
-                • <strong>Accept Incoming</strong> – Use the incoming changes<br/>
-                • <strong>Accept Both</strong> – Keep both sets of changes<br/>
-                • <strong>Edit Manually</strong> – Create a custom combination
+                • <strong>Accept Current</strong> – Keep your local changes
+                <br />• <strong>Accept Incoming</strong> – Use the incoming
+                changes
+                <br />• <strong>Accept Both</strong> – Keep both sets of changes
+                <br />• <strong>Edit Manually</strong> – Create a custom
+                combination
               </Paragraph>
             </div>
           </div>
@@ -1031,8 +1163,9 @@ function MergeConflictResolver({
             <div className="step-content">
               <Text strong>Review & Save</Text>
               <Paragraph type="secondary">
-                Use the "Result Preview" tab to see the final file. Once all conflicts are resolved, 
-                click "Save & Stage File" to apply your changes.
+                Use the "Result Preview" tab to see the final file. Once all
+                conflicts are resolved, click "Save & Stage File" to apply your
+                changes.
               </Paragraph>
             </div>
           </div>
@@ -1041,9 +1174,15 @@ function MergeConflictResolver({
             message="Keyboard Shortcuts"
             description={
               <Space direction="vertical">
-                <Text><Tag>←</Tag> / <Tag>→</Tag> Navigate between conflicts</Text>
-                <Text><Tag>1</Tag> Accept current | <Tag>2</Tag> Accept incoming</Text>
-                <Text><Tag>3</Tag> Accept both | <Tag>E</Tag> Edit manually</Text>
+                <Text>
+                  <Tag>←</Tag> / <Tag>→</Tag> Navigate between conflicts
+                </Text>
+                <Text>
+                  <Tag>1</Tag> Accept current | <Tag>2</Tag> Accept incoming
+                </Text>
+                <Text>
+                  <Tag>3</Tag> Accept both | <Tag>E</Tag> Edit manually
+                </Text>
               </Space>
             }
             type="info"

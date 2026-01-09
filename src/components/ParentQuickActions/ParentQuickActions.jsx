@@ -8,10 +8,11 @@ function Content(props) {
   const { deleteParent, parent, showParentModal } = props;
   return (
     <Menu>
-      <Item key="edit" onClick={() => showParentModal && showParentModal(parent)}>
-        <Button style={{ border: 'none', width: '100%' }}>
-          Edit Parent
-        </Button>
+      <Item
+        key="edit"
+        onClick={() => showParentModal && showParentModal(parent)}
+      >
+        <Button style={{ border: 'none', width: '100%' }}>Edit Parent</Button>
       </Item>
       <Item key="delete">
         <Popconfirm
@@ -43,7 +44,13 @@ export default function ParentQuickActions(props) {
   return (
     <div>
       <Dropdown
-        overlay={<Content parent={parent} deleteParent={deleteParent} showParentModal={showParentModal} />}
+        overlay={
+          <Content
+            parent={parent}
+            deleteParent={deleteParent}
+            showParentModal={showParentModal}
+          />
+        }
       >
         {button}
       </Dropdown>

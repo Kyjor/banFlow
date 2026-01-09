@@ -3,14 +3,14 @@ import HeartbeatService from '../services/HeartbeatService';
 
 /**
  * React hook for using the HeartbeatService
- * 
+ *
  * @param {string} name - Name for this heartbeat (for debugging)
  * @param {Function} callback - Function to call on each interval
  * @param {number} intervalMs - Interval in milliseconds
  * @param {Object} options - Additional options
  * @param {boolean} options.immediate - Execute callback immediately (default: false)
  * @param {boolean} options.enabled - Whether heartbeat is enabled (default: true)
- * 
+ *
  * @example
  * useHeartbeat('my-polling', async () => {
  *   await fetchData();
@@ -43,7 +43,7 @@ export function useHeartbeat(name, callback, intervalMs, options = {}) {
       name,
       () => callbackRef.current(),
       intervalMs,
-      { immediate }
+      { immediate },
     );
 
     // Cleanup on unmount or when dependencies change
@@ -69,11 +69,12 @@ export function useHeartbeat(name, callback, intervalMs, options = {}) {
       }
     },
     isActive: () => {
-      return heartbeatIdRef.current !== null && 
-             heartbeatService.isRegistered(heartbeatIdRef.current);
-    }
+      return (
+        heartbeatIdRef.current !== null &&
+        heartbeatService.isRegistered(heartbeatIdRef.current)
+      );
+    },
   };
 }
 
 export default useHeartbeat;
-

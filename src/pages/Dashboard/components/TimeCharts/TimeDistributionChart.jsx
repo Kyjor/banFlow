@@ -3,7 +3,10 @@ import { Card, Empty } from 'antd';
 import PropTypes from 'prop-types';
 import './TimeCharts.scss';
 
-function TimeDistributionChart({ data, title = 'Time Distribution by Status' }) {
+function TimeDistributionChart({
+  data,
+  title = 'Time Distribution by Status',
+}) {
   if (!data || Object.keys(data).length === 0) {
     return (
       <Card title={title} className="time-chart-card">
@@ -17,11 +20,17 @@ function TimeDistributionChart({ data, title = 'Time Distribution by Status' }) 
     .sort((a, b) => b.value - a.value);
 
   const total = entries.reduce((sum, entry) => sum + entry.value, 0);
-  const maxValue = Math.max(...entries.map(e => e.value));
+  const maxValue = Math.max(...entries.map((e) => e.value));
 
   const colors = [
-    '#1890ff', '#52c41a', '#faad14', '#f5222d', 
-    '#722ed1', '#13c2c2', '#eb2f96', '#fa8c16'
+    '#1890ff',
+    '#52c41a',
+    '#faad14',
+    '#f5222d',
+    '#722ed1',
+    '#13c2c2',
+    '#eb2f96',
+    '#fa8c16',
   ];
 
   return (
@@ -63,7 +72,7 @@ function formatTime(seconds) {
   if (!seconds || seconds === 0) return '0s';
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  
+
   if (hours > 0) {
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
@@ -81,4 +90,3 @@ TimeDistributionChart.defaultProps = {
 };
 
 export default TimeDistributionChart;
-

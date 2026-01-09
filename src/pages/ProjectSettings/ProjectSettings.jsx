@@ -49,7 +49,7 @@ class ProjectSettings extends Component {
     this.projectName = location.split('/').pop();
     this.projectName = this.projectName.split('?')[0];
     this.projectName = this.projectName.replace(/[@]/g, '/');
-    
+
     this.currentProject = this.projectName;
     this.trelloToken = localStorage.getItem('trelloToken');
     this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
@@ -60,7 +60,7 @@ class ProjectSettings extends Component {
       boards: [],
       selectedBoard: '',
       projectSettings: {},
-      
+
       // General
       projectName: '',
       projectDescription: '',
@@ -68,23 +68,23 @@ class ProjectSettings extends Component {
       bannerImageUrl: null,
       logoImage: null,
       logoImageUrl: null,
-      
+
       // Appearance
       themeOverride: false,
       primaryColor: '#1890ff',
       accentColor: '#52c41a',
-      
+
       // Behavior
       defaultIteration: null,
       defaultParent: null,
       autoArchiveCompleted: false,
       archiveAfterDays: 30,
-      
+
       // Integrations
       trelloBoard: null,
       trelloSyncEnabled: false,
       syncInterval: 60,
-      
+
       // Data
       nodeCount: 0,
       parentCount: 0,
@@ -92,7 +92,7 @@ class ProjectSettings extends Component {
       totalTimeSpent: 0,
       createdDate: null,
       lastModified: null,
-      
+
       // UI State
       activeTab: 'general',
       saving: false,
@@ -106,31 +106,34 @@ class ProjectSettings extends Component {
       this.projectName,
     );
 
-    this.setState({
-      ...this.state,
-      ...newState,
-      lokiLoaded: newState.lokiLoaded || false,
-      projectSettings: newState.projectSettings || {},
-    }, () => {
-      if (this.state.lokiLoaded) {
-        this.loadProjectData();
-        this.loadProjectSettings();
-      }
-    });
+    this.setState(
+      {
+        ...this.state,
+        ...newState,
+        lokiLoaded: newState.lokiLoaded || false,
+        projectSettings: newState.projectSettings || {},
+      },
+      () => {
+        if (this.state.lokiLoaded) {
+          this.loadProjectData();
+          this.loadProjectSettings();
+        }
+      },
+    );
   }
 
   loadProjectData = () => {
     const { nodes, parents, tags } = this.state;
-    
+
     const nodeCount = Object.keys(nodes || {}).length;
     const parentCount = Object.keys(parents || {}).length;
     const tagCount = Object.keys(tags || {}).length;
-    
+
     let totalTimeSpent = 0;
-    Object.values(nodes || {}).forEach(node => {
+    Object.values(nodes || {}).forEach((node) => {
       totalTimeSpent += node.timeSpent || 0;
     });
-    
+
     this.setState({
       nodeCount,
       parentCount,
@@ -141,7 +144,7 @@ class ProjectSettings extends Component {
 
   loadProjectSettings = () => {
     const { projectSettings } = this.state;
-    
+
     if (projectSettings) {
       this.setState({
         projectName: this.currentProject,
@@ -171,12 +174,16 @@ class ProjectSettings extends Component {
       [key]: value,
       lastModified: new Date().toISOString(),
     };
-    
+
     this.setState({ projectSettings: updatedSettings });
-    
+
     // Save to database via IPC
     try {
-      await ipcRenderer.invoke('api:updateProjectSettings', this.projectName, updatedSettings);
+      await ipcRenderer.invoke(
+        'api:updateProjectSettings',
+        this.projectName,
+        updatedSettings,
+      );
       this.setState({ [key]: value });
       message.success('Setting saved');
     } catch (error) {
@@ -187,7 +194,7 @@ class ProjectSettings extends Component {
 
   handleSaveAll = async () => {
     this.setState({ saving: true });
-    
+
     const { projectSettings } = this.state;
     const updatedSettings = {
       ...projectSettings,
@@ -206,9 +213,13 @@ class ProjectSettings extends Component {
       syncInterval: this.state.syncInterval,
       lastModified: new Date().toISOString(),
     };
-    
+
     try {
-      await ipcRenderer.invoke('api:updateProjectSettings', this.projectName, updatedSettings);
+      await ipcRenderer.invoke(
+        'api:updateProjectSettings',
+        this.projectName,
+        updatedSettings,
+      );
       this.setState({ projectSettings: updatedSettings, saving: false });
       message.success('All settings saved successfully!');
     } catch (error) {
@@ -225,21 +236,21 @@ class ProjectSettings extends Component {
         'docs:saveImage',
         file,
         this.projectName,
-        false
+        false,
       );
-      
+
       // Get image as data URL for preview
       const imageUrl = await ipcRenderer.invoke(
         'docs:getImage',
         imagePath,
         this.projectName,
-        false
+        false,
       );
-      
+
       this.setState({
         bannerImageUrl: imageUrl,
       });
-      
+
       message.success('Banner uploaded successfully');
     } catch (error) {
       console.error('Error uploading banner:', error);
@@ -255,21 +266,21 @@ class ProjectSettings extends Component {
         'docs:saveImage',
         file,
         this.projectName,
-        false
+        false,
       );
-      
+
       // Get image as data URL for preview
       const imageUrl = await ipcRenderer.invoke(
         'docs:getImage',
         imagePath,
         this.projectName,
-        false
+        false,
       );
-      
+
       this.setState({
         logoImageUrl: imageUrl,
       });
-      
+
       message.success('Logo uploaded successfully');
     } catch (error) {
       console.error('Error uploading logo:', error);
@@ -388,7 +399,9 @@ class ProjectSettings extends Component {
                   <Text strong>Description</Text>
                   <TextArea
                     value={projectDescription}
-                    onChange={(e) => this.setState({ projectDescription: e.target.value })}
+                    onChange={(e) =>
+                      this.setState({ projectDescription: e.target.value })
+                    }
                     rows={4}
                     placeholder="Describe your project..."
                     style={{ marginTop: 8 }}
@@ -400,8 +413,12 @@ class ProjectSettings extends Component {
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text strong>Banner Image</Text>
-                  <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
-                    Display at the top of project pages (recommended: 1200x200px)
+                  <Paragraph
+                    type="secondary"
+                    style={{ margin: 0, fontSize: 12 }}
+                  >
+                    Display at the top of project pages (recommended:
+                    1200x200px)
                   </Paragraph>
                   {bannerImageUrl && (
                     <div style={{ marginTop: 8, marginBottom: 8 }}>
@@ -411,7 +428,8 @@ class ProjectSettings extends Component {
                         style={{ maxHeight: 100, borderRadius: 4 }}
                         preview={{
                           visible: previewBannerVisible,
-                          onVisibleChange: (visible) => this.setState({ previewBannerVisible: visible }),
+                          onVisibleChange: (visible) =>
+                            this.setState({ previewBannerVisible: visible }),
                         }}
                       />
                     </div>
@@ -427,7 +445,11 @@ class ProjectSettings extends Component {
                       </Button>
                     </Upload>
                     {bannerImageUrl && (
-                      <Button danger icon={<DeleteOutlined />} onClick={this.removeBanner}>
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={this.removeBanner}
+                      >
                         Remove
                       </Button>
                     )}
@@ -436,7 +458,10 @@ class ProjectSettings extends Component {
                 <Divider />
                 <div>
                   <Text strong>Logo</Text>
-                  <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                  <Paragraph
+                    type="secondary"
+                    style={{ margin: 0, fontSize: 12 }}
+                  >
                     Project logo (recommended: square, 200x200px)
                   </Paragraph>
                   {logoImageUrl && (
@@ -459,7 +484,11 @@ class ProjectSettings extends Component {
                       </Button>
                     </Upload>
                     {logoImageUrl && (
-                      <Button danger icon={<DeleteOutlined />} onClick={this.removeLogo}>
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={this.removeLogo}
+                      >
                         Remove
                       </Button>
                     )}
@@ -470,7 +499,9 @@ class ProjectSettings extends Component {
             <Card title="Project Statistics" size="small">
               <Descriptions column={2} bordered size="small">
                 <Descriptions.Item label="Nodes">{nodeCount}</Descriptions.Item>
-                <Descriptions.Item label="Parents">{parentCount}</Descriptions.Item>
+                <Descriptions.Item label="Parents">
+                  {parentCount}
+                </Descriptions.Item>
                 <Descriptions.Item label="Tags">{tagCount}</Descriptions.Item>
                 <Descriptions.Item label="Total Time Spent">
                   {this.formatTime(totalTimeSpent)}
@@ -501,16 +532,27 @@ class ProjectSettings extends Component {
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <Card title="Theme Override" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Override App Theme</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Use project-specific theme colors
                     </Paragraph>
                   </div>
                   <Switch
                     checked={themeOverride}
-                    onChange={(checked) => this.setState({ themeOverride: checked })}
+                    onChange={(checked) =>
+                      this.setState({ themeOverride: checked })
+                    }
                   />
                 </div>
                 {themeOverride && (
@@ -522,7 +564,9 @@ class ProjectSettings extends Component {
                           <Text strong>Primary Color</Text>
                           <Select
                             value={primaryColor}
-                            onChange={(value) => this.setState({ primaryColor: value })}
+                            onChange={(value) =>
+                              this.setState({ primaryColor: value })
+                            }
                             style={{ width: '100%' }}
                           >
                             <Option value="#1890ff">Blue</Option>
@@ -541,7 +585,9 @@ class ProjectSettings extends Component {
                           <Text strong>Accent Color</Text>
                           <Select
                             value={accentColor}
-                            onChange={(value) => this.setState({ accentColor: value })}
+                            onChange={(value) =>
+                              this.setState({ accentColor: value })
+                            }
                             style={{ width: '100%' }}
                           >
                             <Option value="#52c41a">Green</Option>
@@ -576,12 +622,17 @@ class ProjectSettings extends Component {
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text strong>Default Iteration</Text>
-                  <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                  <Paragraph
+                    type="secondary"
+                    style={{ margin: 0, fontSize: 12 }}
+                  >
                     Default iteration for new nodes
                   </Paragraph>
                   <Select
                     value={defaultIteration}
-                    onChange={(value) => this.setState({ defaultIteration: value })}
+                    onChange={(value) =>
+                      this.setState({ defaultIteration: value })
+                    }
                     allowClear
                     style={{ width: '100%', marginTop: 8 }}
                     placeholder="Select default iteration"
@@ -595,12 +646,17 @@ class ProjectSettings extends Component {
                 </div>
                 <div style={{ marginTop: 16 }}>
                   <Text strong>Default Parent</Text>
-                  <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                  <Paragraph
+                    type="secondary"
+                    style={{ margin: 0, fontSize: 12 }}
+                  >
                     Default parent column for new nodes
                   </Paragraph>
                   <Select
                     value={defaultParent}
-                    onChange={(value) => this.setState({ defaultParent: value })}
+                    onChange={(value) =>
+                      this.setState({ defaultParent: value })
+                    }
                     allowClear
                     style={{ width: '100%', marginTop: 8 }}
                     placeholder="Select default parent"
@@ -616,29 +672,51 @@ class ProjectSettings extends Component {
             </Card>
             <Card title="Auto-Archive" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Auto-Archive Completed Tasks</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Automatically archive completed nodes after a period
                     </Paragraph>
                   </div>
                   <Switch
                     checked={autoArchiveCompleted}
-                    onChange={(checked) => this.setState({ autoArchiveCompleted: checked })}
+                    onChange={(checked) =>
+                      this.setState({ autoArchiveCompleted: checked })
+                    }
                   />
                 </div>
                 {autoArchiveCompleted && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <div>
                       <Text strong>Archive After (days)</Text>
-                      <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                      <Paragraph
+                        type="secondary"
+                        style={{ margin: 0, fontSize: 12 }}
+                      >
                         Days after completion to archive
                       </Paragraph>
                     </div>
                     <InputNumber
                       value={archiveAfterDays}
-                      onChange={(value) => this.setState({ archiveAfterDays: value })}
+                      onChange={(value) =>
+                        this.setState({ archiveAfterDays: value })
+                      }
                       min={1}
                       max={365}
                     />
@@ -660,16 +738,27 @@ class ProjectSettings extends Component {
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
             <Card title="Trello Sync" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <div>
                     <Text strong>Enable Trello Sync</Text>
-                    <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                    <Paragraph
+                      type="secondary"
+                      style={{ margin: 0, fontSize: 12 }}
+                    >
                       Sync this project with a Trello board
                     </Paragraph>
                   </div>
                   <Switch
                     checked={trelloSyncEnabled}
-                    onChange={(checked) => this.setState({ trelloSyncEnabled: checked })}
+                    onChange={(checked) =>
+                      this.setState({ trelloSyncEnabled: checked })
+                    }
                   />
                 </div>
                 {trelloSyncEnabled && (
@@ -700,14 +789,18 @@ class ProjectSettings extends Component {
                         </div>
                         <Space>
                           <Button onClick={this.displayAvailableBoards}>
-                            {boards.length > 0 ? 'Refresh Boards' : 'Load Boards'}
+                            {boards.length > 0
+                              ? 'Refresh Boards'
+                              : 'Load Boards'}
                           </Button>
                           {boards.length > 0 && (
                             <Select
                               placeholder="Select a board"
                               style={{ width: 300 }}
                               onChange={(boardId) => {
-                                const board = boards.find((b) => b.id === boardId);
+                                const board = boards.find(
+                                  (b) => b.id === boardId,
+                                );
                                 if (board) this.setSelectedBoard(board);
                               }}
                             >
@@ -719,16 +812,28 @@ class ProjectSettings extends Component {
                             </Select>
                           )}
                         </Space>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: 16,
+                          }}
+                        >
                           <div>
                             <Text strong>Sync Interval (minutes)</Text>
-                            <Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+                            <Paragraph
+                              type="secondary"
+                              style={{ margin: 0, fontSize: 12 }}
+                            >
                               How often to sync with Trello
                             </Paragraph>
                           </div>
                           <InputNumber
                             value={syncInterval}
-                            onChange={(value) => this.setState({ syncInterval: value })}
+                            onChange={(value) =>
+                              this.setState({ syncInterval: value })
+                            }
                             min={1}
                             max={1440}
                           />
@@ -754,15 +859,14 @@ class ProjectSettings extends Component {
             <Card title="Export" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Paragraph>
-                  Export your project data in various formats for backup or migration.
+                  Export your project data in various formats for backup or
+                  migration.
                 </Paragraph>
                 <Space>
                   <Button icon={<DownloadOutlined />} type="primary">
                     Export as JSON
                   </Button>
-                  <Button icon={<DownloadOutlined />}>
-                    Export as CSV
-                  </Button>
+                  <Button icon={<DownloadOutlined />}>Export as CSV</Button>
                 </Space>
               </Space>
             </Card>
@@ -771,12 +875,14 @@ class ProjectSettings extends Component {
                 <Paragraph>
                   Import project data from a backup or another source.
                 </Paragraph>
-                <Button icon={<UploadOutlined />}>
-                  Import Data
-                </Button>
+                <Button icon={<UploadOutlined />}>Import Data</Button>
               </Space>
             </Card>
-            <Card title="Danger Zone" size="small" style={{ borderColor: '#ff4d4f' }}>
+            <Card
+              title="Danger Zone"
+              size="small"
+              style={{ borderColor: '#ff4d4f' }}
+            >
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Alert
                   message="Delete Project"
@@ -800,12 +906,21 @@ class ProjectSettings extends Component {
       <Layout>
         <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <Title level={2} style={{ margin: 0 }}>
                 {projectName} Settings
               </Title>
               <Space>
-                <Button icon={<ReloadOutlined />} onClick={this.loadProjectSettings}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={this.loadProjectSettings}
+                >
                   Reload
                 </Button>
                 <Button
@@ -818,7 +933,7 @@ class ProjectSettings extends Component {
                 </Button>
               </Space>
             </div>
-            
+
             <Tabs
               activeKey={activeTab}
               onChange={(key) => this.setState({ activeTab: key })}

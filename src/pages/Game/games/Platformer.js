@@ -144,7 +144,10 @@ export function playPlatformer({
 
     const camera = { x: 0 };
     const updateCamera = () => {
-      camera.x = Math.max(0, Math.min(player.pos.x - width / 2.2, levelWidth - width));
+      camera.x = Math.max(
+        0,
+        Math.min(player.pos.x - width / 2.2, levelWidth - width),
+      );
       k.camPos(camera.x + width / 2, height / 2);
     };
 
@@ -204,7 +207,10 @@ export function playPlatformer({
       const baseGold = 15;
       const coinGold = coinsCollected * 5;
       const timeBonus = Math.max(0, Math.round(30 - duration));
-      const totalGold = Math.max(0, Math.round(baseGold + coinGold + timeBonus));
+      const totalGold = Math.max(
+        0,
+        Math.round(baseGold + coinGold + timeBonus),
+      );
 
       onComplete({
         coinsCollected,
@@ -267,4 +273,3 @@ export function playPlatformer({
 }
 
 export default playPlatformer;
-

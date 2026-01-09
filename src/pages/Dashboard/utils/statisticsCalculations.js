@@ -21,12 +21,12 @@ export const formatTimeHuman = (seconds) => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  
+
   const parts = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
   if (secs > 0 && hours === 0) parts.push(`${secs}s`);
-  
+
   return parts.join(' ') || '0s';
 };
 
@@ -45,20 +45,20 @@ export const calculateTotalTimeSpent = (nodes) => {
  */
 export const calculateTimeByParent = (nodes, parents) => {
   const timeByParent = {};
-  
+
   if (!nodes || !Array.isArray(nodes)) return timeByParent;
-  
+
   nodes.forEach((node) => {
     const parentId = node.parent || 'unassigned';
-    const parent = parents?.find(p => p.id === parentId);
+    const parent = parents?.find((p) => p.id === parentId);
     const parentName = parent?.title || parentId;
-    
+
     if (!timeByParent[parentName]) {
       timeByParent[parentName] = 0;
     }
     timeByParent[parentName] += node.timeSpent || 0;
   });
-  
+
   return timeByParent;
 };
 
@@ -67,9 +67,9 @@ export const calculateTimeByParent = (nodes, parents) => {
  */
 export const calculateTimeByTag = (nodes) => {
   const timeByTag = {};
-  
+
   if (!nodes || !Array.isArray(nodes)) return timeByTag;
-  
+
   nodes.forEach((node) => {
     const tags = node.tags || [];
     if (tags.length === 0) {
@@ -79,7 +79,8 @@ export const calculateTimeByTag = (nodes) => {
       timeByTag['No Tag'] += node.timeSpent || 0;
     } else {
       tags.forEach((tag) => {
-        const tagName = typeof tag === 'string' ? tag : (tag.title || tag.name || 'Unknown');
+        const tagName =
+          typeof tag === 'string' ? tag : tag.title || tag.name || 'Unknown';
         if (!timeByTag[tagName]) {
           timeByTag[tagName] = 0;
         }
@@ -87,7 +88,7 @@ export const calculateTimeByTag = (nodes) => {
       });
     }
   });
-  
+
   return timeByTag;
 };
 
@@ -96,24 +97,24 @@ export const calculateTimeByTag = (nodes) => {
  */
 export const calculateTimeByIteration = (nodes, iterations) => {
   const timeByIteration = {};
-  
+
   if (!nodes || !Array.isArray(nodes)) return timeByIteration;
-  
+
   nodes.forEach((node) => {
     const iterationId = node.iterationId || node.iteration || null;
     let iterationName = 'No Iteration';
-    
+
     if (iterationId && iterations) {
-      const iteration = iterations.find(i => i.id === iterationId);
+      const iteration = iterations.find((i) => i.id === iterationId);
       iterationName = iteration?.title || iterationId;
     }
-    
+
     if (!timeByIteration[iterationName]) {
       timeByIteration[iterationName] = 0;
     }
     timeByIteration[iterationName] += node.timeSpent || 0;
   });
-  
+
   return timeByIteration;
 };
 
@@ -132,7 +133,7 @@ export const calculateNodeStats = (nodes) => {
       byIteration: {},
     };
   }
-  
+
   const stats = {
     total: nodes.length,
     completed: 0,
@@ -142,21 +143,21 @@ export const calculateNodeStats = (nodes) => {
     byTag: {},
     byIteration: {},
   };
-  
+
   nodes.forEach((node) => {
     if (node.isComplete) {
       stats.completed += 1;
     } else {
       stats.incomplete += 1;
     }
-    
+
     // By parent
     const parentId = node.parent || 'unassigned';
     if (!stats.byParent[parentId]) {
       stats.byParent[parentId] = 0;
     }
     stats.byParent[parentId] += 1;
-    
+
     // By tag
     const tags = node.tags || [];
     if (tags.length === 0) {
@@ -166,14 +167,15 @@ export const calculateNodeStats = (nodes) => {
       stats.byTag['No Tag'] += 1;
     } else {
       tags.forEach((tag) => {
-        const tagName = typeof tag === 'string' ? tag : (tag.title || tag.name || 'Unknown');
+        const tagName =
+          typeof tag === 'string' ? tag : tag.title || tag.name || 'Unknown';
         if (!stats.byTag[tagName]) {
           stats.byTag[tagName] = 0;
         }
         stats.byTag[tagName] += 1;
       });
     }
-    
+
     // By iteration
     const iterationId = node.iterationId || node.iteration || 'No Iteration';
     if (!stats.byIteration[iterationId]) {
@@ -181,11 +183,10 @@ export const calculateNodeStats = (nodes) => {
     }
     stats.byIteration[iterationId] += 1;
   });
-  
-  stats.completionRate = stats.total > 0 
-    ? Math.round((stats.completed / stats.total) * 100) 
-    : 0;
-  
+
+  stats.completionRate =
+    stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+
   return stats;
 };
 
@@ -194,10 +195,10 @@ export const calculateNodeStats = (nodes) => {
  */
 export const calculateAverageSessionDuration = (nodes) => {
   if (!nodes || !Array.isArray(nodes)) return 0;
-  
+
   let totalSessions = 0;
   let totalDuration = 0;
-  
+
   nodes.forEach((node) => {
     const sessions = node.sessionHistory || [];
     sessions.forEach((session) => {
@@ -207,7 +208,7 @@ export const calculateAverageSessionDuration = (nodes) => {
       }
     });
   });
-  
+
   return totalSessions > 0 ? Math.round(totalDuration / totalSessions) : 0;
 };
 
@@ -216,12 +217,12 @@ export const calculateAverageSessionDuration = (nodes) => {
  */
 export const calculateTimeInDateRange = (nodes, startDate, endDate) => {
   if (!nodes || !Array.isArray(nodes)) return 0;
-  
+
   const start = startDate ? new Date(startDate).getTime() : 0;
   const end = endDate ? new Date(endDate).getTime() : Date.now();
-  
+
   let totalTime = 0;
-  
+
   nodes.forEach((node) => {
     const sessions = node.sessionHistory || [];
     sessions.forEach((session) => {
@@ -233,7 +234,7 @@ export const calculateTimeInDateRange = (nodes, startDate, endDate) => {
       }
     });
   });
-  
+
   return totalTime;
 };
 
@@ -242,13 +243,13 @@ export const calculateTimeInDateRange = (nodes, startDate, endDate) => {
  */
 export const getRecentActivity = (nodes, days = 7) => {
   if (!nodes || !Array.isArray(nodes)) return [];
-  
+
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
   const cutoffTime = cutoffDate.getTime();
-  
+
   const activities = [];
-  
+
   nodes.forEach((node) => {
     const sessions = node.sessionHistory || [];
     sessions.forEach((session) => {
@@ -266,9 +267,9 @@ export const getRecentActivity = (nodes, days = 7) => {
       }
     });
   });
-  
-  return activities.sort((a, b) => 
-    new Date(b.startDateTime) - new Date(a.startDateTime)
+
+  return activities.sort(
+    (a, b) => new Date(b.startDateTime) - new Date(a.startDateTime),
   );
 };
 
@@ -278,11 +279,11 @@ export const getRecentActivity = (nodes, days = 7) => {
 export const calculateProjectHealth = (nodes, parents) => {
   const stats = calculateNodeStats(nodes);
   const totalTime = calculateTotalTimeSpent(nodes);
-  
+
   // Calculate overdue items
   const now = new Date();
   let overdueCount = 0;
-  
+
   nodes.forEach((node) => {
     if (node.estimatedDate && !node.isComplete) {
       const estimatedDate = new Date(node.estimatedDate);
@@ -291,12 +292,11 @@ export const calculateProjectHealth = (nodes, parents) => {
       }
     }
   });
-  
+
   // Calculate average time per node
-  const avgTimePerNode = stats.total > 0 
-    ? Math.round(totalTime / stats.total) 
-    : 0;
-  
+  const avgTimePerNode =
+    stats.total > 0 ? Math.round(totalTime / stats.total) : 0;
+
   // Calculate nodes by parent with names
   const nodesByParent = {};
   if (parents) {
@@ -305,7 +305,7 @@ export const calculateProjectHealth = (nodes, parents) => {
       nodesByParent[parent.title] = count;
     });
   }
-  
+
   return {
     completionRate: stats.completionRate,
     totalNodes: stats.total,
@@ -317,4 +317,3 @@ export const calculateProjectHealth = (nodes, parents) => {
     nodesByParent,
   };
 };
-

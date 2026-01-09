@@ -39,12 +39,12 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { ipcRenderer } from 'electron';
+import moment from 'moment';
 import Layout from '../../layouts/App';
 import NodeModal from '../../components/NodeModal/NodeModal';
 import NodeController from '../../api/nodes/NodeController';
 import ParentController from '../../api/parent/ParentController';
 import { formatTimeHuman } from '../Dashboard/utils/statisticsCalculations';
-import moment from 'moment';
 import './SheetPage.scss';
 
 const { Option } = Select;
@@ -65,9 +65,23 @@ class SheetPage extends Component {
 
     // Column presets
     this.columnPresets = {
-      overview: ['title', 'parent', 'status', 'completion', 'timeSpent', 'created'],
+      overview: [
+        'title',
+        'parent',
+        'status',
+        'completion',
+        'timeSpent',
+        'created',
+      ],
       timeTracking: ['title', 'timeSpent', 'estimatedTime', 'parent', 'status'],
-      planning: ['title', 'parent', 'dueDate', 'estimatedDate', 'status', 'tags'],
+      planning: [
+        'title',
+        'parent',
+        'dueDate',
+        'estimatedDate',
+        'status',
+        'tags',
+      ],
       full: 'all',
     };
 
@@ -80,7 +94,16 @@ class SheetPage extends Component {
       nodeStates: [],
       // Table state
       searchText: '',
-      selectedColumns: ['title', 'description', 'parent', 'status', 'completion', 'timeSpent', 'created', 'lastUpdated'],
+      selectedColumns: [
+        'title',
+        'description',
+        'parent',
+        'status',
+        'completion',
+        'timeSpent',
+        'created',
+        'lastUpdated',
+      ],
       columnPreset: 'overview',
       // Filtering
       filters: {
@@ -229,7 +252,10 @@ class SheetPage extends Component {
   // Calculate statistics
   calculateStatistics = () => {
     const data = this.getTableData();
-    const totalTime = data.reduce((sum, node) => sum + (node.timeSpent || 0), 0);
+    const totalTime = data.reduce(
+      (sum, node) => sum + (node.timeSpent || 0),
+      0,
+    );
     const completedCount = data.filter((node) => node.isComplete).length;
     const overdueCount = data.filter((node) => {
       if (!node.dueDate) return false;
@@ -275,7 +301,8 @@ class SheetPage extends Component {
         key: 'description',
         width: 250,
         ellipsis: true,
-        render: (text) => text || <span style={{ color: '#999' }}>No description</span>,
+        render: (text) =>
+          text || <span style={{ color: '#999' }}>No description</span>,
       },
       parent: {
         title: 'Parent',
@@ -286,7 +313,9 @@ class SheetPage extends Component {
           text: p.title,
           value: p.id,
         })),
-        filteredValue: this.state.filters.parent ? [this.state.filters.parent] : null,
+        filteredValue: this.state.filters.parent
+          ? [this.state.filters.parent]
+          : null,
         onFilter: (value, record) => record.parent === value,
         sorter: (a, b) => {
           const aParent = this.getParentName(a.parent);
@@ -308,7 +337,9 @@ class SheetPage extends Component {
           text: state.name || state,
           value: state.name || state,
         })),
-        filteredValue: this.state.filters.status ? [this.state.filters.status] : null,
+        filteredValue: this.state.filters.status
+          ? [this.state.filters.status]
+          : null,
         onFilter: (value, record) => record.nodeState === value,
         render: (status) => {
           if (!status) return <Tag>None</Tag>;
@@ -324,19 +355,20 @@ class SheetPage extends Component {
           { text: 'Completed', value: 'completed' },
           { text: 'Incomplete', value: 'incomplete' },
         ],
-        filteredValue: this.state.filters.completion ? [this.state.filters.completion] : null,
+        filteredValue: this.state.filters.completion
+          ? [this.state.filters.completion]
+          : null,
         onFilter: (value, record) => {
           if (value === 'completed') return record.isComplete;
           return !record.isComplete;
         },
         sorter: (a, b) => (a.isComplete ? 1 : 0) - (b.isComplete ? 1 : 0),
-        render: (isComplete) => (
+        render: (isComplete) =>
           isComplete ? (
             <Badge status="success" text="Complete" />
           ) : (
             <Badge status="default" text="Incomplete" />
-          )
-        ),
+          ),
       },
       timeSpent: {
         title: 'Time Spent',
@@ -521,7 +553,10 @@ class SheetPage extends Component {
     const rows = data.map((node) => {
       return columns.map((col) => {
         const value = node[col.dataIndex];
-        if (col.dataIndex === 'timeSpent' || col.dataIndex === 'estimatedTime') {
+        if (
+          col.dataIndex === 'timeSpent' ||
+          col.dataIndex === 'estimatedTime'
+        ) {
           return formatTimeHuman(value || 0);
         }
         if (col.dataIndex === 'parent') {
@@ -530,7 +565,12 @@ class SheetPage extends Component {
         if (col.dataIndex === 'isComplete') {
           return value ? 'Yes' : 'No';
         }
-        if (moment.isMoment(value) || (value && typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/))) {
+        if (
+          moment.isMoment(value) ||
+          (value &&
+            typeof value === 'string' &&
+            value.match(/^\d{4}-\d{2}-\d{2}/))
+        ) {
           return moment(value).format('YYYY-MM-DD HH:mm');
         }
         if (Array.isArray(value)) {
@@ -540,7 +580,10 @@ class SheetPage extends Component {
       });
     });
 
-    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.join(',')),
+    ].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -650,7 +693,10 @@ class SheetPage extends Component {
       modalNodeId: null,
     });
     // Refresh data
-    const newState = ipcRenderer.sendSync('api:initializeProjectState', this.projectName);
+    const newState = ipcRenderer.sendSync(
+      'api:initializeProjectState',
+      this.projectName,
+    );
     this.setState(newState);
   };
 
@@ -660,7 +706,10 @@ class SheetPage extends Component {
 
   updateNodeProperty = (property, nodeId, value, shouldSync = true) => {
     NodeController.updateNodeProperty(property, nodeId, value, shouldSync);
-    const newState = ipcRenderer.sendSync('api:initializeProjectState', this.projectName);
+    const newState = ipcRenderer.sendSync(
+      'api:initializeProjectState',
+      this.projectName,
+    );
     this.setState(newState);
   };
 
@@ -686,8 +735,8 @@ class SheetPage extends Component {
       { key: 'sessions', label: 'Sessions' },
     ];
 
-    let currentSelection = selectedColumns.includes('all') 
-      ? allColumnOptions.map((o) => o.key) 
+    let currentSelection = selectedColumns.includes('all')
+      ? allColumnOptions.map((o) => o.key)
       : selectedColumns;
 
     Modal.confirm({
@@ -697,16 +746,28 @@ class SheetPage extends Component {
         <div>
           <div style={{ marginBottom: 16 }}>
             <Space>
-              <Button size="small" onClick={() => this.handlePresetChange('overview')}>
+              <Button
+                size="small"
+                onClick={() => this.handlePresetChange('overview')}
+              >
                 Overview
               </Button>
-              <Button size="small" onClick={() => this.handlePresetChange('timeTracking')}>
+              <Button
+                size="small"
+                onClick={() => this.handlePresetChange('timeTracking')}
+              >
                 Time Tracking
               </Button>
-              <Button size="small" onClick={() => this.handlePresetChange('planning')}>
+              <Button
+                size="small"
+                onClick={() => this.handlePresetChange('planning')}
+              >
                 Planning
               </Button>
-              <Button size="small" onClick={() => this.handlePresetChange('full')}>
+              <Button
+                size="small"
+                onClick={() => this.handlePresetChange('full')}
+              >
                 All Columns
               </Button>
             </Space>
@@ -739,20 +800,20 @@ class SheetPage extends Component {
   getViewsMenu = () => {
     const { savedViews } = this.state;
     const menuItems = [];
-    
+
     if (savedViews.length === 0) {
       menuItems.push(
         <Menu.Item key="no-views" disabled>
           No saved views
-        </Menu.Item>
+        </Menu.Item>,
       );
     } else {
       savedViews.forEach((view) => {
         menuItems.push(
           <Menu.Item key={view.name}>
             <Space>
-              <Button 
-                type="link" 
+              <Button
+                type="link"
                 onClick={(e) => {
                   e.stopPropagation();
                   this.loadView(view);
@@ -772,18 +833,22 @@ class SheetPage extends Component {
                 style={{ padding: 0 }}
               />
             </Space>
-          </Menu.Item>
+          </Menu.Item>,
         );
       });
     }
-    
+
     menuItems.push(<Menu.Divider key="divider" />);
     menuItems.push(
-      <Menu.Item key="save" icon={<SaveOutlined />} onClick={this.saveCurrentView}>
+      <Menu.Item
+        key="save"
+        icon={<SaveOutlined />}
+        onClick={this.saveCurrentView}
+      >
         Save Current View
-      </Menu.Item>
+      </Menu.Item>,
     );
-    
+
     return <Menu>{menuItems}</Menu>;
   };
 
@@ -791,9 +856,9 @@ class SheetPage extends Component {
   getExportMenu = () => {
     return (
       <Menu>
-        <Menu.Item 
-          key="csv" 
-          icon={<FileTextOutlined />} 
+        <Menu.Item
+          key="csv"
+          icon={<FileTextOutlined />}
           onClick={(e) => {
             e.domEvent?.stopPropagation();
             this.exportToCSV();
@@ -801,9 +866,9 @@ class SheetPage extends Component {
         >
           Export to CSV
         </Menu.Item>
-        <Menu.Item 
-          key="json" 
-          icon={<FileOutlined />} 
+        <Menu.Item
+          key="json"
+          icon={<FileOutlined />}
           onClick={(e) => {
             e.domEvent?.stopPropagation();
             this.exportToJSON();
@@ -853,14 +918,24 @@ class SheetPage extends Component {
                 placeholder="Search nodes..."
                 prefix={<SearchOutlined />}
                 value={searchText}
-                onChange={(e) => this.setState({ searchText: e.target.value, pagination: { ...pagination, current: 1 } })}
+                onChange={(e) =>
+                  this.setState({
+                    searchText: e.target.value,
+                    pagination: { ...pagination, current: 1 },
+                  })
+                }
                 style={{ width: 300 }}
                 allowClear
               />
               <Select
                 placeholder="Filter by Parent"
                 value={filters.parent}
-                onChange={(value) => this.setState({ filters: { ...filters, parent: value }, pagination: { ...pagination, current: 1 } })}
+                onChange={(value) =>
+                  this.setState({
+                    filters: { ...filters, parent: value },
+                    pagination: { ...pagination, current: 1 },
+                  })
+                }
                 allowClear
                 style={{ width: 150 }}
               >
@@ -873,7 +948,12 @@ class SheetPage extends Component {
               <Select
                 placeholder="Filter by Status"
                 value={filters.status}
-                onChange={(value) => this.setState({ filters: { ...filters, status: value }, pagination: { ...pagination, current: 1 } })}
+                onChange={(value) =>
+                  this.setState({
+                    filters: { ...filters, status: value },
+                    pagination: { ...pagination, current: 1 },
+                  })
+                }
                 allowClear
                 style={{ width: 150 }}
               >
@@ -886,7 +966,12 @@ class SheetPage extends Component {
               <Select
                 placeholder="Filter by Completion"
                 value={filters.completion}
-                onChange={(value) => this.setState({ filters: { ...filters, completion: value }, pagination: { ...pagination, current: 1 } })}
+                onChange={(value) =>
+                  this.setState({
+                    filters: { ...filters, completion: value },
+                    pagination: { ...pagination, current: 1 },
+                  })
+                }
                 allowClear
                 style={{ width: 150 }}
               >
@@ -895,7 +980,12 @@ class SheetPage extends Component {
               </Select>
               <RangePicker
                 placeholder={['Start Date', 'End Date']}
-                onChange={(dates) => this.setState({ filters: { ...filters, dateRange: dates }, pagination: { ...pagination, current: 1 } })}
+                onChange={(dates) =>
+                  this.setState({
+                    filters: { ...filters, dateRange: dates },
+                    pagination: { ...pagination, current: 1 },
+                  })
+                }
                 style={{ width: 250 }}
               />
               <Select
@@ -913,14 +1003,20 @@ class SheetPage extends Component {
               <Button
                 icon={<ReloadOutlined />}
                 onClick={() => {
-                  const newState = ipcRenderer.sendSync('api:initializeProjectState', this.projectName);
+                  const newState = ipcRenderer.sendSync(
+                    'api:initializeProjectState',
+                    this.projectName,
+                  );
                   this.setState(newState);
                   message.success('Data refreshed');
                 }}
               >
                 Refresh
               </Button>
-              <Button icon={<SettingOutlined />} onClick={this.showColumnSelectionModal}>
+              <Button
+                icon={<SettingOutlined />}
+                onClick={this.showColumnSelectionModal}
+              >
                 Columns
               </Button>
               <Dropdown overlay={this.getViewsMenu()} trigger={['click']}>
@@ -992,23 +1088,76 @@ class SheetPage extends Component {
               <Row gutter={16}>
                 <Col span={12}>
                   <Card size="small" title="Completion Status">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', padding: '20px 0' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-around',
+                        padding: '20px 0',
+                      }}
+                    >
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#3f8600' }}>
-                          {stats.total > 0 ? ((stats.completed / stats.total) * 100).toFixed(1) : 0}%
+                        <div
+                          style={{
+                            fontSize: '36px',
+                            fontWeight: 'bold',
+                            color: '#3f8600',
+                          }}
+                        >
+                          {stats.total > 0
+                            ? ((stats.completed / stats.total) * 100).toFixed(1)
+                            : 0}
+                          %
                         </div>
-                        <div style={{ color: '#666', marginTop: 8 }}>Completion Rate</div>
+                        <div style={{ color: '#666', marginTop: 8 }}>
+                          Completion Rate
+                        </div>
                       </div>
-                      <div style={{ width: '2px', height: '60px', background: '#e8e8e8' }} />
+                      <div
+                        style={{
+                          width: '2px',
+                          height: '60px',
+                          background: '#e8e8e8',
+                        }}
+                      />
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3f8600' }}>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#3f8600',
+                          }}
+                        >
                           {stats.completed}
                         </div>
-                        <div style={{ color: '#666', marginTop: 4, fontSize: '12px' }}>Completed</div>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#cf1322', marginTop: 8 }}>
+                        <div
+                          style={{
+                            color: '#666',
+                            marginTop: 4,
+                            fontSize: '12px',
+                          }}
+                        >
+                          Completed
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#cf1322',
+                            marginTop: 8,
+                          }}
+                        >
                           {stats.incomplete}
                         </div>
-                        <div style={{ color: '#666', marginTop: 4, fontSize: '12px' }}>Incomplete</div>
+                        <div
+                          style={{
+                            color: '#666',
+                            marginTop: 4,
+                            fontSize: '12px',
+                          }}
+                        >
+                          Incomplete
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -1017,16 +1166,39 @@ class SheetPage extends Component {
                   <Card size="small" title="Time Distribution by Parent">
                     <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                       {Object.values(parents || {}).map((parent) => {
-                        const parentNodes = data.filter((n) => n.parent === parent.id);
-                        const parentTime = parentNodes.reduce((sum, n) => sum + (n.timeSpent || 0), 0);
-                        const percentage = stats.totalTime > 0 ? (parentTime / stats.totalTime) * 100 : 0;
+                        const parentNodes = data.filter(
+                          (n) => n.parent === parent.id,
+                        );
+                        const parentTime = parentNodes.reduce(
+                          (sum, n) => sum + (n.timeSpent || 0),
+                          0,
+                        );
+                        const percentage =
+                          stats.totalTime > 0
+                            ? (parentTime / stats.totalTime) * 100
+                            : 0;
                         return (
                           <div key={parent.id} style={{ marginBottom: 12 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                marginBottom: 4,
+                              }}
+                            >
                               <span>{parent.title}</span>
-                              <span style={{ fontWeight: 'bold' }}>{formatTimeHuman(parentTime)}</span>
+                              <span style={{ fontWeight: 'bold' }}>
+                                {formatTimeHuman(parentTime)}
+                              </span>
                             </div>
-                            <div style={{ background: '#f0f0f0', borderRadius: '4px', height: '8px', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                background: '#f0f0f0',
+                                borderRadius: '4px',
+                                height: '8px',
+                                overflow: 'hidden',
+                              }}
+                            >
                               <div
                                 style={{
                                   background: '#1890ff',
@@ -1050,7 +1222,7 @@ class SheetPage extends Component {
                   type="text"
                 >
                   Hide Statistics
-        </Button>
+                </Button>
               </div>
             </Card>
           )}
@@ -1058,25 +1230,34 @@ class SheetPage extends Component {
           <Card>
             {this.state.groupBy ? (
               <div>
-                {Object.entries(this.getGroupedData()).map(([groupName, groupData]) => (
-                  <div key={groupName} style={{ marginBottom: 24 }}>
-                    <h3 style={{ marginBottom: 16, padding: '8px 16px', background: '#f5f5f5', borderRadius: '4px' }}>
-                      {groupName} ({groupData.length})
-                    </h3>
-                    <Table
-                      columns={columns}
-                      dataSource={groupData}
-                      rowKey="id"
-                      pagination={false}
-                      scroll={{ x: 'max-content' }}
-                      size="small"
-                      onRow={(record) => ({
-                        onClick: () => this.openNodeModal(record),
-                        style: { cursor: 'pointer' },
-                      })}
-                    />
-                  </div>
-                ))}
+                {Object.entries(this.getGroupedData()).map(
+                  ([groupName, groupData]) => (
+                    <div key={groupName} style={{ marginBottom: 24 }}>
+                      <h3
+                        style={{
+                          marginBottom: 16,
+                          padding: '8px 16px',
+                          background: '#f5f5f5',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {groupName} ({groupData.length})
+                      </h3>
+                      <Table
+                        columns={columns}
+                        dataSource={groupData}
+                        rowKey="id"
+                        pagination={false}
+                        scroll={{ x: 'max-content' }}
+                        size="small"
+                        onRow={(record) => ({
+                          onClick: () => this.openNodeModal(record),
+                          style: { cursor: 'pointer' },
+                        })}
+                      />
+                    </div>
+                  ),
+                )}
               </div>
             ) : (
               <Table

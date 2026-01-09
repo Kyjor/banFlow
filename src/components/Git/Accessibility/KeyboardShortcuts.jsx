@@ -4,7 +4,7 @@ import { KeyboardOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
-const KeyboardShortcuts = ({ visible, onClose }) => {
+function KeyboardShortcuts({ visible, onClose }) {
   const shortcuts = [
     {
       category: 'General',
@@ -16,8 +16,8 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
         { keys: ['Ctrl', 'G'], description: 'Go to line' },
         { keys: ['Ctrl', '/'], description: 'Toggle comment' },
         { keys: ['F11'], description: 'Toggle fullscreen' },
-        { keys: ['Esc'], description: 'Close dialogs/cancel operations' }
-      ]
+        { keys: ['Esc'], description: 'Close dialogs/cancel operations' },
+      ],
     },
     {
       category: 'Navigation',
@@ -29,8 +29,8 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
         { keys: ['Ctrl', '4'], description: 'Go to Conflicts tab' },
         { keys: ['Ctrl', '5'], description: 'Go to Operations tab' },
         { keys: ['Ctrl', 'B'], description: 'Toggle sidebar' },
-        { keys: ['Ctrl', 'Shift', 'F'], description: 'Focus file search' }
-      ]
+        { keys: ['Ctrl', 'Shift', 'F'], description: 'Focus file search' },
+      ],
     },
     {
       category: 'Git Operations',
@@ -41,8 +41,11 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
         { keys: ['Ctrl', 'Shift', 'B'], description: 'Create new branch' },
         { keys: ['Ctrl', 'Shift', 'S'], description: 'Switch branch' },
         { keys: ['Ctrl', 'Shift', 'M'], description: 'Merge branch' },
-        { keys: ['Ctrl', 'Shift', 'R'], description: 'Refresh repository status' }
-      ]
+        {
+          keys: ['Ctrl', 'Shift', 'R'],
+          description: 'Refresh repository status',
+        },
+      ],
     },
     {
       category: 'File Operations',
@@ -52,8 +55,8 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
         { keys: ['Ctrl', 'W'], description: 'Close current file' },
         { keys: ['Ctrl', 'Shift', 'O'], description: 'Open repository' },
         { keys: ['Ctrl', 'R'], description: 'Reload current file' },
-        { keys: ['Ctrl', 'Shift', 'S'], description: 'Save as' }
-      ]
+        { keys: ['Ctrl', 'Shift', 'S'], description: 'Save as' },
+      ],
     },
     {
       category: 'Staging',
@@ -64,32 +67,38 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
         { keys: ['Ctrl', 'Shift', 'U'], description: 'Unstage all files' },
         { keys: ['Space'], description: 'Stage/unstage current chunk' },
         { keys: ['Enter'], description: 'Stage current chunk' },
-        { keys: ['Backspace'], description: 'Unstage current chunk' }
-      ]
+        { keys: ['Backspace'], description: 'Unstage current chunk' },
+      ],
     },
     {
       category: 'Diff View',
       items: [
         { keys: ['Ctrl', 'D'], description: 'Toggle diff view mode' },
-        { keys: ['Ctrl', 'Shift', 'W'], description: 'Toggle whitespace visibility' },
+        {
+          keys: ['Ctrl', 'Shift', 'W'],
+          description: 'Toggle whitespace visibility',
+        },
         { keys: ['Ctrl', 'Shift', 'L'], description: 'Toggle line numbers' },
         { keys: ['Ctrl', 'Shift', 'C'], description: 'Copy diff to clipboard' },
         { keys: ['Ctrl', 'Shift', 'E'], description: 'Export diff' },
         { keys: ['Up', 'Arrow'], description: 'Previous change' },
-        { keys: ['Down', 'Arrow'], description: 'Next change' }
-      ]
+        { keys: ['Down', 'Arrow'], description: 'Next change' },
+      ],
     },
     {
       category: 'Conflict Resolution',
       items: [
-        { keys: ['Ctrl', 'Shift', 'I'], description: 'Accept incoming changes' },
+        {
+          keys: ['Ctrl', 'Shift', 'I'],
+          description: 'Accept incoming changes',
+        },
         { keys: ['Ctrl', 'Shift', 'C'], description: 'Accept current changes' },
         { keys: ['Ctrl', 'Shift', 'B'], description: 'Accept both changes' },
         { keys: ['Ctrl', 'Shift', 'E'], description: 'Edit manually' },
         { keys: ['Ctrl', 'Shift', 'N'], description: 'Next conflict' },
-        { keys: ['Ctrl', 'Shift', 'P'], description: 'Previous conflict' }
-      ]
-    }
+        { keys: ['Ctrl', 'Shift', 'P'], description: 'Previous conflict' },
+      ],
+    },
   ];
 
   const renderKey = (key) => {
@@ -103,7 +112,7 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
           fontFamily: 'monospace',
           fontSize: '12px',
           padding: '2px 6px',
-          margin: '1px'
+          margin: '1px',
         }}
       >
         {key}
@@ -119,7 +128,9 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
             <React.Fragment key={index}>
               {renderKey(key)}
               {index < shortcut.keys.length - 1 && (
-                <Text type="secondary" style={{ fontSize: '12px' }}>+</Text>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  +
+                </Text>
               )}
             </React.Fragment>
           ))}
@@ -134,7 +145,9 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
       title={
         <Space>
           <KeyboardOutlined />
-          <Title level={4} style={{ margin: 0 }}>Keyboard Shortcuts</Title>
+          <Title level={4} style={{ margin: 0 }}>
+            Keyboard Shortcuts
+          </Title>
         </Space>
       }
       open={visible}
@@ -146,7 +159,13 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
       <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
         {shortcuts.map((category, index) => (
           <div key={category.category}>
-            <Title level={5} style={{ marginTop: index === 0 ? 0 : '24px', marginBottom: '12px' }}>
+            <Title
+              level={5}
+              style={{
+                marginTop: index === 0 ? 0 : '24px',
+                marginBottom: '12px',
+              }}
+            >
               {category.category}
             </Title>
             {category.items.map(renderShortcut)}
@@ -156,6 +175,6 @@ const KeyboardShortcuts = ({ visible, onClose }) => {
       </div>
     </Modal>
   );
-};
+}
 
 export default KeyboardShortcuts;

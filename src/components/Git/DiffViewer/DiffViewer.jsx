@@ -1,27 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Select, Button, Space, Typography, Tag, Empty, Spin, Tooltip, Row, Col } from 'antd';
+import {
+  Card,
+  Select,
+  Button,
+  Space,
+  Typography,
+  Tag,
+  Empty,
+  Spin,
+  Tooltip,
+  Row,
+  Col,
+} from 'antd';
 import {
   FileTextOutlined,
   SwapOutlined,
   FullscreenOutlined,
   CopyOutlined,
   DownloadOutlined,
-  EyeOutlined
+  EyeOutlined,
 } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {
+  tomorrow,
+  prism,
+} from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useGit } from '../../../contexts/GitContext';
 import './DiffViewer.scss';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-function DiffViewer({ 
-  file = null, 
-  staged = false, 
+function DiffViewer({
+  file = null,
+  staged = false,
   compact = false,
   showFileSelector = true,
-  theme = 'light'
+  theme = 'light',
 }) {
   const {
     currentRepository,
@@ -29,7 +44,7 @@ function DiffViewer({
     modifiedFiles,
     stagedFiles,
     getDiff,
-    isLoading
+    isLoading,
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -45,7 +60,11 @@ function DiffViewer({
   const [selectedDiff, setSelectedDiff] = useState(null);
 
   useEffect(() => {
-    console.log('DiffViewer useEffect triggered:', { selectedFile, currentRepository, staged });
+    console.log('DiffViewer useEffect triggered:', {
+      selectedFile,
+      currentRepository,
+      staged,
+    });
     if (selectedFile && currentRepository) {
       loadDiff(selectedFile);
     }
@@ -53,13 +72,17 @@ function DiffViewer({
 
   useEffect(() => {
     if (currentDiff && currentDiff.length > 0) {
-      const fileDiff = currentDiff.find(diff => diff.name === selectedFile);
+      const fileDiff = currentDiff.find((diff) => diff.name === selectedFile);
       setSelectedDiff(fileDiff);
     }
   }, [currentDiff, selectedFile]);
 
   const loadDiff = async (filename) => {
-    console.log('DiffViewer loadDiff called with:', { filename, staged, currentRepository });
+    console.log('DiffViewer loadDiff called with:', {
+      filename,
+      staged,
+      currentRepository,
+    });
     try {
       const result = await getDiff(filename, staged);
       console.log('DiffViewer getDiff result:', result);
@@ -70,40 +93,40 @@ function DiffViewer({
 
   const getLanguageFromFilename = (filename) => {
     if (!filename) return 'text';
-    
+
     const extension = filename.split('.').pop()?.toLowerCase();
     const languageMap = {
-      'js': 'javascript',
-      'jsx': 'jsx',
-      'ts': 'typescript',
-      'tsx': 'tsx',
-      'py': 'python',
-      'java': 'java',
-      'cpp': 'cpp',
-      'c': 'c',
-      'cs': 'csharp',
-      'php': 'php',
-      'rb': 'ruby',
-      'go': 'go',
-      'rs': 'rust',
-      'html': 'markup',
-      'xml': 'markup',
-      'css': 'css',
-      'scss': 'scss',
-      'sass': 'sass',
-      'less': 'less',
-      'json': 'json',
-      'yaml': 'yaml',
-      'yml': 'yaml',
-      'md': 'markdown',
-      'sql': 'sql',
-      'sh': 'bash',
-      'bash': 'bash',
-      'zsh': 'bash',
-      'ps1': 'powershell',
-      'dockerfile': 'dockerfile'
+      js: 'javascript',
+      jsx: 'jsx',
+      ts: 'typescript',
+      tsx: 'tsx',
+      py: 'python',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+      cs: 'csharp',
+      php: 'php',
+      rb: 'ruby',
+      go: 'go',
+      rs: 'rust',
+      html: 'markup',
+      xml: 'markup',
+      css: 'css',
+      scss: 'scss',
+      sass: 'sass',
+      less: 'less',
+      json: 'json',
+      yaml: 'yaml',
+      yml: 'yaml',
+      md: 'markdown',
+      sql: 'sql',
+      sh: 'bash',
+      bash: 'bash',
+      zsh: 'bash',
+      ps1: 'powershell',
+      dockerfile: 'dockerfile',
     };
-    
+
     return languageMap[extension] || 'text';
   };
 
@@ -136,7 +159,11 @@ function DiffViewer({
                   className={`diff-line diff-line-${line.type}`}
                 >
                   <span className="line-prefix">
-                    {line.type === 'added' ? '+' : line.type === 'deleted' ? '-' : ' '}
+                    {line.type === 'added'
+                      ? '+'
+                      : line.type === 'deleted'
+                        ? '-'
+                        : ' '}
                   </span>
                   <SyntaxHighlighter
                     language={getLanguageFromFilename(selectedFile)}
@@ -146,7 +173,7 @@ function DiffViewer({
                       padding: '0 8px',
                       background: 'transparent',
                       fontSize: '13px',
-                      lineHeight: '20px'
+                      lineHeight: '20px',
                     }}
                     PreTag="span"
                   >
@@ -169,7 +196,7 @@ function DiffViewer({
     let leftLineNum = 1;
     let rightLineNum = 1;
 
-    diff.hunks.forEach(hunk => {
+    diff.hunks.forEach((hunk) => {
       // Parse hunk header to get line numbers
       const headerMatch = hunk.header.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
       if (headerMatch) {
@@ -177,39 +204,39 @@ function DiffViewer({
         rightLineNum = parseInt(headerMatch[2]);
       }
 
-      hunk.lines.forEach(line => {
+      hunk.lines.forEach((line) => {
         if (line.type === 'deleted') {
           leftLines.push({
             number: leftLineNum++,
             content: line.content.substring(1),
-            type: 'deleted'
+            type: 'deleted',
           });
           rightLines.push({
             number: null,
             content: '',
-            type: 'empty'
+            type: 'empty',
           });
         } else if (line.type === 'added') {
           leftLines.push({
             number: null,
             content: '',
-            type: 'empty'
+            type: 'empty',
           });
           rightLines.push({
             number: rightLineNum++,
             content: line.content.substring(1),
-            type: 'added'
+            type: 'added',
           });
         } else {
           leftLines.push({
             number: leftLineNum++,
             content: line.content.substring(1),
-            type: 'context'
+            type: 'context',
           });
           rightLines.push({
             number: rightLineNum++,
             content: line.content.substring(1),
-            type: 'context'
+            type: 'context',
           });
         }
       });
@@ -225,13 +252,8 @@ function DiffViewer({
             </div>
             <div className="diff-content">
               {leftLines.map((line, index) => (
-                <div
-                  key={index}
-                  className={`diff-line diff-line-${line.type}`}
-                >
-                  <span className="line-number">
-                    {line.number || ''}
-                  </span>
+                <div key={index} className={`diff-line diff-line-${line.type}`}>
+                  <span className="line-number">{line.number || ''}</span>
                   <div className="line-content">
                     <SyntaxHighlighter
                       language={getLanguageFromFilename(selectedFile)}
@@ -241,7 +263,7 @@ function DiffViewer({
                         padding: '0 8px',
                         background: 'transparent',
                         fontSize: '13px',
-                        lineHeight: '20px'
+                        lineHeight: '20px',
                       }}
                       PreTag="span"
                     >
@@ -252,7 +274,7 @@ function DiffViewer({
               ))}
             </div>
           </Col>
-          
+
           <Col span={12} className="diff-pane right-pane">
             <div className="diff-pane-header">
               <Text strong>Modified</Text>
@@ -260,13 +282,8 @@ function DiffViewer({
             </div>
             <div className="diff-content">
               {rightLines.map((line, index) => (
-                <div
-                  key={index}
-                  className={`diff-line diff-line-${line.type}`}
-                >
-                  <span className="line-number">
-                    {line.number || ''}
-                  </span>
+                <div key={index} className={`diff-line diff-line-${line.type}`}>
+                  <span className="line-number">{line.number || ''}</span>
                   <div className="line-content">
                     <SyntaxHighlighter
                       language={getLanguageFromFilename(selectedFile)}
@@ -276,7 +293,7 @@ function DiffViewer({
                         padding: '0 8px',
                         background: 'transparent',
                         fontSize: '13px',
-                        lineHeight: '20px'
+                        lineHeight: '20px',
                       }}
                       PreTag="span"
                     >
@@ -292,13 +309,17 @@ function DiffViewer({
     );
   };
 
-  const availableFiles = staged ? stagedFiles : [...new Set([...(modifiedFiles || []), ...(stagedFiles || [])])];
+  const availableFiles = staged
+    ? stagedFiles
+    : [...new Set([...(modifiedFiles || []), ...(stagedFiles || [])])];
 
   if (!currentRepository) {
     return (
       <Card>
         <Empty
-          image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+          image={
+            <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+          }
           description="No repository selected"
         />
       </Card>
@@ -309,9 +330,7 @@ function DiffViewer({
     return (
       <div className="diff-viewer-compact">
         {selectedDiff ? (
-          <div className="compact-diff">
-            {renderUnifiedDiff(selectedDiff)}
-          </div>
+          <div className="compact-diff">{renderUnifiedDiff(selectedDiff)}</div>
         ) : (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             <Text type="secondary">Select a file to view diff</Text>
@@ -327,11 +346,11 @@ function DiffViewer({
         title={
           <Space>
             <FileTextOutlined />
-            <Title level={4} style={{ margin: 0 }}>Diff Viewer</Title>
+            <Title level={4} style={{ margin: 0 }}>
+              Diff Viewer
+            </Title>
             {selectedFile && (
-              <Tag icon={getFileIcon(selectedFile)}>
-                {selectedFile}
-              </Tag>
+              <Tag icon={getFileIcon(selectedFile)}>{selectedFile}</Tag>
             )}
           </Space>
         }
@@ -345,7 +364,7 @@ function DiffViewer({
                 style={{ minWidth: '200px' }}
                 loading={isLoading}
               >
-                {availableFiles.map(file => (
+                {availableFiles.map((file) => (
                   <Option key={file} value={file}>
                     <Space>
                       {getFileIcon(file)}
@@ -355,7 +374,7 @@ function DiffViewer({
                 ))}
               </Select>
             )}
-            
+
             <Select
               value={viewMode}
               onChange={setViewMode}
@@ -380,7 +399,10 @@ function DiffViewer({
                 onClick={() => {
                   if (selectedDiff) {
                     const diffText = selectedDiff.hunks
-                      .map(hunk => `${hunk.header}\n${hunk.lines.map(line => line.content).join('\n')}`)
+                      .map(
+                        (hunk) =>
+                          `${hunk.header}\n${hunk.lines.map((line) => line.content).join('\n')}`,
+                      )
                       .join('\n\n');
                     navigator.clipboard.writeText(diffText);
                   }
@@ -403,22 +425,25 @@ function DiffViewer({
                   </Text>
                 </Space>
               </div>
-              
+
               <div className="diff-content-wrapper">
-                {viewMode === 'side-by-side' 
+                {viewMode === 'side-by-side'
                   ? renderSideBySideDiff(selectedDiff)
-                  : renderUnifiedDiff(selectedDiff)
-                }
+                  : renderUnifiedDiff(selectedDiff)}
               </div>
             </div>
           ) : availableFiles.length === 0 ? (
             <Empty
-              image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+              image={
+                <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+              }
               description="No modified files to compare"
             />
           ) : (
             <Empty
-              image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+              image={
+                <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+              }
               description="Select a file to view differences"
             />
           )}
@@ -428,4 +453,4 @@ function DiffViewer({
   );
 }
 
-export default DiffViewer; 
+export default DiffViewer;

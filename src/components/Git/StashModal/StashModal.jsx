@@ -8,13 +8,13 @@ import {
   Button,
   Checkbox,
   Divider,
-  Alert
+  Alert,
 } from 'antd';
 import {
   InboxOutlined,
   FileTextOutlined,
   PlusOutlined,
-  EditOutlined
+  EditOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 
@@ -33,36 +33,36 @@ function StashModal({ visible, onCancel, onSuccess }) {
 
     // Add modified files
     if (repositoryStatus.modified) {
-      repositoryStatus.modified.forEach(file => {
+      repositoryStatus.modified.forEach((file) => {
         files.push({
           path: file,
           type: 'modified',
           label: `${file} (modified)`,
-          checked: true
+          checked: true,
         });
       });
     }
 
     // Add staged files
     if (repositoryStatus.staged) {
-      repositoryStatus.staged.forEach(file => {
+      repositoryStatus.staged.forEach((file) => {
         files.push({
           path: file,
           type: 'staged',
           label: `${file} (staged)`,
-          checked: true
+          checked: true,
         });
       });
     }
 
     // Add untracked files
     if (repositoryStatus.created) {
-      repositoryStatus.created.forEach(file => {
+      repositoryStatus.created.forEach((file) => {
         files.push({
           path: file,
           type: 'untracked',
           label: `${file} (untracked)`,
-          checked: true
+          checked: true,
         });
       });
     }
@@ -76,7 +76,7 @@ function StashModal({ visible, onCancel, onSuccess }) {
   useEffect(() => {
     if (visible && stashableFiles.length > 0) {
       const initialSelected = new Set(
-        stashableFiles.filter(file => file.checked).map(file => file.path)
+        stashableFiles.filter((file) => file.checked).map((file) => file.path),
       );
       setSelectedFiles(initialSelected);
     }
@@ -94,7 +94,7 @@ function StashModal({ visible, onCancel, onSuccess }) {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedFiles(new Set(stashableFiles.map(file => file.path)));
+      setSelectedFiles(new Set(stashableFiles.map((file) => file.path)));
     } else {
       setSelectedFiles(new Set());
     }
@@ -104,7 +104,10 @@ function StashModal({ visible, onCancel, onSuccess }) {
     try {
       if (selectedFiles.size === 0) {
         // If no files selected, stash all changes (original behavior)
-        await stashFiles(Array.from(stashableFiles.map(f => f.path)), values.message || null);
+        await stashFiles(
+          Array.from(stashableFiles.map((f) => f.path)),
+          values.message || null,
+        );
       } else {
         await stashFiles(Array.from(selectedFiles), values.message || null);
       }
@@ -119,10 +122,10 @@ function StashModal({ visible, onCancel, onSuccess }) {
     const groups = {
       modified: [],
       staged: [],
-      untracked: []
+      untracked: [],
     };
 
-    files.forEach(file => {
+    files.forEach((file) => {
       if (groups[file.type]) {
         groups[file.type].push(file);
       }
@@ -142,7 +145,7 @@ function StashModal({ visible, onCancel, onSuccess }) {
         footer={[
           <Button key="cancel" onClick={onCancel}>
             Cancel
-          </Button>
+          </Button>,
         ]}
       >
         <Alert
@@ -170,11 +173,7 @@ function StashModal({ visible, onCancel, onSuccess }) {
       footer={null}
       width={600}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Alert
           message={`${stashableFiles.length} file${stashableFiles.length > 1 ? 's' : ''} available to stash`}
           description="Select which files you want to stash. All files are selected by default."
@@ -199,19 +198,27 @@ function StashModal({ visible, onCancel, onSuccess }) {
 
           const getIcon = (type) => {
             switch (type) {
-              case 'modified': return <EditOutlined />;
-              case 'staged': return <FileTextOutlined />;
-              case 'untracked': return <PlusOutlined />;
-              default: return <FileTextOutlined />;
+              case 'modified':
+                return <EditOutlined />;
+              case 'staged':
+                return <FileTextOutlined />;
+              case 'untracked':
+                return <PlusOutlined />;
+              default:
+                return <FileTextOutlined />;
             }
           };
 
           const getTitle = (type) => {
             switch (type) {
-              case 'modified': return 'Modified Files';
-              case 'staged': return 'Staged Files';
-              case 'untracked': return 'Untracked Files';
-              default: return 'Files';
+              case 'modified':
+                return 'Modified Files';
+              case 'staged':
+                return 'Staged Files';
+              case 'untracked':
+                return 'Untracked Files';
+              default:
+                return 'Files';
             }
           };
 
@@ -221,11 +228,13 @@ function StashModal({ visible, onCancel, onSuccess }) {
                 {getIcon(type)} {getTitle(type)} ({files.length})
               </Text>
               <div style={{ paddingLeft: 20 }}>
-                {files.map(file => (
+                {files.map((file) => (
                   <div key={file.path} style={{ marginBottom: 4 }}>
                     <Checkbox
                       checked={selectedFiles.has(file.path)}
-                      onChange={(e) => handleFileToggle(file.path, e.target.checked)}
+                      onChange={(e) =>
+                        handleFileToggle(file.path, e.target.checked)
+                      }
                     >
                       <Text ellipsis style={{ maxWidth: 400 }}>
                         {file.path}
@@ -240,10 +249,7 @@ function StashModal({ visible, onCancel, onSuccess }) {
 
         <Divider />
 
-        <Form.Item
-          name="message"
-          label="Stash Message (optional)"
-        >
+        <Form.Item name="message" label="Stash Message (optional)">
           <Input
             placeholder="Describe what you're stashing..."
             prefix={<FileTextOutlined />}
@@ -252,9 +258,7 @@ function StashModal({ visible, onCancel, onSuccess }) {
 
         <Form.Item>
           <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-            <Button onClick={onCancel}>
-              Cancel
-            </Button>
+            <Button onClick={onCancel}>Cancel</Button>
             <Button
               type="primary"
               htmlType="submit"
@@ -262,7 +266,10 @@ function StashModal({ visible, onCancel, onSuccess }) {
               disabled={selectedFiles.size === 0}
               icon={<InboxOutlined />}
             >
-              Stash {selectedFiles.size > 0 ? `${selectedFiles.size} File${selectedFiles.size > 1 ? 's' : ''}` : 'Changes'}
+              Stash{' '}
+              {selectedFiles.size > 0
+                ? `${selectedFiles.size} File${selectedFiles.size > 1 ? 's' : ''}`
+                : 'Changes'}
             </Button>
           </Space>
         </Form.Item>

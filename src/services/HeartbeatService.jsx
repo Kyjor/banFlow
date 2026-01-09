@@ -1,19 +1,19 @@
 /**
  * HeartbeatService - A reusable service for periodic polling/heartbeat operations
- * 
+ *
  * This service allows components and services to register callbacks that will be
  * executed at specified intervals. It's useful for:
  * - Polling for changes (Git status, file changes, etc.)
  * - Periodic data synchronization
  * - Health checks
  * - Any recurring background tasks
- * 
+ *
  * Usage:
  *   const heartbeat = HeartbeatService.getInstance();
  *   const id = heartbeat.register('my-task', () => {
  *     console.log('This runs every 5 seconds');
  *   }, 5000);
- *   
+ *
  *   // Later, to stop:
  *   heartbeat.unregister(id);
  */
@@ -61,7 +61,10 @@ class HeartbeatService {
       try {
         callback();
       } catch (error) {
-        console.error(`HeartbeatService: Error in immediate execution of "${name}":`, error);
+        console.error(
+          `HeartbeatService: Error in immediate execution of "${name}":`,
+          error,
+        );
       }
     }
 
@@ -81,10 +84,12 @@ class HeartbeatService {
       callback,
       intervalMs,
       options,
-      registeredAt: Date.now()
+      registeredAt: Date.now(),
     });
 
-    console.log(`HeartbeatService: Registered "${name}" with interval ${intervalMs}ms (ID: ${id})`);
+    console.log(
+      `HeartbeatService: Registered "${name}" with interval ${intervalMs}ms (ID: ${id})`,
+    );
     return id;
   }
 
@@ -96,7 +101,9 @@ class HeartbeatService {
   unregister(id) {
     const timer = this.timers.get(id);
     if (!timer) {
-      console.warn(`HeartbeatService: Attempted to unregister unknown heartbeat ID: ${id}`);
+      console.warn(
+        `HeartbeatService: Attempted to unregister unknown heartbeat ID: ${id}`,
+      );
       return false;
     }
 
@@ -156,7 +163,7 @@ class HeartbeatService {
       name: timer.name,
       intervalMs: timer.intervalMs,
       registeredAt: timer.registeredAt,
-      uptime: Date.now() - timer.registeredAt
+      uptime: Date.now() - timer.registeredAt,
     };
   }
 
@@ -170,7 +177,7 @@ class HeartbeatService {
       name: timer.name,
       intervalMs: timer.intervalMs,
       registeredAt: timer.registeredAt,
-      uptime: Date.now() - timer.registeredAt
+      uptime: Date.now() - timer.registeredAt,
     }));
   }
 
@@ -205,7 +212,10 @@ class HeartbeatService {
       try {
         timer.callback();
       } catch (error) {
-        console.error(`HeartbeatService: Error in heartbeat "${timer.name}":`, error);
+        console.error(
+          `HeartbeatService: Error in heartbeat "${timer.name}":`,
+          error,
+        );
       }
     }, timer.intervalMs);
 
@@ -218,4 +228,3 @@ class HeartbeatService {
 }
 
 export default HeartbeatService;
-

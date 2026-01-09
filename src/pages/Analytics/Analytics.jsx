@@ -1,7 +1,34 @@
 // Libs
 import React, { Component } from 'react';
-import { Card, Spin, Space, Button, DatePicker, Select, Typography, Divider, Radio, Input, InputNumber, Collapse, Badge, Table, Row, Col, Dropdown, Menu, message } from 'antd';
-import { FilterOutlined, UpOutlined, DownOutlined, DownloadOutlined, FileOutlined, FileExcelOutlined } from '@ant-design/icons';
+import {
+  Card,
+  Spin,
+  Space,
+  Button,
+  DatePicker,
+  Select,
+  Typography,
+  Divider,
+  Radio,
+  Input,
+  InputNumber,
+  Collapse,
+  Badge,
+  Table,
+  Row,
+  Col,
+  Dropdown,
+  Menu,
+  message,
+} from 'antd';
+import {
+  FilterOutlined,
+  UpOutlined,
+  DownOutlined,
+  DownloadOutlined,
+  FileOutlined,
+  FileExcelOutlined,
+} from '@ant-design/icons';
 import moment from 'moment';
 // Layout
 import Layout from '../../layouts/App';
@@ -11,9 +38,19 @@ import TimeTrendChart from '../Dashboard/components/TimeCharts/TimeTrendChart';
 import TimeDistributionChart from '../Dashboard/components/TimeCharts/TimeDistributionChart';
 import ActivityHeatmap from '../Dashboard/components/TimeCharts/ActivityHeatmap';
 // Utils
-import { loadMultipleProjectsData, getAllProjectNames } from '../Dashboard/utils/projectDataLoader';
+import {
+  loadMultipleProjectsData,
+  getAllProjectNames,
+} from '../Dashboard/utils/projectDataLoader';
 import { aggregateProjectStats } from '../Dashboard/utils/aggregateCalculations';
-import { formatTimeHuman, calculateTimeByParent, calculateTimeByTag, calculateTimeByIteration, calculateAverageSessionDuration, getRecentActivity } from '../Dashboard/utils/statisticsCalculations';
+import {
+  formatTimeHuman,
+  calculateTimeByParent,
+  calculateTimeByTag,
+  calculateTimeByIteration,
+  calculateAverageSessionDuration,
+  getRecentActivity,
+} from '../Dashboard/utils/statisticsCalculations';
 
 const { RangePicker } = DatePicker;
 const { Title, Text } = Typography;
@@ -22,8 +59,12 @@ class Analytics extends Component {
   constructor(props) {
     super(props);
 
-    const savedSelectedProjects = localStorage.getItem('analyticsSelectedProjects');
-    const initialSelectedProjects = savedSelectedProjects ? JSON.parse(savedSelectedProjects) : [];
+    const savedSelectedProjects = localStorage.getItem(
+      'analyticsSelectedProjects',
+    );
+    const initialSelectedProjects = savedSelectedProjects
+      ? JSON.parse(savedSelectedProjects)
+      : [];
     const savedReports = localStorage.getItem('analyticsSavedReports');
 
     this.state = {
@@ -46,11 +87,14 @@ class Analytics extends Component {
     this.loadAvailableProjects();
     // Default to all projects
     const availableProjects = getAllProjectNames();
-    this.setState({ availableProjects, selectedProjects: availableProjects }, () => {
-      if (availableProjects.length > 0) {
-        this.loadProjectsData(availableProjects);
-      }
-    });
+    this.setState(
+      { availableProjects, selectedProjects: availableProjects },
+      () => {
+        if (availableProjects.length > 0) {
+          this.loadProjectsData(availableProjects);
+        }
+      },
+    );
   }
 
   loadAvailableProjects = () => {
@@ -103,22 +147,30 @@ class Analytics extends Component {
 
   evaluateRule = (node, rule) => {
     if (!rule || !rule.field) return true;
-    const value = rule.value;
+    const { value } = rule;
     const lc = (text) => (text || '').toString().toLowerCase();
 
     switch (rule.field) {
       case 'titleDescription':
-        return lc(node.title).includes(lc(value)) || lc(node.description).includes(lc(value));
+        return (
+          lc(node.title).includes(lc(value)) ||
+          lc(node.description).includes(lc(value))
+        );
       case 'status':
         return value ? node.nodeState === value : true;
       case 'parent':
         return value ? node.parent === value : true;
       case 'tags':
         if (!value || value.length === 0) return true;
-        return Array.isArray(node.tags) && node.tags.some((t) => value.includes(t));
+        return (
+          Array.isArray(node.tags) && node.tags.some((t) => value.includes(t))
+        );
       case 'labels':
         if (!value || value.length === 0) return true;
-        return Array.isArray(node.labels) && node.labels.some((l) => value.includes(l));
+        return (
+          Array.isArray(node.labels) &&
+          node.labels.some((l) => value.includes(l))
+        );
       case 'completion': {
         if (value === undefined || value === null || value === '') return true;
         const boolVal = value === 'complete';
@@ -191,7 +243,8 @@ class Analytics extends Component {
   };
 
   getFilteredProjects = () => {
-    const { projectsData, dateRange, selectedTag, selectedIteration } = this.state;
+    const { projectsData, dateRange, selectedTag, selectedIteration } =
+      this.state;
     if (!projectsData || projectsData.length === 0) return [];
 
     let filteredData = projectsData;
@@ -204,7 +257,12 @@ class Analytics extends Component {
           return sessions.some((session) => {
             if (!session.startDateTime) return false;
             const sessionDate = moment(session.startDateTime);
-            return sessionDate.isBetween(dateRange[0], dateRange[1], 'day', '[]');
+            return sessionDate.isBetween(
+              dateRange[0],
+              dateRange[1],
+              'day',
+              '[]',
+            );
           });
         });
         return { ...project, nodes: filteredNodes };
@@ -361,7 +419,10 @@ class Analytics extends Component {
       state: {
         selectedProjects: this.state.selectedProjects,
         dateRange: this.state.dateRange
-          ? [this.state.dateRange[0]?.toISOString(), this.state.dateRange[1]?.toISOString()]
+          ? [
+              this.state.dateRange[0]?.toISOString(),
+              this.state.dateRange[1]?.toISOString(),
+            ]
           : null,
         selectedTag: this.state.selectedTag,
         selectedIteration: this.state.selectedIteration,
@@ -373,11 +434,16 @@ class Analytics extends Component {
 
     this.setState(
       (prev) => {
-        const withoutExisting = prev.savedReports.filter((r) => r.name !== name);
+        const withoutExisting = prev.savedReports.filter(
+          (r) => r.name !== name,
+        );
         return { savedReports: [...withoutExisting, report] };
       },
       () => {
-        localStorage.setItem('analyticsSavedReports', JSON.stringify(this.state.savedReports));
+        localStorage.setItem(
+          'analyticsSavedReports',
+          JSON.stringify(this.state.savedReports),
+        );
         message.success('Report saved');
       },
     );
@@ -387,7 +453,10 @@ class Analytics extends Component {
     if (!report || !report.state) return;
     const { state } = report;
     const dateRange =
-      state.dateRange && state.dateRange.length === 2 && state.dateRange[0] && state.dateRange[1]
+      state.dateRange &&
+      state.dateRange.length === 2 &&
+      state.dateRange[0] &&
+      state.dateRange[1]
         ? [moment(state.dateRange[0]), moment(state.dateRange[1])]
         : null;
 
@@ -410,9 +479,14 @@ class Analytics extends Component {
 
   deleteReport = (name) => {
     this.setState(
-      (prev) => ({ savedReports: prev.savedReports.filter((r) => r.name !== name) }),
+      (prev) => ({
+        savedReports: prev.savedReports.filter((r) => r.name !== name),
+      }),
       () => {
-        localStorage.setItem('analyticsSavedReports', JSON.stringify(this.state.savedReports));
+        localStorage.setItem(
+          'analyticsSavedReports',
+          JSON.stringify(this.state.savedReports),
+        );
         message.success('Report deleted');
       },
     );
@@ -455,18 +529,28 @@ class Analytics extends Component {
     const last14 = Object.entries(completionByDate)
       .sort((a, b) => new Date(b[0]) - new Date(a[0]))
       .slice(0, 14);
-    const totalCompletedLast14 = last14.reduce((sum, [, count]) => sum + count, 0);
+    const totalCompletedLast14 = last14.reduce(
+      (sum, [, count]) => sum + count,
+      0,
+    );
     const daysConsidered = last14.length || 1;
     const avgCompletionsPerDay = totalCompletedLast14 / daysConsidered;
 
-    const daysToFinish = avgCompletionsPerDay > 0 ? Math.ceil(remaining / avgCompletionsPerDay) : null;
-    const estimatedFinishDate = daysToFinish !== null ? moment().add(daysToFinish, 'days').format('YYYY-MM-DD') : 'N/A';
+    const daysToFinish =
+      avgCompletionsPerDay > 0
+        ? Math.ceil(remaining / avgCompletionsPerDay)
+        : null;
+    const estimatedFinishDate =
+      daysToFinish !== null
+        ? moment().add(daysToFinish, 'days').format('YYYY-MM-DD')
+        : 'N/A';
 
     // Time forecast from trend (last 14 days)
     const recentTrend = trend.slice(-14);
     const avgTimePerDay =
       recentTrend.length > 0
-        ? recentTrend.reduce((sum, d) => sum + (d.value || 0), 0) / recentTrend.length
+        ? recentTrend.reduce((sum, d) => sum + (d.value || 0), 0) /
+          recentTrend.length
         : 0;
     const projectedNextWeekTime = Math.round(avgTimePerDay * 7);
 
@@ -550,9 +634,13 @@ class Analytics extends Component {
         return completed.diff(created, 'seconds');
       });
 
-    const avgTimeToCompletion = completionTimes.length > 0
-      ? Math.round(completionTimes.reduce((sum, t) => sum + t, 0) / completionTimes.length)
-      : 0;
+    const avgTimeToCompletion =
+      completionTimes.length > 0
+        ? Math.round(
+            completionTimes.reduce((sum, t) => sum + t, 0) /
+              completionTimes.length,
+          )
+        : 0;
 
     // Completion by date
     const completionByDate = {};
@@ -566,9 +654,10 @@ class Analytics extends Component {
     return {
       totalCompleted: completed.length,
       totalIncomplete: incomplete.length,
-      completionRate: allNodes.length > 0
-        ? Math.round((completed.length / allNodes.length) * 100)
-        : 0,
+      completionRate:
+        allNodes.length > 0
+          ? Math.round((completed.length / allNodes.length) * 100)
+          : 0,
       avgTimeToCompletion,
       completionByDate,
     };
@@ -581,23 +670,29 @@ class Analytics extends Component {
 
     // Calculate tasks completed per hour
     const totalTimeHours = sessionStats.totalTime / 3600;
-    const tasksPerHour = totalTimeHours > 0
-      ? (this.getCompletionAnalytics().totalCompleted / totalTimeHours).toFixed(2)
-      : 0;
+    const tasksPerHour =
+      totalTimeHours > 0
+        ? (
+            this.getCompletionAnalytics().totalCompleted / totalTimeHours
+          ).toFixed(2)
+        : 0;
 
     // Calculate focus time (sessions > 30 minutes)
-    const focusSessions = allNodes.flatMap((n) => n.sessionHistory || [])
+    const focusSessions = allNodes
+      .flatMap((n) => n.sessionHistory || [])
       .filter((s) => s.length && s.length >= 1800).length; // 30 minutes = 1800 seconds
 
     // Work patterns - most active days
     const sessionsByDay = sessionStats.sessionsByDay || {};
-    const mostActiveDay = Object.entries(sessionsByDay)
-      .sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+    const mostActiveDay =
+      Object.entries(sessionsByDay).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      'N/A';
 
     // Most active hour
     const sessionsByHour = sessionStats.sessionsByHour || {};
-    const mostActiveHour = Object.entries(sessionsByHour)
-      .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+    const mostActiveHour =
+      Object.entries(sessionsByHour).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      null;
 
     return {
       tasksPerHour: parseFloat(tasksPerHour),
@@ -612,41 +707,56 @@ class Analytics extends Component {
     const filteredProjects = this.getFilteredProjects();
     if (filteredProjects.length === 0) return [];
 
-    return filteredProjects.map((project) => {
-      const nodes = project.nodes || [];
-      const completed = nodes.filter((n) => n.isComplete).length;
-      const totalTime = nodes.reduce((sum, n) => sum + (n.timeSpent || 0), 0);
-      const completionRate = nodes.length > 0
-        ? Math.round((completed / nodes.length) * 100)
-        : 0;
+    return filteredProjects
+      .map((project) => {
+        const nodes = project.nodes || [];
+        const completed = nodes.filter((n) => n.isComplete).length;
+        const totalTime = nodes.reduce((sum, n) => sum + (n.timeSpent || 0), 0);
+        const completionRate =
+          nodes.length > 0 ? Math.round((completed / nodes.length) * 100) : 0;
 
-      return {
-        projectName: project.projectName,
-        totalNodes: nodes.length,
-        completed,
-        incomplete: nodes.length - completed,
-        completionRate,
-        totalTimeSpent: totalTime,
-        avgTimePerNode: nodes.length > 0 ? Math.round(totalTime / nodes.length) : 0,
-      };
-    }).sort((a, b) => b.totalTimeSpent - a.totalTimeSpent);
+        return {
+          projectName: project.projectName,
+          totalNodes: nodes.length,
+          completed,
+          incomplete: nodes.length - completed,
+          completionRate,
+          totalTimeSpent: totalTime,
+          avgTimePerNode:
+            nodes.length > 0 ? Math.round(totalTime / nodes.length) : 0,
+        };
+      })
+      .sort((a, b) => b.totalTimeSpent - a.totalTimeSpent);
   };
 
   exportToCSV = () => {
     const filteredProjects = this.getFilteredProjects();
     const allNodes = filteredProjects.flatMap((p) => p.nodes || []);
-    
+
     if (allNodes.length === 0) {
       message.warning('No data to export');
       return;
     }
 
-    const headers = ['Title', 'Description', 'Parent', 'Status', 'Completion', 'Time Spent', 'Estimated Time', 'Created', 'Updated', 'Due Date', 'Tags', 'Labels'];
+    const headers = [
+      'Title',
+      'Description',
+      'Parent',
+      'Status',
+      'Completion',
+      'Time Spent',
+      'Estimated Time',
+      'Created',
+      'Updated',
+      'Due Date',
+      'Tags',
+      'Labels',
+    ];
     const rows = allNodes.map((node) => {
       const parent = filteredProjects
         .flatMap((p) => p.parents || [])
         .find((p) => p.id === node.parent);
-      
+
       return [
         node.title || '',
         node.description || '',
@@ -656,16 +766,22 @@ class Analytics extends Component {
         formatTimeHuman(node.timeSpent || 0),
         formatTimeHuman(node.estimatedTime || 0),
         node.created ? moment(node.created).format('YYYY-MM-DD HH:mm') : '',
-        node.lastUpdated ? moment(node.lastUpdated).format('YYYY-MM-DD HH:mm') : '',
+        node.lastUpdated
+          ? moment(node.lastUpdated).format('YYYY-MM-DD HH:mm')
+          : '',
         node.dueDate ? moment(node.dueDate).format('YYYY-MM-DD') : '',
         (node.tags || []).join('; '),
-        (node.labels || []).map((l) => (typeof l === 'string' ? l : l?.name || l?.id || '')).join('; '),
+        (node.labels || [])
+          .map((l) => (typeof l === 'string' ? l : l?.name || l?.id || ''))
+          .join('; '),
       ];
     });
 
     const csvContent = [
       headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
+      ),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -691,10 +807,12 @@ class Analytics extends Component {
       exportDate: moment().toISOString(),
       selectedProjects: this.state.selectedProjects,
       filters: {
-        dateRange: this.state.dateRange ? [
-          this.state.dateRange[0]?.toISOString(),
-          this.state.dateRange[1]?.toISOString(),
-        ] : null,
+        dateRange: this.state.dateRange
+          ? [
+              this.state.dateRange[0]?.toISOString(),
+              this.state.dateRange[1]?.toISOString(),
+            ]
+          : null,
         tag: this.state.selectedTag,
         iteration: this.state.selectedIteration,
         queryRules: this.state.filterRules,
@@ -763,17 +881,30 @@ class Analytics extends Component {
     return (
       <Layout>
         <Card
-          style={{ margin: '16px', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+          style={{
+            margin: '16px',
+            borderRadius: '10px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          }}
           bodyStyle={{ padding: '16px' }}
         >
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12,
+              }}
+            >
               <div>
                 <Title level={3} style={{ margin: 0 }}>
                   Analytics
                 </Title>
                 <Text type="secondary">
-                  Analyze across one, many, or all projects with customizable filters.
+                  Analyze across one, many, or all projects with customizable
+                  filters.
                 </Text>
               </div>
               <Space>
@@ -785,28 +916,39 @@ class Analytics extends Component {
                   onDeselectAll={this.handleDeselectAll}
                 />
                 <Space>
-                  <Dropdown overlay={this.getSavedReportsMenu()} trigger={['click']}>
-                    <Button>
-                      Reports
-                    </Button>
+                  <Dropdown
+                    overlay={this.getSavedReportsMenu()}
+                    trigger={['click']}
+                  >
+                    <Button>Reports</Button>
                   </Dropdown>
                   <Button type="dashed" onClick={this.saveCurrentReport}>
                     Save Report
                   </Button>
                   <Dropdown overlay={this.getExportMenu()} trigger={['click']}>
-                    <Button icon={<DownloadOutlined />}>
-                      Export
-                    </Button>
+                    <Button icon={<DownloadOutlined />}>Export</Button>
                   </Dropdown>
                 </Space>
               </Space>
             </div>
 
             <Card
-              style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', border: '1px solid #e8e8e8' }}
+              style={{
+                borderRadius: '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                border: '1px solid #e8e8e8',
+              }}
               bodyStyle={{ padding: '12px 16px' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginBottom: '12px',
+                }}
+              >
                 <RangePicker
                   value={dateRange}
                   onChange={(val) => this.setState({ dateRange: val })}
@@ -822,9 +964,14 @@ class Analytics extends Component {
                   options={(() => {
                     const tags = new Set();
                     projectsData.forEach((p) =>
-                      (p.nodes || []).forEach((n) => (n.tags || []).forEach((t) => tags.add(t))),
+                      (p.nodes || []).forEach((n) =>
+                        (n.tags || []).forEach((t) => tags.add(t)),
+                      ),
                     );
-                    return Array.from(tags).map((t) => ({ label: t, value: t }));
+                    return Array.from(tags).map((t) => ({
+                      label: t,
+                      value: t,
+                    }));
                   })()}
                 />
                 <Select
@@ -836,37 +983,76 @@ class Analytics extends Component {
                   options={(() => {
                     const iterations = new Set();
                     projectsData.forEach((p) =>
-                      (p.iterations || []).forEach((it) => iterations.add(it.id)),
+                      (p.iterations || []).forEach((it) =>
+                        iterations.add(it.id),
+                      ),
                     );
-                    return Array.from(iterations).map((it) => ({ label: it, value: it }));
+                    return Array.from(iterations).map((it) => ({
+                      label: it,
+                      value: it,
+                    }));
                   })()}
                 />
-                <Badge count={this.state.filterRules.length} showZero={false} offset={[8, 0]}>
+                <Badge
+                  count={this.state.filterRules.length}
+                  showZero={false}
+                  offset={[8, 0]}
+                >
                   <Button
-                    icon={this.state.filtersOpen ? <UpOutlined /> : <DownOutlined />}
-                    onClick={() => this.setState({ filtersOpen: !this.state.filtersOpen })}
+                    icon={
+                      this.state.filtersOpen ? <UpOutlined /> : <DownOutlined />
+                    }
+                    onClick={() =>
+                      this.setState({ filtersOpen: !this.state.filtersOpen })
+                    }
                     type={this.state.filtersOpen ? 'default' : 'text'}
                   >
                     <FilterOutlined /> Query Builder
                   </Button>
                 </Badge>
-                <Button onClick={() => this.setState({
-                  dateRange: null,
-                  selectedTag: null,
-                  selectedIteration: null,
-                  filterRules: [],
-                })}
+                <Button
+                  onClick={() =>
+                    this.setState({
+                      dateRange: null,
+                      selectedTag: null,
+                      selectedIteration: null,
+                      filterRules: [],
+                    })
+                  }
                 >
                   Clear All
                 </Button>
               </div>
               {this.state.filtersOpen && (
-                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
-                  <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '13px', color: '#666', fontWeight: 500 }}>Match:</span>
+                <div
+                  style={{
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid #f0f0f0',
+                  }}
+                >
+                  <div
+                    style={{
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        color: '#666',
+                        fontWeight: 500,
+                      }}
+                    >
+                      Match:
+                    </span>
                     <Radio.Group
                       value={this.state.queryConjunction}
-                      onChange={(e) => this.setState({ queryConjunction: e.target.value })}
+                      onChange={(e) =>
+                        this.setState({ queryConjunction: e.target.value })
+                      }
                       optionType="button"
                       buttonStyle="solid"
                       size="small"
@@ -877,7 +1063,7 @@ class Analytics extends Component {
                   </div>
                   <div style={{ marginBottom: '8px' }}>
                     {this.state.filterRules.map((rule) => {
-                      const field = rule.field;
+                      const { field } = rule;
                       const commonProps = {
                         style: { width: '100%' },
                         size: 'small',
@@ -888,7 +1074,9 @@ class Analytics extends Component {
                           const statuses = Array.from(
                             new Set(
                               filteredProjects.flatMap((p) =>
-                                (p.nodes || []).map((n) => n?.nodeState).filter(Boolean),
+                                (p.nodes || [])
+                                  .map((n) => n?.nodeState)
+                                  .filter(Boolean),
                               ),
                             ),
                           );
@@ -897,7 +1085,9 @@ class Analytics extends Component {
                               {...commonProps}
                               placeholder="Select status"
                               value={rule.value}
-                              onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                              onChange={(val) =>
+                                this.updateFilterRule(rule.id, { value: val })
+                              }
                               allowClear
                             >
                               {statuses.map((s) => (
@@ -911,14 +1101,18 @@ class Analytics extends Component {
                         if (field === 'parent') {
                           const parentIds = new Set();
                           filteredProjects.forEach((p) => {
-                            (p.parents || []).forEach((parent) => parentIds.add(parent.id));
+                            (p.parents || []).forEach((parent) =>
+                              parentIds.add(parent.id),
+                            );
                           });
                           return (
                             <Select
                               {...commonProps}
                               placeholder="Select parent"
                               value={rule.value}
-                              onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                              onChange={(val) =>
+                                this.updateFilterRule(rule.id, { value: val })
+                              }
                               allowClear
                               showSearch
                               optionFilterProp="children"
@@ -940,7 +1134,11 @@ class Analytics extends Component {
                           const tags = Array.from(
                             new Set(
                               filteredProjects.flatMap((p) =>
-                                (p.nodes || []).flatMap((n) => (Array.isArray(n?.tags) ? n.tags : [])).filter(Boolean),
+                                (p.nodes || [])
+                                  .flatMap((n) =>
+                                    Array.isArray(n?.tags) ? n.tags : [],
+                                  )
+                                  .filter(Boolean),
                               ),
                             ),
                           );
@@ -950,7 +1148,9 @@ class Analytics extends Component {
                               mode="multiple"
                               placeholder="Select tags"
                               value={rule.value}
-                              onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                              onChange={(val) =>
+                                this.updateFilterRule(rule.id, { value: val })
+                              }
                               allowClear
                             >
                               {tags.map((t) => (
@@ -966,8 +1166,14 @@ class Analytics extends Component {
                             new Set(
                               filteredProjects.flatMap((p) =>
                                 (p.nodes || [])
-                                  .flatMap((n) => (Array.isArray(n?.labels) ? n.labels : []))
-                                  .map((l) => (typeof l === 'string' ? l : l?.name || l?.id))
+                                  .flatMap((n) =>
+                                    Array.isArray(n?.labels) ? n.labels : [],
+                                  )
+                                  .map((l) =>
+                                    typeof l === 'string'
+                                      ? l
+                                      : l?.name || l?.id,
+                                  )
                                   .filter(Boolean),
                               ),
                             ),
@@ -978,7 +1184,9 @@ class Analytics extends Component {
                               mode="multiple"
                               placeholder="Select labels"
                               value={rule.value}
-                              onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                              onChange={(val) =>
+                                this.updateFilterRule(rule.id, { value: val })
+                              }
                               allowClear
                             >
                               {labels.map((l) => (
@@ -989,24 +1197,38 @@ class Analytics extends Component {
                             </Select>
                           );
                         }
-                        if (field === 'dueDate' || field === 'created' || field === 'updated') {
+                        if (
+                          field === 'dueDate' ||
+                          field === 'created' ||
+                          field === 'updated'
+                        ) {
                           return (
                             <RangePicker
                               {...commonProps}
                               onChange={(dates) =>
                                 this.updateFilterRule(rule.id, {
                                   value: dates
-                                    ? dates.map((d) => (d ? d.toISOString() : null))
+                                    ? dates.map((d) =>
+                                        d ? d.toISOString() : null,
+                                      )
                                     : [],
                                 })
                               }
-                              value={rule.value && rule.value.length === 2
-                                ? [moment(rule.value[0]), moment(rule.value[1])]
-                                : null}
+                              value={
+                                rule.value && rule.value.length === 2
+                                  ? [
+                                      moment(rule.value[0]),
+                                      moment(rule.value[1]),
+                                    ]
+                                  : null
+                              }
                             />
                           );
                         }
-                        if (field === 'estimatedTime' || field === 'timeSpent') {
+                        if (
+                          field === 'estimatedTime' ||
+                          field === 'timeSpent'
+                        ) {
                           return (
                             <Space size={4} style={{ width: '100%' }}>
                               <InputNumber
@@ -1038,27 +1260,36 @@ class Analytics extends Component {
                               {...commonProps}
                               placeholder="Completion"
                               value={rule.value}
-                              onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                              onChange={(val) =>
+                                this.updateFilterRule(rule.id, { value: val })
+                              }
                               allowClear
                             >
-                              <Select.Option value="complete">Complete</Select.Option>
-                              <Select.Option value="incomplete">Incomplete</Select.Option>
+                              <Select.Option value="complete">
+                                Complete
+                              </Select.Option>
+                              <Select.Option value="incomplete">
+                                Incomplete
+                              </Select.Option>
                             </Select>
                           );
                         }
                         if (field === 'iteration') {
-                          const iterationOptions = filteredProjects.flatMap((p) =>
-                            (p.iterations || []).map((iter) => ({
-                              id: iter.id,
-                              name: iter.title || `Iteration ${iter.id}`,
-                            })),
+                          const iterationOptions = filteredProjects.flatMap(
+                            (p) =>
+                              (p.iterations || []).map((iter) => ({
+                                id: iter.id,
+                                name: iter.title || `Iteration ${iter.id}`,
+                              })),
                           );
                           return (
                             <Select
                               {...commonProps}
                               placeholder="Select iteration"
                               value={rule.value}
-                              onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                              onChange={(val) =>
+                                this.updateFilterRule(rule.id, { value: val })
+                              }
                               allowClear
                             >
                               <Select.Option value={0}>Backlog</Select.Option>
@@ -1076,7 +1307,9 @@ class Analytics extends Component {
                             placeholder="Contains text"
                             value={rule.value}
                             onChange={(e) =>
-                              this.updateFilterRule(rule.id, { value: e.target.value })
+                              this.updateFilterRule(rule.id, {
+                                value: e.target.value,
+                              })
                             }
                           />
                         );
@@ -1098,23 +1331,50 @@ class Analytics extends Component {
                             size="small"
                             value={rule.field}
                             onChange={(val) =>
-                              this.updateFilterRule(rule.id, { field: val, value: undefined })
+                              this.updateFilterRule(rule.id, {
+                                field: val,
+                                value: undefined,
+                              })
                             }
                           >
-                            <Select.Option value="titleDescription">Title / Description</Select.Option>
-                            <Select.Option value="status">Status / State</Select.Option>
+                            <Select.Option value="titleDescription">
+                              Title / Description
+                            </Select.Option>
+                            <Select.Option value="status">
+                              Status / State
+                            </Select.Option>
                             <Select.Option value="parent">Parent</Select.Option>
                             <Select.Option value="tags">Tags</Select.Option>
                             <Select.Option value="labels">Labels</Select.Option>
-                            <Select.Option value="dueDate">Due Date</Select.Option>
-                            <Select.Option value="created">Created Date</Select.Option>
-                            <Select.Option value="updated">Updated Date</Select.Option>
-                            <Select.Option value="estimatedTime">Estimated Time (sec)</Select.Option>
-                            <Select.Option value="timeSpent">Time Spent (sec)</Select.Option>
-                            <Select.Option value="completion">Completion</Select.Option>
-                            <Select.Option value="iteration">Iteration</Select.Option>
+                            <Select.Option value="dueDate">
+                              Due Date
+                            </Select.Option>
+                            <Select.Option value="created">
+                              Created Date
+                            </Select.Option>
+                            <Select.Option value="updated">
+                              Updated Date
+                            </Select.Option>
+                            <Select.Option value="estimatedTime">
+                              Estimated Time (sec)
+                            </Select.Option>
+                            <Select.Option value="timeSpent">
+                              Time Spent (sec)
+                            </Select.Option>
+                            <Select.Option value="completion">
+                              Completion
+                            </Select.Option>
+                            <Select.Option value="iteration">
+                              Iteration
+                            </Select.Option>
                           </Select>
-                          <div style={{ flex: '1', minWidth: '200px', maxWidth: '400px' }}>
+                          <div
+                            style={{
+                              flex: '1',
+                              minWidth: '200px',
+                              maxWidth: '400px',
+                            }}
+                          >
                             {renderValueInput()}
                           </div>
                           <Button
@@ -1129,7 +1389,12 @@ class Analytics extends Component {
                       );
                     })}
                   </div>
-                  <Button type="dashed" size="small" onClick={this.addFilterRule} block>
+                  <Button
+                    type="dashed"
+                    size="small"
+                    onClick={this.addFilterRule}
+                    block
+                  >
                     + Add rule
                   </Button>
                 </div>
@@ -1142,7 +1407,9 @@ class Analytics extends Component {
           {isLoadingProjects ? (
             <div style={{ textAlign: 'center', padding: '40px' }}>
               <Spin size="large" />
-              <div style={{ marginTop: '8px', color: '#666' }}>Loading project data...</div>
+              <div style={{ marginTop: '8px', color: '#666' }}>
+                Loading project data...
+              </div>
             </div>
           ) : (
             <>
@@ -1160,11 +1427,20 @@ class Analytics extends Component {
                 isAggregate
               />
 
-              <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '16px' }}>
+              <div
+                style={{
+                  marginTop: 16,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+                  gap: '16px',
+                }}
+              >
                 <TimeTrendChart
                   data={this.getTrendData()}
                   title="Time Trend"
-                  onPeriodChange={(period) => this.setState({ trendPeriod: period })}
+                  onPeriodChange={(period) =>
+                    this.setState({ trendPeriod: period })
+                  }
                   selectedPeriod={this.state.trendPeriod}
                 />
                 <TimeDistributionChart
@@ -1185,28 +1461,59 @@ class Analytics extends Component {
                 {(() => {
                   const sessionStats = this.getSessionAnalytics();
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '16px',
+                      }}
+                    >
                       <div>
                         <Text type="secondary">Total Sessions</Text>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#1890ff',
+                          }}
+                        >
                           {sessionStats.totalSessions}
                         </div>
                       </div>
                       <div>
                         <Text type="secondary">Average Duration</Text>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#52c41a' }}>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#52c41a',
+                          }}
+                        >
                           {formatTimeHuman(sessionStats.averageDuration)}
                         </div>
                       </div>
                       <div>
                         <Text type="secondary">Longest Session</Text>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#faad14' }}>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#faad14',
+                          }}
+                        >
                           {formatTimeHuman(sessionStats.longestSession)}
                         </div>
                       </div>
                       <div>
                         <Text type="secondary">Shortest Session</Text>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#722ed1' }}>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#722ed1',
+                          }}
+                        >
                           {formatTimeHuman(sessionStats.shortestSession)}
                         </div>
                       </div>
@@ -1219,29 +1526,62 @@ class Analytics extends Component {
                 {(() => {
                   const completionStats = this.getCompletionAnalytics();
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '16px',
+                      }}
+                    >
                       <div>
                         <Text type="secondary">Completion Rate</Text>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#52c41a' }}>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#52c41a',
+                          }}
+                        >
                           {completionStats.completionRate}%
                         </div>
                       </div>
                       <div>
                         <Text type="secondary">Completed Tasks</Text>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#1890ff',
+                          }}
+                        >
                           {completionStats.totalCompleted}
                         </div>
                       </div>
                       <div>
                         <Text type="secondary">Incomplete Tasks</Text>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#faad14' }}>
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#faad14',
+                          }}
+                        >
                           {completionStats.totalIncomplete}
                         </div>
                       </div>
                       <div>
                         <Text type="secondary">Avg Time to Complete</Text>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#722ed1' }}>
-                          {this.formatDurationWithDays(completionStats.avgTimeToCompletion)}
+                        <div
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 'bold',
+                            color: '#722ed1',
+                          }}
+                        >
+                          {this.formatDurationWithDays(
+                            completionStats.avgTimeToCompletion,
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1257,7 +1597,13 @@ class Analytics extends Component {
                       <Col xs={24} sm={12} md={6}>
                         <div>
                           <Text type="secondary">Tasks per Hour</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#1890ff',
+                            }}
+                          >
                             {productivity.tasksPerHour}
                           </div>
                         </div>
@@ -1265,7 +1611,13 @@ class Analytics extends Component {
                       <Col xs={24} sm={12} md={6}>
                         <div>
                           <Text type="secondary">Focus Sessions</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#52c41a' }}>
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#52c41a',
+                            }}
+                          >
                             {productivity.focusSessions}
                           </div>
                           <Text type="secondary" style={{ fontSize: '12px' }}>
@@ -1276,15 +1628,31 @@ class Analytics extends Component {
                       <Col xs={24} sm={12} md={6}>
                         <div>
                           <Text type="secondary">Most Active Day</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#faad14' }}>
-                            {productivity.mostActiveDay !== 'N/A' ? moment(productivity.mostActiveDay).format('MMM D') : 'N/A'}
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#faad14',
+                            }}
+                          >
+                            {productivity.mostActiveDay !== 'N/A'
+                              ? moment(productivity.mostActiveDay).format(
+                                  'MMM D',
+                                )
+                              : 'N/A'}
                           </div>
                         </div>
                       </Col>
                       <Col xs={24} sm={12} md={6}>
                         <div>
                           <Text type="secondary">Most Active Hour</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#722ed1' }}>
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#722ed1',
+                            }}
+                          >
                             {productivity.mostActiveHour}
                           </div>
                         </div>
@@ -1303,7 +1671,8 @@ class Analytics extends Component {
                         title: 'Project',
                         dataIndex: 'projectName',
                         key: 'projectName',
-                        sorter: (a, b) => a.projectName.localeCompare(b.projectName),
+                        sorter: (a, b) =>
+                          a.projectName.localeCompare(b.projectName),
                       },
                       {
                         title: 'Total Nodes',
@@ -1361,15 +1730,29 @@ class Analytics extends Component {
                       <Col xs={24} sm={12} md={6}>
                         <div>
                           <Text type="secondary">Remaining Tasks</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#1890ff',
+                            }}
+                          >
                             {forecast.remaining}
                           </div>
                         </div>
                       </Col>
                       <Col xs={24} sm={12} md={6}>
                         <div>
-                          <Text type="secondary">Avg Completions/Day (14d)</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#52c41a' }}>
+                          <Text type="secondary">
+                            Avg Completions/Day (14d)
+                          </Text>
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#52c41a',
+                            }}
+                          >
                             {forecast.avgCompletionsPerDay}
                           </div>
                         </div>
@@ -1377,23 +1760,45 @@ class Analytics extends Component {
                       <Col xs={24} sm={12} md={6}>
                         <div>
                           <Text type="secondary">Days to Finish</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#faad14' }}>
-                            {forecast.daysToFinish !== null ? forecast.daysToFinish : 'N/A'}
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#faad14',
+                            }}
+                          >
+                            {forecast.daysToFinish !== null
+                              ? forecast.daysToFinish
+                              : 'N/A'}
                           </div>
                         </div>
                       </Col>
                       <Col xs={24} sm={12} md={6}>
                         <div>
                           <Text type="secondary">Estimated Finish Date</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#722ed1' }}>
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#722ed1',
+                            }}
+                          >
                             {forecast.estimatedFinishDate}
                           </div>
                         </div>
                       </Col>
                       <Col xs={24} sm={12} md={6}>
                         <div>
-                          <Text type="secondary">Projected Time (next 7 days)</Text>
-                          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#13c2c2' }}>
+                          <Text type="secondary">
+                            Projected Time (next 7 days)
+                          </Text>
+                          <div
+                            style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              color: '#13c2c2',
+                            }}
+                          >
                             {formatTimeHuman(forecast.projectedNextWeekTime)}
                           </div>
                         </div>
@@ -1411,5 +1816,3 @@ class Analytics extends Component {
 }
 
 export default Analytics;
-
-

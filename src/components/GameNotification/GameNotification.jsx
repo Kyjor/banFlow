@@ -5,7 +5,11 @@
 
 import React, { Component } from 'react';
 import { notification } from 'antd';
-import { DollarOutlined, GiftOutlined, TrophyOutlined } from '@ant-design/icons';
+import {
+  DollarOutlined,
+  GiftOutlined,
+  TrophyOutlined,
+} from '@ant-design/icons';
 import eventSystem from '../../services/EventSystem';
 
 class GameNotification extends Component {
@@ -29,11 +33,11 @@ class GameNotification extends Component {
 
     if (hours > 0) {
       return `${hours}h ${minutes}m`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
     }
+    if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    }
+    return `${secs}s`;
   }
 
   getRewardMessage(data) {
@@ -43,7 +47,8 @@ class GameNotification extends Component {
       if (reason === 'session_completed') {
         const duration = this.formatDuration(sessionDuration);
         return `Earned ${amount} gold for completing a ${duration} session${nodeTitle ? ` on "${nodeTitle}"` : ''}!`;
-      } else if (reason === 'task_completed') {
+      }
+      if (reason === 'task_completed') {
         return `Earned ${amount} gold for completing task${nodeTitle ? ` "${nodeTitle}"` : ''}!`;
       }
     }
@@ -87,4 +92,3 @@ class GameNotification extends Component {
 }
 
 export default GameNotification;
-

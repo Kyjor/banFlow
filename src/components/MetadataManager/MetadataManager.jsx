@@ -65,15 +65,21 @@ class MetadataManager extends Component {
     if (this.props.visible && !prevProps.visible) {
       this.loadData();
     }
-    if (this.props.isGlobal !== prevProps.isGlobal || this.props.projectName !== prevProps.projectName) {
-      this.setState({
-        isGlobal: this.props.isGlobal || false,
-        projectName: this.props.projectName || null,
-      }, () => {
-        if (this.props.visible) {
-          this.loadData();
-        }
-      });
+    if (
+      this.props.isGlobal !== prevProps.isGlobal ||
+      this.props.projectName !== prevProps.projectName
+    ) {
+      this.setState(
+        {
+          isGlobal: this.props.isGlobal || false,
+          projectName: this.props.projectName || null,
+        },
+        () => {
+          if (this.props.visible) {
+            this.loadData();
+          }
+        },
+      );
     }
   }
 
@@ -90,7 +96,7 @@ class MetadataManager extends Component {
       const images = await ipcRenderer.invoke(
         'docs:listImages',
         this.state.projectName,
-        this.state.isGlobal
+        this.state.isGlobal,
       );
       this.setState({ images });
     } catch (error) {
@@ -125,7 +131,7 @@ class MetadataManager extends Component {
           file.name,
           base64,
           this.state.projectName,
-          this.state.isGlobal
+          this.state.isGlobal,
         );
         message.success('Image uploaded');
         await this.loadImages();
@@ -146,7 +152,7 @@ class MetadataManager extends Component {
         'docs:deleteImage',
         imagePath,
         this.state.projectName,
-        this.state.isGlobal
+        this.state.isGlobal,
       );
       message.success('Image deleted');
       await this.loadImages();
@@ -211,7 +217,7 @@ class MetadataManager extends Component {
       newTagColor,
       newCategoryName,
     } = this.state;
-    
+
     const visible = this.props.visible || false;
 
     const imageColumns = [
@@ -224,10 +230,21 @@ class MetadataManager extends Component {
             <img
               src={`file://${record.fullPath}`}
               alt={text}
-              style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px' }}
+              style={{
+                width: '60px',
+                height: '60px',
+                objectFit: 'cover',
+                borderRadius: '4px',
+              }}
               onError={(e) => {
-                ipcRenderer.invoke('docs:getImage', record.path, this.state.projectName, isGlobal)
-                  .then(dataUrl => {
+                ipcRenderer
+                  .invoke(
+                    'docs:getImage',
+                    record.path,
+                    this.state.projectName,
+                    isGlobal,
+                  )
+                  .then((dataUrl) => {
                     e.target.src = dataUrl;
                   })
                   .catch(() => {
@@ -236,7 +253,9 @@ class MetadataManager extends Component {
               }}
             />
             <div>
-              <div><Text strong>{text}</Text></div>
+              <div>
+                <Text strong>{text}</Text>
+              </div>
               <Text type="secondary" style={{ fontSize: '12px' }}>
                 {(record.size / 1024).toFixed(1)} KB
               </Text>
@@ -259,7 +278,9 @@ class MetadataManager extends Component {
               <Button
                 size="small"
                 icon={<EyeOutlined />}
-                onClick={() => window.open(`file://${record.fullPath}`, '_blank')}
+                onClick={() =>
+                  window.open(`file://${record.fullPath}`, '_blank')
+                }
               />
             </Tooltip>
             <Popconfirm
@@ -293,7 +314,10 @@ class MetadataManager extends Component {
         footer={null}
         width={900}
       >
-        <Tabs activeKey={activeTab} onChange={(key) => this.setState({ activeTab: key })}>
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => this.setState({ activeTab: key })}
+        >
           <TabPane
             tab={
               <span>
@@ -304,7 +328,13 @@ class MetadataManager extends Component {
             key="images"
           >
             <Space direction="vertical" style={{ width: '100%' }} size="middle">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <Title level={5} style={{ margin: 0 }}>
                   Image Gallery ({images.length})
                 </Title>
@@ -313,7 +343,11 @@ class MetadataManager extends Component {
                   showUploadList={false}
                   accept="image/*"
                 >
-                  <Button type="primary" icon={<UploadOutlined />} loading={uploading}>
+                  <Button
+                    type="primary"
+                    icon={<UploadOutlined />}
+                    loading={uploading}
+                  >
                     Upload Image
                   </Button>
                 </Upload>
@@ -343,7 +377,9 @@ class MetadataManager extends Component {
                   <Input
                     placeholder="Tag name"
                     value={newTagName}
-                    onChange={(e) => this.setState({ newTagName: e.target.value })}
+                    onChange={(e) =>
+                      this.setState({ newTagName: e.target.value })
+                    }
                     onPressEnter={this.handleTagCreate}
                     style={{ width: 200 }}
                   />
@@ -404,7 +440,9 @@ class MetadataManager extends Component {
                   <Input
                     placeholder="Category name"
                     value={newCategoryName}
-                    onChange={(e) => this.setState({ newCategoryName: e.target.value })}
+                    onChange={(e) =>
+                      this.setState({ newCategoryName: e.target.value })
+                    }
                     onPressEnter={this.handleCategoryCreate}
                     style={{ width: 200 }}
                   />
@@ -437,4 +475,3 @@ class MetadataManager extends Component {
 }
 
 export default MetadataManager;
-

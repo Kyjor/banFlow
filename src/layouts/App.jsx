@@ -23,7 +23,11 @@ const { Content, Sider } = Layout;
 
 // eslint-disable-next-line consistent-return
 function loadSidebarComponents(pathname) {
-  if (pathname === '/dashboard' || pathname === '/' || pathname === '/settings') {
+  if (
+    pathname === '/dashboard' ||
+    pathname === '/' ||
+    pathname === '/settings'
+  ) {
     localStorage.removeItem('currentProject');
   }
 
@@ -98,10 +102,16 @@ function App(props) {
   const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
   const sidebarColor = appSettings.sidebarColor || '#001529';
   const headerColor = appSettings.headerColor || '#001529';
-  const backgroundGradient = appSettings.backgroundGradient || ['#3a7bd5', '#e5e5e5'];
-  const backgroundStyle = backgroundGradient && Array.isArray(backgroundGradient) && backgroundGradient.length >= 2
-    ? `linear-gradient(to top, ${backgroundGradient[0]}, ${backgroundGradient[1]})`
-    : 'linear-gradient(to top, #3a7bd5, #e5e5e5)';
+  const backgroundGradient = appSettings.backgroundGradient || [
+    '#3a7bd5',
+    '#e5e5e5',
+  ];
+  const backgroundStyle =
+    backgroundGradient &&
+    Array.isArray(backgroundGradient) &&
+    backgroundGradient.length >= 2
+      ? `linear-gradient(to top, ${backgroundGradient[0]}, ${backgroundGradient[1]})`
+      : 'linear-gradient(to top, #3a7bd5, #e5e5e5)';
 
   return (
     <Layout

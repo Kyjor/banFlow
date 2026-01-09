@@ -28,7 +28,7 @@ export default class GitService {
 
       const git = simpleGit(repoPath);
       const isRepo = await git.checkIsRepo();
-      
+
       if (!isRepo) {
         throw new Error('Selected directory is not a Git repository');
       }
@@ -36,16 +36,16 @@ export default class GitService {
       const status = await git.status();
       const branches = await git.branch();
       const remotes = await git.getRemotes(true);
-      
+
       // Create clean, serializable objects for IPC
-      const cleanRemotes = remotes.map(remote => ({
+      const cleanRemotes = remotes.map((remote) => ({
         name: remote.name,
         refs: {
           fetch: remote.refs?.fetch || '',
-          push: remote.refs?.push || ''
-        }
+          push: remote.refs?.push || '',
+        },
       }));
-      
+
       const cleanStatus = {
         staged: status.staged || [],
         modified: status.modified || [],
@@ -55,9 +55,9 @@ export default class GitService {
         ahead: status.ahead || 0,
         behind: status.behind || 0,
         current: status.current || '',
-        tracking: status.tracking || ''
+        tracking: status.tracking || '',
       };
-      
+
       const repoInfo = {
         path: repoPath,
         name: path.basename(repoPath),
@@ -65,16 +65,16 @@ export default class GitService {
         branches: branches.all || [],
         remotes: cleanRemotes,
         status: cleanStatus,
-        lastAccessed: new Date().toISOString()
+        lastAccessed: new Date().toISOString(),
       };
 
       this.repositories.set(repoPath, repoInfo);
-      
+
       // Cache repository for current project if context is available
       if (this.gitRepositoryService) {
         this.gitRepositoryService.addRepositoryToProject(repoInfo);
       }
-      
+
       return repoInfo;
     } catch (error) {
       console.error('Error adding repository:', error);
@@ -87,7 +87,10 @@ export default class GitService {
       // If repository isn't in our managed list, try to add it first
       // This handles the case where the app was restarted and we're opening from recent list
       if (!this.repositories.has(repoPath)) {
-        console.log('Repository not in managed list, attempting to add:', repoPath);
+        console.log(
+          'Repository not in managed list, attempting to add:',
+          repoPath,
+        );
         try {
           await this.addRepository(repoPath);
         } catch (addError) {
@@ -98,7 +101,7 @@ export default class GitService {
 
       this.currentRepo = repoPath;
       this.git = simpleGit(repoPath);
-      
+
       // Update last accessed time
       const repoInfo = this.repositories.get(repoPath);
       if (repoInfo) {
@@ -120,52 +123,57 @@ export default class GitService {
 
   async getRepositoryStatus() {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const status = await this.git.status();
       const branches = await this.git.branch();
-      
+
       // Properly separate staged vs unstaged files using the detailed file status
       // status.files contains {path, index, working_dir} for each file
       // index: status in staging area (A=added, M=modified, D=deleted, R=renamed, ' '=unchanged)
       // working_dir: status in working directory (M=modified, D=deleted, ' '=unchanged, ?=untracked)
-      
+
       const stagedFiles = [];
       const unstagedModified = [];
       const untrackedFiles = [];
       const deletedFiles = [];
       const conflictedFiles = [];
-      
-      for (const file of (status.files || [])) {
+
+      for (const file of status.files || []) {
         const { path, index, working_dir } = file;
-        
+
         // Check for conflicts (both have changes)
-        if (index === 'U' || working_dir === 'U' || (index === 'A' && working_dir === 'A') || (index === 'D' && working_dir === 'D')) {
+        if (
+          index === 'U' ||
+          working_dir === 'U' ||
+          (index === 'A' && working_dir === 'A') ||
+          (index === 'D' && working_dir === 'D')
+        ) {
           conflictedFiles.push(path);
           continue;
         }
-        
+
         // Staged changes (index has a status other than ' ' or '?')
         if (index && index !== ' ' && index !== '?') {
           stagedFiles.push(path);
         }
-        
+
         // Unstaged modifications (working_dir is 'M')
         if (working_dir === 'M') {
           unstagedModified.push(path);
         }
-        
+
         // Deleted in working dir
         if (working_dir === 'D') {
           deletedFiles.push(path);
         }
-        
+
         // Untracked files (working_dir is '?')
         if (working_dir === '?') {
           untrackedFiles.push(path);
         }
       }
-      
+
       // Create clean, serializable status object
       const statusInfo = {
         currentBranch: branches.current,
@@ -176,12 +184,15 @@ export default class GitService {
         conflicted: conflictedFiles,
         ahead: status.ahead || 0,
         behind: status.behind || 0,
-        branches: branches.all || []
+        branches: branches.all || [],
       };
 
       // Update project cache with status
       if (this.gitRepositoryService && this.currentRepo) {
-        this.gitRepositoryService.updateRepositoryStatus(this.currentRepo, statusInfo);
+        this.gitRepositoryService.updateRepositoryStatus(
+          this.currentRepo,
+          statusInfo,
+        );
       }
 
       return statusInfo;
@@ -194,13 +205,13 @@ export default class GitService {
   // Core Git Operations for Solo Development
   async createBranch(branchName, startPoint = null) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'CREATE_BRANCH',
         timestamp: new Date().toISOString(),
         data: { branchName, startPoint },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       if (startPoint) {
@@ -219,13 +230,13 @@ export default class GitService {
 
   async switchBranch(branchName) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'SWITCH_BRANCH',
         timestamp: new Date().toISOString(),
         data: { from: (await this.git.branch()).current, to: branchName },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       await this.git.checkout(branchName);
@@ -239,13 +250,13 @@ export default class GitService {
 
   async deleteBranch(branchName, force = false) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'DELETE_BRANCH',
         timestamp: new Date().toISOString(),
         data: { branchName, force },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       if (force) {
@@ -264,13 +275,13 @@ export default class GitService {
 
   async stageFiles(files) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'STAGE_FILES',
         timestamp: new Date().toISOString(),
         data: { files },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       await this.git.add(files);
@@ -284,13 +295,13 @@ export default class GitService {
 
   async unstageFiles(files) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'UNSTAGE_FILES',
         timestamp: new Date().toISOString(),
         data: { files },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       await this.git.reset(['HEAD', ...files]);
@@ -304,23 +315,25 @@ export default class GitService {
 
   async commit(message, description = '') {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
-      const fullMessage = description ? `${message}\n\n${description}` : message;
+      const fullMessage = description
+        ? `${message}\n\n${description}`
+        : message;
       const operation = {
         type: 'COMMIT',
         timestamp: new Date().toISOString(),
         data: { message, description },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       const result = await this.git.commit(fullMessage);
       operation.data.commitHash = result.commit;
       this.operationHistory.push(operation);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error committing:', error);
@@ -330,14 +343,14 @@ export default class GitService {
 
   async fetch(remote = 'origin', prune = false) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const fetchOptions = prune ? ['--prune'] : [];
       const result = await this.git.fetch(remote, fetchOptions);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error fetching:', error);
@@ -347,16 +360,16 @@ export default class GitService {
 
   async pull(remote = 'origin', branch = null, strategy = 'merge') {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const currentBranch = (await this.git.branch()).current;
       const pullBranch = branch || currentBranch;
-      
+
       const operation = {
         type: 'PULL',
         timestamp: new Date().toISOString(),
         data: { remote, branch: pullBranch, strategy },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       // Build pull options based on strategy
@@ -372,10 +385,10 @@ export default class GitService {
 
       const result = await this.git.pull(remote, pullBranch, pullOptions);
       this.operationHistory.push(operation);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error pulling:', error);
@@ -385,24 +398,24 @@ export default class GitService {
 
   async push(remote = 'origin', branch = null) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const currentBranch = (await this.git.branch()).current;
       const pushBranch = branch || currentBranch;
-      
+
       const operation = {
         type: 'PUSH',
         timestamp: new Date().toISOString(),
         data: { remote, branch: pushBranch },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       const result = await this.git.push(remote, pushBranch);
       this.operationHistory.push(operation);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error pushing:', error);
@@ -419,7 +432,7 @@ export default class GitService {
         type: 'STASH',
         timestamp: new Date().toISOString(),
         data: { message },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       const result = message
@@ -429,7 +442,7 @@ export default class GitService {
       this.operationHistory.push(operation);
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error stashing changes:', error);
@@ -439,14 +452,15 @@ export default class GitService {
 
   async stashFiles(files, message = null) {
     if (!this.git) throw new Error('No repository selected');
-    if (!files || files.length === 0) throw new Error('No files specified for stashing');
+    if (!files || files.length === 0)
+      throw new Error('No files specified for stashing');
 
     try {
       const operation = {
         type: 'STASH_FILES',
         timestamp: new Date().toISOString(),
         data: { files, message },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       // Debug: log the files being stashed
@@ -471,7 +485,7 @@ export default class GitService {
       this.operationHistory.push(operation);
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error stashing selected files:', error);
@@ -484,12 +498,12 @@ export default class GitService {
 
     try {
       const stashList = await this.git.stashList();
-      return (stashList.all || []).map(stash => ({
+      return (stashList.all || []).map((stash) => ({
         index: stash.index,
         message: stash.message || '',
         date: stash.date || '',
         author_name: stash.author_name || '',
-        author_email: stash.author_email || ''
+        author_email: stash.author_email || '',
       }));
     } catch (error) {
       console.error('Error getting stash list:', error);
@@ -502,20 +516,29 @@ export default class GitService {
 
     try {
       // Get detailed information about the stash including files
-      const showResult = await this.git.stash(['show', '--name-status', `stash@{${stashIndex}}`]);
-      const statResult = await this.git.stash(['show', '--stat', `stash@{${stashIndex}}`]);
+      const showResult = await this.git.stash([
+        'show',
+        '--name-status',
+        `stash@{${stashIndex}}`,
+      ]);
+      const statResult = await this.git.stash([
+        'show',
+        '--stat',
+        `stash@{${stashIndex}}`,
+      ]);
 
       // Parse the name-status output to get file changes
-      const files = showResult.split('\n')
-        .filter(line => line.trim())
-        .map(line => {
+      const files = showResult
+        .split('\n')
+        .filter((line) => line.trim())
+        .map((line) => {
           const match = line.match(/^([MADRCU])\s+(.+)$/);
           if (match) {
             const [, status, filename] = match;
             return {
               status: this.parseStatus(status),
               filename,
-              statusCode: status
+              statusCode: status,
             };
           }
           return null;
@@ -524,7 +547,7 @@ export default class GitService {
 
       return {
         files,
-        stat: statResult
+        stat: statResult,
       };
     } catch (error) {
       console.error('Error getting stash files:', error);
@@ -542,7 +565,7 @@ export default class GitService {
         `stash@{${stashIndex}}^`,
         `stash@{${stashIndex}}`,
         '--',
-        filename
+        filename,
       ]);
       return diffResult;
     } catch (error) {
@@ -553,33 +576,33 @@ export default class GitService {
 
   parseStatus(statusCode) {
     const statusMap = {
-      'M': 'modified',
-      'A': 'added',
-      'D': 'deleted',
-      'R': 'renamed',
-      'C': 'copied',
-      'U': 'unmerged'
+      M: 'modified',
+      A: 'added',
+      D: 'deleted',
+      R: 'renamed',
+      C: 'copied',
+      U: 'unmerged',
     };
     return statusMap[statusCode] || 'unknown';
   }
 
   async applyStash(stashIndex = 0) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'APPLY_STASH',
         timestamp: new Date().toISOString(),
         data: { stashIndex },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       const result = await this.git.stash(['apply', `stash@{${stashIndex}}`]);
       this.operationHistory.push(operation);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error applying stash:', error);
@@ -589,21 +612,21 @@ export default class GitService {
 
   async popStash(stashIndex = 0) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'POP_STASH',
         timestamp: new Date().toISOString(),
         data: { stashIndex },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       const result = await this.git.stash(['pop', `stash@{${stashIndex}}`]);
       this.operationHistory.push(operation);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error popping stash:', error);
@@ -613,21 +636,21 @@ export default class GitService {
 
   async dropStash(stashIndex = 0) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'DROP_STASH',
         timestamp: new Date().toISOString(),
         data: { stashIndex },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       const result = await this.git.stash(['drop', `stash@{${stashIndex}}`]);
       this.operationHistory.push(operation);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error dropping stash:', error);
@@ -637,22 +660,29 @@ export default class GitService {
 
   // Diff and History Operations
   async getDiff(file = null, staged = false) {
-    console.log('getDiff called with:', { file, staged, hasGit: !!this.git, currentRepo: this.currentRepo });
-    
+    console.log('getDiff called with:', {
+      file,
+      staged,
+      hasGit: !!this.git,
+      currentRepo: this.currentRepo,
+    });
+
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       let diff;
       if (staged) {
-        diff = file ? await this.git.diff(['--cached', '--', file]) : await this.git.diff(['--cached']);
+        diff = file
+          ? await this.git.diff(['--cached', '--', file])
+          : await this.git.diff(['--cached']);
       } else {
         diff = file ? await this.git.diff(['--', file]) : await this.git.diff();
       }
-      
+
       console.log('Raw diff output:', diff);
       const parsedDiff = this.parseDiff(diff);
       console.log('Parsed diff:', parsedDiff);
-      
+
       return parsedDiff;
     } catch (error) {
       console.error('Error getting diff:', error);
@@ -662,10 +692,10 @@ export default class GitService {
 
   async getCommitHistory(options = {}) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const { maxCount = 50, from = null, to = null } = options;
-      
+
       const logOptions = {
         maxCount,
         format: {
@@ -674,8 +704,8 @@ export default class GitService {
           message: '%s',
           body: '%b',
           author_name: '%an',
-          author_email: '%ae'
-        }
+          author_email: '%ae',
+        },
       };
 
       if (from && to) {
@@ -684,13 +714,13 @@ export default class GitService {
       }
 
       const log = await this.git.log(logOptions);
-      return (log.all || []).map(commit => ({
+      return (log.all || []).map((commit) => ({
         hash: commit.hash || '',
         date: commit.date || '',
         message: commit.message || '',
         body: commit.body || '',
         author_name: commit.author_name || '',
-        author_email: commit.author_email || ''
+        author_email: commit.author_email || '',
       }));
     } catch (error) {
       console.error('Error getting commit history:', error);
@@ -700,18 +730,37 @@ export default class GitService {
 
   async getCommitFiles(commitHash) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       // Get list of files changed in this commit with their status
-      const result = await this.git.raw(['diff-tree', '--no-commit-id', '--name-status', '-r', commitHash]);
-      const files = result.trim().split('\n').filter(Boolean).map(line => {
-        const [status, ...pathParts] = line.split('\t');
-        const path = pathParts.join('\t'); // Handle paths with tabs
-        return {
-          path,
-          status: status === 'A' ? 'added' : status === 'D' ? 'deleted' : status === 'M' ? 'modified' : status.startsWith('R') ? 'renamed' : 'changed'
-        };
-      });
+      const result = await this.git.raw([
+        'diff-tree',
+        '--no-commit-id',
+        '--name-status',
+        '-r',
+        commitHash,
+      ]);
+      const files = result
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          const [status, ...pathParts] = line.split('\t');
+          const path = pathParts.join('\t'); // Handle paths with tabs
+          return {
+            path,
+            status:
+              status === 'A'
+                ? 'added'
+                : status === 'D'
+                  ? 'deleted'
+                  : status === 'M'
+                    ? 'modified'
+                    : status.startsWith('R')
+                      ? 'renamed'
+                      : 'changed',
+          };
+        });
       return files;
     } catch (error) {
       console.error('Error getting commit files:', error);
@@ -721,7 +770,7 @@ export default class GitService {
 
   async getCommitDiff(commitHash, file = null) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       // Get diff for this commit (compare with parent)
       const args = ['diff', `${commitHash}^`, commitHash];
@@ -752,7 +801,7 @@ export default class GitService {
 
   async getFileHistory(filePath, maxCount = 50) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       // Get commits that modified this specific file
       const result = await this.git.raw([
@@ -761,15 +810,19 @@ export default class GitService {
         `--max-count=${maxCount}`,
         '--format=%H|%ai|%s|%an',
         '--',
-        filePath
+        filePath,
       ]);
-      
+
       if (!result.trim()) return [];
-      
-      return result.trim().split('\n').filter(Boolean).map(line => {
-        const [hash, date, message, author] = line.split('|');
-        return { hash, date, message, author };
-      });
+
+      return result
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          const [hash, date, message, author] = line.split('|');
+          return { hash, date, message, author };
+        });
     } catch (error) {
       console.error('Error getting file history:', error);
       throw error;
@@ -778,7 +831,7 @@ export default class GitService {
 
   async getFileAtCommit(filePath, commitHash) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const content = await this.git.raw(['show', `${commitHash}:${filePath}`]);
       return content;
@@ -790,12 +843,12 @@ export default class GitService {
 
   async getBranchesWithDates() {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const branches = await this.git.branchLocal();
       const branchList = branches.all || [];
       const currentBranch = branches.current;
-      
+
       // Get last commit date for each branch
       const branchesWithDates = await Promise.all(
         branchList.map(async (branchName) => {
@@ -806,20 +859,20 @@ export default class GitService {
               from: branchName,
               format: {
                 date: '%ai',
-                hash: '%H'
-              }
+                hash: '%H',
+              },
             });
-            
+
             const lastCommit = log.latest || log.all?.[0];
-            const lastCommitDate = lastCommit?.date 
+            const lastCommitDate = lastCommit?.date
               ? new Date(lastCommit.date).toISOString()
               : null;
-            
+
             return {
               name: branchName,
               isCurrent: branchName === currentBranch,
-              lastCommitDate: lastCommitDate,
-              lastCommitHash: lastCommit?.hash || null
+              lastCommitDate,
+              lastCommitHash: lastCommit?.hash || null,
             };
           } catch (error) {
             // If we can't get the date for a branch, still include it
@@ -828,12 +881,12 @@ export default class GitService {
               name: branchName,
               isCurrent: branchName === currentBranch,
               lastCommitDate: null,
-              lastCommitHash: null
+              lastCommitHash: null,
             };
           }
-        })
+        }),
       );
-      
+
       // Sort by last commit date (most recent first), then by name
       branchesWithDates.sort((a, b) => {
         if (!a.lastCommitDate && !b.lastCommitDate) {
@@ -843,7 +896,7 @@ export default class GitService {
         if (!b.lastCommitDate) return -1;
         return new Date(b.lastCommitDate) - new Date(a.lastCommitDate);
       });
-      
+
       return branchesWithDates;
     } catch (error) {
       console.error('Error getting branches with dates:', error);
@@ -854,21 +907,24 @@ export default class GitService {
   // Merge and Rebase Operations
   async merge(branchName, options = {}) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'MERGE',
         timestamp: new Date().toISOString(),
         data: { branchName, options },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
-      const result = await this.git.merge([branchName, ...Object.keys(options)]);
+      const result = await this.git.merge([
+        branchName,
+        ...Object.keys(options),
+      ]);
       this.operationHistory.push(operation);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error merging:', error);
@@ -878,22 +934,22 @@ export default class GitService {
 
   async rebase(branchName, interactive = false) {
     if (!this.git) throw new Error('No repository selected');
-    
+
     try {
       const operation = {
         type: 'REBASE',
         timestamp: new Date().toISOString(),
         data: { branchName, interactive },
-        repoPath: this.currentRepo
+        repoPath: this.currentRepo,
       };
 
       const args = interactive ? ['--interactive', branchName] : [branchName];
       const result = await this.git.rebase(args);
       this.operationHistory.push(operation);
-      
+
       return {
         ...result,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error rebasing:', error);
@@ -907,8 +963,9 @@ export default class GitService {
       throw new Error('No operations to undo');
     }
 
-    const lastOperation = this.operationHistory[this.operationHistory.length - 1];
-    
+    const lastOperation =
+      this.operationHistory[this.operationHistory.length - 1];
+
     try {
       switch (lastOperation.type) {
         case 'COMMIT':
@@ -924,7 +981,9 @@ export default class GitService {
           await this.git.checkout(lastOperation.data.from);
           break;
         default:
-          throw new Error(`Cannot undo operation of type: ${lastOperation.type}`);
+          throw new Error(
+            `Cannot undo operation of type: ${lastOperation.type}`,
+          );
       }
 
       this.operationHistory.pop();
@@ -939,14 +998,14 @@ export default class GitService {
   async discardChanges(files) {
     try {
       if (!this.git) throw new Error('No repository selected');
-      
+
       // Reset modified files to HEAD
       await this.git.checkout(['HEAD', '--', ...files]);
-      
+
       return {
         success: true,
         message: `Discarded changes to ${files.length} file(s)`,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error discarding changes:', error);
@@ -958,25 +1017,27 @@ export default class GitService {
   async stageHunk(filePath, hunkIndex) {
     try {
       if (!this.git) throw new Error('No repository selected');
-      
+
       // Get the diff for the file
       const diff = await this.git.diff(['--', filePath]);
       const hunks = this.extractHunksFromDiff(diff);
-      
+
       if (hunkIndex >= hunks.length) {
-        throw new Error(`Hunk index ${hunkIndex} out of range (${hunks.length} hunks)`);
+        throw new Error(
+          `Hunk index ${hunkIndex} out of range (${hunks.length} hunks)`,
+        );
       }
-      
+
       // Create a patch for just this hunk
       const patch = this.createPatchFromHunk(filePath, hunks[hunkIndex], diff);
-      
+
       // Apply the patch to the index
       await this.applyPatchToIndex(patch);
-      
+
       return {
         success: true,
         message: `Staged hunk ${hunkIndex + 1} of ${hunks.length}`,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error staging hunk:', error);
@@ -988,25 +1049,27 @@ export default class GitService {
   async discardHunk(filePath, hunkIndex) {
     try {
       if (!this.git) throw new Error('No repository selected');
-      
+
       // Get the diff for the file
       const diff = await this.git.diff(['--', filePath]);
       const hunks = this.extractHunksFromDiff(diff);
-      
+
       if (hunkIndex >= hunks.length) {
-        throw new Error(`Hunk index ${hunkIndex} out of range (${hunks.length} hunks)`);
+        throw new Error(
+          `Hunk index ${hunkIndex} out of range (${hunks.length} hunks)`,
+        );
       }
-      
+
       // Create a reverse patch for just this hunk
       const patch = this.createPatchFromHunk(filePath, hunks[hunkIndex], diff);
-      
+
       // Apply the reverse patch to the working directory
       await this.applyPatchToWorkingDir(patch, true);
-      
+
       return {
         success: true,
         message: `Discarded hunk ${hunkIndex + 1} of ${hunks.length}`,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error discarding hunk:', error);
@@ -1018,25 +1081,30 @@ export default class GitService {
   async stageLines(filePath, hunkIndex, lineIndices) {
     try {
       if (!this.git) throw new Error('No repository selected');
-      
+
       // Get the diff for the file
       const diff = await this.git.diff(['--', filePath]);
       const hunks = this.extractHunksFromDiff(diff);
-      
+
       if (hunkIndex >= hunks.length) {
         throw new Error(`Hunk index ${hunkIndex} out of range`);
       }
-      
+
       // Create a patch with only the selected lines
-      const patch = this.createPatchFromLines(filePath, hunks[hunkIndex], lineIndices, diff);
-      
+      const patch = this.createPatchFromLines(
+        filePath,
+        hunks[hunkIndex],
+        lineIndices,
+        diff,
+      );
+
       // Apply the patch to the index
       await this.applyPatchToIndex(patch);
-      
+
       return {
         success: true,
         message: `Staged ${lineIndices.length} line(s)`,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error staging lines:', error);
@@ -1048,25 +1116,30 @@ export default class GitService {
   async discardLines(filePath, hunkIndex, lineIndices) {
     try {
       if (!this.git) throw new Error('No repository selected');
-      
+
       // Get the diff for the file
       const diff = await this.git.diff(['--', filePath]);
       const hunks = this.extractHunksFromDiff(diff);
-      
+
       if (hunkIndex >= hunks.length) {
         throw new Error(`Hunk index ${hunkIndex} out of range`);
       }
-      
+
       // Create a patch with only the selected lines
-      const patch = this.createPatchFromLines(filePath, hunks[hunkIndex], lineIndices, diff);
-      
+      const patch = this.createPatchFromLines(
+        filePath,
+        hunks[hunkIndex],
+        lineIndices,
+        diff,
+      );
+
       // Apply the reverse patch to the working directory
       await this.applyPatchToWorkingDir(patch, true);
-      
+
       return {
         success: true,
         message: `Discarded ${lineIndices.length} line(s)`,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error discarding lines:', error);
@@ -1078,19 +1151,19 @@ export default class GitService {
   async applyPatch(patchContent, options = {}) {
     try {
       if (!this.git) throw new Error('No repository selected');
-      
+
       const { cached = false, reverse = false } = options;
-      
+
       if (cached) {
         await this.applyPatchToIndex(patchContent, reverse);
       } else {
         await this.applyPatchToWorkingDir(patchContent, reverse);
       }
-      
+
       return {
         success: true,
         message: 'Patch applied successfully',
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error applying patch:', error);
@@ -1103,8 +1176,8 @@ export default class GitService {
     const hunks = [];
     const lines = diffString.split('\n');
     let currentHunk = null;
-    let headerInfo = { aFile: '', bFile: '' };
-    
+    const headerInfo = { aFile: '', bFile: '' };
+
     for (const line of lines) {
       // Capture file headers
       if (line.startsWith('--- ')) {
@@ -1119,17 +1192,17 @@ export default class GitService {
           header: line,
           lines: [line],
           aFile: headerInfo.aFile,
-          bFile: headerInfo.bFile
+          bFile: headerInfo.bFile,
         };
       } else if (currentHunk) {
         currentHunk.lines.push(line);
       }
     }
-    
+
     if (currentHunk) {
       hunks.push(currentHunk);
     }
-    
+
     return hunks;
   }
 
@@ -1137,47 +1210,49 @@ export default class GitService {
   createPatchFromHunk(filePath, hunk, fullDiff) {
     const lines = fullDiff.split('\n');
     let header = '';
-    
+
     // Find the diff header (everything before first @@)
     for (const line of lines) {
       if (line.startsWith('@@')) break;
-      header += line + '\n';
+      header += `${line}\n`;
     }
-    
-    return header + hunk.lines.join('\n') + '\n';
+
+    return `${header + hunk.lines.join('\n')}\n`;
   }
 
   // Helper: Create a patch from specific lines within a hunk
   createPatchFromLines(filePath, hunk, lineIndices, fullDiff) {
     const lines = fullDiff.split('\n');
     let header = '';
-    
+
     // Find the diff header
     for (const line of lines) {
       if (line.startsWith('@@')) break;
-      header += line + '\n';
+      header += `${line}\n`;
     }
-    
+
     // Parse hunk header to get line numbers
-    const hunkHeaderMatch = hunk.header.match(/@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@/);
+    const hunkHeaderMatch = hunk.header.match(
+      /@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@/,
+    );
     if (!hunkHeaderMatch) {
       throw new Error('Invalid hunk header format');
     }
-    
+
     const oldStart = parseInt(hunkHeaderMatch[1]);
     const newStart = parseInt(hunkHeaderMatch[3]);
-    
+
     // Build new hunk with only selected changed lines (keep context)
     const lineIndicesSet = new Set(lineIndices);
     const newLines = [];
     let oldCount = 0;
     let newCount = 0;
-    
+
     hunk.lines.forEach((line, idx) => {
       if (idx === 0) return; // Skip hunk header
-      
+
       const firstChar = line[0];
-      
+
       if (firstChar === ' ' || firstChar === undefined) {
         // Context line - always include
         newLines.push(line);
@@ -1190,7 +1265,7 @@ export default class GitService {
           oldCount++;
         } else {
           // Convert to context line
-          newLines.push(' ' + line.substring(1));
+          newLines.push(` ${line.substring(1)}`);
           oldCount++;
           newCount++;
         }
@@ -1203,11 +1278,11 @@ export default class GitService {
         // If not selected, just skip the line
       }
     });
-    
+
     // Create new hunk header
     const newHeader = `@@ -${oldStart},${oldCount} +${newStart},${newCount} @@`;
-    
-    return header + newHeader + '\n' + newLines.join('\n') + '\n';
+
+    return `${header + newHeader}\n${newLines.join('\n')}\n`;
   }
 
   // Helper: Apply patch to index (staging area)
@@ -1216,19 +1291,19 @@ export default class GitService {
     const fs = require('fs');
     const path = require('path');
     const os = require('os');
-    
+
     // Write patch to temp file
     const tempFile = path.join(os.tmpdir(), `git-patch-${Date.now()}.patch`);
     fs.writeFileSync(tempFile, patchContent);
-    
+
     try {
       const args = ['apply', '--cached'];
       if (reverse) args.push('--reverse');
       args.push(tempFile);
-      
+
       execSync(`git ${args.join(' ')}`, {
         cwd: this.currentRepo,
-        encoding: 'utf-8'
+        encoding: 'utf-8',
       });
     } finally {
       // Clean up temp file
@@ -1244,19 +1319,19 @@ export default class GitService {
     const fs = require('fs');
     const path = require('path');
     const os = require('os');
-    
+
     // Write patch to temp file
     const tempFile = path.join(os.tmpdir(), `git-patch-${Date.now()}.patch`);
     fs.writeFileSync(tempFile, patchContent);
-    
+
     try {
       const args = ['apply'];
       if (reverse) args.push('--reverse');
       args.push(tempFile);
-      
+
       execSync(`git ${args.join(' ')}`, {
         cwd: this.currentRepo,
-        encoding: 'utf-8'
+        encoding: 'utf-8',
       });
     } finally {
       // Clean up temp file
@@ -1270,10 +1345,10 @@ export default class GitService {
   async deleteUntrackedFiles(files) {
     try {
       if (!this.git) throw new Error('No repository selected');
-      
+
       const fs = require('fs');
       const path = require('path');
-      
+
       // Delete files from filesystem
       for (const file of files) {
         const fullPath = path.join(this.currentRepo, file);
@@ -1281,11 +1356,11 @@ export default class GitService {
           fs.unlinkSync(fullPath);
         }
       }
-      
+
       return {
         success: true,
         message: `Deleted ${files.length} untracked file(s)`,
-        status: await this.getRepositoryStatus()
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error deleting untracked files:', error);
@@ -1297,19 +1372,19 @@ export default class GitService {
   async cleanUntrackedFiles(dryRun = false) {
     try {
       if (!this.git) throw new Error('No repository selected');
-      
+
       const options = ['-f']; // Force
       if (dryRun) {
         options.push('-n'); // Dry run
       }
-      
+
       const result = await this.git.clean(options);
-      
+
       return {
         success: true,
         message: dryRun ? 'Dry run completed' : 'Cleaned untracked files',
-        result: result,
-        status: await this.getRepositoryStatus()
+        result,
+        status: await this.getRepositoryStatus(),
       };
     } catch (error) {
       console.error('Error cleaning untracked files:', error);
@@ -1326,36 +1401,40 @@ export default class GitService {
   generatePKCE() {
     const crypto = require('crypto');
     // Generate code verifier (base64url encoded random bytes)
-    const codeVerifier = crypto.randomBytes(32).toString('base64')
+    const codeVerifier = crypto
+      .randomBytes(32)
+      .toString('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');
-    
+
     // Generate code challenge (SHA256 hash of verifier, base64url encoded)
-    const codeChallenge = crypto.createHash('sha256')
+    const codeChallenge = crypto
+      .createHash('sha256')
       .update(codeVerifier)
       .digest('base64')
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=/g, '');
-    
+
     return { codeVerifier, codeChallenge };
   }
 
   getOAuthUrl(state, codeChallenge) {
     const clientId = process.env.GITHUB_CLIENT_ID || 'Ov23liBd1HNOGPQyC90C';
     // Use localhost for development (more reliable on Linux), custom protocol for production
-    const redirectUri = process.env.NODE_ENV === 'production' 
-      ? 'banflow://oauth/callback' 
-      : 'http://localhost:3001/oauth/callback';
+    const redirectUri =
+      process.env.NODE_ENV === 'production'
+        ? 'banflow://oauth/callback'
+        : 'http://localhost:3001/oauth/callback';
     const scope = 'repo user';
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
-      scope: scope,
-      state: state,
+      scope,
+      state,
       code_challenge: codeChallenge,
-      code_challenge_method: 'S256'
+      code_challenge_method: 'S256',
     });
     return `https://github.com/login/oauth/authorize?${params.toString()}`;
   }
@@ -1368,26 +1447,27 @@ export default class GitService {
       const clientId = process.env.GITHUB_CLIENT_ID || 'Ov23liBd1HNOGPQyC90C';
       const clientSecret = process.env.GITHUB_CLIENT_SECRET || ''; // Not needed for PKCE
       // Use localhost for development (more reliable on Linux), custom protocol for production
-      const redirectUri = process.env.NODE_ENV === 'production' 
-        ? 'banflow://oauth/callback' 
-        : 'http://localhost:3001/oauth/callback';
+      const redirectUri =
+        process.env.NODE_ENV === 'production'
+          ? 'banflow://oauth/callback'
+          : 'http://localhost:3001/oauth/callback';
 
       const url = new URL('https://github.com/login/oauth/access_token');
-      
+
       // GitHub's token endpoint expects form-encoded data, not JSON
       // For PKCE, we don't need client_secret
       const params = new URLSearchParams({
         client_id: clientId,
-        code: code,
+        code,
         redirect_uri: redirectUri,
-        code_verifier: codeVerifier
+        code_verifier: codeVerifier,
       });
-      
+
       // Only add client_secret if it's provided (not needed for PKCE)
       if (clientSecret && clientSecret.trim() !== '') {
         params.append('client_secret', clientSecret);
       }
-      
+
       const postData = params.toString();
 
       const options = {
@@ -1395,11 +1475,11 @@ export default class GitService {
         path: url.pathname,
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
           'Content-Type': 'application/x-www-form-urlencoded',
           'Content-Length': Buffer.byteLength(postData),
-          'User-Agent': 'banFlow-git-client'
-        }
+          'User-Agent': 'banFlow-git-client',
+        },
       };
 
       const req = https.request(options, (res) => {
@@ -1414,20 +1494,26 @@ export default class GitService {
             console.error('OAuth token exchange failed:', {
               statusCode: res.statusCode,
               response: data,
-              clientId: clientId,
+              clientId,
               hasClientSecret: !!clientSecret && clientSecret.trim() !== '',
-              redirectUri: redirectUri
+              redirectUri,
             });
-            reject(new Error(
-              `OAuth token exchange failed (status ${res.statusCode}): ${data || res.statusMessage}`
-            ));
+            reject(
+              new Error(
+                `OAuth token exchange failed (status ${res.statusCode}): ${data || res.statusMessage}`,
+              ),
+            );
             return;
           }
 
           try {
             const response = JSON.parse(data);
             if (response.error) {
-              reject(new Error(`OAuth error: ${response.error_description || response.error}`));
+              reject(
+                new Error(
+                  `OAuth error: ${response.error_description || response.error}`,
+                ),
+              );
               return;
             }
 
@@ -1438,7 +1524,11 @@ export default class GitService {
 
             resolve(response.access_token);
           } catch (parseError) {
-            reject(new Error(`Failed to parse OAuth response: ${parseError.message}`));
+            reject(
+              new Error(
+                `Failed to parse OAuth response: ${parseError.message}`,
+              ),
+            );
           }
         });
       });
@@ -1466,10 +1556,10 @@ export default class GitService {
           path: url.pathname,
           method: 'GET',
           headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'Authorization': `token ${token}`,
-            'User-Agent': 'banFlow-git-client'
-          }
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${token}`,
+            'User-Agent': 'banFlow-git-client',
+          },
         };
 
         const req = https.request(options, (res) => {
@@ -1481,9 +1571,11 @@ export default class GitService {
 
           res.on('end', () => {
             if (res.statusCode !== 200) {
-              reject(new Error(
-                `GitHub authentication failed with status ${res.statusCode}: ${data || res.statusMessage}`
-              ));
+              reject(
+                new Error(
+                  `GitHub authentication failed with status ${res.statusCode}: ${data || res.statusMessage}`,
+                ),
+              );
               return;
             }
 
@@ -1498,11 +1590,15 @@ export default class GitService {
                   login: user.login || '',
                   name: user.name || '',
                   email: user.email || '',
-                  avatar_url: user.avatar_url || ''
-                }
+                  avatar_url: user.avatar_url || '',
+                },
               });
             } catch (parseError) {
-              reject(new Error(`Failed to parse GitHub response: ${parseError.message}`));
+              reject(
+                new Error(
+                  `Failed to parse GitHub response: ${parseError.message}`,
+                ),
+              );
             }
           });
         });
@@ -1525,19 +1621,22 @@ export default class GitService {
   async cloneRepository(repoUrl, targetPath) {
     try {
       // Extract repo name from URL (e.g., "Flecs.jl" from "https://github.com/user/Flecs.jl.git")
-      const repoName = repoUrl.split('/').pop().replace(/\.git$/, '');
+      const repoName = repoUrl
+        .split('/')
+        .pop()
+        .replace(/\.git$/, '');
       const fullPath = path.join(targetPath, repoName);
-      
+
       const operation = {
         type: 'CLONE',
         timestamp: new Date().toISOString(),
         data: { repoUrl, targetPath: fullPath },
-        repoPath: fullPath
+        repoPath: fullPath,
       };
 
       await simpleGit().clone(repoUrl, fullPath);
       this.operationHistory.push(operation);
-      
+
       return await this.addRepository(fullPath);
     } catch (error) {
       console.error('Error cloning repository:', error);
@@ -1551,12 +1650,12 @@ export default class GitService {
         type: 'INIT',
         timestamp: new Date().toISOString(),
         data: { targetPath },
-        repoPath: targetPath
+        repoPath: targetPath,
       };
 
       await simpleGit(targetPath).init();
       this.operationHistory.push(operation);
-      
+
       return await this.addRepository(targetPath);
     } catch (error) {
       console.error('Error initializing repository:', error);
@@ -1584,10 +1683,10 @@ export default class GitService {
           path: url.pathname + url.search,
           method: 'GET',
           headers: {
-            'Accept': 'application/vnd.github.v3+json',
-            'Authorization': `token ${this.githubToken}`,
-            'User-Agent': 'banFlow-git-client'
-          }
+            Accept: 'application/vnd.github.v3+json',
+            Authorization: `token ${this.githubToken}`,
+            'User-Agent': 'banFlow-git-client',
+          },
         };
 
         const req = https.request(options, (res) => {
@@ -1599,26 +1698,34 @@ export default class GitService {
 
           res.on('end', () => {
             if (res.statusCode !== 200) {
-              reject(new Error(
-                `Failed to load GitHub repositories (status ${res.statusCode}): ${data || res.statusMessage}`
-              ));
+              reject(
+                new Error(
+                  `Failed to load GitHub repositories (status ${res.statusCode}): ${data || res.statusMessage}`,
+                ),
+              );
               return;
             }
 
             try {
               const repos = JSON.parse(data);
-              resolve((repos || []).map(repo => ({
-                id: repo.id || 0,
-                name: repo.name || '',
-                full_name: repo.full_name || '',
-                clone_url: repo.clone_url || '',
-                ssh_url: repo.ssh_url || '',
-                description: repo.description || '',
-                private: repo.private || false,
-                updated_at: repo.updated_at || ''
-              })));
+              resolve(
+                (repos || []).map((repo) => ({
+                  id: repo.id || 0,
+                  name: repo.name || '',
+                  full_name: repo.full_name || '',
+                  clone_url: repo.clone_url || '',
+                  ssh_url: repo.ssh_url || '',
+                  description: repo.description || '',
+                  private: repo.private || false,
+                  updated_at: repo.updated_at || '',
+                })),
+              );
             } catch (parseError) {
-              reject(new Error(`Failed to parse GitHub repositories response: ${parseError.message}`));
+              reject(
+                new Error(
+                  `Failed to parse GitHub repositories response: ${parseError.message}`,
+                ),
+              );
             }
           });
         });
@@ -1646,26 +1753,30 @@ export default class GitService {
     for (const line of lines) {
       if (line.startsWith('diff --git')) {
         if (currentFile) files.push(currentFile);
-        
+
         currentFile = {
           name: line.split(' b/')[1],
           hunks: [],
           added: 0,
-          deleted: 0
+          deleted: 0,
         };
       } else if (line.startsWith('@@')) {
         if (currentHunk) currentFile.hunks.push(currentHunk);
-        
+
         currentHunk = {
           header: line,
-          lines: []
+          lines: [],
         };
       } else if (currentHunk) {
         currentHunk.lines.push({
           content: line,
-          type: line.startsWith('+') ? 'added' : line.startsWith('-') ? 'deleted' : 'context'
+          type: line.startsWith('+')
+            ? 'added'
+            : line.startsWith('-')
+              ? 'deleted'
+              : 'context',
         });
-        
+
         if (line.startsWith('+')) currentFile.added++;
         if (line.startsWith('-')) currentFile.deleted++;
       }
@@ -1685,9 +1796,9 @@ export default class GitService {
     // If we have project context, load from project cache first
     if (this.gitRepositoryService) {
       const projectRepos = this.gitRepositoryService.getProjectRepositories();
-      
+
       // Merge with in-memory repositories
-      projectRepos.forEach(projectRepo => {
+      projectRepos.forEach((projectRepo) => {
         if (!this.repositories.has(projectRepo.path)) {
           this.repositories.set(projectRepo.path, {
             path: projectRepo.path,
@@ -1697,13 +1808,13 @@ export default class GitService {
             remotes: projectRepo.remotes || [],
             status: projectRepo.status || {},
             lastAccessed: projectRepo.lastAccessed,
-            isActive: projectRepo.isActive || false
+            isActive: projectRepo.isActive || false,
           });
         }
       });
     }
 
-    return Array.from(this.repositories.values()).map(repo => ({
+    return Array.from(this.repositories.values()).map((repo) => ({
       path: repo.path,
       name: repo.name,
       currentBranch: repo.currentBranch,
@@ -1711,16 +1822,16 @@ export default class GitService {
       remotes: repo.remotes || [],
       status: repo.status || {},
       lastAccessed: repo.lastAccessed,
-      isActive: repo.isActive || false
+      isActive: repo.isActive || false,
     }));
   }
 
   getCurrentRepository() {
     if (!this.currentRepo) return null;
-    
+
     const repo = this.repositories.get(this.currentRepo);
     if (!repo) return null;
-    
+
     return {
       path: repo.path,
       name: repo.name,
@@ -1729,19 +1840,19 @@ export default class GitService {
       remotes: repo.remotes || [],
       status: repo.status || {},
       lastAccessed: repo.lastAccessed,
-      isActive: repo.isActive || false
+      isActive: repo.isActive || false,
     };
   }
 
   // New methods for project-specific repository management
   async loadProjectRepositories() {
     if (!this.gitRepositoryService) return [];
-    
+
     try {
       const projectRepos = this.gitRepositoryService.getProjectRepositories();
-      
+
       // Load repositories into memory
-      projectRepos.forEach(projectRepo => {
+      projectRepos.forEach((projectRepo) => {
         this.repositories.set(projectRepo.path, {
           path: projectRepo.path,
           name: projectRepo.name,
@@ -1750,7 +1861,7 @@ export default class GitService {
           remotes: projectRepo.remotes || [],
           status: projectRepo.status || {},
           lastAccessed: projectRepo.lastAccessed,
-          isActive: projectRepo.isActive || false
+          isActive: projectRepo.isActive || false,
         });
       });
 
@@ -1777,4 +1888,4 @@ export default class GitService {
     if (!this.gitRepositoryService) return [];
     return this.gitRepositoryService.cleanupNonExistentRepositories();
   }
-} 
+}

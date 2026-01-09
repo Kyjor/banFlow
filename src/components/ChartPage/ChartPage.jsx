@@ -2,9 +2,9 @@ import React, { Component } from 'react';
 import { Button } from 'antd';
 import { ipcRenderer } from 'electron';
 import Spreadsheet from 'react-spreadsheet';
-import Layout from '../../layouts/App';
 import ReactDOM from 'react-dom';
 import { Flowchart } from '@ant-design/flowchart';
+import Layout from '../../layouts/App';
 
 const createLink = (src) => {
   const link = document.createElement('link');
@@ -42,8 +42,6 @@ class SheetPage extends Component {
       ...newState,
     });
   }
-
-
 
   render() {
     const { lokiLoaded } = this.state;

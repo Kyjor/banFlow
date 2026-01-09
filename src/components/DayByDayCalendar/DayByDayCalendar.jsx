@@ -27,7 +27,9 @@ class DayByDayCalendar extends React.Component {
 
   componentDidUpdate(prevProps) {
     if (this.props.currentDate) {
-      const prevMoment = prevProps.currentDate ? moment(prevProps.currentDate) : null;
+      const prevMoment = prevProps.currentDate
+        ? moment(prevProps.currentDate)
+        : null;
       const currentMoment = moment(this.props.currentDate);
       if (!prevMoment || !prevMoment.isSame(currentMoment, 'day')) {
         this.setState({ currentDate: currentMoment });
@@ -61,8 +63,10 @@ class DayByDayCalendar extends React.Component {
             borderRadius: '4px',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
-          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          onMouseEnter={(e) =>
+            (e.target.style.background = 'rgba(255, 255, 255, 0.2)')
+          }
+          onMouseLeave={(e) => (e.target.style.background = 'transparent')}
           onClick={() => {
             this.incrementDays(-7);
           }}
@@ -75,8 +79,10 @@ class DayByDayCalendar extends React.Component {
             borderRadius: '4px',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
-          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          onMouseEnter={(e) =>
+            (e.target.style.background = 'rgba(255, 255, 255, 0.2)')
+          }
+          onMouseLeave={(e) => (e.target.style.background = 'transparent')}
           onClick={() => {
             this.incrementDays(-1);
           }}
@@ -88,15 +94,9 @@ class DayByDayCalendar extends React.Component {
             textAlign: 'center',
           }}
         >
-          {currentDate.isSame(yesterday, 'day') && (
-            <span>Yesterday, </span>
-          )}
-          {currentDate.isSame(today, 'day') && (
-            <span>Today, </span>
-          )}
-          {currentDate.isSame(tomorrow, 'day') && (
-            <span>Tomorrow, </span>
-          )}
+          {currentDate.isSame(yesterday, 'day') && <span>Yesterday, </span>}
+          {currentDate.isSame(today, 'day') && <span>Today, </span>}
+          {currentDate.isSame(tomorrow, 'day') && <span>Tomorrow, </span>}
           {currentDate.format('YYYY/MM/DD')}
         </div>
         <RightOutlined
@@ -107,8 +107,10 @@ class DayByDayCalendar extends React.Component {
             borderRadius: '4px',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
-          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          onMouseEnter={(e) =>
+            (e.target.style.background = 'rgba(255, 255, 255, 0.2)')
+          }
+          onMouseLeave={(e) => (e.target.style.background = 'transparent')}
           onClick={() => {
             this.incrementDays(1);
           }}
@@ -121,8 +123,10 @@ class DayByDayCalendar extends React.Component {
             borderRadius: '4px',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.2)'}
-          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+          onMouseEnter={(e) =>
+            (e.target.style.background = 'rgba(255, 255, 255, 0.2)')
+          }
+          onMouseLeave={(e) => (e.target.style.background = 'transparent')}
           onClick={() => {
             this.incrementDays(7);
           }}
@@ -145,19 +149,23 @@ class DayByDayCalendar extends React.Component {
     const { dayCellRender } = this.props;
 
     return (
-      <div style={{ 
-        height: '400px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: '12px',
-        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
-        padding: '20px',
-        border: '1px solid rgba(0, 0, 0, 0.06)',
-      }}>
-        <div style={{ 
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
+      <div
+        style={{
+          height: '400px',
+          background: 'rgba(255, 255, 255, 0.95)',
+          borderRadius: '12px',
+          boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
+          padding: '20px',
+          border: '1px solid rgba(0, 0, 0, 0.06)',
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           {dayCellRender({ _d: currentDate.toDate() }, this.header)}
         </div>
       </div>

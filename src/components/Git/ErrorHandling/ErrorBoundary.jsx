@@ -1,31 +1,36 @@
 import React from 'react';
 import { Result, Button, Space, Typography, Card, Alert } from 'antd';
-import { BugOutlined, ReloadOutlined, HomeOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import {
+  BugOutlined,
+  ReloadOutlined,
+  HomeOutlined,
+  QuestionCircleOutlined,
+} from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { 
-      hasError: false, 
-      error: null, 
+    this.state = {
+      hasError: false,
+      error: null,
       errorInfo: null,
-      errorId: null
+      errorId: null,
     };
   }
 
   static getDerivedStateFromError(error) {
-    return { 
+    return {
       hasError: true,
-      errorId: Date.now().toString()
+      errorId: Date.now().toString(),
     };
   }
 
   componentDidCatch(error, errorInfo) {
     this.setState({
-      error: error,
-      errorInfo: errorInfo
+      error,
+      errorInfo,
     });
 
     // Log error to console in development
@@ -42,11 +47,11 @@ class ErrorBoundary extends React.Component {
   };
 
   handleReset = () => {
-    this.setState({ 
-      hasError: false, 
-      error: null, 
+    this.setState({
+      hasError: false,
+      error: null,
       errorInfo: null,
-      errorId: null
+      errorId: null,
     });
   };
 
@@ -62,13 +67,15 @@ class ErrorBoundary extends React.Component {
           <Card className="error-card">
             <Result
               status="error"
-              icon={<BugOutlined style={{ fontSize: '64px', color: '#ff4d4f' }} />}
+              icon={
+                <BugOutlined style={{ fontSize: '64px', color: '#ff4d4f' }} />
+              }
               title="Something went wrong"
               subTitle={
                 <Space direction="vertical" size="small">
                   <Text type="secondary">
-                    The Git client encountered an unexpected error. 
-                    Don't worry, your work is safe.
+                    The Git client encountered an unexpected error. Don't worry,
+                    your work is safe.
                   </Text>
                   {this.state.errorId && (
                     <Text type="secondary" style={{ fontSize: '12px' }}>
@@ -78,28 +85,28 @@ class ErrorBoundary extends React.Component {
                 </Space>
               }
               extra={[
-                <Button 
-                  type="primary" 
-                  icon={<ReloadOutlined />} 
+                <Button
+                  type="primary"
+                  icon={<ReloadOutlined />}
                   onClick={this.handleReload}
                   key="reload"
                 >
                   Reload Application
                 </Button>,
-                <Button 
-                  icon={<HomeOutlined />} 
+                <Button
+                  icon={<HomeOutlined />}
                   onClick={this.handleGoHome}
                   key="home"
                 >
                   Go to Home
                 </Button>,
-                <Button 
-                  icon={<QuestionCircleOutlined />} 
+                <Button
+                  icon={<QuestionCircleOutlined />}
                   onClick={this.handleReset}
                   key="retry"
                 >
                   Try Again
-                </Button>
+                </Button>,
               ]}
             >
               <div className="error-details">
@@ -108,26 +115,32 @@ class ErrorBoundary extends React.Component {
                   description={
                     <div>
                       <Paragraph>
-                        <Text strong>Error:</Text> {this.state.error?.message || 'Unknown error'}
+                        <Text strong>Error:</Text>{' '}
+                        {this.state.error?.message || 'Unknown error'}
                       </Paragraph>
-                      {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
-                        <details style={{ marginTop: '16px' }}>
-                          <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>
-                            Stack Trace (Development Only)
-                          </summary>
-                          <pre style={{ 
-                            marginTop: '8px', 
-                            padding: '12px', 
-                            background: '#f5f5f5', 
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            overflow: 'auto',
-                            maxHeight: '200px'
-                          }}>
-                            {this.state.error?.stack}
-                          </pre>
-                        </details>
-                      )}
+                      {process.env.NODE_ENV === 'development' &&
+                        this.state.errorInfo && (
+                          <details style={{ marginTop: '16px' }}>
+                            <summary
+                              style={{ cursor: 'pointer', fontWeight: 'bold' }}
+                            >
+                              Stack Trace (Development Only)
+                            </summary>
+                            <pre
+                              style={{
+                                marginTop: '8px',
+                                padding: '12px',
+                                background: '#f5f5f5',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                overflow: 'auto',
+                                maxHeight: '200px',
+                              }}
+                            >
+                              {this.state.error?.stack}
+                            </pre>
+                          </details>
+                        )}
                     </div>
                   }
                   type="error"

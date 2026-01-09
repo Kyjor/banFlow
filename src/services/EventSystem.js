@@ -40,7 +40,7 @@ class EventSystem {
   emit(eventName, data = {}) {
     const callbacks = this.listeners.get(eventName);
     if (callbacks) {
-      callbacks.forEach(callback => {
+      callbacks.forEach((callback) => {
         try {
           callback(data);
         } catch (error) {
@@ -82,4 +82,3 @@ export const EVENTS = {
   TIME_SPENT: 'time:spent',
   TASK_COMPLETED: 'task:completed',
 };
-

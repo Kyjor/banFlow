@@ -1,37 +1,43 @@
 import React from 'react';
 import { Checkbox, Card, Space, Typography, Button, Input } from 'antd';
-import { CheckOutlined, CloseOutlined, SearchOutlined } from '@ant-design/icons';
+import {
+  CheckOutlined,
+  CloseOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import PropTypes from 'prop-types';
 import './ProjectSelector.scss';
 
 const { Title, Text } = Typography;
 
-function ProjectSelector({ 
-  availableProjects, 
-  selectedProjects, 
+function ProjectSelector({
+  availableProjects,
+  selectedProjects,
   onSelectionChange,
   onSelectAll,
-  onDeselectAll 
+  onDeselectAll,
 }) {
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  const filteredProjects = availableProjects.filter(project =>
-    project.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProjects = availableProjects.filter((project) =>
+    project.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleToggle = (projectName) => {
     const newSelection = selectedProjects.includes(projectName)
-      ? selectedProjects.filter(p => p !== projectName)
+      ? selectedProjects.filter((p) => p !== projectName)
       : [...selectedProjects, projectName];
     onSelectionChange(newSelection);
   };
 
   return (
-    <Card 
+    <Card
       className="project-selector-card"
       title={
         <Space>
-          <Title level={5} style={{ margin: 0 }}>Select Projects</Title>
+          <Title level={5} style={{ margin: 0 }}>
+            Select Projects
+          </Title>
           <Text type="secondary" style={{ fontSize: '12px' }}>
             ({selectedProjects.length} selected)
           </Text>
@@ -39,18 +45,10 @@ function ProjectSelector({
       }
       extra={
         <Space>
-          <Button 
-            size="small" 
-            icon={<CheckOutlined />}
-            onClick={onSelectAll}
-          >
+          <Button size="small" icon={<CheckOutlined />} onClick={onSelectAll}>
             Select All
           </Button>
-          <Button 
-            size="small" 
-            icon={<CloseOutlined />}
-            onClick={onDeselectAll}
-          >
+          <Button size="small" icon={<CloseOutlined />} onClick={onDeselectAll}>
             Clear
           </Button>
         </Space>
@@ -64,10 +62,13 @@ function ProjectSelector({
         style={{ marginBottom: '12px' }}
         allowClear
       />
-      
+
       <div className="project-selector-list">
         {filteredProjects.length === 0 ? (
-          <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: '20px' }}>
+          <Text
+            type="secondary"
+            style={{ display: 'block', textAlign: 'center', padding: '20px' }}
+          >
             {searchQuery ? 'No projects found' : 'No projects available'}
           </Text>
         ) : (
@@ -96,4 +97,3 @@ ProjectSelector.propTypes = {
 };
 
 export default ProjectSelector;
-

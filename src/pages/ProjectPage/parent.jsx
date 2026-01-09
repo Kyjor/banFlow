@@ -65,7 +65,8 @@ function ParentInnerList({
 
   const filteredNodes = useMemo(() => {
     const val = nodes.filter(
-      (node) => node && isInCurrentIteration(node) && (!filterNode || filterNode(node)),
+      (node) =>
+        node && isInCurrentIteration(node) && (!filterNode || filterNode(node)),
     );
     return val;
   }, [nodes, selectedIteration, filterNode]);
@@ -161,8 +162,8 @@ function Parent(props) {
                   }}
                   placeholder="Add node title here..."
                   updateText={(value) =>
+                    // eslint-disable-next-line no-sequences
                     (
-                      // eslint-disable-next-line no-sequences
                       setIsEditing(false),
                       updateParentProperty('title', parent.id, value)
                     )

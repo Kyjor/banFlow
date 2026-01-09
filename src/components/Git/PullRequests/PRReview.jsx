@@ -13,7 +13,7 @@ import {
   Empty,
   Alert,
   Input,
-  Modal
+  Modal,
 } from 'antd';
 import {
   PullRequestOutlined,
@@ -24,7 +24,7 @@ import {
   FileTextOutlined,
   CommentOutlined,
   ClockCircleOutlined,
-  BranchesOutlined
+  BranchesOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import EnhancedDiffViewer from '../EnhancedDiffViewer/EnhancedDiffViewer';
@@ -41,7 +41,7 @@ function PRReview({ pr, onClose, onRefresh }) {
     getPullRequestCommits,
     getPullRequestReviews,
     addPullRequestComment,
-    pullRequestLoading
+    pullRequestLoading,
   } = useGit();
 
   const [files, setFiles] = useState([]);
@@ -60,13 +60,25 @@ function PRReview({ pr, onClose, onRefresh }) {
 
   const loadPRDetails = async () => {
     if (!pr || !githubRepoInfo) return;
-    
+
     setLoading(true);
     try {
       const [filesData, commitsData, reviewsData] = await Promise.all([
-        getPullRequestFiles(githubRepoInfo.owner, githubRepoInfo.repo, pr.number),
-        getPullRequestCommits(githubRepoInfo.owner, githubRepoInfo.repo, pr.number),
-        getPullRequestReviews(githubRepoInfo.owner, githubRepoInfo.repo, pr.number)
+        getPullRequestFiles(
+          githubRepoInfo.owner,
+          githubRepoInfo.repo,
+          pr.number,
+        ),
+        getPullRequestCommits(
+          githubRepoInfo.owner,
+          githubRepoInfo.repo,
+          pr.number,
+        ),
+        getPullRequestReviews(
+          githubRepoInfo.owner,
+          githubRepoInfo.repo,
+          pr.number,
+        ),
       ]);
       setFiles(filesData || []);
       setCommits(commitsData || []);
@@ -81,7 +93,12 @@ function PRReview({ pr, onClose, onRefresh }) {
   const handleAddComment = async () => {
     if (!comment.trim()) return;
     try {
-      await addPullRequestComment(githubRepoInfo.owner, githubRepoInfo.repo, pr.number, comment);
+      await addPullRequestComment(
+        githubRepoInfo.owner,
+        githubRepoInfo.repo,
+        pr.number,
+        comment,
+      );
       setComment('');
       await loadPRDetails();
     } catch (error) {
@@ -109,12 +126,24 @@ function PRReview({ pr, onClose, onRefresh }) {
                 </Title>
               </Space>
               <Space>
-                {pr.merged && <Tag color="blue" icon={<CheckCircleOutlined />}>Merged</Tag>}
-                {!pr.merged && pr.state === 'open' && <Tag color="green" icon={<PullRequestOutlined />}>Open</Tag>}
-                {!pr.merged && pr.state === 'closed' && <Tag color="default" icon={<CloseCircleOutlined />}>Closed</Tag>}
+                {pr.merged && (
+                  <Tag color="blue" icon={<CheckCircleOutlined />}>
+                    Merged
+                  </Tag>
+                )}
+                {!pr.merged && pr.state === 'open' && (
+                  <Tag color="green" icon={<PullRequestOutlined />}>
+                    Open
+                  </Tag>
+                )}
+                {!pr.merged && pr.state === 'closed' && (
+                  <Tag color="default" icon={<CloseCircleOutlined />}>
+                    Closed
+                  </Tag>
+                )}
                 {canMerge && (
-                  <Button 
-                    type="primary" 
+                  <Button
+                    type="primary"
                     icon={<MergeOutlined />}
                     onClick={() => setShowMergeModal(true)}
                   >
@@ -130,7 +159,9 @@ function PRReview({ pr, onClose, onRefresh }) {
             <Avatar src={pr.user.avatar_url} icon={<UserOutlined />} />
             <Text strong>{pr.user.login}</Text>
             <Text type="secondary">opened this PR</Text>
-            <Text type="secondary">{new Date(pr.created_at).toLocaleDateString()}</Text>
+            <Text type="secondary">
+              {new Date(pr.created_at).toLocaleDateString()}
+            </Text>
           </Space>
 
           {/* Branch Info */}
@@ -178,7 +209,9 @@ function PRReview({ pr, onClose, onRefresh }) {
                         title={file.filename}
                         description={
                           <Space>
-                            <Text type="secondary">+{file.additions} -{file.deletions}</Text>
+                            <Text type="secondary">
+                              +{file.additions} -{file.deletions}
+                            </Text>
                             <Tag>{file.status}</Tag>
                           </Space>
                         }
@@ -187,18 +220,24 @@ function PRReview({ pr, onClose, onRefresh }) {
                   )}
                 />
                 {selectedFile && (
-                  <Card 
-                    title={selectedFile.filename} 
-                    extra={<Button onClick={() => setSelectedFile(null)}>Close</Button>}
+                  <Card
+                    title={selectedFile.filename}
+                    extra={
+                      <Button onClick={() => setSelectedFile(null)}>
+                        Close
+                      </Button>
+                    }
                     style={{ marginTop: 16 }}
                   >
                     <EnhancedDiffViewer
-                      diffData={[{
-                        name: selectedFile.filename,
-                        hunks: [],
-                        added: selectedFile.additions,
-                        deleted: selectedFile.deletions
-                      }]}
+                      diffData={[
+                        {
+                          name: selectedFile.filename,
+                          hunks: [],
+                          added: selectedFile.additions,
+                          deleted: selectedFile.deletions,
+                        },
+                      ]}
                       readOnly
                     />
                   </Card>
@@ -212,13 +251,21 @@ function PRReview({ pr, onClose, onRefresh }) {
                 renderItem={(commit) => (
                   <List.Item>
                     <List.Item.Meta
-                      avatar={<Avatar src={commit.author?.avatar_url} icon={<UserOutlined />} />}
+                      avatar={
+                        <Avatar
+                          src={commit.author?.avatar_url}
+                          icon={<UserOutlined />}
+                        />
+                      }
                       title={commit.commit.message.split('\n')[0]}
                       description={
                         <Space>
                           <Text>{commit.author?.login}</Text>
                           <Text type="secondary">
-                            <ClockCircleOutlined /> {new Date(commit.commit.author.date).toLocaleString()}
+                            <ClockCircleOutlined />{' '}
+                            {new Date(
+                              commit.commit.author.date,
+                            ).toLocaleString()}
                           </Text>
                         </Space>
                       }
@@ -229,15 +276,19 @@ function PRReview({ pr, onClose, onRefresh }) {
             </TabPane>
 
             <TabPane tab="Comments" key="comments">
-              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <Space
+                direction="vertical"
+                style={{ width: '100%' }}
+                size="middle"
+              >
                 <TextArea
                   rows={4}
                   placeholder="Add a comment..."
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                 />
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   onClick={handleAddComment}
                   disabled={!comment.trim()}
                 >
@@ -249,10 +300,15 @@ function PRReview({ pr, onClose, onRefresh }) {
                     <Space>
                       <Avatar src={review.user.avatar_url} />
                       <Text strong>{review.user.login}</Text>
-                      <Tag color={
-                        review.state === 'APPROVED' ? 'green' :
-                        review.state === 'CHANGES_REQUESTED' ? 'red' : 'default'
-                      }>
+                      <Tag
+                        color={
+                          review.state === 'APPROVED'
+                            ? 'green'
+                            : review.state === 'CHANGES_REQUESTED'
+                              ? 'red'
+                              : 'default'
+                        }
+                      >
                         {review.state}
                       </Tag>
                       <Text type="secondary">
@@ -286,4 +342,3 @@ function PRReview({ pr, onClose, onRefresh }) {
 }
 
 export default PRReview;
-

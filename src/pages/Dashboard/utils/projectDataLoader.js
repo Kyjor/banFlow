@@ -9,7 +9,10 @@ import { ipcRenderer } from 'electron';
  */
 export const loadProjectData = async (projectName) => {
   try {
-    const projectData = await ipcRenderer.invoke('dashboard:loadProjectData', projectName);
+    const projectData = await ipcRenderer.invoke(
+      'dashboard:loadProjectData',
+      projectName,
+    );
     return projectData;
   } catch (error) {
     console.error(`Error loading project ${projectName}:`, error);
@@ -21,13 +24,20 @@ export const loadProjectData = async (projectName) => {
  * Load multiple projects' data
  */
 export const loadMultipleProjectsData = async (projectNames) => {
-  if (!projectNames || !Array.isArray(projectNames) || projectNames.length === 0) {
+  if (
+    !projectNames ||
+    !Array.isArray(projectNames) ||
+    projectNames.length === 0
+  ) {
     return [];
   }
-  
+
   try {
-    const results = await ipcRenderer.invoke('dashboard:loadMultipleProjectsData', projectNames);
-    return results.filter(result => result !== null);
+    const results = await ipcRenderer.invoke(
+      'dashboard:loadMultipleProjectsData',
+      projectNames,
+    );
+    return results.filter((result) => result !== null);
   } catch (error) {
     console.error('Error loading multiple projects:', error);
     return [];
@@ -45,4 +55,3 @@ export const getAllProjectNames = () => {
     return [];
   }
 };
-

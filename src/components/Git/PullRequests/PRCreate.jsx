@@ -9,12 +9,9 @@ import {
   Button,
   Tag,
   Divider,
-  Alert
+  Alert,
 } from 'antd';
-import {
-  BranchesOutlined,
-  CheckCircleOutlined
-} from '@ant-design/icons';
+import { BranchesOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 
 const { TextArea } = Input;
@@ -28,7 +25,7 @@ function PRCreate({ visible, onCancel, onSuccess }) {
     githubRepoInfo,
     createPullRequest,
     pullRequestLoading,
-    repositoryStatus
+    repositoryStatus,
   } = useGit();
 
   const [form] = Form.useForm();
@@ -37,12 +34,17 @@ function PRCreate({ visible, onCancel, onSuccess }) {
   useEffect(() => {
     if (visible && currentBranch) {
       // Auto-detect base branch (main, master, or develop)
-      const defaultBase = branches.find(b => ['main', 'master', 'develop'].includes(b)) || branches[0] || 'main';
+      const defaultBase =
+        branches.find((b) => ['main', 'master', 'develop'].includes(b)) ||
+        branches[0] ||
+        'main';
       setBaseBranch(defaultBase);
       form.setFieldsValue({
         head: currentBranch,
         base: defaultBase,
-        title: currentBranch.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+        title: currentBranch
+          .replace(/[-_]/g, ' ')
+          .replace(/\b\w/g, (l) => l.toUpperCase()),
       });
     }
   }, [visible, currentBranch, branches, form]);
@@ -56,7 +58,7 @@ function PRCreate({ visible, onCancel, onSuccess }) {
         values.body || '',
         values.head,
         values.base,
-        values.draft || false
+        values.draft || false,
       );
       form.resetFields();
       onSuccess?.(pr);
@@ -90,11 +92,7 @@ function PRCreate({ visible, onCancel, onSuccess }) {
       footer={null}
       width={700}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           label="Base Repository"
           tooltip="The repository where you want to merge your changes"
@@ -114,14 +112,16 @@ function PRCreate({ visible, onCancel, onSuccess }) {
               onChange={setBaseBranch}
               placeholder="Select base branch"
             >
-              {branches.filter(b => b !== currentBranch).map(branch => (
-                <Option key={branch} value={branch}>
-                  <Space>
-                    <BranchesOutlined />
-                    {branch}
-                  </Space>
-                </Option>
-              ))}
+              {branches
+                .filter((b) => b !== currentBranch)
+                .map((branch) => (
+                  <Option key={branch} value={branch}>
+                    <Space>
+                      <BranchesOutlined />
+                      {branch}
+                    </Space>
+                  </Option>
+                ))}
             </Select>
           </Form.Item>
 
@@ -139,26 +139,27 @@ function PRCreate({ visible, onCancel, onSuccess }) {
                 </Space>
               </Option>
             </Select>
-            </Form.Item>
+          </Form.Item>
         </Space>
 
-        {repositoryStatus && (repositoryStatus.ahead > 0 || repositoryStatus.behind > 0) && (
-          <Alert
-            message="Branch Status"
-            description={
-              <Space>
-                {repositoryStatus.ahead > 0 && (
-                  <Text>↑ {repositoryStatus.ahead} commits ahead</Text>
-                )}
-                {repositoryStatus.behind > 0 && (
-                  <Text>↓ {repositoryStatus.behind} commits behind</Text>
-                )}
-              </Space>
-            }
-            type="info"
-            style={{ marginBottom: 16 }}
-          />
-        )}
+        {repositoryStatus &&
+          (repositoryStatus.ahead > 0 || repositoryStatus.behind > 0) && (
+            <Alert
+              message="Branch Status"
+              description={
+                <Space>
+                  {repositoryStatus.ahead > 0 && (
+                    <Text>↑ {repositoryStatus.ahead} commits ahead</Text>
+                  )}
+                  {repositoryStatus.behind > 0 && (
+                    <Text>↓ {repositoryStatus.behind} commits behind</Text>
+                  )}
+                </Space>
+              }
+              type="info"
+              style={{ marginBottom: 16 }}
+            />
+          )}
 
         <Form.Item
           name="title"
@@ -168,22 +169,18 @@ function PRCreate({ visible, onCancel, onSuccess }) {
           <Input placeholder="Pull request title" />
         </Form.Item>
 
-        <Form.Item
-          name="body"
-          label="Description"
-        >
-          <TextArea
-            rows={6}
-            placeholder="Describe your changes..."
-          />
+        <Form.Item name="body" label="Description">
+          <TextArea rows={6} placeholder="Describe your changes..." />
         </Form.Item>
 
         <Form.Item>
           <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-            <Button onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button type="primary" htmlType="submit" loading={pullRequestLoading}>
+            <Button onClick={onCancel}>Cancel</Button>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={pullRequestLoading}
+            >
               Create Pull Request
             </Button>
           </Space>
@@ -194,4 +191,3 @@ function PRCreate({ visible, onCancel, onSuccess }) {
 }
 
 export default PRCreate;
-

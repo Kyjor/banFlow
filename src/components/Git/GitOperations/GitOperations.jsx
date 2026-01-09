@@ -19,7 +19,7 @@ import {
   Col,
   Alert,
   Collapse,
-  message
+  message,
 } from 'antd';
 import {
   CloudUploadOutlined,
@@ -40,7 +40,7 @@ import {
   EyeOutlined,
   FileAddOutlined,
   FileDeleteOutlined,
-  EditOutlined
+  EditOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import './GitOperations.scss';
@@ -84,7 +84,7 @@ function GitOperations({ onViewDiff }) {
     refreshRepositoryStatus,
     discardChanges,
     deleteUntrackedFiles,
-    cleanUntrackedFiles
+    cleanUntrackedFiles,
   } = useGit();
 
   const [activeTab, setActiveTab] = useState('staging');
@@ -201,9 +201,9 @@ function GitOperations({ onViewDiff }) {
 
     try {
       const files = await getStashFiles(stashIndex);
-      setStashFiles(prev => ({
+      setStashFiles((prev) => ({
         ...prev,
-        [stashIndex]: files
+        [stashIndex]: files,
       }));
     } catch (error) {
       console.error('Failed to load stash files:', error);
@@ -230,12 +230,18 @@ function GitOperations({ onViewDiff }) {
 
   const getFileStatusColor = (status) => {
     switch (status) {
-      case 'staged': return 'success';
-      case 'modified': return 'warning';
-      case 'deleted': return 'error';
-      case 'untracked': return 'processing';
-      case 'conflicted': return 'error';
-      default: return 'default';
+      case 'staged':
+        return 'success';
+      case 'modified':
+        return 'warning';
+      case 'deleted':
+        return 'error';
+      case 'untracked':
+        return 'processing';
+      case 'conflicted':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
@@ -256,66 +262,71 @@ function GitOperations({ onViewDiff }) {
         renderItem={(file) => (
           <List.Item
             key={file}
-            actions={actions ? [
-              status === 'staged' ? (
-                <Button
-                  size="small"
-                  onClick={() => handleUnstageFiles([file])}
-                  loading={operationInProgress}
-                >
-                  Unstage
-                </Button>
-              ) : (
-                <Button
-                  size="small"
-                  type="primary"
-                  onClick={() => handleStageFiles([file])}
-                  loading={operationInProgress}
-                >
-                  Stage
-                </Button>
-              ),
-              onViewDiff && (status === 'modified' || status === 'staged') && (
-                <Button
-                  size="small"
-                  icon={<EyeOutlined />}
-                  onClick={() => onViewDiff(file)}
-                  title="View Diff"
-                />
-              ),
-              status === 'modified' && (
-                <Popconfirm
-                  title="Discard changes to this file?"
-                  onConfirm={() => handleDiscardChanges([file])}
-                  okText="Yes"
-                  cancelText="No"
-                >
-                  <Button
-                    size="small"
-                    icon={<UndoOutlined />}
-                    danger
-                    loading={operationInProgress}
-                    title="Discard Changes"
-                  />
-                </Popconfirm>
-              ),
-              status === 'untracked' && (
-                <Popconfirm
-                  title="Delete this untracked file?"
-                  onConfirm={() => handleDeleteUntracked([file])}
-                  okText="Yes"
-                  cancelText="No"
-                >
-                  <Button
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    danger
-                    loading={operationInProgress}
-                    title="Delete File"
-                  />
-                </Popconfirm>
-              )
-            ].filter(Boolean) : []}
+            actions={
+              actions
+                ? [
+                    status === 'staged' ? (
+                      <Button
+                        size="small"
+                        onClick={() => handleUnstageFiles([file])}
+                        loading={operationInProgress}
+                      >
+                        Unstage
+                      </Button>
+                    ) : (
+                      <Button
+                        size="small"
+                        type="primary"
+                        onClick={() => handleStageFiles([file])}
+                        loading={operationInProgress}
+                      >
+                        Stage
+                      </Button>
+                    ),
+                    onViewDiff &&
+                      (status === 'modified' || status === 'staged') && (
+                        <Button
+                          size="small"
+                          icon={<EyeOutlined />}
+                          onClick={() => onViewDiff(file)}
+                          title="View Diff"
+                        />
+                      ),
+                    status === 'modified' && (
+                      <Popconfirm
+                        title="Discard changes to this file?"
+                        onConfirm={() => handleDiscardChanges([file])}
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <Button
+                          size="small"
+                          icon={<UndoOutlined />}
+                          danger
+                          loading={operationInProgress}
+                          title="Discard Changes"
+                        />
+                      </Popconfirm>
+                    ),
+                    status === 'untracked' && (
+                      <Popconfirm
+                        title="Delete this untracked file?"
+                        onConfirm={() => handleDeleteUntracked([file])}
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <Button
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          danger
+                          loading={operationInProgress}
+                          title="Delete File"
+                        />
+                      </Popconfirm>
+                    ),
+                  ].filter(Boolean)
+                : []
+            }
           >
             <List.Item.Meta
               avatar={
@@ -325,7 +336,7 @@ function GitOperations({ onViewDiff }) {
                     if (e.target.checked) {
                       setSelectedFiles([...selectedFiles, file]);
                     } else {
-                      setSelectedFiles(selectedFiles.filter(f => f !== file));
+                      setSelectedFiles(selectedFiles.filter((f) => f !== file));
                     }
                   }}
                 />
@@ -351,7 +362,9 @@ function GitOperations({ onViewDiff }) {
       <Card>
         <div style={{ textAlign: 'center', padding: '40px' }}>
           <CodeOutlined style={{ fontSize: '48px', color: '#ccc' }} />
-          <Title level={4} type="secondary">No Repository Selected</Title>
+          <Title level={4} type="secondary">
+            No Repository Selected
+          </Title>
           <Paragraph type="secondary">
             Please select a Git repository to access Git operations.
           </Paragraph>
@@ -366,7 +379,9 @@ function GitOperations({ onViewDiff }) {
         title={
           <Space>
             <CodeOutlined />
-            <Title level={4} style={{ margin: 0 }}>Git Operations</Title>
+            <Title level={4} style={{ margin: 0 }}>
+              Git Operations
+            </Title>
             {currentBranch && (
               <Tag icon={<BranchesOutlined />} color="green">
                 {currentBranch}
@@ -386,16 +401,19 @@ function GitOperations({ onViewDiff }) {
             <Tooltip title="Undo last operation">
               <Button
                 icon={<UndoOutlined />}
-                        onClick={async () => {
-                          try {
-                            await undoLastOperation();
-                            if (currentRepository && typeof loadOperationHistory === 'function') {
-                              await loadOperationHistory();
-                            }
-                          } catch (e) {
-                            // errors are handled in context
-                          }
-                        }}
+                onClick={async () => {
+                  try {
+                    await undoLastOperation();
+                    if (
+                      currentRepository &&
+                      typeof loadOperationHistory === 'function'
+                    ) {
+                      await loadOperationHistory();
+                    }
+                  } catch (e) {
+                    // errors are handled in context
+                  }
+                }}
                 disabled={operationHistory.length === 0}
                 loading={operationInProgress}
               />
@@ -405,18 +423,34 @@ function GitOperations({ onViewDiff }) {
       >
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           {/* Staging Area */}
-          <TabPane tab={
-            <Space>
-              <SaveOutlined />
-              Staging
-              {(stagedFiles.length + modifiedFiles.length + untrackedFiles.length > 0) && (
-                <Badge count={stagedFiles.length + modifiedFiles.length + untrackedFiles.length} />
-              )}
-            </Space>
-          } key="staging">
+          <TabPane
+            tab={
+              <Space>
+                <SaveOutlined />
+                Staging
+                {stagedFiles.length +
+                  modifiedFiles.length +
+                  untrackedFiles.length >
+                  0 && (
+                  <Badge
+                    count={
+                      stagedFiles.length +
+                      modifiedFiles.length +
+                      untrackedFiles.length
+                    }
+                  />
+                )}
+              </Space>
+            }
+            key="staging"
+          >
             <Row gutter={16}>
               <Col span={12}>
-                <Card size="small" title="Changes to Commit" className="staged-files">
+                <Card
+                  size="small"
+                  title="Changes to Commit"
+                  className="staged-files"
+                >
                   <div style={{ marginBottom: '8px' }}>
                     <Space>
                       <Button
@@ -443,20 +477,28 @@ function GitOperations({ onViewDiff }) {
                   {renderFileList(stagedFiles, 'staged')}
                 </Card>
               </Col>
-              
+
               <Col span={12}>
                 <Card size="small" title="Working Directory Changes">
                   <div style={{ marginBottom: '8px' }}>
                     <Space>
                       <Button
                         size="small"
-                        disabled={modifiedFiles.length + untrackedFiles.length === 0}
-                        onClick={() => handleStageFiles([...modifiedFiles, ...untrackedFiles])}
+                        disabled={
+                          modifiedFiles.length + untrackedFiles.length === 0
+                        }
+                        onClick={() =>
+                          handleStageFiles([
+                            ...modifiedFiles,
+                            ...untrackedFiles,
+                          ])
+                        }
                         loading={operationInProgress}
                       >
-                        Stage All ({modifiedFiles.length + untrackedFiles.length})
+                        Stage All (
+                        {modifiedFiles.length + untrackedFiles.length})
                       </Button>
-                      {(modifiedFiles.length + untrackedFiles.length > 0) && (
+                      {modifiedFiles.length + untrackedFiles.length > 0 && (
                         <Button
                           size="small"
                           onClick={() => setShowStashModal(true)}
@@ -467,21 +509,33 @@ function GitOperations({ onViewDiff }) {
                       )}
                     </Space>
                   </div>
-                  
+
                   <Collapse size="small" ghost>
-                    <Panel header={`Modified Files (${modifiedFiles.length})`} key="modified">
+                    <Panel
+                      header={`Modified Files (${modifiedFiles.length})`}
+                      key="modified"
+                    >
                       {renderFileList(modifiedFiles, 'modified')}
                     </Panel>
-                    <Panel header={`New Files (${untrackedFiles.length})`} key="untracked">
+                    <Panel
+                      header={`New Files (${untrackedFiles.length})`}
+                      key="untracked"
+                    >
                       {renderFileList(untrackedFiles, 'untracked')}
                     </Panel>
                     {deletedFiles.length > 0 && (
-                      <Panel header={`Deleted Files (${deletedFiles.length})`} key="deleted">
+                      <Panel
+                        header={`Deleted Files (${deletedFiles.length})`}
+                        key="deleted"
+                      >
                         {renderFileList(deletedFiles, 'deleted')}
                       </Panel>
                     )}
                     {conflictedFiles.length > 0 && (
-                      <Panel header={`Conflicted Files (${conflictedFiles.length})`} key="conflicted">
+                      <Panel
+                        header={`Conflicted Files (${conflictedFiles.length})`}
+                        key="conflicted"
+                      >
                         {renderFileList(conflictedFiles, 'conflicted')}
                       </Panel>
                     )}
@@ -492,34 +546,44 @@ function GitOperations({ onViewDiff }) {
           </TabPane>
 
           {/* Remote Operations */}
-          <TabPane tab={
-            <Space>
-              <CloudUploadOutlined />
-              Remote
-              {repositoryStatus && (repositoryStatus.ahead > 0 || repositoryStatus.behind > 0) && (
-                <Badge count={repositoryStatus.ahead + repositoryStatus.behind} />
-              )}
-            </Space>
-          } key="remote">
+          <TabPane
+            tab={
+              <Space>
+                <CloudUploadOutlined />
+                Remote
+                {repositoryStatus &&
+                  (repositoryStatus.ahead > 0 ||
+                    repositoryStatus.behind > 0) && (
+                    <Badge
+                      count={repositoryStatus.ahead + repositoryStatus.behind}
+                    />
+                  )}
+              </Space>
+            }
+            key="remote"
+          >
             <Space direction="vertical" style={{ width: '100%' }} size="large">
-              {repositoryStatus && (repositoryStatus.ahead > 0 || repositoryStatus.behind > 0) && (
-                <Alert
-                  message="Repository Status"
-                  description={
-                    <Space>
-                      {repositoryStatus.ahead > 0 && (
-                        <Text>↑ {repositoryStatus.ahead} commits ahead</Text>
-                      )}
-                      {repositoryStatus.behind > 0 && (
-                        <Text>↓ {repositoryStatus.behind} commits behind</Text>
-                      )}
-                    </Space>
-                  }
-                  type="info"
-                  showIcon
-                />
-              )}
-              
+              {repositoryStatus &&
+                (repositoryStatus.ahead > 0 || repositoryStatus.behind > 0) && (
+                  <Alert
+                    message="Repository Status"
+                    description={
+                      <Space>
+                        {repositoryStatus.ahead > 0 && (
+                          <Text>↑ {repositoryStatus.ahead} commits ahead</Text>
+                        )}
+                        {repositoryStatus.behind > 0 && (
+                          <Text>
+                            ↓ {repositoryStatus.behind} commits behind
+                          </Text>
+                        )}
+                      </Space>
+                    }
+                    type="info"
+                    showIcon
+                  />
+                )}
+
               <Row gutter={16}>
                 <Col span={12}>
                   <Card size="small" title="Pull Changes">
@@ -564,7 +628,7 @@ function GitOperations({ onViewDiff }) {
                     </Space>
                   </Card>
                 </Col>
-                
+
                 <Col span={12}>
                   <Card size="small" title="Push Changes">
                     <Space direction="vertical" style={{ width: '100%' }}>
@@ -589,18 +653,21 @@ function GitOperations({ onViewDiff }) {
           </TabPane>
 
           {/* Branch Management */}
-          <TabPane tab={
-            <Space>
-              <BranchesOutlined />
-              Branches
-              <Badge count={branches.length} />
-            </Space>
-          } key="branches">
+          <TabPane
+            tab={
+              <Space>
+                <BranchesOutlined />
+                Branches
+                <Badge count={branches.length} />
+              </Space>
+            }
+            key="branches"
+          >
             <Row gutter={16}>
               <Col span={12}>
-                <Card 
-                  size="small" 
-                  title="Current Branch" 
+                <Card
+                  size="small"
+                  title="Current Branch"
                   extra={
                     <Button
                       size="small"
@@ -613,20 +680,27 @@ function GitOperations({ onViewDiff }) {
                   }
                 >
                   <div style={{ textAlign: 'center', padding: '20px' }}>
-                    <BranchesOutlined style={{ fontSize: '32px', color: '#52c41a' }} />
-                    <Title level={4} style={{ color: '#52c41a', margin: '8px 0' }}>
+                    <BranchesOutlined
+                      style={{ fontSize: '32px', color: '#52c41a' }}
+                    />
+                    <Title
+                      level={4}
+                      style={{ color: '#52c41a', margin: '8px 0' }}
+                    >
                       {currentBranch}
                     </Title>
                     <Text type="secondary">Active branch</Text>
                   </div>
                 </Card>
               </Col>
-              
+
               <Col span={12}>
                 <Card size="small" title="All Branches">
                   <List
                     size="small"
-                    dataSource={branches.filter(branch => branch !== currentBranch)}
+                    dataSource={branches.filter(
+                      (branch) => branch !== currentBranch,
+                    )}
                     renderItem={(branch) => (
                       <List.Item
                         key={branch}
@@ -671,7 +745,7 @@ function GitOperations({ onViewDiff }) {
                               danger
                               icon={<DeleteOutlined />}
                             />
-                          </Popconfirm>
+                          </Popconfirm>,
                         ]}
                       >
                         <Space>
@@ -687,13 +761,16 @@ function GitOperations({ onViewDiff }) {
           </TabPane>
 
           {/* Stash Management */}
-          <TabPane tab={
-            <Space>
-              <InboxOutlined />
-              Stash
-              <Badge count={stashList.length} />
-            </Space>
-          } key="stash">
+          <TabPane
+            tab={
+              <Space>
+                <InboxOutlined />
+                Stash
+                <Badge count={stashList.length} />
+              </Space>
+            }
+            key="stash"
+          >
             <Card
               size="small"
               title="Stash List"
@@ -712,14 +789,18 @@ function GitOperations({ onViewDiff }) {
               <Collapse
                 ghost
                 onChange={(keys) => handleStashExpand(keys)}
-                expandIcon={({ isActive }) => <EyeOutlined rotate={isActive ? 90 : 0} />}
+                expandIcon={({ isActive }) => (
+                  <EyeOutlined rotate={isActive ? 90 : 0} />
+                )}
               >
                 {stashList.map((stash, index) => (
                   <Panel
                     key={index}
                     header={
                       <Space direction="vertical" size={0}>
-                        <Text strong>{stash.message || `stash@{${index}}`}</Text>
+                        <Text strong>
+                          {stash.message || `stash@{${index}}`}
+                        </Text>
                         <Space size="small">
                           <Text type="secondary">{stash.date}</Text>
                           <Text type="secondary">by {stash.author_name}</Text>
@@ -759,16 +840,36 @@ function GitOperations({ onViewDiff }) {
                           renderItem={(file) => (
                             <List.Item>
                               <Space>
-                                {file.status === 'added' && <FileAddOutlined style={{ color: '#52c41a' }} />}
-                                {file.status === 'modified' && <EditOutlined style={{ color: '#faad14' }} />}
-                                {file.status === 'deleted' && <FileDeleteOutlined style={{ color: '#ff4d4f' }} />}
-                                {file.status === 'renamed' && <FileTextOutlined style={{ color: '#1890ff' }} />}
-                                <Tag size="small" color={
-                                  file.status === 'added' ? 'success' :
-                                  file.status === 'modified' ? 'warning' :
-                                  file.status === 'deleted' ? 'error' :
-                                  'default'
-                                }>
+                                {file.status === 'added' && (
+                                  <FileAddOutlined
+                                    style={{ color: '#52c41a' }}
+                                  />
+                                )}
+                                {file.status === 'modified' && (
+                                  <EditOutlined style={{ color: '#faad14' }} />
+                                )}
+                                {file.status === 'deleted' && (
+                                  <FileDeleteOutlined
+                                    style={{ color: '#ff4d4f' }}
+                                  />
+                                )}
+                                {file.status === 'renamed' && (
+                                  <FileTextOutlined
+                                    style={{ color: '#1890ff' }}
+                                  />
+                                )}
+                                <Tag
+                                  size="small"
+                                  color={
+                                    file.status === 'added'
+                                      ? 'success'
+                                      : file.status === 'modified'
+                                        ? 'warning'
+                                        : file.status === 'deleted'
+                                          ? 'error'
+                                          : 'default'
+                                  }
+                                >
                                   {file.status}
                                 </Tag>
                                 <Text>{file.filename}</Text>
@@ -778,7 +879,13 @@ function GitOperations({ onViewDiff }) {
                         />
                         {stashFiles[index].stat && (
                           <div style={{ marginTop: 16 }}>
-                            <Text type="secondary" style={{ fontSize: '12px', fontFamily: 'monospace' }}>
+                            <Text
+                              type="secondary"
+                              style={{
+                                fontSize: '12px',
+                                fontFamily: 'monospace',
+                              }}
+                            >
                               {stashFiles[index].stat}
                             </Text>
                           </div>
@@ -794,13 +901,16 @@ function GitOperations({ onViewDiff }) {
           </TabPane>
 
           {/* Operation History */}
-          <TabPane tab={
-            <Space>
-              <HistoryOutlined />
-              History
-              <Badge count={operationHistory.length} />
-            </Space>
-          } key="history">
+          <TabPane
+            tab={
+              <Space>
+                <HistoryOutlined />
+                History
+                <Badge count={operationHistory.length} />
+              </Space>
+            }
+            key="history"
+          >
             <Card size="small" title="Recent Operations">
               <List
                 dataSource={operationHistory.slice(0, 20)}
@@ -809,8 +919,12 @@ function GitOperations({ onViewDiff }) {
                     <List.Item.Meta
                       title={
                         <Space>
-                          <Tag color="blue">{operation.type.replace(/_/g, ' ')}</Tag>
-                          <Text>{new Date(operation.timestamp).toLocaleString()}</Text>
+                          <Tag color="blue">
+                            {operation.type.replace(/_/g, ' ')}
+                          </Tag>
+                          <Text>
+                            {new Date(operation.timestamp).toLocaleString()}
+                          </Text>
                         </Space>
                       }
                       description={
@@ -839,36 +953,39 @@ function GitOperations({ onViewDiff }) {
           <Form.Item
             name="message"
             label="Commit Message"
-            rules={[{ required: true, message: 'Please enter a commit message' }]}
+            rules={[
+              { required: true, message: 'Please enter a commit message' },
+            ]}
           >
             <Input placeholder="Brief description of changes" />
           </Form.Item>
-          
-          <Form.Item
-            name="description"
-            label="Description (Optional)"
-          >
-            <TextArea 
+
+          <Form.Item name="description" label="Description (Optional)">
+            <TextArea
               rows={4}
               placeholder="Detailed description of what was changed and why..."
             />
           </Form.Item>
-          
+
           <div style={{ marginBottom: '16px' }}>
             <Text strong>Files to commit ({stagedFiles.length}):</Text>
-            <div style={{ maxHeight: '200px', overflow: 'auto', marginTop: '8px' }}>
+            <div
+              style={{ maxHeight: '200px', overflow: 'auto', marginTop: '8px' }}
+            >
               {renderFileList(stagedFiles, 'staged', false)}
             </div>
           </div>
-          
+
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit" loading={operationInProgress}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={operationInProgress}
+              >
                 Commit Changes
               </Button>
-              <Button onClick={() => setShowCommitModal(false)}>
-                Cancel
-              </Button>
+              <Button onClick={() => setShowCommitModal(false)}>Cancel</Button>
             </Space>
           </Form.Item>
         </Form>
@@ -889,29 +1006,30 @@ function GitOperations({ onViewDiff }) {
           >
             <Input placeholder="feature/new-feature" />
           </Form.Item>
-          
-          <Form.Item
-            name="startPoint"
-            label="Start Point (Optional)"
-          >
+
+          <Form.Item name="startPoint" label="Start Point (Optional)">
             <Select
               placeholder="Select branch or commit to start from"
               allowClear
             >
-              {branches.map(branch => (
-                <Option key={branch} value={branch}>{branch}</Option>
+              {branches.map((branch) => (
+                <Option key={branch} value={branch}>
+                  {branch}
+                </Option>
               ))}
             </Select>
           </Form.Item>
-          
+
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit" loading={operationInProgress}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={operationInProgress}
+              >
                 Create Branch
               </Button>
-              <Button onClick={() => setShowBranchModal(false)}>
-                Cancel
-              </Button>
+              <Button onClick={() => setShowBranchModal(false)}>Cancel</Button>
             </Space>
           </Form.Item>
         </Form>
@@ -943,4 +1061,4 @@ function GitOperations({ onViewDiff }) {
   );
 }
 
-export default GitOperations; 
+export default GitOperations;

@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Table, 
-  Tag, 
-  Button, 
-  Space, 
-  Input, 
-  Select, 
-  Avatar, 
-  Typography, 
+import {
+  Table,
+  Tag,
+  Button,
+  Space,
+  Input,
+  Select,
+  Avatar,
+  Typography,
   Badge,
   Tooltip,
   Empty,
   Spin,
-  Popconfirm
+  Popconfirm,
 } from 'antd';
 import {
   PullRequestOutlined,
@@ -22,7 +22,7 @@ import {
   PlusOutlined,
   EyeOutlined,
   MergeOutlined,
-  DeleteOutlined
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import './PRList.scss';
@@ -37,33 +37,40 @@ function PRList({ onCreatePR, onViewPR }) {
     githubRepoInfo,
     loadPullRequests,
     closePullRequest,
-    isGitHubAuthenticated
+    isGitHubAuthenticated,
   } = useGit();
 
   const [filters, setFilters] = useState({
     state: 'open',
-    search: ''
+    search: '',
   });
 
   useEffect(() => {
     if (githubRepoInfo && isGitHubAuthenticated) {
-      loadPullRequests(githubRepoInfo.owner, githubRepoInfo.repo, { state: filters.state });
+      loadPullRequests(githubRepoInfo.owner, githubRepoInfo.repo, {
+        state: filters.state,
+      });
     }
   }, [githubRepoInfo, filters.state, isGitHubAuthenticated, loadPullRequests]);
 
   const filteredPRs = useMemo(() => {
     if (!filters.search) return pullRequests;
     const search = filters.search.toLowerCase();
-    return pullRequests.filter(pr => 
-      pr.title.toLowerCase().includes(search) ||
-      pr.user.login.toLowerCase().includes(search) ||
-      `#${pr.number}`.includes(search)
+    return pullRequests.filter(
+      (pr) =>
+        pr.title.toLowerCase().includes(search) ||
+        pr.user.login.toLowerCase().includes(search) ||
+        `#${pr.number}`.includes(search),
     );
   }, [pullRequests, filters.search]);
 
   const handleClosePR = async (pr) => {
     try {
-      await closePullRequest(githubRepoInfo.owner, githubRepoInfo.repo, pr.number);
+      await closePullRequest(
+        githubRepoInfo.owner,
+        githubRepoInfo.repo,
+        pr.number,
+      );
     } catch (error) {
       // Error handled by context
     }
@@ -76,14 +83,19 @@ function PRList({ onCreatePR, onViewPR }) {
       width: 80,
       render: (_, pr) => (
         <Space>
-          <PullRequestOutlined 
-            style={{ 
-              color: pr.state === 'open' ? '#52c41a' : pr.merged ? '#1890ff' : '#999'
-            }} 
+          <PullRequestOutlined
+            style={{
+              color:
+                pr.state === 'open'
+                  ? '#52c41a'
+                  : pr.merged
+                    ? '#1890ff'
+                    : '#999',
+            }}
           />
           <Text strong>#{pr.number}</Text>
         </Space>
-      )
+      ),
     },
     {
       title: 'Title',
@@ -91,14 +103,18 @@ function PRList({ onCreatePR, onViewPR }) {
       ellipsis: true,
       render: (_, pr) => (
         <Space direction="vertical" size={0}>
-          <Text strong style={{ cursor: 'pointer' }} onClick={() => onViewPR(pr)}>
+          <Text
+            strong
+            style={{ cursor: 'pointer' }}
+            onClick={() => onViewPR(pr)}
+          >
             {pr.title}
           </Text>
           <Text type="secondary" style={{ fontSize: 12 }}>
             {pr.head.ref} → {pr.base.ref}
           </Text>
         </Space>
-      )
+      ),
     },
     {
       title: 'Author',
@@ -109,7 +125,7 @@ function PRList({ onCreatePR, onViewPR }) {
           <Avatar size="small" src={pr.user.avatar_url} />
           <Text>{pr.user.login}</Text>
         </Space>
-      )
+      ),
     },
     {
       title: 'Status',
@@ -117,13 +133,25 @@ function PRList({ onCreatePR, onViewPR }) {
       width: 120,
       render: (_, pr) => {
         if (pr.merged) {
-          return <Tag color="blue" icon={<CheckCircleOutlined />}>Merged</Tag>;
+          return (
+            <Tag color="blue" icon={<CheckCircleOutlined />}>
+              Merged
+            </Tag>
+          );
         }
         if (pr.state === 'open') {
-          return <Tag color="green" icon={<PullRequestOutlined />}>Open</Tag>;
+          return (
+            <Tag color="green" icon={<PullRequestOutlined />}>
+              Open
+            </Tag>
+          );
         }
-        return <Tag color="default" icon={<CloseCircleOutlined />}>Closed</Tag>;
-      }
+        return (
+          <Tag color="default" icon={<CloseCircleOutlined />}>
+            Closed
+          </Tag>
+        );
+      },
     },
     {
       title: 'Labels',
@@ -131,16 +159,14 @@ function PRList({ onCreatePR, onViewPR }) {
       width: 200,
       render: (_, pr) => (
         <Space size={[0, 4]} wrap>
-          {pr.labels?.slice(0, 3).map(label => (
+          {pr.labels?.slice(0, 3).map((label) => (
             <Tag key={label.name} color={`#${label.color}`}>
               {label.name}
             </Tag>
           ))}
-          {pr.labels?.length > 3 && (
-            <Tag>+{pr.labels.length - 3}</Tag>
-          )}
+          {pr.labels?.length > 3 && <Tag>+{pr.labels.length - 3}</Tag>}
         </Space>
-      )
+      ),
     },
     {
       title: 'Changes',
@@ -148,10 +174,11 @@ function PRList({ onCreatePR, onViewPR }) {
       width: 120,
       render: (_, pr) => (
         <Text type="secondary">
-          {pr.additions ? `+${pr.additions}` : ''} {pr.deletions ? `-${pr.deletions}` : ''}
+          {pr.additions ? `+${pr.additions}` : ''}{' '}
+          {pr.deletions ? `-${pr.deletions}` : ''}
           {pr.changed_files ? ` (${pr.changed_files} files)` : ''}
         </Text>
-      )
+      ),
     },
     {
       title: 'Actions',
@@ -160,9 +187,9 @@ function PRList({ onCreatePR, onViewPR }) {
       render: (_, pr) => (
         <Space>
           <Tooltip title="View PR">
-            <Button 
-              size="small" 
-              icon={<EyeOutlined />} 
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
               onClick={() => onViewPR(pr)}
             />
           </Tooltip>
@@ -174,17 +201,13 @@ function PRList({ onCreatePR, onViewPR }) {
               cancelText="Cancel"
             >
               <Tooltip title="Close PR">
-                <Button 
-                  size="small" 
-                  danger 
-                  icon={<CloseCircleOutlined />}
-                />
+                <Button size="small" danger icon={<CloseCircleOutlined />} />
               </Tooltip>
             </Popconfirm>
           )}
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   if (!isGitHubAuthenticated) {
@@ -213,11 +236,7 @@ function PRList({ onCreatePR, onViewPR }) {
             <Text strong>Pull Requests</Text>
             <Badge count={filteredPRs.length} showZero />
           </Space>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            onClick={onCreatePR}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={onCreatePR}>
             Create PR
           </Button>
         </Space>
@@ -254,7 +273,7 @@ function PRList({ onCreatePR, onViewPR }) {
           size="small"
           onRow={(pr) => ({
             onClick: () => onViewPR(pr),
-            style: { cursor: 'pointer' }
+            style: { cursor: 'pointer' },
           })}
         />
       </Spin>
@@ -263,13 +282,3 @@ function PRList({ onCreatePR, onViewPR }) {
 }
 
 export default PRList;
-
-
-
-
-
-
-
-
-
-

@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { ipcRenderer } from 'electron';
 import {
   Layout,
@@ -19,7 +25,7 @@ import {
   List,
   Popconfirm,
   Modal,
-  Collapse
+  Collapse,
 } from 'antd';
 import {
   BranchesOutlined,
@@ -50,7 +56,7 @@ import {
   MergeOutlined,
   FileAddOutlined,
   EditOutlined,
-  FileExcelOutlined
+  FileExcelOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import EnhancedDiffViewer from '../EnhancedDiffViewer/EnhancedDiffViewer';
@@ -66,7 +72,7 @@ const { Text } = Typography;
 const { Option } = Select;
 
 // DiffViewer component for displaying color-coded diffs
-const DiffViewer = ({ diff }) => {
+function DiffViewer({ diff }) {
   const renderDiffLine = (line, index) => {
     const style = {
       fontFamily: 'monospace',
@@ -81,81 +87,105 @@ const DiffViewer = ({ diff }) => {
     if (line.startsWith('+') && !line.startsWith('+++')) {
       // Addition (green)
       return (
-        <div key={index} style={{
-          ...style,
-          backgroundColor: '#f0f9f0',
-          color: '#22863a',
-          borderLeft: '3px solid #28a745'
-        }}>
-          {line}
-        </div>
-      );
-    } else if (line.startsWith('-') && !line.startsWith('---')) {
-      // Deletion (red)
-      return (
-        <div key={index} style={{
-          ...style,
-          backgroundColor: '#ffeef0',
-          color: '#cb2431',
-          borderLeft: '3px solid #cb2431'
-        }}>
-          {line}
-        </div>
-      );
-    } else if (line.startsWith('@@')) {
-      // Hunk header (blue)
-      return (
-        <div key={index} style={{
-          ...style,
-          backgroundColor: '#f1f8ff',
-          color: '#0366d6',
-          borderLeft: '3px solid #0366d6',
-          fontWeight: 'bold'
-        }}>
-          {line}
-        </div>
-      );
-    } else if (line.startsWith('diff --git') || line.startsWith('index ') || line.startsWith('---') || line.startsWith('+++')) {
-      // Metadata (gray)
-      return (
-        <div key={index} style={{
-          ...style,
-          backgroundColor: '#f6f8fa',
-          color: '#586069',
-          borderLeft: '3px solid #d1d9e0'
-        }}>
-          {line}
-        </div>
-      );
-    } else {
-      // Context lines (neutral)
-      return (
-        <div key={index} style={{
-          ...style,
-          backgroundColor: 'transparent',
-          color: '#24292e',
-          borderLeft: '3px solid transparent'
-        }}>
+        <div
+          key={index}
+          style={{
+            ...style,
+            backgroundColor: '#f0f9f0',
+            color: '#22863a',
+            borderLeft: '3px solid #28a745',
+          }}
+        >
           {line}
         </div>
       );
     }
+    if (line.startsWith('-') && !line.startsWith('---')) {
+      // Deletion (red)
+      return (
+        <div
+          key={index}
+          style={{
+            ...style,
+            backgroundColor: '#ffeef0',
+            color: '#cb2431',
+            borderLeft: '3px solid #cb2431',
+          }}
+        >
+          {line}
+        </div>
+      );
+    }
+    if (line.startsWith('@@')) {
+      // Hunk header (blue)
+      return (
+        <div
+          key={index}
+          style={{
+            ...style,
+            backgroundColor: '#f1f8ff',
+            color: '#0366d6',
+            borderLeft: '3px solid #0366d6',
+            fontWeight: 'bold',
+          }}
+        >
+          {line}
+        </div>
+      );
+    }
+    if (
+      line.startsWith('diff --git') ||
+      line.startsWith('index ') ||
+      line.startsWith('---') ||
+      line.startsWith('+++')
+    ) {
+      // Metadata (gray)
+      return (
+        <div
+          key={index}
+          style={{
+            ...style,
+            backgroundColor: '#f6f8fa',
+            color: '#586069',
+            borderLeft: '3px solid #d1d9e0',
+          }}
+        >
+          {line}
+        </div>
+      );
+    }
+    // Context lines (neutral)
+    return (
+      <div
+        key={index}
+        style={{
+          ...style,
+          backgroundColor: 'transparent',
+          color: '#24292e',
+          borderLeft: '3px solid transparent',
+        }}
+      >
+        {line}
+      </div>
+    );
   };
 
-  const diffLines = diff.split('\n').filter(line => line.trim() !== '');
+  const diffLines = diff.split('\n').filter((line) => line.trim() !== '');
 
   return (
-    <div style={{
-      background: '#ffffff',
-      border: '1px solid #d1d9e0',
-      borderRadius: '6px',
-      overflow: 'auto',
-      maxHeight: '400px'
-    }}>
+    <div
+      style={{
+        background: '#ffffff',
+        border: '1px solid #d1d9e0',
+        borderRadius: '6px',
+        overflow: 'auto',
+        maxHeight: '400px',
+      }}
+    >
       {diffLines.map((line, index) => renderDiffLine(line, index))}
     </div>
   );
-};
+}
 const { TextArea } = Input;
 
 function GitClient() {
@@ -216,7 +246,7 @@ function GitClient() {
     currentPullRequest,
     loadPullRequests,
     getPullRequest,
-    createPullRequest
+    createPullRequest,
   } = useGit();
 
   // UI State
@@ -291,7 +321,7 @@ function GitClient() {
     const autoOpenRecent = async () => {
       if (hasTriedAutoOpen || currentRepository) return;
       setHasTriedAutoOpen(true);
-      
+
       try {
         const stored = localStorage.getItem('gitRecentRepositories');
         if (stored) {
@@ -306,15 +336,24 @@ function GitClient() {
       }
     };
     autoOpenRecent();
-  }, [hasTriedAutoOpen, currentRepository, switchRepository, refreshRepositoryStatus]);
+  }, [
+    hasTriedAutoOpen,
+    currentRepository,
+    switchRepository,
+    refreshRepositoryStatus,
+  ]);
 
   // Save current repository to recent list
   useEffect(() => {
     if (currentRepository) {
       const repoName = currentRepository.split('/').pop();
-      const newEntry = { path: currentRepository, name: repoName, lastOpened: new Date().toISOString() };
-      setRecentRepositories(prev => {
-        const filtered = prev.filter(r => r.path !== currentRepository);
+      const newEntry = {
+        path: currentRepository,
+        name: repoName,
+        lastOpened: new Date().toISOString(),
+      };
+      setRecentRepositories((prev) => {
+        const filtered = prev.filter((r) => r.path !== currentRepository);
         const updated = [newEntry, ...filtered].slice(0, 10);
         localStorage.setItem('gitRecentRepositories', JSON.stringify(updated));
         return updated;
@@ -350,22 +389,22 @@ function GitClient() {
   // Unstaged files - show modified, untracked, conflicted, and deleted files
   const unstagedFiles = useMemo(() => {
     const files = [];
-    (modifiedFiles || []).forEach(f => {
+    (modifiedFiles || []).forEach((f) => {
       files.push({ path: f, status: 'modified' });
     });
-    (untrackedFiles || []).forEach(f => {
+    (untrackedFiles || []).forEach((f) => {
       files.push({ path: f, status: 'untracked' });
     });
-    (conflictedFiles || []).forEach(f => {
+    (conflictedFiles || []).forEach((f) => {
       files.push({ path: f, status: 'conflicted' });
     });
-    (deletedFiles || []).forEach(f => {
+    (deletedFiles || []).forEach((f) => {
       files.push({ path: f, status: 'deleted' });
     });
     return files;
   }, [modifiedFiles, untrackedFiles, conflictedFiles, deletedFiles]);
 
-  const hasChanges = (stagedFiles?.length > 0) || (unstagedFiles.length > 0);
+  const hasChanges = stagedFiles?.length > 0 || unstagedFiles.length > 0;
   const hasStagedChanges = stagedFiles && stagedFiles.length > 0;
   const hasConflicts = conflictedFiles && conflictedFiles.length > 0;
 
@@ -394,28 +433,31 @@ function GitClient() {
     setOriginalContent('');
   }, []);
 
-  const handleCommitSelect = useCallback(async (commitData) => {
-    setSelectedCommit(commitData);
-    setSelectedFile(null);
-    setSelectedFileStaged(false);
-    setCommitDiff(null);
-    setCommitFiles([]);
-    setEditingFile(null);
-    setEditedContent('');
-    setOriginalContent('');
-    
-    if (commitData?.hash) {
-      try {
-        setLoadingCommitFiles(true);
-        const files = await getCommitFiles(commitData.hash);
-        setCommitFiles(files || []);
-      } catch (error) {
-        console.error('Failed to load commit files:', error);
-      } finally {
-        setLoadingCommitFiles(false);
+  const handleCommitSelect = useCallback(
+    async (commitData) => {
+      setSelectedCommit(commitData);
+      setSelectedFile(null);
+      setSelectedFileStaged(false);
+      setCommitDiff(null);
+      setCommitFiles([]);
+      setEditingFile(null);
+      setEditedContent('');
+      setOriginalContent('');
+
+      if (commitData?.hash) {
+        try {
+          setLoadingCommitFiles(true);
+          const files = await getCommitFiles(commitData.hash);
+          setCommitFiles(files || []);
+        } catch (error) {
+          console.error('Failed to load commit files:', error);
+        } finally {
+          setLoadingCommitFiles(false);
+        }
       }
-    }
-  }, [getCommitFiles]);
+    },
+    [getCommitFiles],
+  );
 
   const handleBackToChanges = useCallback(() => {
     setSelectedCommit(null);
@@ -428,36 +470,47 @@ function GitClient() {
     setOriginalContent('');
   }, []);
 
-  const handleCommitFileSelect = useCallback(async (filePath) => {
-    if (!selectedCommit?.hash) return;
-    setSelectedFile(filePath);
-    setCommitDiff(null);
-    try {
-      const diff = await getCommitDiff(selectedCommit.hash, filePath);
-      setCommitDiff(diff);
-    } catch (error) {
-      console.error('Failed to load commit diff:', error);
-    }
-  }, [selectedCommit, getCommitDiff]);
+  const handleCommitFileSelect = useCallback(
+    async (filePath) => {
+      if (!selectedCommit?.hash) return;
+      setSelectedFile(filePath);
+      setCommitDiff(null);
+      try {
+        const diff = await getCommitDiff(selectedCommit.hash, filePath);
+        setCommitDiff(diff);
+      } catch (error) {
+        console.error('Failed to load commit diff:', error);
+      }
+    },
+    [selectedCommit, getCommitDiff],
+  );
 
-  const handleStageFile = useCallback(async (filePath) => {
-    try {
-      await stageFiles([filePath]);
-    } catch (error) {
-      console.error('Failed to stage file:', error);
-    }
-  }, [stageFiles]);
+  const handleStageFile = useCallback(
+    async (filePath) => {
+      try {
+        await stageFiles([filePath]);
+      } catch (error) {
+        console.error('Failed to stage file:', error);
+      }
+    },
+    [stageFiles],
+  );
 
-  const handleUnstageFile = useCallback(async (filePath) => {
-    try {
-      await unstageFiles([filePath]);
-    } catch (error) {
-      console.error('Failed to unstage file:', error);
-    }
-  }, [unstageFiles]);
+  const handleUnstageFile = useCallback(
+    async (filePath) => {
+      try {
+        await unstageFiles([filePath]);
+      } catch (error) {
+        console.error('Failed to unstage file:', error);
+      }
+    },
+    [unstageFiles],
+  );
 
   const handleStageAll = useCallback(async () => {
-    const filesToStage = unstagedFiles.filter(f => f.status !== 'conflicted').map(f => f.path);
+    const filesToStage = unstagedFiles
+      .filter((f) => f.status !== 'conflicted')
+      .map((f) => f.path);
     if (filesToStage.length > 0) {
       await stageFiles(filesToStage);
     }
@@ -504,31 +557,40 @@ function GitClient() {
     }
   }, [push, refreshRepositoryStatus, getCommitHistory]);
 
-  const handleDiscard = useCallback(async (filePath) => {
-    try {
-      await discardChanges([filePath]);
-    } catch (error) {
-      console.error('Failed to discard:', error);
-    }
-  }, [discardChanges]);
+  const handleDiscard = useCallback(
+    async (filePath) => {
+      try {
+        await discardChanges([filePath]);
+      } catch (error) {
+        console.error('Failed to discard:', error);
+      }
+    },
+    [discardChanges],
+  );
 
-  const handleDelete = useCallback(async (filePath) => {
-    try {
-      await deleteUntrackedFiles([filePath]);
-    } catch (error) {
-      console.error('Failed to delete:', error);
-    }
-  }, [deleteUntrackedFiles]);
+  const handleDelete = useCallback(
+    async (filePath) => {
+      try {
+        await deleteUntrackedFiles([filePath]);
+      } catch (error) {
+        console.error('Failed to delete:', error);
+      }
+    },
+    [deleteUntrackedFiles],
+  );
 
-  const handleBranchChange = useCallback(async (branchName) => {
-    try {
-      await switchBranch(branchName);
-      await refreshRepositoryStatus();
-      await getCommitHistory({ maxCount: 100 });
-    } catch (error) {
-      console.error('Failed to switch branch:', error);
-    }
-  }, [switchBranch, refreshRepositoryStatus, getCommitHistory]);
+  const handleBranchChange = useCallback(
+    async (branchName) => {
+      try {
+        await switchBranch(branchName);
+        await refreshRepositoryStatus();
+        await getCommitHistory({ maxCount: 100 });
+      } catch (error) {
+        console.error('Failed to switch branch:', error);
+      }
+    },
+    [switchBranch, refreshRepositoryStatus, getCommitHistory],
+  );
 
   const handleCreateBranch = useCallback(async () => {
     const trimmedName = newBranchName.trim();
@@ -537,7 +599,7 @@ function GitClient() {
       return;
     }
     // Check for duplicate
-    const exists = branchesWithDates.some(b => b.name === trimmedName);
+    const exists = branchesWithDates.some((b) => b.name === trimmedName);
     if (exists) {
       setNewBranchError(`Branch "${trimmedName}" already exists`);
       return;
@@ -561,7 +623,10 @@ function GitClient() {
     setFileSearchTerm('');
     setLoadingFiles(true);
     try {
-      const files = await ipcRenderer.invoke('git:listFiles', currentRepository);
+      const files = await ipcRenderer.invoke(
+        'git:listFiles',
+        currentRepository,
+      );
       setAllFiles(files || []);
     } catch (error) {
       console.error('Failed to load files:', error);
@@ -571,29 +636,41 @@ function GitClient() {
     }
   }, [currentRepository]);
 
-  const handleFilePickerSelect = useCallback(async (filePath) => {
-    setShowFilePicker(false);
-    setSelectedCommit(null); // Clear any selected commit
-    setSelectedFile(null); // Clear regular file selection
-    setSelectedFileStaged(false);
-    try {
-      const result = await ipcRenderer.invoke('git:readFile', currentRepository, filePath);
-      if (result.success) {
-        setEditingFile(filePath);
-        setEditedContent(result.content);
-        setOriginalContent(result.content);
+  const handleFilePickerSelect = useCallback(
+    async (filePath) => {
+      setShowFilePicker(false);
+      setSelectedCommit(null); // Clear any selected commit
+      setSelectedFile(null); // Clear regular file selection
+      setSelectedFileStaged(false);
+      try {
+        const result = await ipcRenderer.invoke(
+          'git:readFile',
+          currentRepository,
+          filePath,
+        );
+        if (result.success) {
+          setEditingFile(filePath);
+          setEditedContent(result.content);
+          setOriginalContent(result.content);
+        }
+      } catch (error) {
+        console.error('Failed to load file:', error);
+        message.error('Failed to load file');
       }
-    } catch (error) {
-      console.error('Failed to load file:', error);
-      message.error('Failed to load file');
-    }
-  }, [currentRepository]);
+    },
+    [currentRepository],
+  );
 
   const handleSaveFile = useCallback(async () => {
     if (!editingFile || !currentRepository) return;
     setIsSaving(true);
     try {
-      const result = await ipcRenderer.invoke('git:writeFile', currentRepository, editingFile, editedContent);
+      const result = await ipcRenderer.invoke(
+        'git:writeFile',
+        currentRepository,
+        editingFile,
+        editedContent,
+      );
       if (result.success) {
         message.success('File saved');
         setOriginalContent(editedContent);
@@ -616,17 +693,18 @@ function GitClient() {
   const filteredPickerFiles = useMemo(() => {
     if (!fileSearchTerm) return allFiles.slice(0, 50);
     const term = fileSearchTerm.toLowerCase();
-    return allFiles.filter(f => f.toLowerCase().includes(term)).slice(0, 50);
+    return allFiles.filter((f) => f.toLowerCase().includes(term)).slice(0, 50);
   }, [allFiles, fileSearchTerm]);
 
   const filteredGitHubRepos = useMemo(() => {
     if (!githubRepositories || githubRepositories.length === 0) return [];
     if (!githubRepoSearchTerm.trim()) return githubRepositories;
     const term = githubRepoSearchTerm.toLowerCase();
-    return githubRepositories.filter(repo => 
-      (repo.name && repo.name.toLowerCase().includes(term)) ||
-      (repo.full_name && repo.full_name.toLowerCase().includes(term)) ||
-      (repo.description && repo.description.toLowerCase().includes(term))
+    return githubRepositories.filter(
+      (repo) =>
+        (repo.name && repo.name.toLowerCase().includes(term)) ||
+        (repo.full_name && repo.full_name.toLowerCase().includes(term)) ||
+        (repo.description && repo.description.toLowerCase().includes(term)),
     );
   }, [githubRepositories, githubRepoSearchTerm]);
 
@@ -700,12 +778,18 @@ function GitClient() {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'staged': return <CheckOutlined style={{ color: '#52c41a' }} />;
-      case 'modified': return <SyncOutlined style={{ color: '#fa8c16' }} />;
-      case 'untracked': return <PlusOutlined style={{ color: '#1890ff' }} />;
-      case 'deleted': return <MinusOutlined style={{ color: '#f5222d' }} />;
-      case 'conflicted': return <WarningOutlined style={{ color: '#f5222d' }} />;
-      default: return <FileTextOutlined />;
+      case 'staged':
+        return <CheckOutlined style={{ color: '#52c41a' }} />;
+      case 'modified':
+        return <SyncOutlined style={{ color: '#fa8c16' }} />;
+      case 'untracked':
+        return <PlusOutlined style={{ color: '#1890ff' }} />;
+      case 'deleted':
+        return <MinusOutlined style={{ color: '#f5222d' }} />;
+      case 'conflicted':
+        return <WarningOutlined style={{ color: '#f5222d' }} />;
+      default:
+        return <FileTextOutlined />;
     }
   };
 
@@ -716,38 +800,98 @@ function GitClient() {
         <Dropdown
           menu={{
             items: [
-              ...(repositories || []).map(repo => ({
+              ...(repositories || []).map((repo) => ({
                 key: repo.path,
-                label: <Space><GitlabOutlined />{repo.name}</Space>,
-                onClick: () => switchRepository(repo.path).then(() => refreshRepositoryStatus())
+                label: (
+                  <Space>
+                    <GitlabOutlined />
+                    {repo.name}
+                  </Space>
+                ),
+                onClick: () =>
+                  switchRepository(repo.path).then(() =>
+                    refreshRepositoryStatus(),
+                  ),
               })),
-              ...(recentRepositories.filter(r => !(repositories || []).some(repo => repo.path === r.path)).length > 0 ? [
-                { type: 'divider' },
-                ...recentRepositories.filter(r => !(repositories || []).some(repo => repo.path === r.path)).map(repo => ({
-                  key: `recent-${repo.path}`,
-                  label: <Space><HistoryOutlined />{repo.name}<Text type="secondary" style={{ fontSize: 10 }}>{formatDate(repo.lastOpened)}</Text></Space>,
-                  onClick: async () => {
-                    try {
-                      await switchRepository(repo.path);
-                      await refreshRepositoryStatus();
-                    } catch (e) {
-                      message.error('Failed to open repository');
-                    }
-                  }
-                }))
-              ] : []),
+              ...(recentRepositories.filter(
+                (r) =>
+                  !(repositories || []).some((repo) => repo.path === r.path),
+              ).length > 0
+                ? [
+                    { type: 'divider' },
+                    ...recentRepositories
+                      .filter(
+                        (r) =>
+                          !(repositories || []).some(
+                            (repo) => repo.path === r.path,
+                          ),
+                      )
+                      .map((repo) => ({
+                        key: `recent-${repo.path}`,
+                        label: (
+                          <Space>
+                            <HistoryOutlined />
+                            {repo.name}
+                            <Text type="secondary" style={{ fontSize: 10 }}>
+                              {formatDate(repo.lastOpened)}
+                            </Text>
+                          </Space>
+                        ),
+                        onClick: async () => {
+                          try {
+                            await switchRepository(repo.path);
+                            await refreshRepositoryStatus();
+                          } catch (e) {
+                            message.error('Failed to open repository');
+                          }
+                        },
+                      })),
+                  ]
+                : []),
               { type: 'divider' },
-              { key: 'add', label: <Space><FolderOpenOutlined />Add Repository</Space>, onClick: () => selectRepository().then(() => refreshRepositoryStatus()) },
-              { key: 'clone', label: <Space><CloudDownloadOutlined />Clone Repository</Space>, onClick: () => setShowCloneModal(true) },
-              { key: 'init', label: <Space><PlusOutlined />Init New Repository</Space>, onClick: () => setShowInitModal(true) }
-            ]
+              {
+                key: 'add',
+                label: (
+                  <Space>
+                    <FolderOpenOutlined />
+                    Add Repository
+                  </Space>
+                ),
+                onClick: () =>
+                  selectRepository().then(() => refreshRepositoryStatus()),
+              },
+              {
+                key: 'clone',
+                label: (
+                  <Space>
+                    <CloudDownloadOutlined />
+                    Clone Repository
+                  </Space>
+                ),
+                onClick: () => setShowCloneModal(true),
+              },
+              {
+                key: 'init',
+                label: (
+                  <Space>
+                    <PlusOutlined />
+                    Init New Repository
+                  </Space>
+                ),
+                onClick: () => setShowInitModal(true),
+              },
+            ],
           }}
           trigger={['click']}
         >
           <Button className="repo-button">
             <Space>
               <GitlabOutlined />
-              <span>{currentRepository ? currentRepository.split('/').pop() : 'Select Repository'}</span>
+              <span>
+                {currentRepository
+                  ? currentRepository.split('/').pop()
+                  : 'Select Repository'}
+              </span>
             </Space>
           </Button>
         </Dropdown>
@@ -761,11 +905,13 @@ function GitClient() {
             suffixIcon={<BranchesOutlined />}
             dropdownMatchSelectWidth={false}
           >
-            {branchesWithDates.map(branch => (
+            {branchesWithDates.map((branch) => (
               <Option key={branch.name} value={branch.name}>
                 <Space>
                   <span>{branch.name}</span>
-                  <Text type="secondary" style={{ fontSize: 11 }}>{formatDate(branch.lastCommitDate)}</Text>
+                  <Text type="secondary" style={{ fontSize: 11 }}>
+                    {formatDate(branch.lastCommitDate)}
+                  </Text>
                 </Space>
               </Option>
             ))}
@@ -776,7 +922,11 @@ function GitClient() {
       <div className="toolbar-center">
         <Space size={4}>
           <Tooltip title="Undo">
-            <Button icon={<UndoOutlined />} onClick={undoLastOperation} disabled={operationInProgress} />
+            <Button
+              icon={<UndoOutlined />}
+              onClick={undoLastOperation}
+              disabled={operationInProgress}
+            />
           </Tooltip>
           <Tooltip title="Redo">
             <Button icon={<RedoOutlined />} disabled />
@@ -785,46 +935,88 @@ function GitClient() {
           <Divider type="vertical" />
 
           <Tooltip title="Fetch">
-            <Button icon={<SyncOutlined />} onClick={() => fetch()} loading={operationInProgress} />
+            <Button
+              icon={<SyncOutlined />}
+              onClick={() => fetch()}
+              loading={operationInProgress}
+            />
           </Tooltip>
           <Tooltip title={`Pull (${pullStrategy})`}>
             <Dropdown
               menu={{
                 items: [
-                  { key: 'merge', label: 'Pull (Merge)', onClick: () => { setPullStrategy('merge'); pull('origin', null, 'merge'); } },
-                  { key: 'rebase', label: 'Pull (Rebase)', onClick: () => { setPullStrategy('rebase'); pull('origin', null, 'rebase'); } },
-                  { key: 'ff', label: 'Pull (Fast-forward)', onClick: () => { setPullStrategy('ff-only'); pull('origin', null, 'ff-only'); } }
-                ]
+                  {
+                    key: 'merge',
+                    label: 'Pull (Merge)',
+                    onClick: () => {
+                      setPullStrategy('merge');
+                      pull('origin', null, 'merge');
+                    },
+                  },
+                  {
+                    key: 'rebase',
+                    label: 'Pull (Rebase)',
+                    onClick: () => {
+                      setPullStrategy('rebase');
+                      pull('origin', null, 'rebase');
+                    },
+                  },
+                  {
+                    key: 'ff',
+                    label: 'Pull (Fast-forward)',
+                    onClick: () => {
+                      setPullStrategy('ff-only');
+                      pull('origin', null, 'ff-only');
+                    },
+                  },
+                ],
               }}
               trigger={['contextMenu']}
             >
-              <Button icon={<CloudDownloadOutlined />} onClick={handlePull} loading={operationInProgress} />
+              <Button
+                icon={<CloudDownloadOutlined />}
+                onClick={handlePull}
+                loading={operationInProgress}
+              />
             </Dropdown>
           </Tooltip>
           <Tooltip title="Push">
-            <Button 
-              icon={<CloudUploadOutlined />} 
-              onClick={handlePush} 
+            <Button
+              icon={<CloudUploadOutlined />}
+              onClick={handlePush}
               loading={operationInProgress}
               disabled={!repositoryStatus?.ahead}
             >
-              {repositoryStatus?.ahead > 0 && <Badge count={repositoryStatus.ahead} size="small" />}
+              {repositoryStatus?.ahead > 0 && (
+                <Badge count={repositoryStatus.ahead} size="small" />
+              )}
             </Button>
           </Tooltip>
 
           <Divider type="vertical" />
 
           <Tooltip title="Branch">
-            <Button icon={<BranchesOutlined />} onClick={() => setShowBranchModal(true)} />
+            <Button
+              icon={<BranchesOutlined />}
+              onClick={() => setShowBranchModal(true)}
+            />
           </Tooltip>
           <Tooltip title="Stash">
-            <Button icon={<InboxOutlined />} onClick={() => setShowStashModal(true)} disabled={!hasChanges || operationInProgress} />
+            <Button
+              icon={<InboxOutlined />}
+              onClick={() => setShowStashModal(true)}
+              disabled={!hasChanges || operationInProgress}
+            />
           </Tooltip>
           <Tooltip title="Pop Stash">
-            <Button icon={<ExportOutlined />} onClick={() => {
-              getStashList();
-              setShowPopStashModal(true);
-            }} disabled={operationInProgress} />
+            <Button
+              icon={<ExportOutlined />}
+              onClick={() => {
+                getStashList();
+                setShowPopStashModal(true);
+              }}
+              disabled={operationInProgress}
+            />
           </Tooltip>
 
           <Divider type="vertical" />
@@ -847,7 +1039,11 @@ function GitClient() {
             </Button>
           </Tooltip>
         )}
-        <Tooltip title={isGitHubAuthenticated ? 'GitHub connected' : 'Connect to GitHub'}>
+        <Tooltip
+          title={
+            isGitHubAuthenticated ? 'GitHub connected' : 'Connect to GitHub'
+          }
+        >
           <Button
             icon={<GitlabOutlined />}
             onClick={() => setShowGitHubModal(true)}
@@ -858,8 +1054,8 @@ function GitClient() {
           </Button>
         </Tooltip>
         <Tooltip title="Refresh">
-          <Button 
-            icon={<ReloadOutlined />} 
+          <Button
+            icon={<ReloadOutlined />}
             onClick={async () => {
               await refreshRepositoryStatus();
               await getCommitHistory({ maxCount: 100 });
@@ -880,9 +1076,9 @@ function GitClient() {
       <div className="history-header">
         <Text strong>Commits</Text>
       </div>
-      
+
       {hasChanges && (
-        <div 
+        <div
           className={`commit-item uncommitted ${!selectedCommit ? 'active' : ''}`}
           onClick={handleBackToChanges}
         >
@@ -892,14 +1088,16 @@ function GitClient() {
           </div>
           <div className="commit-info">
             <Text className="commit-msg">Uncommitted Changes</Text>
-            <Text className="commit-meta">{(stagedFiles?.length || 0) + unstagedFiles.length} files changed</Text>
+            <Text className="commit-meta">
+              {(stagedFiles?.length || 0) + unstagedFiles.length} files changed
+            </Text>
           </div>
         </div>
       )}
 
       <div className="commit-list">
         {(commitHistory || []).map((c) => (
-          <div 
+          <div
             key={c.hash}
             className={`commit-item ${selectedCommit?.hash === c.hash ? 'active' : ''}`}
             onClick={() => handleCommitSelect(c)}
@@ -909,8 +1107,12 @@ function GitClient() {
               <div className="graph-node" />
             </div>
             <div className="commit-info">
-              <Text className="commit-msg" ellipsis={{ tooltip: c.message }}>{c.message}</Text>
-              <Text className="commit-meta">{c.author_name} • {formatDate(c.date)}</Text>
+              <Text className="commit-msg" ellipsis={{ tooltip: c.message }}>
+                {c.message}
+              </Text>
+              <Text className="commit-meta">
+                {c.author_name} • {formatDate(c.date)}
+              </Text>
             </div>
           </div>
         ))}
@@ -919,9 +1121,12 @@ function GitClient() {
   );
 
   // Check if a file is untracked
-  const isFileUntracked = useCallback((file) => {
-    return untrackedFiles && untrackedFiles.includes(file);
-  }, [untrackedFiles]);
+  const isFileUntracked = useCallback(
+    (file) => {
+      return untrackedFiles && untrackedFiles.includes(file);
+    },
+    [untrackedFiles],
+  );
 
   // MIDDLE: Diff viewer
   const renderMiddlePanel = () => {
@@ -936,10 +1141,10 @@ function GitClient() {
               {hasUnsavedChanges && <Tag color="orange">Unsaved</Tag>}
             </Space>
             <Space>
-              <Button 
-                type="primary" 
-                size="small" 
-                onClick={handleSaveFile} 
+              <Button
+                type="primary"
+                size="small"
+                onClick={handleSaveFile}
                 loading={isSaving}
                 disabled={!hasUnsavedChanges}
               >
@@ -950,7 +1155,10 @@ function GitClient() {
               </Button>
             </Space>
           </div>
-          <div className="diff-wrapper" style={{ height: 'calc(100% - 50px)', overflow: 'hidden' }}>
+          <div
+            className="diff-wrapper"
+            style={{ height: 'calc(100% - 50px)', overflow: 'hidden' }}
+          >
             <Input.TextArea
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
@@ -962,7 +1170,7 @@ function GitClient() {
                 resize: 'none',
                 border: 'none',
                 borderRadius: 0,
-                padding: '12px'
+                padding: '12px',
               }}
             />
           </div>
@@ -985,7 +1193,7 @@ function GitClient() {
     if (selectedFile) {
       // Viewing a file from a historical commit
       if (selectedCommit) {
-        const fileInfo = commitFiles.find(f => f.path === selectedFile);
+        const fileInfo = commitFiles.find((f) => f.path === selectedFile);
         return (
           <div className="middle-panel has-file">
             <div className="file-header">
@@ -995,7 +1203,15 @@ function GitClient() {
                 {fileInfo && <Tag color="blue">{fileInfo.status}</Tag>}
                 <Tag>{selectedCommit.hash?.substring(0, 7)}</Tag>
               </Space>
-              <Button size="small" onClick={() => { setSelectedFile(null); setCommitDiff(null); }}>Close</Button>
+              <Button
+                size="small"
+                onClick={() => {
+                  setSelectedFile(null);
+                  setCommitDiff(null);
+                }}
+              >
+                Close
+              </Button>
             </div>
             <div className="diff-wrapper">
               {commitDiff ? (
@@ -1018,7 +1234,7 @@ function GitClient() {
 
       // Viewing uncommitted changes
       const isUntracked = isFileUntracked(selectedFile);
-      
+
       return (
         <div className="middle-panel has-file">
           <div className="file-header">
@@ -1028,21 +1244,36 @@ function GitClient() {
               {selectedFileStaged && <Tag color="green">Staged</Tag>}
               {isUntracked && <Tag color="blue">New File</Tag>}
             </Space>
-            <Button size="small" onClick={() => { setSelectedFile(null); setSelectedFileStaged(false); }}>Close</Button>
+            <Button
+              size="small"
+              onClick={() => {
+                setSelectedFile(null);
+                setSelectedFileStaged(false);
+              }}
+            >
+              Close
+            </Button>
           </div>
           <div className="diff-wrapper">
             {isUntracked ? (
               <div className="untracked-notice">
                 <Empty
-                  image={<PlusOutlined style={{ fontSize: 48, color: '#1890ff' }} />}
+                  image={
+                    <PlusOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+                  }
                   description={
                     <Space direction="vertical">
                       <Text>This is a new untracked file</Text>
-                      <Text type="secondary">Stage it to include in your next commit</Text>
+                      <Text type="secondary">
+                        Stage it to include in your next commit
+                      </Text>
                     </Space>
                   }
                 >
-                  <Button type="primary" onClick={() => handleStageFile(selectedFile)}>
+                  <Button
+                    type="primary"
+                    onClick={() => handleStageFile(selectedFile)}
+                  >
                     Stage File
                   </Button>
                 </Empty>
@@ -1067,7 +1298,9 @@ function GitClient() {
           image={<CodeOutlined style={{ fontSize: 48, color: '#bbb' }} />}
           description={
             <div>
-              <Text style={{ color: '#666' }}>Select a file to view changes</Text>
+              <Text style={{ color: '#666' }}>
+                Select a file to view changes
+              </Text>
             </div>
           }
         />
@@ -1084,12 +1317,16 @@ function GitClient() {
           <div className="commit-details">
             <div className="section-header">
               <Text strong>Commit Info</Text>
-              <Button size="small" type="link" onClick={handleBackToChanges}>Back to changes</Button>
+              <Button size="small" type="link" onClick={handleBackToChanges}>
+                Back to changes
+              </Button>
             </div>
             <div className="details-body">
               <div className="detail-row">
                 <Text type="secondary">Hash</Text>
-                <Text code copyable={{ text: selectedCommit.hash }}>{selectedCommit.hash?.substring(0, 8)}</Text>
+                <Text code copyable={{ text: selectedCommit.hash }}>
+                  {selectedCommit.hash?.substring(0, 8)}
+                </Text>
               </div>
               <div className="detail-row">
                 <Text type="secondary">Author</Text>
@@ -1104,31 +1341,45 @@ function GitClient() {
               </div>
             </div>
           </div>
-          
+
           <div className="file-section">
             <div className="section-header">
               <Space>
                 <Text strong>Changed Files</Text>
-                <Badge count={commitFiles.length} style={{ backgroundColor: '#1890ff' }} />
+                <Badge
+                  count={commitFiles.length}
+                  style={{ backgroundColor: '#1890ff' }}
+                />
               </Space>
             </div>
             <Spin spinning={loadingCommitFiles}>
               <div className="file-list">
                 {commitFiles.map(({ path, status }) => (
-                  <div 
+                  <div
                     key={path}
                     className={`file-item ${selectedFile === path ? 'active' : ''}`}
                     onClick={() => handleCommitFileSelect(path)}
                   >
-                    {getStatusIcon(status === 'added' ? 'untracked' : status === 'deleted' ? 'modified' : 'modified')}
-                    <Text className="filename" ellipsis>{path}</Text>
+                    {getStatusIcon(
+                      status === 'added'
+                        ? 'untracked'
+                        : status === 'deleted'
+                          ? 'modified'
+                          : 'modified',
+                    )}
+                    <Text className="filename" ellipsis>
+                      {path}
+                    </Text>
                     <Tag size="small" style={{ marginLeft: 'auto' }}>
                       {status}
                     </Tag>
                   </div>
                 ))}
                 {!loadingCommitFiles && commitFiles.length === 0 && (
-                  <Empty description="No files changed" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                  <Empty
+                    description="No files changed"
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
                 )}
               </div>
             </Spin>
@@ -1144,27 +1395,39 @@ function GitClient() {
             <div className="file-section">
               <div className="section-header">
                 <Space>
-                  <Text strong className="staged-label">Staged</Text>
-                  <Badge count={stagedFiles.length} style={{ backgroundColor: '#52c41a' }} />
+                  <Text strong className="staged-label">
+                    Staged
+                  </Text>
+                  <Badge
+                    count={stagedFiles.length}
+                    style={{ backgroundColor: '#52c41a' }}
+                  />
                 </Space>
-                <Button size="small" onClick={handleUnstageAll}>Unstage All</Button>
+                <Button size="small" onClick={handleUnstageAll}>
+                  Unstage All
+                </Button>
               </div>
               <div className="file-list">
-                {stagedFiles.map(file => (
-                  <div 
-                    key={`staged-${file}`} 
+                {stagedFiles.map((file) => (
+                  <div
+                    key={`staged-${file}`}
                     className={`file-item ${selectedFile === file && selectedFileStaged ? 'active' : ''}`}
                     onClick={() => handleFileSelect(file, true)}
                   >
                     {getStatusIcon('staged')}
-                    <Text className="filename" ellipsis>{file}</Text>
+                    <Text className="filename" ellipsis>
+                      {file}
+                    </Text>
                     <div className="actions">
                       <Tooltip title="Unstage">
-                        <Button 
-                          size="small" 
+                        <Button
+                          size="small"
                           type="text"
-                          icon={<MinusOutlined />} 
-                          onClick={(e) => { e.stopPropagation(); handleUnstageFile(file); }} 
+                          icon={<MinusOutlined />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUnstageFile(file);
+                          }}
                         />
                       </Tooltip>
                     </div>
@@ -1179,39 +1442,69 @@ function GitClient() {
             <div className="file-section">
               <div className="section-header">
                 <Space>
-                  <Text strong className="unstaged-label">Unstaged Changes</Text>
-                  <Badge count={unstagedFiles.length} style={{ backgroundColor: '#fa8c16' }} />
+                  <Text strong className="unstaged-label">
+                    Unstaged Changes
+                  </Text>
+                  <Badge
+                    count={unstagedFiles.length}
+                    style={{ backgroundColor: '#fa8c16' }}
+                  />
                 </Space>
-                <Button size="small" onClick={handleStageAll}>Stage All</Button>
+                <Button size="small" onClick={handleStageAll}>
+                  Stage All
+                </Button>
               </div>
               <div className="file-list">
                 {unstagedFiles.map(({ path, status }) => (
-                  <div 
+                  <div
                     key={`unstaged-${path}`}
                     className={`file-item ${selectedFile === path && !selectedFileStaged ? 'active' : ''}`}
                     onClick={() => handleFileSelect(path, false)}
                   >
                     {getStatusIcon(status)}
-                    <Text className="filename" ellipsis>{path}</Text>
+                    <Text className="filename" ellipsis>
+                      {path}
+                    </Text>
                     <div className="actions">
                       {status !== 'conflicted' && (
                         <Tooltip title="Stage">
-                          <Button 
-                            size="small" 
+                          <Button
+                            size="small"
                             type="text"
-                            icon={<PlusOutlined />} 
-                            onClick={(e) => { e.stopPropagation(); handleStageFile(path); }} 
+                            icon={<PlusOutlined />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStageFile(path);
+                            }}
                           />
                         </Tooltip>
                       )}
                       {status === 'modified' && (
-                        <Popconfirm title="Discard changes?" onConfirm={() => handleDiscard(path)}>
-                          <Button size="small" type="text" danger icon={<UndoOutlined />} onClick={(e) => e.stopPropagation()} />
+                        <Popconfirm
+                          title="Discard changes?"
+                          onConfirm={() => handleDiscard(path)}
+                        >
+                          <Button
+                            size="small"
+                            type="text"
+                            danger
+                            icon={<UndoOutlined />}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </Popconfirm>
                       )}
                       {status === 'untracked' && (
-                        <Popconfirm title="Delete file?" onConfirm={() => handleDelete(path)}>
-                          <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={(e) => e.stopPropagation()} />
+                        <Popconfirm
+                          title="Delete file?"
+                          onConfirm={() => handleDelete(path)}
+                        >
+                          <Button
+                            size="small"
+                            type="text"
+                            danger
+                            icon={<DeleteOutlined />}
+                            onClick={(e) => e.stopPropagation()}
+                          />
                         </Popconfirm>
                       )}
                     </div>
@@ -1236,14 +1529,21 @@ function GitClient() {
         <div className="commit-form">
           <div className="section-header">
             <Text strong>Commit</Text>
-            {hasStagedChanges && <Tag color="green">{stagedFiles.length} staged</Tag>}
+            {hasStagedChanges && (
+              <Tag color="green">{stagedFiles.length} staged</Tag>
+            )}
           </div>
           <Input
             placeholder="Commit message"
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
             onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && hasStagedChanges && commitMessage.trim()) {
+              if (
+                (e.ctrlKey || e.metaKey) &&
+                e.key === 'Enter' &&
+                hasStagedChanges &&
+                commitMessage.trim()
+              ) {
                 e.preventDefault();
                 handleCommit();
               }
@@ -1255,7 +1555,12 @@ function GitClient() {
             value={commitDescription}
             onChange={(e) => setCommitDescription(e.target.value)}
             onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && hasStagedChanges && commitMessage.trim()) {
+              if (
+                (e.ctrlKey || e.metaKey) &&
+                e.key === 'Enter' &&
+                hasStagedChanges &&
+                commitMessage.trim()
+              ) {
                 e.preventDefault();
                 handleCommit();
               }
@@ -1284,7 +1589,9 @@ function GitClient() {
         {renderToolbar()}
         <div className="empty-state">
           <Empty
-            image={<GitlabOutlined style={{ fontSize: 48, color: '#1890ff' }} />}
+            image={
+              <GitlabOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+            }
             description={
               <Space direction="vertical">
                 <Text strong>No Repository Selected</Text>
@@ -1292,10 +1599,12 @@ function GitClient() {
               </Space>
             }
           >
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               icon={<FolderOpenOutlined />}
-              onClick={() => selectRepository().then(() => refreshRepositoryStatus())}
+              onClick={() =>
+                selectRepository().then(() => refreshRepositoryStatus())
+              }
             >
               Add Repository
             </Button>
@@ -1308,24 +1617,25 @@ function GitClient() {
   return (
     <div className="git-client">
       {renderToolbar()}
-      
+
       <Layout className="git-layout">
         <Sider width={260} className="left-sider">
-          <Spin spinning={isLoading}>
-            {renderCommitHistory()}
-          </Spin>
+          <Spin spinning={isLoading}>{renderCommitHistory()}</Spin>
         </Sider>
 
         <Content className="middle-content">
           <Spin spinning={operationInProgress}>
             {showPRView ? (
               selectedPR ? (
-                <PRReview 
-                  pr={selectedPR} 
+                <PRReview
+                  pr={selectedPR}
                   onClose={() => setSelectedPR(null)}
                   onRefresh={() => {
                     if (githubRepoInfo) {
-                      loadPullRequests(githubRepoInfo.owner, githubRepoInfo.repo);
+                      loadPullRequests(
+                        githubRepoInfo.owner,
+                        githubRepoInfo.repo,
+                      );
                     }
                   }}
                 />
@@ -1349,7 +1659,11 @@ function GitClient() {
       <Modal
         title="Branches"
         open={showBranchModal}
-        onCancel={() => { setShowBranchModal(false); setNewBranchName(''); setNewBranchError(''); }}
+        onCancel={() => {
+          setShowBranchModal(false);
+          setNewBranchName('');
+          setNewBranchError('');
+        }}
         footer={null}
       >
         <div style={{ marginBottom: 16 }}>
@@ -1357,24 +1671,31 @@ function GitClient() {
             <Input
               placeholder="New branch name"
               value={newBranchName}
-              onChange={(e) => { setNewBranchName(e.target.value); setNewBranchError(''); }}
+              onChange={(e) => {
+                setNewBranchName(e.target.value);
+                setNewBranchError('');
+              }}
               onPressEnter={handleCreateBranch}
               status={newBranchError ? 'error' : undefined}
             />
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
               onClick={handleCreateBranch}
               loading={operationInProgress}
             >
               Create
             </Button>
           </Space.Compact>
-          {newBranchError && <Text type="danger" style={{ fontSize: 12 }}>{newBranchError}</Text>}
+          {newBranchError && (
+            <Text type="danger" style={{ fontSize: 12 }}>
+              {newBranchError}
+            </Text>
+          )}
         </div>
         <List
           dataSource={branchesWithDates}
-          renderItem={branch => (
+          renderItem={(branch) => (
             <List.Item
               actions={[
                 branch.name !== currentBranch && (
@@ -1403,14 +1724,17 @@ function GitClient() {
                     </Button>
                   </Popconfirm>
                 ),
-                <Button 
+                <Button
                   key="checkout"
                   type={branch.name === currentBranch ? 'primary' : 'default'}
                   size="small"
-                  onClick={() => { handleBranchChange(branch.name); setShowBranchModal(false); }}
+                  onClick={() => {
+                    handleBranchChange(branch.name);
+                    setShowBranchModal(false);
+                  }}
                 >
                   {branch.name === currentBranch ? 'Current' : 'Checkout'}
-                </Button>
+                </Button>,
               ].filter(Boolean)}
             >
               <List.Item.Meta
@@ -1442,10 +1766,12 @@ function GitClient() {
           {!isGitHubAuthenticated && (
             <>
               <Text>
-                Connect to GitHub using OAuth to list your repositories, create pull requests, and more.
+                Connect to GitHub using OAuth to list your repositories, create
+                pull requests, and more.
               </Text>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                This will open your browser to authorize banFlow. No personal access token needed.
+                This will open your browser to authorize banFlow. No personal
+                access token needed.
               </Text>
               <Button
                 type="primary"
@@ -1515,9 +1841,15 @@ function GitClient() {
 
           {isGitHubAuthenticated && (
             <>
-              <Space align="center" style={{ width: '100%', justifyContent: 'space-between' }}>
+              <Space
+                align="center"
+                style={{ width: '100%', justifyContent: 'space-between' }}
+              >
                 <Space align="center">
-                  <Avatar src={githubUser?.avatar_url} icon={<UserOutlined />} />
+                  <Avatar
+                    src={githubUser?.avatar_url}
+                    icon={<UserOutlined />}
+                  />
                   <div>
                     <Text strong>{githubUser?.login || 'GitHub User'}</Text>
                     {githubUser?.name && (
@@ -1542,7 +1874,10 @@ function GitClient() {
               <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                 <Text type="secondary">
                   Repositories ({filteredGitHubRepos?.length || 0}
-                  {githubRepoSearchTerm && githubRepositories?.length > 0 && ` of ${githubRepositories.length}`})
+                  {githubRepoSearchTerm &&
+                    githubRepositories?.length > 0 &&
+                    ` of ${githubRepositories.length}`}
+                  )
                 </Text>
                 <Button
                   size="small"
@@ -1663,15 +1998,23 @@ function GitClient() {
               >
                 <Space>
                   <FileTextOutlined />
-                  <Text ellipsis style={{ maxWidth: 500 }}>{filePath}</Text>
+                  <Text ellipsis style={{ maxWidth: 500 }}>
+                    {filePath}
+                  </Text>
                 </Space>
               </List.Item>
             )}
-            locale={{ emptyText: fileSearchTerm ? 'No files match' : 'No files found' }}
+            locale={{
+              emptyText: fileSearchTerm ? 'No files match' : 'No files found',
+            }}
           />
           {allFiles.length > 50 && (
-            <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-              Showing {Math.min(50, filteredPickerFiles.length)} of {allFiles.length} files
+            <Text
+              type="secondary"
+              style={{ display: 'block', textAlign: 'center', marginTop: 8 }}
+            >
+              Showing {Math.min(50, filteredPickerFiles.length)} of{' '}
+              {allFiles.length} files
             </Text>
           )}
         </Spin>
@@ -1686,7 +2029,11 @@ function GitClient() {
           </Space>
         }
         open={showCloneModal}
-        onCancel={() => { setShowCloneModal(false); setCloneUrl(''); setCloneTargetPath(''); }}
+        onCancel={() => {
+          setShowCloneModal(false);
+          setCloneUrl('');
+          setCloneTargetPath('');
+        }}
         onOk={handleClone}
         okText="Clone"
         confirmLoading={isLoading}
@@ -1710,7 +2057,10 @@ function GitClient() {
                 onChange={(e) => setCloneTargetPath(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <Button icon={<FolderOpenOutlined />} onClick={handleSelectCloneDirectory}>
+              <Button
+                icon={<FolderOpenOutlined />}
+                onClick={handleSelectCloneDirectory}
+              >
                 Browse
               </Button>
             </Space.Compact>
@@ -1738,7 +2088,10 @@ function GitClient() {
           </Space>
         }
         open={showInitModal}
-        onCancel={() => { setShowInitModal(false); setInitTargetPath(''); }}
+        onCancel={() => {
+          setShowInitModal(false);
+          setInitTargetPath('');
+        }}
         onOk={handleInit}
         okText="Initialize"
         confirmLoading={isLoading}
@@ -1753,11 +2106,17 @@ function GitClient() {
                 onChange={(e) => setInitTargetPath(e.target.value)}
                 style={{ flex: 1 }}
               />
-              <Button icon={<FolderOpenOutlined />} onClick={handleSelectInitDirectory}>
+              <Button
+                icon={<FolderOpenOutlined />}
+                onClick={handleSelectInitDirectory}
+              >
                 Browse
               </Button>
             </Space.Compact>
-            <Text type="secondary" style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: 12, marginTop: 4, display: 'block' }}
+            >
               This will create a new Git repository in the selected directory.
             </Text>
           </div>
@@ -1792,7 +2151,7 @@ function GitClient() {
               if (key && !popStashFiles[key]) {
                 try {
                   const files = await getStashFiles(parseInt(key));
-                  setPopStashFiles(prev => ({ ...prev, [key]: files }));
+                  setPopStashFiles((prev) => ({ ...prev, [key]: files }));
                 } catch (e) {
                   console.error('Failed to load stash files:', e);
                 }
@@ -1803,11 +2162,19 @@ function GitClient() {
               <Collapse.Panel
                 key={index}
                 header={
-                  <Space direction="vertical" size={0} style={{ width: '100%' }}>
+                  <Space
+                    direction="vertical"
+                    size={0}
+                    style={{ width: '100%' }}
+                  >
                     <Text strong>{stash.message || `stash@{${index}}`}</Text>
                     <Space size="small">
-                      <Text type="secondary" style={{ fontSize: 12 }}>{stash.date}</Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>by {stash.author_name}</Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {stash.date}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        by {stash.author_name}
+                      </Text>
                     </Space>
                   </Space>
                 }
@@ -1871,7 +2238,10 @@ function GitClient() {
                         if (!stashFileDiffs[`${index}-${key}`]) {
                           try {
                             const diff = await getStashFileDiff(index, key);
-                            setStashFileDiffs(prev => ({ ...prev, [`${index}-${key}`]: diff }));
+                            setStashFileDiffs((prev) => ({
+                              ...prev,
+                              [`${index}-${key}`]: diff,
+                            }));
                           } catch (e) {
                             console.error('Failed to load file diff:', e);
                           }
@@ -1879,33 +2249,54 @@ function GitClient() {
                       }
                     }}
                   >
-                    {(popStashFiles[index].files || []).map((file, fileIndex) => (
-                      <Collapse.Panel
-                        key={file.filename}
-                        header={
-                          <Space>
-                            {file.status === 'added' && <FileAddOutlined style={{ color: '#52c41a' }} />}
-                            {file.status === 'modified' && <EditOutlined style={{ color: '#faad14' }} />}
-                            {file.status === 'deleted' && <FileExcelOutlined style={{ color: '#ff4d4f' }} />}
-                            {!['added', 'modified', 'deleted'].includes(file.status) && <FileTextOutlined />}
-                            <Tag size="small" color={
-                              file.status === 'added' ? 'success' :
-                              file.status === 'modified' ? 'warning' :
-                              file.status === 'deleted' ? 'error' : 'default'
-                            }>
-                              {file.status}
-                            </Tag>
-                            <Text>{file.filename}</Text>
-                          </Space>
-                        }
-                      >
-                        {stashFileDiffs[`${index}-${file.filename}`] ? (
-                          <DiffViewer diff={stashFileDiffs[`${index}-${file.filename}`]} />
-                        ) : (
-                          <Spin size="small" />
-                        )}
-                      </Collapse.Panel>
-                    ))}
+                    {(popStashFiles[index].files || []).map(
+                      (file, fileIndex) => (
+                        <Collapse.Panel
+                          key={file.filename}
+                          header={
+                            <Space>
+                              {file.status === 'added' && (
+                                <FileAddOutlined style={{ color: '#52c41a' }} />
+                              )}
+                              {file.status === 'modified' && (
+                                <EditOutlined style={{ color: '#faad14' }} />
+                              )}
+                              {file.status === 'deleted' && (
+                                <FileExcelOutlined
+                                  style={{ color: '#ff4d4f' }}
+                                />
+                              )}
+                              {!['added', 'modified', 'deleted'].includes(
+                                file.status,
+                              ) && <FileTextOutlined />}
+                              <Tag
+                                size="small"
+                                color={
+                                  file.status === 'added'
+                                    ? 'success'
+                                    : file.status === 'modified'
+                                      ? 'warning'
+                                      : file.status === 'deleted'
+                                        ? 'error'
+                                        : 'default'
+                                }
+                              >
+                                {file.status}
+                              </Tag>
+                              <Text>{file.filename}</Text>
+                            </Space>
+                          }
+                        >
+                          {stashFileDiffs[`${index}-${file.filename}`] ? (
+                            <DiffViewer
+                              diff={stashFileDiffs[`${index}-${file.filename}`]}
+                            />
+                          ) : (
+                            <Spin size="small" />
+                          )}
+                        </Collapse.Panel>
+                      ),
+                    )}
                   </Collapse>
                 ) : (
                   <Spin size="small" />

@@ -152,11 +152,13 @@ const ParentService = {
         node.parent = updatedDestinationParent.id;
         nodeToUpdate = node;
       });
-    
+
     // If the destination parent has markAsDoneOnDrag enabled, mark the node as complete
     if (parentToUpdate && parentToUpdate.markAsDoneOnDrag && nodeToUpdate) {
       const ISO8601ServiceInstance = require('./ISO8601Service').default;
-      console.log(`Marking node ${nodeId} as complete due to markAsDoneOnDrag on parent ${parentToUpdate.id}`);
+      console.log(
+        `Marking node ${nodeId} as complete due to markAsDoneOnDrag on parent ${parentToUpdate.id}`,
+      );
       nodes
         .chain()
         .find({ id: nodeId })
@@ -166,10 +168,14 @@ const ParentService = {
           if (!node.completedDate) {
             node.completedDate = ISO8601ServiceInstance.getISO8601Time();
           }
-          console.log(`Node ${nodeId} marked as complete:`, node.isComplete, node.completedDate);
+          console.log(
+            `Node ${nodeId} marked as complete:`,
+            node.isComplete,
+            node.completedDate,
+          );
         });
     }
-    
+
     lokiService.saveDB();
 
     // Refresh nodeToUpdate after potential completion update

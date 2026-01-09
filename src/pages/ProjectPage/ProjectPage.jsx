@@ -16,7 +16,12 @@ import {
   Space,
   Badge,
 } from 'antd';
-import { FilterOutlined, SearchOutlined, UpOutlined, DownOutlined } from '@ant-design/icons';
+import {
+  FilterOutlined,
+  SearchOutlined,
+  UpOutlined,
+  DownOutlined,
+} from '@ant-design/icons';
 import Layout from '../../layouts/App';
 // Components
 import NodeModal from '../../components/NodeModal/NodeModal';
@@ -67,13 +72,16 @@ class ProjectPage extends Component {
       this.projectName,
     );
 
-    this.setState({
-      ...this.state,
-      ...newState,
-    }, () => {
-      // Check URL parameters for node or parent to open
-      this.checkUrlParameters();
-    });
+    this.setState(
+      {
+        ...this.state,
+        ...newState,
+      },
+      () => {
+        // Check URL parameters for node or parent to open
+        this.checkUrlParameters();
+      },
+    );
 
     const self = this;
     ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
@@ -90,7 +98,7 @@ class ProjectPage extends Component {
 
   checkUrlParameters = () => {
     // Parse hash URL for HashRouter: #/projectPage/ProjectName?node=nodeId
-    const hash = window.location.hash;
+    const { hash } = window.location;
     const hashParts = hash.split('?');
     if (hashParts.length < 2) return;
 
@@ -428,7 +436,8 @@ class ProjectPage extends Component {
           }
 
           // Parse description and BanFlow fields
-          const { cleanDescription, banflowFields } = this.parseBanflowDescription(card.desc);
+          const { cleanDescription, banflowFields } =
+            this.parseBanflowDescription(card.desc);
           if (cleanDescription !== node.description) {
             NodeController.updateNodeProperty(
               'description',
@@ -437,10 +446,15 @@ class ProjectPage extends Component {
               false,
             );
           }
-          
+
           // Update BanFlow fields if they exist
           if (banflowFields.timeSpent !== undefined) {
-            NodeController.updateNodeProperty('timeSpent', node.id, banflowFields.timeSpent, false);
+            NodeController.updateNodeProperty(
+              'timeSpent',
+              node.id,
+              banflowFields.timeSpent,
+              false,
+            );
           }
 
           const currentParent = ParentController.getParents()[node.parent];
@@ -577,22 +591,30 @@ class ProjectPage extends Component {
 
   evaluateRule = (node, rule) => {
     if (!rule || !rule.field) return true;
-    const value = rule.value;
+    const { value } = rule;
     const lc = (text) => (text || '').toString().toLowerCase();
 
     switch (rule.field) {
       case 'titleDescription':
-        return lc(node.title).includes(lc(value)) || lc(node.description).includes(lc(value));
+        return (
+          lc(node.title).includes(lc(value)) ||
+          lc(node.description).includes(lc(value))
+        );
       case 'status':
         return value ? node.nodeState === value : true;
       case 'parent':
         return value ? node.parent === value : true;
       case 'tags':
         if (!value || value.length === 0) return true;
-        return Array.isArray(node.tags) && node.tags.some((t) => value.includes(t));
+        return (
+          Array.isArray(node.tags) && node.tags.some((t) => value.includes(t))
+        );
       case 'labels':
         if (!value || value.length === 0) return true;
-        return Array.isArray(node.labels) && node.labels.some((l) => value.includes(l));
+        return (
+          Array.isArray(node.labels) &&
+          node.labels.some((l) => value.includes(l))
+        );
       case 'dueDate': {
         if (!value || value.length === 0) return true;
         const [start, end] = value;
@@ -742,14 +764,18 @@ class ProjectPage extends Component {
               } else {
                 console.log('Node already exists');
                 // Check if node needs to be moved to a different parent/column
-                const currentParent = ParentController.getParents()[nodeExists.parent];
+                const currentParent =
+                  ParentController.getParents()[nodeExists.parent];
                 const newParentId = card.idList;
-                
-                if (currentParent.trello && currentParent.trello.id !== newParentId) {
+
+                if (
+                  currentParent.trello &&
+                  currentParent.trello.id !== newParentId
+                ) {
                   console.log('Node needs to be moved to different column');
-                  const newParent = Object.values(ParentController.getParents()).find(
-                    (parent) => parent.trello.id === newParentId,
-                  );
+                  const newParent = Object.values(
+                    ParentController.getParents(),
+                  ).find((parent) => parent.trello.id === newParentId);
 
                   const startNodeIds = Array.from(currentParent.nodeIds);
                   // remove node from current parent
@@ -766,27 +792,52 @@ class ProjectPage extends Component {
                     ...newParent,
                     nodeIds: finishNodeIds,
                   };
-                  parentController.updateNodesInParents(newStart, newFinish, nodeExists.id);
+                  parentController.updateNodesInParents(
+                    newStart,
+                    newFinish,
+                    nodeExists.id,
+                  );
                 }
-                
+
                 // Also update node properties if they've changed
                 if (card.name !== nodeExists.title) {
-                  NodeController.updateNodeProperty('title', nodeExists.id, card.name, false);
+                  NodeController.updateNodeProperty(
+                    'title',
+                    nodeExists.id,
+                    card.name,
+                    false,
+                  );
                 }
-                
+
                 // Parse description and BanFlow fields
-                const { cleanDescription, banflowFields } = this.parseBanflowDescription(card.desc);
+                const { cleanDescription, banflowFields } =
+                  this.parseBanflowDescription(card.desc);
                 if (cleanDescription !== nodeExists.description) {
-                  NodeController.updateNodeProperty('description', nodeExists.id, cleanDescription, false);
+                  NodeController.updateNodeProperty(
+                    'description',
+                    nodeExists.id,
+                    cleanDescription,
+                    false,
+                  );
                 }
-                
+
                 // Update BanFlow fields if they exist
                 if (banflowFields.timeSpent !== undefined) {
-                  NodeController.updateNodeProperty('timeSpent', nodeExists.id, banflowFields.timeSpent, false);
+                  NodeController.updateNodeProperty(
+                    'timeSpent',
+                    nodeExists.id,
+                    banflowFields.timeSpent,
+                    false,
+                  );
                 }
-                
+
                 // Update trello data
-                NodeController.updateNodeProperty('trello', nodeExists.id, card, false);
+                NodeController.updateNodeProperty(
+                  'trello',
+                  nodeExists.id,
+                  card,
+                  false,
+                );
               }
             });
           })
@@ -804,17 +855,18 @@ class ProjectPage extends Component {
       return { cleanDescription: '', banflowFields: {} };
     }
 
-    const banflowSeparator = '---Banflow fields, do not edit this line or below it---';
+    const banflowSeparator =
+      '---Banflow fields, do not edit this line or below it---';
     const parts = description.split(banflowSeparator);
-    
+
     const cleanDescription = parts[0].trim();
     const banflowFields = {};
-    
+
     if (parts.length > 1) {
       const fieldsSection = parts[1].trim();
       const fieldLines = fieldsSection.split('\n');
-      
-      fieldLines.forEach(line => {
+
+      fieldLines.forEach((line) => {
         const trimmedLine = line.trim();
         if (trimmedLine.startsWith('banflow:')) {
           const fieldPart = trimmedLine.substring(8); // Remove 'banflow:' prefix
@@ -830,7 +882,7 @@ class ProjectPage extends Component {
         }
       });
     }
-    
+
     return { cleanDescription, banflowFields };
   };
 
@@ -899,8 +951,26 @@ class ProjectPage extends Component {
           }}
           bodyStyle={{ padding: '12px 16px' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #f0f0f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1', minWidth: '200px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              flexWrap: 'wrap',
+              marginBottom: '12px',
+              paddingBottom: '12px',
+              borderBottom: '1px solid #f0f0f0',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flex: '1',
+                minWidth: '200px',
+              }}
+            >
               <span
                 style={{
                   fontWeight: 600,
@@ -921,7 +991,11 @@ class ProjectPage extends Component {
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>Iteration:</span>
+              <span
+                style={{ fontSize: '14px', color: '#666', fontWeight: 500 }}
+              >
+                Iteration:
+              </span>
               <Select
                 onSelect={(newValue) => {
                   this.setSelectedIteration(newValue);
@@ -960,7 +1034,14 @@ class ProjectPage extends Component {
               )}
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
             <Input.Search
               allowClear
               placeholder="Search title + description"
@@ -980,9 +1061,26 @@ class ProjectPage extends Component {
             </Badge>
           </div>
           {filtersOpen && (
-            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f0f0f0' }}>
-              <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#666', fontWeight: 500 }}>Match:</span>
+            <div
+              style={{
+                marginTop: '16px',
+                paddingTop: '16px',
+                borderTop: '1px solid #f0f0f0',
+              }}
+            >
+              <div
+                style={{
+                  marginBottom: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span
+                  style={{ fontSize: '13px', color: '#666', fontWeight: 500 }}
+                >
+                  Match:
+                </span>
                 <Radio.Group
                   value={queryConjunction}
                   onChange={(e) => this.setQueryConjunction(e.target.value)}
@@ -996,7 +1094,7 @@ class ProjectPage extends Component {
               </div>
               <div style={{ marginBottom: '8px' }}>
                 {filterRules.map((rule) => {
-                  const field = rule.field;
+                  const { field } = rule;
                   const commonProps = {
                     style: { width: '100%' },
                     size: 'small',
@@ -1005,14 +1103,20 @@ class ProjectPage extends Component {
                   const renderValueInput = () => {
                     if (field === 'status') {
                       const statuses = Array.from(
-                        new Set(Object.values(nodes).map((n) => n?.nodeState).filter(Boolean)),
+                        new Set(
+                          Object.values(nodes)
+                            .map((n) => n?.nodeState)
+                            .filter(Boolean),
+                        ),
                       );
                       return (
                         <Select
                           {...commonProps}
                           placeholder="Select status"
                           value={rule.value}
-                          onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                          onChange={(val) =>
+                            this.updateFilterRule(rule.id, { value: val })
+                          }
                           allowClear
                         >
                           {statuses.map((s) => (
@@ -1029,7 +1133,9 @@ class ProjectPage extends Component {
                           {...commonProps}
                           placeholder="Select parent"
                           value={rule.value}
-                          onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                          onChange={(val) =>
+                            this.updateFilterRule(rule.id, { value: val })
+                          }
                           allowClear
                           showSearch
                           optionFilterProp="children"
@@ -1046,7 +1152,9 @@ class ProjectPage extends Component {
                       const tags = Array.from(
                         new Set(
                           Object.values(nodes)
-                            .flatMap((n) => (Array.isArray(n?.tags) ? n.tags : []))
+                            .flatMap((n) =>
+                              Array.isArray(n?.tags) ? n.tags : [],
+                            )
                             .filter(Boolean),
                         ),
                       );
@@ -1056,7 +1164,9 @@ class ProjectPage extends Component {
                           mode="multiple"
                           placeholder="Select tags"
                           value={rule.value}
-                          onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                          onChange={(val) =>
+                            this.updateFilterRule(rule.id, { value: val })
+                          }
                           allowClear
                         >
                           {tags.map((t) => (
@@ -1071,7 +1181,9 @@ class ProjectPage extends Component {
                       const labels = Array.from(
                         new Set(
                           Object.values(nodes)
-                            .flatMap((n) => (Array.isArray(n?.labels) ? n.labels : []))
+                            .flatMap((n) =>
+                              Array.isArray(n?.labels) ? n.labels : [],
+                            )
                             .filter(Boolean),
                         ),
                       );
@@ -1081,7 +1193,9 @@ class ProjectPage extends Component {
                           mode="multiple"
                           placeholder="Select labels"
                           value={rule.value}
-                          onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                          onChange={(val) =>
+                            this.updateFilterRule(rule.id, { value: val })
+                          }
                           allowClear
                         >
                           {labels.map((l) => (
@@ -1092,7 +1206,11 @@ class ProjectPage extends Component {
                         </Select>
                       );
                     }
-                    if (field === 'dueDate' || field === 'created' || field === 'updated') {
+                    if (
+                      field === 'dueDate' ||
+                      field === 'created' ||
+                      field === 'updated'
+                    ) {
                       return (
                         <RangePicker
                           {...commonProps}
@@ -1138,16 +1256,24 @@ class ProjectPage extends Component {
                           {...commonProps}
                           placeholder="Completion"
                           value={rule.value}
-                          onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                          onChange={(val) =>
+                            this.updateFilterRule(rule.id, { value: val })
+                          }
                           allowClear
                         >
-                          <Select.Option value="complete">Complete</Select.Option>
-                          <Select.Option value="incomplete">Incomplete</Select.Option>
+                          <Select.Option value="complete">
+                            Complete
+                          </Select.Option>
+                          <Select.Option value="incomplete">
+                            Incomplete
+                          </Select.Option>
                         </Select>
                       );
                     }
                     if (field === 'iteration') {
-                      const iterationOptions = Object.values(iterations || {}).map((iter) => ({
+                      const iterationOptions = Object.values(
+                        iterations || {},
+                      ).map((iter) => ({
                         id: iter.id,
                         name: iter.title || `Iteration ${iter.id}`,
                       }));
@@ -1156,7 +1282,9 @@ class ProjectPage extends Component {
                           {...commonProps}
                           placeholder="Select iteration"
                           value={rule.value}
-                          onChange={(val) => this.updateFilterRule(rule.id, { value: val })}
+                          onChange={(val) =>
+                            this.updateFilterRule(rule.id, { value: val })
+                          }
                           allowClear
                         >
                           <Select.Option value={0}>Backlog</Select.Option>
@@ -1174,7 +1302,9 @@ class ProjectPage extends Component {
                         placeholder="Contains text"
                         value={rule.value}
                         onChange={(e) =>
-                          this.updateFilterRule(rule.id, { value: e.target.value })
+                          this.updateFilterRule(rule.id, {
+                            value: e.target.value,
+                          })
                         }
                       />
                     );
@@ -1196,23 +1326,48 @@ class ProjectPage extends Component {
                         size="small"
                         value={rule.field}
                         onChange={(val) =>
-                          this.updateFilterRule(rule.id, { field: val, value: undefined })
+                          this.updateFilterRule(rule.id, {
+                            field: val,
+                            value: undefined,
+                          })
                         }
                       >
-                        <Select.Option value="titleDescription">Title / Description</Select.Option>
-                        <Select.Option value="status">Status / State</Select.Option>
+                        <Select.Option value="titleDescription">
+                          Title / Description
+                        </Select.Option>
+                        <Select.Option value="status">
+                          Status / State
+                        </Select.Option>
                         <Select.Option value="parent">Parent</Select.Option>
                         <Select.Option value="tags">Tags</Select.Option>
                         <Select.Option value="labels">Labels</Select.Option>
                         <Select.Option value="dueDate">Due Date</Select.Option>
-                        <Select.Option value="created">Created Date</Select.Option>
-                        <Select.Option value="updated">Updated Date</Select.Option>
-                        <Select.Option value="estimatedTime">Estimated Time (sec)</Select.Option>
-                        <Select.Option value="timeSpent">Time Spent (sec)</Select.Option>
-                        <Select.Option value="completion">Completion</Select.Option>
-                        <Select.Option value="iteration">Iteration</Select.Option>
+                        <Select.Option value="created">
+                          Created Date
+                        </Select.Option>
+                        <Select.Option value="updated">
+                          Updated Date
+                        </Select.Option>
+                        <Select.Option value="estimatedTime">
+                          Estimated Time (sec)
+                        </Select.Option>
+                        <Select.Option value="timeSpent">
+                          Time Spent (sec)
+                        </Select.Option>
+                        <Select.Option value="completion">
+                          Completion
+                        </Select.Option>
+                        <Select.Option value="iteration">
+                          Iteration
+                        </Select.Option>
                       </Select>
-                      <div style={{ flex: '1', minWidth: '200px', maxWidth: '400px' }}>
+                      <div
+                        style={{
+                          flex: '1',
+                          minWidth: '200px',
+                          maxWidth: '400px',
+                        }}
+                      >
                         {renderValueInput()}
                       </div>
                       <Button
@@ -1227,7 +1382,12 @@ class ProjectPage extends Component {
                   );
                 })}
               </div>
-              <Button type="dashed" size="small" onClick={this.addFilterRule} block>
+              <Button
+                type="dashed"
+                size="small"
+                onClick={this.addFilterRule}
+                block
+              >
                 + Add rule
               </Button>
             </div>

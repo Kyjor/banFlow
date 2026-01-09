@@ -10,10 +10,7 @@ import {
   Space,
   Pagination,
 } from 'antd';
-import {
-  DeleteOutlined,
-  PlusOutlined,
-} from '@ant-design/icons';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import PropTypes from 'prop-types';
 import './SessionManager.scss';
@@ -21,7 +18,12 @@ import './SessionManager.scss';
 const { Option } = Select;
 const { TextArea } = Input;
 
-function SessionManager({ node, parents, updateNodeProperty, onSessionsChange }) {
+function SessionManager({
+  node,
+  parents,
+  updateNodeProperty,
+  onSessionsChange,
+}) {
   const [editingField, setEditingField] = useState(null); // Format: "rowIndex-fieldName"
   const [pageSize, setPageSize] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,7 +33,11 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
   // Handle click outside to cancel editing
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (editingField && tableRef.current && !tableRef.current.contains(event.target)) {
+      if (
+        editingField &&
+        tableRef.current &&
+        !tableRef.current.contains(event.target)
+      ) {
         setEditingField(null);
       }
     };
@@ -66,12 +72,21 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
   const unallocatedTime = calculateUnallocatedTime();
 
   // Check for overlapping sessions
-  const checkOverlap = (sessionIndex, startDateTime, finishDateTime, allSessions) => {
+  const checkOverlap = (
+    sessionIndex,
+    startDateTime,
+    finishDateTime,
+    allSessions,
+  ) => {
     const start = moment(startDateTime);
     const finish = moment(finishDateTime);
 
     return allSessions.some((session, index) => {
-      if (index === sessionIndex || !session.startDateTime || !session.finishDateTime) {
+      if (
+        index === sessionIndex ||
+        !session.startDateTime ||
+        !session.finishDateTime
+      ) {
         return false;
       }
       const sessionStart = moment(session.startDateTime);
@@ -93,7 +108,9 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
   };
 
   const saveField = (record, fieldName, value) => {
-    const updatedSessions = sessions.map((s, i) => (i === record.key ? { ...s } : s));
+    const updatedSessions = sessions.map((s, i) =>
+      i === record.key ? { ...s } : s,
+    );
     const index = record.key;
 
     if (index < 0 || index >= updatedSessions.length) {
@@ -121,16 +138,24 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
 
     // Recalculate dependent fields
     if (shouldRecalculate) {
-      if (fieldName === 'startDateTime' && session.length && session.startDateTime) {
+      if (
+        fieldName === 'startDateTime' &&
+        session.length &&
+        session.startDateTime
+      ) {
         // Recalculate finishDateTime from startDateTime and length
         session.finishDateTime = moment(session.startDateTime)
           .add(session.length, 'seconds')
           .toISOString();
-      } else if (fieldName === 'finishDateTime' && session.startDateTime && session.finishDateTime) {
+      } else if (
+        fieldName === 'finishDateTime' &&
+        session.startDateTime &&
+        session.finishDateTime
+      ) {
         // Recalculate length from start and end times
         session.length = moment(session.finishDateTime).diff(
           moment(session.startDateTime),
-          'seconds'
+          'seconds',
         );
       } else if (fieldName === 'length' && session.startDateTime) {
         // Recalculate finishDateTime from startDateTime and length
@@ -152,7 +177,14 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
       }
 
       // Check for overlaps (excluding current session)
-      if (checkOverlap(index, session.startDateTime, session.finishDateTime, updatedSessions)) {
+      if (
+        checkOverlap(
+          index,
+          session.startDateTime,
+          session.finishDateTime,
+          updatedSessions,
+        )
+      ) {
         message.error('This session overlaps with another session');
         setEditingField(null);
         return;
@@ -248,7 +280,14 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
 
     // Check for overlaps with existing sessions
     const allSessions = [...sessions];
-    if (checkOverlap(-1, tempSession.startDateTime, tempSession.finishDateTime, allSessions)) {
+    if (
+      checkOverlap(
+        -1,
+        tempSession.startDateTime,
+        tempSession.finishDateTime,
+        allSessions,
+      )
+    ) {
       message.error('This session overlaps with an existing session');
       return;
     }
@@ -303,7 +342,7 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
       if (updated.startDateTime && updated.finishDateTime) {
         updated.length = moment(updated.finishDateTime).diff(
           moment(updated.startDateTime),
-          'seconds'
+          'seconds',
         );
       }
     } else if (field === 'length') {
@@ -333,7 +372,10 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
       item: node.title,
       finishDateTime: now.toISOString(),
       length: unallocatedTime,
-      startDateTime: now.clone().subtract(unallocatedTime, 'seconds').toISOString(),
+      startDateTime: now
+        .clone()
+        .subtract(unallocatedTime, 'seconds')
+        .toISOString(),
       startingSeconds: (node.timeSpent || 0) - unallocatedTime,
     };
 
@@ -346,9 +388,10 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
       onSessionsChange(updatedSessions, node.timeSpent || 0);
     }
 
-    message.success(`Created session with ${formatDuration(unallocatedTime)} from unallocated time`);
+    message.success(
+      `Created session with ${formatDuration(unallocatedTime)} from unallocated time`,
+    );
   };
-
 
   const formatDuration = (seconds) => {
     if (!seconds || seconds === 0) return '0s';
@@ -383,9 +426,11 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
       width: '20%',
       render: (text, record) => {
         if (record.isUnallocated) {
-          return <span style={{ color: '#999', fontStyle: 'italic' }}>N/A</span>;
+          return (
+            <span style={{ color: '#999', fontStyle: 'italic' }}>N/A</span>
+          );
         }
-        
+
         // Temp sessions are always editable
         if (record.isTemp) {
           return (
@@ -439,7 +484,8 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
               transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => {
-              if (!editingField) e.currentTarget.style.backgroundColor = '#f5f5f5';
+              if (!editingField)
+                e.currentTarget.style.backgroundColor = '#f5f5f5';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -457,9 +503,11 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
       width: '20%',
       render: (text, record) => {
         if (record.isUnallocated) {
-          return <span style={{ color: '#999', fontStyle: 'italic' }}>N/A</span>;
+          return (
+            <span style={{ color: '#999', fontStyle: 'italic' }}>N/A</span>
+          );
         }
-        
+
         // Temp sessions are always editable
         if (record.isTemp) {
           return (
@@ -513,7 +561,8 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
               transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => {
-              if (!editingField) e.currentTarget.style.backgroundColor = '#f5f5f5';
+              if (!editingField)
+                e.currentTarget.style.backgroundColor = '#f5f5f5';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -537,7 +586,7 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
             </span>
           );
         }
-        
+
         // Temp sessions - length auto-calculates, but show it
         if (record.isTemp) {
           return (
@@ -555,10 +604,17 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
               value={text}
               onChange={(e) => {
                 // Update immediately for visual feedback
-                const updatedSessions = sessions.map((s, i) => 
-                  i === record.key ? { ...s, length: parseFloat(e.target.value) || 0 } : s
+                const updatedSessions = sessions.map((s, i) =>
+                  i === record.key
+                    ? { ...s, length: parseFloat(e.target.value) || 0 }
+                    : s,
                 );
-                updateNodeProperty('sessionHistory', node.id, updatedSessions, false);
+                updateNodeProperty(
+                  'sessionHistory',
+                  node.id,
+                  updatedSessions,
+                  false,
+                );
               }}
               onBlur={(e) => {
                 saveField(record, 'length', e.target.value);
@@ -582,7 +638,8 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
               transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => {
-              if (!editingField) e.currentTarget.style.backgroundColor = '#f5f5f5';
+              if (!editingField)
+                e.currentTarget.style.backgroundColor = '#f5f5f5';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -600,9 +657,11 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
       width: '15%',
       render: (text, record) => {
         if (record.isUnallocated) {
-          return <span style={{ color: '#999', fontStyle: 'italic' }}>N/A</span>;
+          return (
+            <span style={{ color: '#999', fontStyle: 'italic' }}>N/A</span>
+          );
         }
-        
+
         // Temp sessions are always editable
         if (record.isTemp) {
           return (
@@ -654,7 +713,8 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
               transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => {
-              if (!editingField) e.currentTarget.style.backgroundColor = '#f5f5f5';
+              if (!editingField)
+                e.currentTarget.style.backgroundColor = '#f5f5f5';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -678,7 +738,7 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
             </span>
           );
         }
-        
+
         // Temp sessions are always editable
         if (record.isTemp) {
           return (
@@ -700,10 +760,15 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
               value={text || ''}
               onChange={(e) => {
                 // Update immediately for visual feedback
-                const updatedSessions = sessions.map((s, i) => 
-                  i === record.key ? { ...s, comment: e.target.value } : s
+                const updatedSessions = sessions.map((s, i) =>
+                  i === record.key ? { ...s, comment: e.target.value } : s,
                 );
-                updateNodeProperty('sessionHistory', node.id, updatedSessions, false);
+                updateNodeProperty(
+                  'sessionHistory',
+                  node.id,
+                  updatedSessions,
+                  false,
+                );
               }}
               onBlur={(e) => {
                 saveField(record, 'comment', e.target.value);
@@ -725,13 +790,16 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
               minHeight: '20px',
             }}
             onMouseEnter={(e) => {
-              if (!editingField) e.currentTarget.style.backgroundColor = '#f5f5f5';
+              if (!editingField)
+                e.currentTarget.style.backgroundColor = '#f5f5f5';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            {text || <span style={{ color: '#999' }}>Click to add comment</span>}
+            {text || (
+              <span style={{ color: '#999' }}>Click to add comment</span>
+            )}
           </div>
         );
       },
@@ -753,7 +821,7 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
             </Button>
           );
         }
-        
+
         // Temp session has Save and Cancel buttons
         if (record.isTemp) {
           const canSave = record.startDateTime && record.finishDateTime;
@@ -767,16 +835,13 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
               >
                 Save
               </Button>
-              <Button
-                size="small"
-                onClick={cancelTempSession}
-              >
+              <Button size="small" onClick={cancelTempSession}>
                 Cancel
               </Button>
             </Space>
           );
         }
-        
+
         return (
           <Popconfirm
             title="Are you sure you want to delete this session?"
@@ -843,20 +908,22 @@ function SessionManager({ node, parents, updateNodeProperty, onSessionsChange })
 
   // Pagination - keep unallocated time entry and temp session always visible at top
   const paginatedData = useMemo(() => {
-    const unallocatedEntry = dataSource.find(item => item.isUnallocated);
-    const tempEntry = dataSource.find(item => item.isTemp);
-    const regularSessions = dataSource.filter(item => !item.isUnallocated && !item.isTemp);
-    
+    const unallocatedEntry = dataSource.find((item) => item.isUnallocated);
+    const tempEntry = dataSource.find((item) => item.isTemp);
+    const regularSessions = dataSource.filter(
+      (item) => !item.isUnallocated && !item.isTemp,
+    );
+
     const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
     const paginatedSessions = regularSessions.slice(start, end);
-    
+
     // Always include unallocated entry and temp session at the top if they exist
     const result = [];
     if (unallocatedEntry) result.push(unallocatedEntry);
     if (tempEntry) result.push(tempEntry);
     result.push(...paginatedSessions);
-    
+
     return result;
   }, [dataSource, currentPage, pageSize]);
 
@@ -939,4 +1006,3 @@ SessionManager.defaultProps = {
 };
 
 export default SessionManager;
-

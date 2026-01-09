@@ -19,20 +19,12 @@ class ParentModal extends React.Component {
 
   handleTimedCheckboxChange = (e) => {
     const { updateParentProperty, parent } = this.props;
-    updateParentProperty(
-      'isTimed',
-      parent.id,
-      e.target.checked,
-    );
+    updateParentProperty('isTimed', parent.id, e.target.checked);
   };
 
   handleMarkAsDoneCheckboxChange = (e) => {
     const { updateParentProperty, parent } = this.props;
-    updateParentProperty(
-      'markAsDoneOnDrag',
-      parent.id,
-      e.target.checked,
-    );
+    updateParentProperty('markAsDoneOnDrag', parent.id, e.target.checked);
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -58,11 +50,7 @@ class ParentModal extends React.Component {
               maxLength={70}
               autoSize={{ maxRows: 1 }}
               updateText={(value) => {
-                updateParentProperty(
-                  'title',
-                  parent.id,
-                  value,
-                );
+                updateParentProperty('title', parent.id, value);
               }}
             />
           </div>

@@ -8,12 +8,9 @@ import {
   Typography,
   Button,
   Checkbox,
-  Alert
+  Alert,
 } from 'antd';
-import {
-  MergeOutlined,
-  WarningOutlined
-} from '@ant-design/icons';
+import { MergeOutlined, WarningOutlined } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 
 const { TextArea } = Input;
@@ -21,11 +18,7 @@ const { Text } = Typography;
 const { Option } = Select;
 
 function PRMergeModal({ visible, pr, onCancel, onSuccess }) {
-  const {
-    githubRepoInfo,
-    mergePullRequest,
-    pullRequestLoading
-  } = useGit();
+  const { githubRepoInfo, mergePullRequest, pullRequestLoading } = useGit();
 
   const [form] = Form.useForm();
   const [mergeMethod, setMergeMethod] = useState('merge');
@@ -39,7 +32,7 @@ function PRMergeModal({ visible, pr, onCancel, onSuccess }) {
         pr.number,
         mergeMethod,
         values.commitTitle || null,
-        values.commitMessage || null
+        values.commitMessage || null,
       );
       form.resetFields();
       onSuccess?.();
@@ -58,11 +51,7 @@ function PRMergeModal({ visible, pr, onCancel, onSuccess }) {
       footer={null}
       width={600}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Alert
           message={`Merge #${pr.number}: ${pr.title}`}
           description={`This will merge ${pr.head.ref} into ${pr.base.ref}`}
@@ -80,14 +69,8 @@ function PRMergeModal({ visible, pr, onCancel, onSuccess }) {
           />
         )}
 
-        <Form.Item
-          label="Merge Method"
-          required
-        >
-          <Select
-            value={mergeMethod}
-            onChange={setMergeMethod}
-          >
+        <Form.Item label="Merge Method" required>
+          <Select value={mergeMethod} onChange={setMergeMethod}>
             <Option value="merge">
               <Space>
                 <MergeOutlined />
@@ -105,20 +88,11 @@ function PRMergeModal({ visible, pr, onCancel, onSuccess }) {
 
         {mergeMethod === 'squash' && (
           <>
-            <Form.Item
-              name="commitTitle"
-              label="Commit Title"
-            >
+            <Form.Item name="commitTitle" label="Commit Title">
               <Input placeholder="Merge pull request #X from..." />
             </Form.Item>
-            <Form.Item
-              name="commitMessage"
-              label="Commit Message"
-            >
-              <TextArea
-                rows={4}
-                placeholder="Optional commit message..."
-              />
+            <Form.Item name="commitMessage" label="Commit Message">
+              <TextArea rows={4} placeholder="Optional commit message..." />
             </Form.Item>
           </>
         )}
@@ -134,12 +108,10 @@ function PRMergeModal({ visible, pr, onCancel, onSuccess }) {
 
         <Form.Item>
           <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-            <Button onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
+            <Button onClick={onCancel}>Cancel</Button>
+            <Button
+              type="primary"
+              htmlType="submit"
               loading={pullRequestLoading}
               disabled={!pr.mergeable}
               icon={<MergeOutlined />}
@@ -154,13 +126,3 @@ function PRMergeModal({ visible, pr, onCancel, onSuccess }) {
 }
 
 export default PRMergeModal;
-
-
-
-
-
-
-
-
-
-

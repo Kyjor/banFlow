@@ -1,16 +1,22 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { ipcRenderer } from 'electron';
-import { 
-  Card, 
-  Select, 
-  Button, 
-  Space, 
-  Typography, 
-  Tag, 
-  Empty, 
-  Spin, 
-  Tooltip, 
-  Row, 
+import {
+  Card,
+  Select,
+  Button,
+  Space,
+  Typography,
+  Tag,
+  Empty,
+  Spin,
+  Tooltip,
+  Row,
   Col,
   Switch,
   Slider,
@@ -22,7 +28,7 @@ import {
   Input,
   Modal,
   List,
-  message
+  message,
 } from 'antd';
 import {
   FileTextOutlined,
@@ -45,10 +51,13 @@ import {
   EditOutlined,
   FileSearchOutlined,
   FolderOpenOutlined,
-  HistoryOutlined
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {
+  tomorrow,
+  prism,
+} from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useGit } from '../../../contexts/GitContext';
 import { useHeartbeat } from '../../../hooks/useHeartbeat';
 import './EnhancedDiffViewer.scss';
@@ -56,16 +65,16 @@ import './EnhancedDiffViewer.scss';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-function EnhancedDiffViewer({ 
-  file = null, 
-  staged = false, 
+function EnhancedDiffViewer({
+  file = null,
+  staged = false,
   compact = false,
   showFileSelector = true,
   theme = 'light',
   showStagingControls = true,
   editable = false,
   diffData = null,
-  readOnly = false
+  readOnly = false,
 }) {
   const {
     currentRepository,
@@ -85,7 +94,7 @@ function EnhancedDiffViewer({
     discardLines,
     getFileHistory,
     getFileAtCommit,
-    getCommitDiff
+    getCommitDiff,
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -138,7 +147,9 @@ function EnhancedDiffViewer({
     if (diffData) {
       // diffData is already parsed, find the file diff or use first one
       if (Array.isArray(diffData) && diffData.length > 0) {
-        const fileDiff = file ? diffData.find(d => d.name === file) : diffData[0];
+        const fileDiff = file
+          ? diffData.find((d) => d.name === file)
+          : diffData[0];
         setSelectedDiff(fileDiff || diffData[0] || null);
       } else {
         setSelectedDiff(null);
@@ -158,7 +169,7 @@ function EnhancedDiffViewer({
     // Skip if we have pre-loaded diffData
     if (diffData) return;
     if (currentDiff && currentDiff.length > 0 && selectedFile) {
-      const fileDiff = currentDiff.find(diff => diff.name === selectedFile);
+      const fileDiff = currentDiff.find((diff) => diff.name === selectedFile);
       setSelectedDiff(fileDiff || null);
     } else if (!currentDiff || currentDiff.length === 0) {
       setSelectedDiff(null);
@@ -177,7 +188,11 @@ function EnhancedDiffViewer({
       setLoadingImages(true);
       try {
         // Load modified/current version
-        const currentResult = await ipcRenderer.invoke('git:readImageFile', currentRepository, selectedFile);
+        const currentResult = await ipcRenderer.invoke(
+          'git:readImageFile',
+          currentRepository,
+          selectedFile,
+        );
         if (currentResult.success) {
           setModifiedImage(currentResult.dataUrl);
         } else {
@@ -188,7 +203,12 @@ function EnhancedDiffViewer({
         // For staged files, compare with HEAD (what was there before staging)
         // For unstaged files, also compare with HEAD (what's in the last commit)
         const gitRef = 'HEAD';
-        const originalResult = await ipcRenderer.invoke('git:getImageFromGit', currentRepository, selectedFile, gitRef);
+        const originalResult = await ipcRenderer.invoke(
+          'git:getImageFromGit',
+          currentRepository,
+          selectedFile,
+          gitRef,
+        );
         if (originalResult.success) {
           setOriginalImage(originalResult.dataUrl);
         } else {
@@ -226,8 +246,8 @@ function EnhancedDiffViewer({
     3000,
     {
       enabled: !!selectedFile && !!currentRepository && !diffData && !readOnly,
-      immediate: false
-    }
+      immediate: false,
+    },
   );
 
   // Load full file content when viewFullFile mode is enabled
@@ -235,7 +255,11 @@ function EnhancedDiffViewer({
     const loadFullFile = async () => {
       if (viewFullFile && selectedFile && currentRepository) {
         try {
-          const result = await ipcRenderer.invoke('git:readFile', currentRepository, selectedFile);
+          const result = await ipcRenderer.invoke(
+            'git:readFile',
+            currentRepository,
+            selectedFile,
+          );
           if (result.success) {
             setFullFileContent(result.content);
           }
@@ -294,29 +318,35 @@ function EnhancedDiffViewer({
   }, [selectedFile, currentRepository, readOnly, getFileHistory]);
 
   // Load file content at selected historical commit
-  const handleHistorySelect = useCallback(async (commitHash) => {
-    if (!commitHash) {
-      // "Current" selected - go back to normal diff view
-      setSelectedHistoryCommit(null);
-      setHistoricalContent(null);
-      return;
-    }
-    
-    setSelectedHistoryCommit(commitHash);
-    try {
-      const content = await getFileAtCommit(selectedFile, commitHash);
-      setHistoricalContent(content);
-    } catch (error) {
-      console.error('Failed to load file at commit:', error);
-      message.error('Failed to load historical version');
-      setHistoricalContent(null);
-    }
-  }, [selectedFile, getFileAtCommit]);
+  const handleHistorySelect = useCallback(
+    async (commitHash) => {
+      if (!commitHash) {
+        // "Current" selected - go back to normal diff view
+        setSelectedHistoryCommit(null);
+        setHistoricalContent(null);
+        return;
+      }
+
+      setSelectedHistoryCommit(commitHash);
+      try {
+        const content = await getFileAtCommit(selectedFile, commitHash);
+        setHistoricalContent(content);
+      } catch (error) {
+        console.error('Failed to load file at commit:', error);
+        message.error('Failed to load historical version');
+        setHistoricalContent(null);
+      }
+    },
+    [selectedFile, getFileAtCommit],
+  );
 
   const formatHistoryDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
   };
 
   const openFilePicker = async () => {
@@ -325,7 +355,10 @@ function EnhancedDiffViewer({
     setFileSearchTerm('');
     setLoadingFiles(true);
     try {
-      const files = await ipcRenderer.invoke('git:listFiles', currentRepository);
+      const files = await ipcRenderer.invoke(
+        'git:listFiles',
+        currentRepository,
+      );
       setAllFiles(files || []);
     } catch (error) {
       console.error('Failed to load files:', error);
@@ -340,7 +373,11 @@ function EnhancedDiffViewer({
     setSelectedFile(filePath);
     // Load file for editing
     try {
-      const result = await ipcRenderer.invoke('git:readFile', currentRepository, filePath);
+      const result = await ipcRenderer.invoke(
+        'git:readFile',
+        currentRepository,
+        filePath,
+      );
       if (result.success) {
         setEditedContent(result.content);
         setOriginalFileContent(result.content);
@@ -356,53 +393,62 @@ function EnhancedDiffViewer({
   const filteredPickerFiles = useMemo(() => {
     if (!fileSearchTerm) return allFiles.slice(0, 50); // Show first 50 by default
     const term = fileSearchTerm.toLowerCase();
-    return allFiles.filter(f => f.toLowerCase().includes(term)).slice(0, 50);
+    return allFiles.filter((f) => f.toLowerCase().includes(term)).slice(0, 50);
   }, [allFiles, fileSearchTerm]);
 
   const isImageFile = (filename) => {
     if (!filename) return false;
     const extension = filename.split('.').pop()?.toLowerCase();
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'];
+    const imageExtensions = [
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'webp',
+      'svg',
+      'bmp',
+      'ico',
+    ];
     return imageExtensions.includes(extension);
   };
 
   const getLanguageFromFilename = (filename) => {
     if (!filename) return 'text';
-    
+
     const extension = filename.split('.').pop()?.toLowerCase();
     const languageMap = {
-      'js': 'javascript',
-      'jsx': 'jsx',
-      'ts': 'typescript',
-      'tsx': 'tsx',
-      'py': 'python',
-      'java': 'java',
-      'cpp': 'cpp',
-      'c': 'c',
-      'cs': 'csharp',
-      'php': 'php',
-      'rb': 'ruby',
-      'go': 'go',
-      'rs': 'rust',
-      'html': 'markup',
-      'xml': 'markup',
-      'css': 'css',
-      'scss': 'scss',
-      'sass': 'sass',
-      'less': 'less',
-      'json': 'json',
-      'yaml': 'yaml',
-      'yml': 'yaml',
-      'md': 'markdown',
-      'sql': 'sql',
-      'sh': 'bash',
-      'bash': 'bash',
-      'zsh': 'bash',
-      'ps1': 'powershell',
-      'dockerfile': 'dockerfile',
-      'jl': 'julia'
+      js: 'javascript',
+      jsx: 'jsx',
+      ts: 'typescript',
+      tsx: 'tsx',
+      py: 'python',
+      java: 'java',
+      cpp: 'cpp',
+      c: 'c',
+      cs: 'csharp',
+      php: 'php',
+      rb: 'ruby',
+      go: 'go',
+      rs: 'rust',
+      html: 'markup',
+      xml: 'markup',
+      css: 'css',
+      scss: 'scss',
+      sass: 'sass',
+      less: 'less',
+      json: 'json',
+      yaml: 'yaml',
+      yml: 'yaml',
+      md: 'markdown',
+      sql: 'sql',
+      sh: 'bash',
+      bash: 'bash',
+      zsh: 'bash',
+      ps1: 'powershell',
+      dockerfile: 'dockerfile',
+      jl: 'julia',
     };
-    
+
     return languageMap[extension] || 'text';
   };
 
@@ -411,7 +457,7 @@ function EnhancedDiffViewer({
   };
 
   const toggleHunkExpansion = useCallback((hunkIndex) => {
-    setExpandedHunks(prev => {
+    setExpandedHunks((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(hunkIndex)) {
         newSet.delete(hunkIndex);
@@ -425,7 +471,7 @@ function EnhancedDiffViewer({
   // Toggle line selection for batch operations
   const toggleLineSelection = useCallback((hunkIndex, lineIndex) => {
     const key = `${hunkIndex}-${lineIndex}`;
-    setSelectedLines(prev => {
+    setSelectedLines((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(key)) {
         newSet.delete(key);
@@ -475,41 +521,47 @@ function EnhancedDiffViewer({
   }, [selectedFile, discardChanges, loadDiff]);
 
   // Stage hunk handler
-  const handleStageHunk = useCallback(async (hunkIndex) => {
-    if (!selectedFile) return;
-    try {
-      await stageHunk(selectedFile, hunkIndex);
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to stage hunk:', error);
-    }
-  }, [selectedFile, stageHunk, loadDiff]);
+  const handleStageHunk = useCallback(
+    async (hunkIndex) => {
+      if (!selectedFile) return;
+      try {
+        await stageHunk(selectedFile, hunkIndex);
+        loadDiff(selectedFile);
+      } catch (error) {
+        console.error('Failed to stage hunk:', error);
+      }
+    },
+    [selectedFile, stageHunk, loadDiff],
+  );
 
   // Discard hunk handler
-  const handleDiscardHunk = useCallback(async (hunkIndex) => {
-    if (!selectedFile) return;
-    try {
-      await discardHunk(selectedFile, hunkIndex);
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to discard hunk:', error);
-    }
-  }, [selectedFile, discardHunk, loadDiff]);
+  const handleDiscardHunk = useCallback(
+    async (hunkIndex) => {
+      if (!selectedFile) return;
+      try {
+        await discardHunk(selectedFile, hunkIndex);
+        loadDiff(selectedFile);
+      } catch (error) {
+        console.error('Failed to discard hunk:', error);
+      }
+    },
+    [selectedFile, discardHunk, loadDiff],
+  );
 
   // Stage selected lines handler
   const handleStageSelectedLines = useCallback(async () => {
     if (!selectedFile || selectedLines.size === 0) return;
-    
+
     // Group selected lines by hunk
     const hunkGroups = {};
-    selectedLines.forEach(key => {
+    selectedLines.forEach((key) => {
       const [hunkIndex, lineIndex] = key.split('-').map(Number);
       if (!hunkGroups[hunkIndex]) {
         hunkGroups[hunkIndex] = [];
       }
       hunkGroups[hunkIndex].push(lineIndex);
     });
-    
+
     try {
       // Stage lines for each hunk
       for (const [hunkIndex, lineIndices] of Object.entries(hunkGroups)) {
@@ -525,17 +577,17 @@ function EnhancedDiffViewer({
   // Discard selected lines handler
   const handleDiscardSelectedLines = useCallback(async () => {
     if (!selectedFile || selectedLines.size === 0) return;
-    
+
     // Group selected lines by hunk
     const hunkGroups = {};
-    selectedLines.forEach(key => {
+    selectedLines.forEach((key) => {
       const [hunkIndex, lineIndex] = key.split('-').map(Number);
       if (!hunkGroups[hunkIndex]) {
         hunkGroups[hunkIndex] = [];
       }
       hunkGroups[hunkIndex].push(lineIndex);
     });
-    
+
     try {
       // Discard lines for each hunk
       for (const [hunkIndex, lineIndices] of Object.entries(hunkGroups)) {
@@ -549,32 +601,42 @@ function EnhancedDiffViewer({
   }, [selectedFile, selectedLines, discardLines, clearLineSelection, loadDiff]);
 
   // Stage single line handler
-  const handleStageLine = useCallback(async (hunkIndex, lineIndex) => {
-    if (!selectedFile) return;
-    try {
-      await stageLines(selectedFile, hunkIndex, [lineIndex]);
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to stage line:', error);
-    }
-  }, [selectedFile, stageLines, loadDiff]);
+  const handleStageLine = useCallback(
+    async (hunkIndex, lineIndex) => {
+      if (!selectedFile) return;
+      try {
+        await stageLines(selectedFile, hunkIndex, [lineIndex]);
+        loadDiff(selectedFile);
+      } catch (error) {
+        console.error('Failed to stage line:', error);
+      }
+    },
+    [selectedFile, stageLines, loadDiff],
+  );
 
   // Discard single line handler
-  const handleDiscardLine = useCallback(async (hunkIndex, lineIndex) => {
-    if (!selectedFile) return;
-    try {
-      await discardLines(selectedFile, hunkIndex, [lineIndex]);
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to discard line:', error);
-    }
-  }, [selectedFile, discardLines, loadDiff]);
+  const handleDiscardLine = useCallback(
+    async (hunkIndex, lineIndex) => {
+      if (!selectedFile) return;
+      try {
+        await discardLines(selectedFile, hunkIndex, [lineIndex]);
+        loadDiff(selectedFile);
+      } catch (error) {
+        console.error('Failed to discard line:', error);
+      }
+    },
+    [selectedFile, discardLines, loadDiff],
+  );
 
   // Load file content for editing
   const loadFileForEditing = useCallback(async () => {
     if (!selectedFile || !currentRepository) return;
     try {
-      const result = await ipcRenderer.invoke('git:readFile', currentRepository, selectedFile);
+      const result = await ipcRenderer.invoke(
+        'git:readFile',
+        currentRepository,
+        selectedFile,
+      );
       if (result.success) {
         setEditedContent(result.content);
         setOriginalFileContent(result.content);
@@ -591,7 +653,12 @@ function EnhancedDiffViewer({
     if (!selectedFile || !currentRepository) return;
     setIsSaving(true);
     try {
-      const result = await ipcRenderer.invoke('git:writeFile', currentRepository, selectedFile, editedContent);
+      const result = await ipcRenderer.invoke(
+        'git:writeFile',
+        currentRepository,
+        selectedFile,
+        editedContent,
+      );
       if (result.success) {
         message.success('File saved successfully');
         setOriginalFileContent(editedContent);
@@ -617,17 +684,20 @@ function EnhancedDiffViewer({
   // Inline editing functions
   const hasInlineEdits = Object.keys(inlineEdits).length > 0;
 
-  const handleInlineEditStart = useCallback((lineKey, currentContent) => {
-    if (readOnly || staged) return;
-    setEditingLineKey(lineKey);
-    if (!inlineEdits[lineKey]) {
-      setInlineEdits(prev => ({ ...prev, [lineKey]: currentContent }));
-    }
-    setTimeout(() => inlineEditInputRef.current?.focus(), 50);
-  }, [readOnly, staged, inlineEdits]);
+  const handleInlineEditStart = useCallback(
+    (lineKey, currentContent) => {
+      if (readOnly || staged) return;
+      setEditingLineKey(lineKey);
+      if (!inlineEdits[lineKey]) {
+        setInlineEdits((prev) => ({ ...prev, [lineKey]: currentContent }));
+      }
+      setTimeout(() => inlineEditInputRef.current?.focus(), 50);
+    },
+    [readOnly, staged, inlineEdits],
+  );
 
   const handleInlineEditChange = useCallback((lineKey, newContent) => {
-    setInlineEdits(prev => ({ ...prev, [lineKey]: newContent }));
+    setInlineEdits((prev) => ({ ...prev, [lineKey]: newContent }));
   }, []);
 
   const handleInlineEditBlur = useCallback(() => {
@@ -639,38 +709,42 @@ function EnhancedDiffViewer({
     setIsSaving(true);
     try {
       // Load the current file content
-      const result = await ipcRenderer.invoke('git:readFile', currentRepository, selectedFile);
+      const result = await ipcRenderer.invoke(
+        'git:readFile',
+        currentRepository,
+        selectedFile,
+      );
       if (!result.success) throw new Error('Failed to read file');
-      
-      let lines = result.content.split('\n');
-      
+
+      const lines = result.content.split('\n');
+
       // Apply edits - we need to map line keys back to actual line numbers
       // For simplicity, we'll rebuild the file based on the modified content
       // The rightLines (modified side) represent the new file state
-      
+
       // Get the current file content and apply inline edits
       const fileContent = result.content;
       const fileLines = fileContent.split('\n');
-      
+
       // For each inline edit, we need to find which line number it corresponds to
       // This is complex because the diff shows line numbers, not array indices
       // We'll use a simpler approach: rebuild from the modified pane
-      
+
       // Actually, the easiest approach is to load the file, parse the hunks,
       // and apply the edits based on the new line numbers
       Object.entries(inlineEdits).forEach(([lineKey, newContent]) => {
         const [hunkIdx, lineIdx] = lineKey.split('-').map(Number);
         const hunk = selectedDiff?.hunks?.[hunkIdx];
         if (!hunk) return;
-        
+
         // Find the line in the hunk
         const line = hunk.lines[lineIdx];
         if (!line) return;
-        
+
         // Calculate the actual line number in the new file
         const headerMatch = hunk.header.match(/@@ -\d+,?\d* \+(\d+),?\d* @@/);
         if (!headerMatch) return;
-        
+
         let newLineNum = parseInt(headerMatch[1]);
         for (let i = 0; i < lineIdx; i++) {
           const prevLine = hunk.lines[i];
@@ -678,7 +752,7 @@ function EnhancedDiffViewer({
             newLineNum++;
           }
         }
-        
+
         // Only apply if this is an added or context line (modifiable)
         if (line.type === 'added' || line.type === 'context') {
           const arrayIdx = newLineNum - 1;
@@ -687,9 +761,14 @@ function EnhancedDiffViewer({
           }
         }
       });
-      
+
       const newContent = fileLines.join('\n');
-      const writeResult = await ipcRenderer.invoke('git:writeFile', currentRepository, selectedFile, newContent);
+      const writeResult = await ipcRenderer.invoke(
+        'git:writeFile',
+        currentRepository,
+        selectedFile,
+        newContent,
+      );
       if (writeResult.success) {
         message.success('Changes saved');
         setInlineEdits({});
@@ -703,7 +782,14 @@ function EnhancedDiffViewer({
     } finally {
       setIsSaving(false);
     }
-  }, [selectedFile, currentRepository, hasInlineEdits, inlineEdits, selectedDiff, loadDiff]);
+  }, [
+    selectedFile,
+    currentRepository,
+    hasInlineEdits,
+    inlineEdits,
+    selectedDiff,
+    loadDiff,
+  ]);
 
   const handleDiscardInlineEdits = useCallback(() => {
     setInlineEdits({});
@@ -713,31 +799,45 @@ function EnhancedDiffViewer({
 
   const filteredHunks = useMemo(() => {
     if (!selectedDiff || !searchTerm) return selectedDiff?.hunks || [];
-    
-    return selectedDiff.hunks.filter(hunk => 
-      hunk.lines.some(line => 
-        line.content.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+
+    return selectedDiff.hunks.filter((hunk) =>
+      hunk.lines.some((line) =>
+        line.content.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
     );
   }, [selectedDiff, searchTerm]);
 
   const renderHunkHeader = (hunk, hunkIndex) => {
     const isExpanded = expandedHunks.has(hunkIndex);
-    const addedLines = hunk.lines.filter(line => line.type === 'added').length;
-    const deletedLines = hunk.lines.filter(line => line.type === 'deleted').length;
-    
+    const addedLines = hunk.lines.filter(
+      (line) => line.type === 'added',
+    ).length;
+    const deletedLines = hunk.lines.filter(
+      (line) => line.type === 'deleted',
+    ).length;
+
     return (
       <div className="hunk-header">
-        <div 
+        <div
           className="hunk-header-info"
           onClick={() => toggleHunkExpansion(hunkIndex)}
           style={{ cursor: 'pointer', flex: 1 }}
         >
           <Space>
             {isExpanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
-            <Text code style={{ fontSize: '12px' }}>{hunk.header}</Text>
-            {addedLines > 0 && <Tag color="green" size="small">+{addedLines}</Tag>}
-            {deletedLines > 0 && <Tag color="red" size="small">-{deletedLines}</Tag>}
+            <Text code style={{ fontSize: '12px' }}>
+              {hunk.header}
+            </Text>
+            {addedLines > 0 && (
+              <Tag color="green" size="small">
+                +{addedLines}
+              </Tag>
+            )}
+            {deletedLines > 0 && (
+              <Tag color="red" size="small">
+                -{deletedLines}
+              </Tag>
+            )}
           </Space>
         </div>
         {showStagingControls && !staged && (
@@ -772,18 +872,25 @@ function EnhancedDiffViewer({
     );
   };
 
-  const renderLineWithStaging = (line, lineIndex, hunkIndex, oldLineNum = null, newLineNum = null) => {
+  const renderLineWithStaging = (
+    line,
+    lineIndex,
+    hunkIndex,
+    oldLineNum = null,
+    newLineNum = null,
+  ) => {
     const lineKey = `${hunkIndex}-${lineIndex}`;
     const isSelected = selectedHunk === lineKey;
     const isLineSelected = selectedLines.has(lineKey);
     const isChangedLine = line.type === 'added' || line.type === 'deleted';
-    const isEditable = inlineEditMode && (line.type === 'added' || line.type === 'context');
+    const isEditable =
+      inlineEditMode && (line.type === 'added' || line.type === 'context');
     const isEditing = editingLineKey === lineKey;
     const lineContent = line.content.substring(1);
     const editedValue = inlineEdits[lineKey] ?? lineContent;
-    
+
     return (
-      <div 
+      <div
         key={lineIndex}
         className={`diff-line diff-line-${line.type} ${isSelected ? 'selected' : ''} ${isLineSelected ? 'line-selected' : ''} ${isEditable ? 'editable' : ''} ${isEditing ? 'editing' : ''}`}
         onClick={() => {
@@ -805,11 +912,12 @@ function EnhancedDiffViewer({
             />
           </div>
         )}
-        
+
         <div className="line-content">
           {showLineNumbers && (
             <span className="line-number">
-              {oldLineNum !== null ? String(oldLineNum).padStart(4) : '    '} {newLineNum !== null ? String(newLineNum).padStart(4) : '    '}
+              {oldLineNum !== null ? String(oldLineNum).padStart(4) : '    '}{' '}
+              {newLineNum !== null ? String(newLineNum).padStart(4) : '    '}
             </span>
           )}
           <span className="line-prefix">
@@ -834,7 +942,7 @@ function EnhancedDiffViewer({
                 fontSize: '13px',
                 lineHeight: '20px',
                 padding: '0 8px',
-                outline: '2px solid #1890ff'
+                outline: '2px solid #1890ff',
               }}
               onClick={(e) => e.stopPropagation()}
             />
@@ -845,11 +953,14 @@ function EnhancedDiffViewer({
               customStyle={{
                 margin: 0,
                 padding: '0 8px',
-                background: inlineEdits[lineKey] !== undefined ? 'rgba(250, 173, 20, 0.15)' : 'transparent',
+                background:
+                  inlineEdits[lineKey] !== undefined
+                    ? 'rgba(250, 173, 20, 0.15)'
+                    : 'transparent',
                 fontSize: '13px',
                 lineHeight: '20px',
                 whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
-                cursor: isEditable ? 'text' : 'default'
+                cursor: isEditable ? 'text' : 'default',
               }}
               PreTag="span"
               wrapLines={wordWrap}
@@ -858,7 +969,7 @@ function EnhancedDiffViewer({
             </SyntaxHighlighter>
           )}
         </div>
-        
+
         {/* Line-level staging controls */}
         {showStagingControls && !staged && isChangedLine && !inlineEditMode && (
           <div className="line-actions" onClick={(e) => e.stopPropagation()}>
@@ -867,7 +978,11 @@ function EnhancedDiffViewer({
                 <Button
                   size="small"
                   type="text"
-                  icon={<PlusOutlined style={{ color: '#52c41a', fontSize: '12px' }} />}
+                  icon={
+                    <PlusOutlined
+                      style={{ color: '#52c41a', fontSize: '12px' }}
+                    />
+                  }
                   onClick={() => handleStageLine(hunkIndex, lineIndex)}
                   disabled={operationInProgress}
                 />
@@ -876,7 +991,11 @@ function EnhancedDiffViewer({
                 <Button
                   size="small"
                   type="text"
-                  icon={<CloseOutlined style={{ color: '#ff4d4f', fontSize: '12px' }} />}
+                  icon={
+                    <CloseOutlined
+                      style={{ color: '#ff4d4f', fontSize: '12px' }}
+                    />
+                  }
                   onClick={() => handleDiscardLine(hunkIndex, lineIndex)}
                   disabled={operationInProgress}
                 />
@@ -899,7 +1018,9 @@ function EnhancedDiffViewer({
       <div className="unified-diff">
         {filteredHunks.map((hunk, hunkIndex) => {
           // Parse hunk header to get starting line numbers
-          const headerMatch = hunk.header.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
+          const headerMatch = hunk.header.match(
+            /@@ -(\d+),?\d* \+(\d+),?\d* @@/,
+          );
           if (headerMatch) {
             oldLineNum = parseInt(headerMatch[1]);
             newLineNum = parseInt(headerMatch[2]);
@@ -909,7 +1030,7 @@ function EnhancedDiffViewer({
           const hunkLineNumbers = hunk.lines.map((line) => {
             let oldLine = null;
             let newLine = null;
-            
+
             if (line.type === 'deleted') {
               oldLine = oldLineNum++;
             } else if (line.type === 'added') {
@@ -929,7 +1050,13 @@ function EnhancedDiffViewer({
                 <div className="hunk-content">
                   {hunk.lines.map((line, lineIndex) => {
                     const lineNums = hunkLineNumbers[lineIndex];
-                    return renderLineWithStaging(line, lineIndex, hunkIndex, lineNums.oldLine, lineNums.newLine);
+                    return renderLineWithStaging(
+                      line,
+                      lineIndex,
+                      hunkIndex,
+                      lineNums.oldLine,
+                      lineNums.newLine,
+                    );
                   })}
                 </div>
               )}
@@ -962,14 +1089,14 @@ function EnhancedDiffViewer({
             content: line.content.substring(1),
             type: 'deleted',
             hunkIndex,
-            lineIndex
+            lineIndex,
           });
           rightLines.push({
             number: null,
             content: '',
             type: 'empty',
             hunkIndex,
-            lineIndex
+            lineIndex,
           });
         } else if (line.type === 'added') {
           leftLines.push({
@@ -977,14 +1104,14 @@ function EnhancedDiffViewer({
             content: '',
             type: 'empty',
             hunkIndex,
-            lineIndex
+            lineIndex,
           });
           rightLines.push({
             number: rightLineNum++,
             content: line.content.substring(1),
             type: 'added',
             hunkIndex,
-            lineIndex
+            lineIndex,
           });
         } else {
           leftLines.push({
@@ -992,14 +1119,14 @@ function EnhancedDiffViewer({
             content: line.content.substring(1),
             type: 'context',
             hunkIndex,
-            lineIndex
+            lineIndex,
           });
           rightLines.push({
             number: rightLineNum++,
             content: line.content.substring(1),
             type: 'context',
             hunkIndex,
-            lineIndex
+            lineIndex,
           });
         }
       });
@@ -1009,10 +1136,13 @@ function EnhancedDiffViewer({
       const lineKey = `${line.hunkIndex}-${line.lineIndex}`;
       const isLineSelected = selectedLines.has(lineKey);
       const isChangedLine = line.type === 'added' || line.type === 'deleted';
-      const isEditable = isRight && inlineEditMode && (line.type === 'added' || line.type === 'context');
+      const isEditable =
+        isRight &&
+        inlineEditMode &&
+        (line.type === 'added' || line.type === 'context');
       const isEditing = editingLineKey === lineKey;
       const editedValue = inlineEdits[lineKey] ?? line.content;
-      
+
       return (
         <div
           key={index}
@@ -1026,21 +1156,27 @@ function EnhancedDiffViewer({
           }}
         >
           {/* Checkbox for line selection (only on deleted lines in left pane or added lines in right pane) */}
-          {showStagingControls && !staged && isChangedLine && !inlineEditMode && (
-            <div className="line-checkbox" onClick={(e) => e.stopPropagation()}>
-              <input
-                type="checkbox"
-                checked={isLineSelected}
-                onChange={() => toggleLineSelection(line.hunkIndex, line.lineIndex)}
-                title="Select line"
-              />
-            </div>
-          )}
-          
+          {showStagingControls &&
+            !staged &&
+            isChangedLine &&
+            !inlineEditMode && (
+              <div
+                className="line-checkbox"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={isLineSelected}
+                  onChange={() =>
+                    toggleLineSelection(line.hunkIndex, line.lineIndex)
+                  }
+                  title="Select line"
+                />
+              </div>
+            )}
+
           {showLineNumbers && (
-            <span className="line-number">
-              {line.number || ''}
-            </span>
+            <span className="line-number">{line.number || ''}</span>
           )}
           <div className="line-content">
             {isEditing ? (
@@ -1048,7 +1184,9 @@ function EnhancedDiffViewer({
                 ref={inlineEditInputRef}
                 type="text"
                 value={editedValue}
-                onChange={(e) => handleInlineEditChange(lineKey, e.target.value)}
+                onChange={(e) =>
+                  handleInlineEditChange(lineKey, e.target.value)
+                }
                 onBlur={handleInlineEditBlur}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {
@@ -1066,7 +1204,7 @@ function EnhancedDiffViewer({
                   fontSize: '13px',
                   lineHeight: '20px',
                   padding: '0 8px',
-                  outline: '2px solid #1890ff'
+                  outline: '2px solid #1890ff',
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -1077,11 +1215,14 @@ function EnhancedDiffViewer({
                 customStyle={{
                   margin: 0,
                   padding: '0 8px',
-                  background: inlineEdits[lineKey] !== undefined ? 'rgba(250, 173, 20, 0.15)' : 'transparent',
+                  background:
+                    inlineEdits[lineKey] !== undefined
+                      ? 'rgba(250, 173, 20, 0.15)'
+                      : 'transparent',
                   fontSize: '13px',
                   lineHeight: '20px',
                   whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
-                  cursor: isEditable ? 'text' : 'default'
+                  cursor: isEditable ? 'text' : 'default',
                 }}
                 PreTag="span"
                 wrapLines={wordWrap}
@@ -1090,32 +1231,50 @@ function EnhancedDiffViewer({
               </SyntaxHighlighter>
             )}
           </div>
-          
+
           {/* Line actions */}
-          {showStagingControls && !staged && isChangedLine && !inlineEditMode && (
-            <div className="line-actions" onClick={(e) => e.stopPropagation()}>
-              <Space size={2}>
-                <Tooltip title="Stage">
-                  <Button
-                    size="small"
-                    type="text"
-                    icon={<PlusOutlined style={{ color: '#52c41a', fontSize: '10px' }} />}
-                    onClick={() => handleStageLine(line.hunkIndex, line.lineIndex)}
-                    disabled={operationInProgress}
-                  />
-                </Tooltip>
-                <Tooltip title="Discard">
-                  <Button
-                    size="small"
-                    type="text"
-                    icon={<CloseOutlined style={{ color: '#ff4d4f', fontSize: '10px' }} />}
-                    onClick={() => handleDiscardLine(line.hunkIndex, line.lineIndex)}
-                    disabled={operationInProgress}
-                  />
-                </Tooltip>
-              </Space>
-            </div>
-          )}
+          {showStagingControls &&
+            !staged &&
+            isChangedLine &&
+            !inlineEditMode && (
+              <div
+                className="line-actions"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Space size={2}>
+                  <Tooltip title="Stage">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={
+                        <PlusOutlined
+                          style={{ color: '#52c41a', fontSize: '10px' }}
+                        />
+                      }
+                      onClick={() =>
+                        handleStageLine(line.hunkIndex, line.lineIndex)
+                      }
+                      disabled={operationInProgress}
+                    />
+                  </Tooltip>
+                  <Tooltip title="Discard">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={
+                        <CloseOutlined
+                          style={{ color: '#ff4d4f', fontSize: '10px' }}
+                        />
+                      }
+                      onClick={() =>
+                        handleDiscardLine(line.hunkIndex, line.lineIndex)
+                      }
+                      disabled={operationInProgress}
+                    />
+                  </Tooltip>
+                </Space>
+              </div>
+            )}
         </div>
       );
     };
@@ -1129,17 +1288,21 @@ function EnhancedDiffViewer({
               <Tag color="red">-{diff.deleted}</Tag>
             </div>
             <div className="diff-content">
-              {leftLines.map((line, index) => renderSideBySideLine(line, index, false))}
+              {leftLines.map((line, index) =>
+                renderSideBySideLine(line, index, false),
+              )}
             </div>
           </Col>
-          
+
           <Col span={12} className="diff-pane right-pane">
             <div className="diff-pane-header">
               <Text strong>Modified</Text>
               <Tag color="green">+{diff.added}</Tag>
             </div>
             <div className="diff-content">
-              {rightLines.map((line, index) => renderSideBySideLine(line, index, true))}
+              {rightLines.map((line, index) =>
+                renderSideBySideLine(line, index, true),
+              )}
             </div>
           </Col>
         </Row>
@@ -1167,8 +1330,8 @@ function EnhancedDiffViewer({
       <div className="image-diff-container" style={{ padding: '20px' }}>
         <Row gutter={16}>
           <Col span={isNewImage || isDeletedImage ? 24 : 12}>
-            <Card 
-              size="small" 
+            <Card
+              size="small"
               title={
                 <Space>
                   <Text strong>Original</Text>
@@ -1179,31 +1342,33 @@ function EnhancedDiffViewer({
             >
               {originalImage ? (
                 <div style={{ textAlign: 'center' }}>
-                  <img 
-                    src={originalImage} 
-                    alt="Original" 
-                    style={{ 
-                      maxWidth: '100%', 
-                      maxHeight: '500px', 
+                  <img
+                    src={originalImage}
+                    alt="Original"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '500px',
                       objectFit: 'contain',
                       border: '1px solid #d9d9d9',
-                      borderRadius: '4px'
-                    }} 
+                      borderRadius: '4px',
+                    }}
                   />
                 </div>
               ) : (
-                <Empty 
-                  description={isNewImage ? "New image file" : "No original version"} 
+                <Empty
+                  description={
+                    isNewImage ? 'New image file' : 'No original version'
+                  }
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                 />
               )}
             </Card>
           </Col>
-          
+
           {!isNewImage && !isDeletedImage && (
             <Col span={12}>
-              <Card 
-                size="small" 
+              <Card
+                size="small"
                 title={
                   <Space>
                     <Text strong>Modified</Text>
@@ -1213,21 +1378,21 @@ function EnhancedDiffViewer({
               >
                 {modifiedImage ? (
                   <div style={{ textAlign: 'center' }}>
-                    <img 
-                      src={modifiedImage} 
-                      alt="Modified" 
-                      style={{ 
-                        maxWidth: '100%', 
-                        maxHeight: '500px', 
+                    <img
+                      src={modifiedImage}
+                      alt="Modified"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '500px',
                         objectFit: 'contain',
                         border: '1px solid #d9d9d9',
-                        borderRadius: '4px'
-                      }} 
+                        borderRadius: '4px',
+                      }}
                     />
                   </div>
                 ) : (
-                  <Empty 
-                    description="No modified version" 
+                  <Empty
+                    description="No modified version"
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                   />
                 )}
@@ -1237,8 +1402,8 @@ function EnhancedDiffViewer({
 
           {isNewImage && (
             <Col span={12}>
-              <Card 
-                size="small" 
+              <Card
+                size="small"
                 title={
                   <Space>
                     <Text strong>New Image</Text>
@@ -1248,20 +1413,23 @@ function EnhancedDiffViewer({
               >
                 {modifiedImage ? (
                   <div style={{ textAlign: 'center' }}>
-                    <img 
-                      src={modifiedImage} 
-                      alt="New" 
-                      style={{ 
-                        maxWidth: '100%', 
-                        maxHeight: '500px', 
+                    <img
+                      src={modifiedImage}
+                      alt="New"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '500px',
                         objectFit: 'contain',
                         border: '1px solid #d9d9d9',
-                        borderRadius: '4px'
-                      }} 
+                        borderRadius: '4px',
+                      }}
                     />
                   </div>
                 ) : (
-                  <Empty description="Loading..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                  <Empty
+                    description="Loading..."
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
                 )}
               </Card>
             </Col>
@@ -1271,15 +1439,21 @@ function EnhancedDiffViewer({
     );
   };
 
-  const availableFiles = staged 
+  const availableFiles = staged
     ? [...(stagedFiles || []), ...(deletedFiles || [])]
-    : [...(modifiedFiles || []), ...(stagedFiles || []), ...(deletedFiles || [])];
+    : [
+        ...(modifiedFiles || []),
+        ...(stagedFiles || []),
+        ...(deletedFiles || []),
+      ];
 
   if (!currentRepository) {
     return (
       <Card>
         <Empty
-          image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+          image={
+            <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+          }
           description="No repository selected"
         />
       </Card>
@@ -1290,9 +1464,7 @@ function EnhancedDiffViewer({
     return (
       <div className="enhanced-diff-viewer-compact">
         {selectedDiff ? (
-          <div className="compact-diff">
-            {renderUnifiedDiff(selectedDiff)}
-          </div>
+          <div className="compact-diff">{renderUnifiedDiff(selectedDiff)}</div>
         ) : (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             <Text type="secondary">Select a file to view diff</Text>
@@ -1308,11 +1480,11 @@ function EnhancedDiffViewer({
         title={
           <Space>
             <FileTextOutlined />
-            <Title level={4} style={{ margin: 0 }}>Diff Viewer</Title>
+            <Title level={4} style={{ margin: 0 }}>
+              Diff Viewer
+            </Title>
             {selectedFile && (
-              <Tag icon={getFileIcon(selectedFile)}>
-                {selectedFile}
-              </Tag>
+              <Tag icon={getFileIcon(selectedFile)}>{selectedFile}</Tag>
             )}
             {selectedFile && fileHistory.length > 0 && !readOnly && (
               <Select
@@ -1333,10 +1505,17 @@ function EnhancedDiffViewer({
                 </Option>
                 {fileHistory.map((commit) => (
                   <Option key={commit.hash} value={commit.hash}>
-                    <Space direction="vertical" size={0} style={{ lineHeight: 1.2 }}>
-                      <Text ellipsis style={{ maxWidth: 300 }}>{commit.message}</Text>
+                    <Space
+                      direction="vertical"
+                      size={0}
+                      style={{ lineHeight: 1.2 }}
+                    >
+                      <Text ellipsis style={{ maxWidth: 300 }}>
+                        {commit.message}
+                      </Text>
                       <Text type="secondary" style={{ fontSize: 11 }}>
-                        {commit.hash.substring(0, 7)} • {formatHistoryDate(commit.date)}
+                        {commit.hash.substring(0, 7)} •{' '}
+                        {formatHistoryDate(commit.date)}
                       </Text>
                     </Space>
                   </Option>
@@ -1344,11 +1523,13 @@ function EnhancedDiffViewer({
               </Select>
             )}
             {selectedHistoryCommit && (
-              <Tag color="purple">Viewing {selectedHistoryCommit.substring(0, 7)}</Tag>
+              <Tag color="purple">
+                Viewing {selectedHistoryCommit.substring(0, 7)}
+              </Tag>
             )}
             {selectedDiff && (
-              <Badge 
-                count={selectedDiff.hunks?.length || 0} 
+              <Badge
+                count={selectedDiff.hunks?.length || 0}
                 style={{ backgroundColor: '#52c41a' }}
                 title="Number of hunks"
               />
@@ -1366,10 +1547,11 @@ function EnhancedDiffViewer({
                 loading={isLoading}
                 showSearch
                 filterOption={(input, option) =>
-                  option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                  option.children.toLowerCase().indexOf(input.toLowerCase()) >=
+                  0
                 }
               >
-                {availableFiles.map(file => (
+                {availableFiles.map((file) => (
                   <Option key={file} value={file}>
                     <Space>
                       {getFileIcon(file)}
@@ -1379,7 +1561,7 @@ function EnhancedDiffViewer({
                 ))}
               </Select>
             )}
-            
+
             <Select
               value={viewMode}
               onChange={setViewMode}
@@ -1421,7 +1603,10 @@ function EnhancedDiffViewer({
                 onClick={() => {
                   if (selectedDiff) {
                     const diffText = selectedDiff.hunks
-                      .map(hunk => `${hunk.header}\n${hunk.lines.map(line => line.content).join('\n')}`)
+                      .map(
+                        (hunk) =>
+                          `${hunk.header}\n${hunk.lines.map((line) => line.content).join('\n')}`,
+                      )
                       .join('\n\n');
                     navigator.clipboard.writeText(diffText);
                   }
@@ -1432,7 +1617,9 @@ function EnhancedDiffViewer({
 
             {/* View Full File toggle */}
             {selectedFile && !editMode && !inlineEditMode && (
-              <Tooltip title={viewFullFile ? "Show diff view" : "View full file"}>
+              <Tooltip
+                title={viewFullFile ? 'Show diff view' : 'View full file'}
+              >
                 <Button
                   icon={<EyeOutlined />}
                   onClick={() => setViewFullFile(!viewFullFile)}
@@ -1443,26 +1630,37 @@ function EnhancedDiffViewer({
             )}
 
             {/* Inline Edit toggle */}
-            {selectedFile && !staged && !readOnly && !editMode && !viewFullFile && selectedDiff && (
-              <Tooltip title={inlineEditMode ? "Exit inline edit" : "Edit in diff view"}>
-                <Button
-                  icon={<EditOutlined />}
-                  onClick={() => {
-                    if (inlineEditMode && hasInlineEdits) {
-                      handleDiscardInlineEdits();
-                    } else {
-                      setInlineEditMode(!inlineEditMode);
-                    }
-                  }}
-                  type={inlineEditMode ? 'primary' : 'default'}
-                  size="small"
-                />
-              </Tooltip>
-            )}
+            {selectedFile &&
+              !staged &&
+              !readOnly &&
+              !editMode &&
+              !viewFullFile &&
+              selectedDiff && (
+                <Tooltip
+                  title={
+                    inlineEditMode ? 'Exit inline edit' : 'Edit in diff view'
+                  }
+                >
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      if (inlineEditMode && hasInlineEdits) {
+                        handleDiscardInlineEdits();
+                      } else {
+                        setInlineEditMode(!inlineEditMode);
+                      }
+                    }}
+                    type={inlineEditMode ? 'primary' : 'default'}
+                    size="small"
+                  />
+                </Tooltip>
+              )}
 
             {/* Full file Edit mode toggle */}
             {selectedFile && !staged && !readOnly && !inlineEditMode && (
-              <Tooltip title={editMode ? "Exit edit mode" : "Edit file directly"}>
+              <Tooltip
+                title={editMode ? 'Exit edit mode' : 'Edit file directly'}
+              >
                 <Button
                   icon={<EditOutlined />}
                   onClick={() => {
@@ -1591,7 +1789,7 @@ function EnhancedDiffViewer({
                   </Space>
                 </div>
               )}
-              
+
               {/* Selected lines action bar */}
               {selectedLines.size > 0 && (
                 <div className="selected-lines-actions">
@@ -1599,7 +1797,9 @@ function EnhancedDiffViewer({
                     type="info"
                     message={
                       <Space>
-                        <Text strong>{selectedLines.size} line(s) selected</Text>
+                        <Text strong>
+                          {selectedLines.size} line(s) selected
+                        </Text>
                         <Button
                           size="small"
                           type="primary"
@@ -1618,10 +1818,7 @@ function EnhancedDiffViewer({
                         >
                           Discard Selected
                         </Button>
-                        <Button
-                          size="small"
-                          onClick={clearLineSelection}
-                        >
+                        <Button size="small" onClick={clearLineSelection}>
                           Clear Selection
                         </Button>
                       </Space>
@@ -1629,7 +1826,7 @@ function EnhancedDiffViewer({
                   />
                 </div>
               )}
-              
+
               <div className="diff-stats">
                 <Space>
                   <Tag color="green">+{selectedDiff.added} additions</Tag>
@@ -1639,7 +1836,8 @@ function EnhancedDiffViewer({
                   </Text>
                   {searchTerm && (
                     <Tag color="blue">
-                      {filteredHunks.length} of {selectedDiff.hunks.length} hunks match
+                      {filteredHunks.length} of {selectedDiff.hunks.length}{' '}
+                      hunks match
                     </Tag>
                   )}
                   {editMode && (
@@ -1649,7 +1847,9 @@ function EnhancedDiffViewer({
                   )}
                   {inlineEditMode && (
                     <Tag color={hasInlineEdits ? 'orange' : 'cyan'}>
-                      {hasInlineEdits ? `${Object.keys(inlineEdits).length} edits` : 'Inline Edit Mode'}
+                      {hasInlineEdits
+                        ? `${Object.keys(inlineEdits).length} edits`
+                        : 'Inline Edit Mode'}
                     </Tag>
                   )}
                 </Space>
@@ -1664,8 +1864,8 @@ function EnhancedDiffViewer({
                     message={
                       <Space>
                         <Text>
-                          {viewMode === 'side-by-side' 
-                            ? 'Click on lines in the Modified pane to edit' 
+                          {viewMode === 'side-by-side'
+                            ? 'Click on lines in the Modified pane to edit'
                             : 'Click on added or context lines to edit'}
                         </Text>
                         {hasInlineEdits && (
@@ -1701,7 +1901,7 @@ function EnhancedDiffViewer({
                   />
                 </div>
               )}
-              
+
               {/* Edit mode panel */}
               {editMode ? (
                 <div className="edit-mode-container">
@@ -1721,7 +1921,9 @@ function EnhancedDiffViewer({
                         onClick={handleCancelEdit}
                         disabled={isSaving}
                       >
-                        {hasUnsavedChanges ? 'Discard & Exit' : 'Exit Edit Mode'}
+                        {hasUnsavedChanges
+                          ? 'Discard & Exit'
+                          : 'Exit Edit Mode'}
                       </Button>
                       {hasUnsavedChanges && (
                         <Button
@@ -1743,7 +1945,7 @@ function EnhancedDiffViewer({
                         fontSize: '13px',
                         lineHeight: '1.5',
                         minHeight: '400px',
-                        resize: 'vertical'
+                        resize: 'vertical',
                       }}
                       autoSize={{ minRows: 20, maxRows: 40 }}
                     />
@@ -1755,10 +1957,15 @@ function EnhancedDiffViewer({
                     <Space>
                       <Tag color="purple">Historical Version</Tag>
                       <Tag>{selectedHistoryCommit.substring(0, 7)}</Tag>
-                      <Text type="secondary">{historicalContent.split('\n').length} lines</Text>
-                      <Button 
-                        size="small" 
-                        onClick={() => { setSelectedHistoryCommit(null); setHistoricalContent(null); }}
+                      <Text type="secondary">
+                        {historicalContent.split('\n').length} lines
+                      </Text>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setSelectedHistoryCommit(null);
+                          setHistoricalContent(null);
+                        }}
                       >
                         Back to Current
                       </Button>
@@ -1775,7 +1982,7 @@ function EnhancedDiffViewer({
                         borderRadius: '4px',
                         fontSize: '13px',
                         maxHeight: '600px',
-                        overflow: 'auto'
+                        overflow: 'auto',
                       }}
                     >
                       {historicalContent}
@@ -1787,7 +1994,9 @@ function EnhancedDiffViewer({
                   <div className="full-file-header">
                     <Space>
                       <Tag color="blue">Full File View</Tag>
-                      <Text type="secondary">{fullFileContent.split('\n').length} lines</Text>
+                      <Text type="secondary">
+                        {fullFileContent.split('\n').length} lines
+                      </Text>
                     </Space>
                   </div>
                   <div className="full-file-content">
@@ -1801,7 +2010,7 @@ function EnhancedDiffViewer({
                         borderRadius: '4px',
                         fontSize: '13px',
                         maxHeight: '600px',
-                        overflow: 'auto'
+                        overflow: 'auto',
                       }}
                     >
                       {fullFileContent || '// Loading...'}
@@ -1809,26 +2018,27 @@ function EnhancedDiffViewer({
                   </div>
                 </div>
               ) : isImageFile(selectedFile) ? (
-                <div className="diff-content-wrapper">
-                  {renderImageDiff()}
-                </div>
+                <div className="diff-content-wrapper">{renderImageDiff()}</div>
               ) : (
                 <div className="diff-content-wrapper">
-                  {viewMode === 'side-by-side' 
+                  {viewMode === 'side-by-side'
                     ? renderSideBySideDiff(selectedDiff)
-                    : renderUnifiedDiff(selectedDiff)
-                  }
+                    : renderUnifiedDiff(selectedDiff)}
                 </div>
               )}
             </div>
           ) : availableFiles.length === 0 ? (
             <Empty
-              image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+              image={
+                <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+              }
               description="No modified files to compare"
             />
           ) : (
             <Empty
-              image={<FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />}
+              image={
+                <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+              }
               description="Select a file to view differences"
             />
           )}
@@ -1879,15 +2089,26 @@ function EnhancedDiffViewer({
               >
                 <Space>
                   <FileTextOutlined />
-                  <Text ellipsis style={{ maxWidth: 500 }}>{filePath}</Text>
+                  <Text ellipsis style={{ maxWidth: 500 }}>
+                    {filePath}
+                  </Text>
                 </Space>
               </List.Item>
             )}
-            locale={{ emptyText: fileSearchTerm ? 'No files match your search' : 'No files found' }}
+            locale={{
+              emptyText: fileSearchTerm
+                ? 'No files match your search'
+                : 'No files found',
+            }}
           />
           {allFiles.length > 50 && (
-            <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginTop: 8 }}>
-              Showing {Math.min(50, filteredPickerFiles.length)} of {fileSearchTerm ? filteredPickerFiles.length : allFiles.length} files
+            <Text
+              type="secondary"
+              style={{ display: 'block', textAlign: 'center', marginTop: 8 }}
+            >
+              Showing {Math.min(50, filteredPickerFiles.length)} of{' '}
+              {fileSearchTerm ? filteredPickerFiles.length : allFiles.length}{' '}
+              files
             </Text>
           )}
         </Spin>

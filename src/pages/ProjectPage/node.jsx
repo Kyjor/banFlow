@@ -3,7 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { Draggable } from '@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration';
 import { Card as AntCard, Tag, Tooltip } from 'antd';
 import PropTypes from 'prop-types';
-import { EllipsisOutlined, SettingOutlined, ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import {
+  EllipsisOutlined,
+  SettingOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons';
 import TagController from '../../api/tag/TagController';
 import styles from './node.module.scss';
 import EditableTextArea from '../../components/EditableTextArea/EditableTextArea';
@@ -58,14 +63,14 @@ function Node(props) {
 
   const renderDueDate = () => {
     if (!node.dueDate) return null;
-    
+
     const dueDate = new Date(node.dueDate);
     const isOverdue = dueDate < new Date();
-    
+
     return (
       <Tooltip title={`Due: ${dueDate.toLocaleString()}`}>
-        <Tag 
-          icon={<ClockCircleOutlined />} 
+        <Tag
+          icon={<ClockCircleOutlined />}
           color={isOverdue ? 'red' : 'blue'}
           style={{ marginTop: '8px' }}
         >
@@ -77,7 +82,7 @@ function Node(props) {
 
   const renderLabels = () => {
     if (!node.labels || node.labels.length === 0) return null;
-    
+
     return (
       <div style={{ marginTop: '8px' }}>
         {node.labels.map((label) => (
@@ -91,15 +96,17 @@ function Node(props) {
 
   const renderChecklistProgress = () => {
     if (!node.checklist || node.checklist.checks.length === 0) return null;
-    
-    const completed = node.checklist.checks.filter(check => check.complete).length;
+
+    const completed = node.checklist.checks.filter(
+      (check) => check.complete,
+    ).length;
     const total = node.checklist.checks.length;
     const percentage = Math.round((completed / total) * 100);
-    
+
     return (
       <Tooltip title={`${completed}/${total} items completed`}>
-        <Tag 
-          icon={<CheckCircleOutlined />} 
+        <Tag
+          icon={<CheckCircleOutlined />}
           color={percentage === 100 ? 'green' : 'blue'}
           style={{ marginTop: '8px' }}
         >
@@ -111,16 +118,23 @@ function Node(props) {
 
   const renderTags = () => {
     if (!node.tags || node.tags.length === 0) return null;
-    
+
     // Get tag colors from global tags
     const globalTags = TagController.getTags() || [];
     const tagMap = {};
     globalTags.forEach((tag) => {
       tagMap[tag.title || tag.id] = tag.color || '';
     });
-    
+
     return (
-      <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+      <div
+        style={{
+          marginTop: '8px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '4px',
+        }}
+      >
         {node.tags.map((tag) => (
           <Tag key={tag} color={tagMap[tag] || 'default'} style={{ margin: 0 }}>
             {tag}
@@ -162,14 +176,16 @@ function Node(props) {
           >
             <Meta
               title={
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
                   {node.isComplete && (
-                    <CheckCircleOutlined 
-                      style={{ 
-                        color: '#52c41a', 
+                    <CheckCircleOutlined
+                      style={{
+                        color: '#52c41a',
                         fontSize: '18px',
-                        flexShrink: 0 
-                      }} 
+                        flexShrink: 0,
+                      }}
                     />
                   )}
                   <span style={{ flex: 1 }}>
@@ -184,15 +200,17 @@ function Node(props) {
                         }}
                         placeholder="Add node title here..."
                         updateText={(value) =>
+                          // eslint-disable-next-line no-sequences
                           (
-                            // eslint-disable-next-line no-sequences
                             setIsEditing(false),
                             updateNodeTitle(value, node.id, false)
                           )
                         }
                       />
                     ) : (
-                      <span style={{ whiteSpace: 'normal', pointerEvents: 'none' }}>
+                      <span
+                        style={{ whiteSpace: 'normal', pointerEvents: 'none' }}
+                      >
                         {node.title}
                       </span>
                     )}
