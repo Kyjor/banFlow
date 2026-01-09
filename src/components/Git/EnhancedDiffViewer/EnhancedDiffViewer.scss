@@ -16,7 +16,7 @@
 
   .selected-lines-actions {
     margin-bottom: 12px;
-    
+
     .ant-alert {
       .ant-alert-message {
         display: flex;
@@ -93,11 +93,11 @@
 
               &.line-selected {
                 background: #bae7ff !important;
-                
+
                 &.diff-line-added {
                   background: #95de64 !important;
                 }
-                
+
                 &.diff-line-deleted {
                   background: #ff7875 !important;
                 }
@@ -107,8 +107,8 @@
                 padding: 0 4px;
                 display: flex;
                 align-items: center;
-                
-                input[type="checkbox"] {
+
+                input[type='checkbox'] {
                   cursor: pointer;
                   width: 14px;
                   height: 14px;
@@ -151,7 +151,7 @@
             .hunk-header-info {
               flex: 1;
               cursor: pointer;
-              
+
               &:hover {
                 opacity: 0.8;
               }
@@ -169,7 +169,7 @@
 
           .hunk-content {
             overflow-x: auto;
-            
+
             .diff-line {
               display: flex;
               align-items: center;
@@ -189,11 +189,11 @@
 
               &.line-selected {
                 background: #bae7ff !important;
-                
+
                 &.diff-line-added {
                   background: #95de64 !important;
                 }
-                
+
                 &.diff-line-deleted {
                   background: #ff7875 !important;
                 }
@@ -217,8 +217,8 @@
                 padding: 0 4px;
                 display: flex;
                 align-items: center;
-                
-                input[type="checkbox"] {
+
+                input[type='checkbox'] {
                   cursor: pointer;
                   width: 14px;
                   height: 14px;
@@ -448,7 +448,7 @@
 
   .inline-edit-actions {
     margin-bottom: 12px;
-    
+
     .ant-alert {
       .ant-alert-message {
         display: flex;
@@ -461,7 +461,7 @@
   .diff-line {
     &.editable {
       cursor: text;
-      
+
       &:hover {
         background-color: rgba(24, 144, 255, 0.05) !important;
       }

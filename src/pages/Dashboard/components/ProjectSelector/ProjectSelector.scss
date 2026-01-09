@@ -12,30 +12,29 @@
 .project-selector-list {
   max-height: 400px;
   overflow-y: auto;
-  
+
   .project-selector-item {
     padding: 8px 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
     transition: background-color 0.2s;
-    
+
     &:hover {
       background-color: rgba(102, 126, 234, 0.05);
       margin: 0 -8px;
       padding: 8px;
       border-radius: 4px;
     }
-    
+
     &:last-child {
       border-bottom: none;
     }
-    
+
     .ant-checkbox-wrapper {
       width: 100%;
-      
+
       span {
         user-select: none;
       }
     }
   }
 }
-

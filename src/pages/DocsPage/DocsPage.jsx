@@ -1,5 +1,6 @@
 // Libs
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
 import {
   Layout,
@@ -10,15 +11,12 @@ import {
   Space,
   Modal,
   message,
-  Dropdown,
-  Menu,
   Tag,
   Typography,
   Divider,
   Popconfirm,
   Tooltip,
   Badge,
-  AutoComplete,
   List,
 } from 'antd';
 import {
@@ -30,7 +28,6 @@ import {
   DeleteOutlined,
   SearchOutlined,
   SaveOutlined,
-  CloseOutlined,
   GlobalOutlined,
   ProjectOutlined,
   PictureOutlined,
@@ -44,105 +41,121 @@ import MDEditor from '@uiw/react-md-editor';
 import '@uiw/react-md-editor/markdown-editor.css';
 import LayoutWrapper from '../../layouts/App';
 import MetadataManager from '../../components/MetadataManager/MetadataManager';
+import ImageThumbnail from './ImageThumbnail';
 import './DocsPage.scss';
 
 const { Sider, Content } = Layout;
 const { Text, Title } = Typography;
-const { TextArea } = Input;
 
-// Image Thumbnail Component
-class ImageThumbnail extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      imageSrc: null,
-      loading: true,
-      error: false,
-    };
-  }
-
-  componentDidMount() {
-    this.loadImage();
-  }
-
-  loadImage = async () => {
-    try {
-      const dataUrl = await ipcRenderer.invoke(
-        'docs:getImage',
-        this.props.image.path,
-        this.props.projectName,
-        this.props.isGlobal,
-      );
-      this.setState({ imageSrc: dataUrl, loading: false });
-    } catch (error) {
-      console.error('Error loading image:', error);
-      this.setState({ error: true, loading: false });
-    }
-  };
-
-  render() {
-    const { imageSrc, loading, error } = this.state;
-
-    if (error) {
-      return (
-        <div
-          style={{
-            height: '150px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#f5f5f5',
-          }}
-        >
-          <Text type="secondary">Failed to load</Text>
-        </div>
-      );
-    }
-
-    if (loading) {
-      return (
-        <div
-          style={{
-            height: '150px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#f5f5f5',
-          }}
-        >
-          <Text type="secondary">Loading...</Text>
-        </div>
-      );
-    }
-
+// Helper component for markdown links
+function MarkdownLink({ href, children, projectName, onLoadDoc }) {
+  if (href?.startsWith('node:')) {
+    const nodeId = href.replace('node:', '');
     return (
-      <div
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          const normalizedProjectName = projectName.replace(/\//g, '@');
+          window.location.hash = `#/projectPage/${normalizedProjectName}?node=${nodeId}`;
+        }}
         style={{
-          height: '150px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f5f5f5',
+          color: '#1890ff',
+          textDecoration: 'none',
+          cursor: 'pointer',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          font: 'inherit',
         }}
       >
-        <img
-          src={imageSrc}
-          alt={this.props.image.name}
-          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-        />
-      </div>
+        {children}
+      </button>
     );
   }
+  if (href?.startsWith('parent:')) {
+    const parentId = href.replace('parent:', '');
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          const normalizedProjectName = projectName.replace(/\//g, '@');
+          window.location.hash = `#/projectPage/${normalizedProjectName}?parent=${parentId}`;
+        }}
+        style={{
+          color: '#52c41a',
+          textDecoration: 'none',
+          cursor: 'pointer',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          font: 'inherit',
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+  if (href?.startsWith('doc:')) {
+    const docName = href.replace('doc:', '');
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          onLoadDoc(docName);
+        }}
+        style={{
+          color: '#722ed1',
+          textDecoration: 'none',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          font: 'inherit',
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
 }
 
+MarkdownLink.propTypes = {
+  href: PropTypes.string,
+  children: PropTypes.node,
+  projectName: PropTypes.string,
+  onLoadDoc: PropTypes.func,
+};
+
+MarkdownLink.defaultProps = {
+  href: null,
+  children: null,
+  projectName: '',
+  onLoadDoc: () => {},
+};
+
 class DocsPage extends Component {
+  static countWords = (text) => {
+    if (!text) return 0;
+    return text
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0).length;
+  };
+
   constructor(props) {
     super(props);
 
     const location = window.location.href;
     this.projectName = location.split('/').pop();
     // Remove query parameters (everything after ?)
-    this.projectName = this.projectName.split('?')[0];
+    [this.projectName] = this.projectName.split('?');
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
 
@@ -163,8 +176,6 @@ class DocsPage extends Component {
       // Modal states
       createDocModalVisible: false,
       createFolderModalVisible: false,
-      deleteConfirmVisible: false,
-      itemToDelete: null,
       newDocName: '',
       newFolderName: '',
       // Editor state
@@ -175,7 +186,6 @@ class DocsPage extends Component {
       showMetadata: false,
       // Image gallery
       imageGalleryVisible: false,
-      images: [],
       // Autocomplete
       mentionSuggestions: [],
       mentionPosition: null,
@@ -194,7 +204,6 @@ class DocsPage extends Component {
       selectedMentionIndex: 0,
     };
 
-    this.editorRef = React.createRef();
     this.templates = {
       blank: { name: 'Blank', content: '' },
       meeting: {
@@ -261,23 +270,18 @@ class DocsPage extends Component {
     );
 
     this.setState(
-      {
-        ...this.state,
+      (prevState) => ({
+        ...prevState,
         ...newState,
         lokiLoaded: true,
-      },
+      }),
       () => {
         this.loadDocs();
         this.loadImages();
         // Debug: Log nodes and parents to verify they're loaded
-        console.log(
-          'Nodes loaded:',
-          Object.keys(this.state.nodes || {}).length,
-        );
-        console.log(
-          'Parents loaded:',
-          Object.keys(this.state.parents || {}).length,
-        );
+        const { nodes, parents } = this.state;
+        console.log('Nodes loaded:', Object.keys(nodes || {}).length);
+        console.log('Parents loaded:', Object.keys(parents || {}).length);
       },
     );
 
@@ -294,10 +298,11 @@ class DocsPage extends Component {
 
   loadDocs = async () => {
     try {
+      const { isGlobal } = this.state;
       const docs = await ipcRenderer.invoke(
         'docs:list',
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
       this.setState({ docs });
     } catch (error) {
@@ -308,25 +313,28 @@ class DocsPage extends Component {
 
   loadDoc = async (docPath) => {
     try {
+      const { isGlobal } = this.state;
       const doc = await ipcRenderer.invoke(
         'docs:read',
         docPath,
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
       const processedContent = this.processMarkdownLinks(doc.content);
-      this.setState({
+      const backlinks = await this.getBacklinks(docPath);
+      this.setState((prevState) => ({
+        ...prevState,
         currentDoc: docPath,
-        docContent: doc.content, // Keep original for editing
+        docContent: processedContent, // Keep original for editing
         isDirty: false,
         docMetadata: {
           ...doc,
           wordCount: this.countWords(doc.content),
           readingTime: this.calculateReadingTime(doc.content),
-          backlinks: await this.getBacklinks(docPath),
+          backlinks,
           references: this.extractReferences(doc.content),
         },
-      });
+      }));
     } catch (error) {
       console.error('Error loading doc:', error);
       message.error('Failed to load document');
@@ -335,49 +343,16 @@ class DocsPage extends Component {
 
   loadImages = async () => {
     try {
+      const { isGlobal } = this.state;
       const images = await ipcRenderer.invoke(
         'docs:listImages',
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
       this.setState({ images });
     } catch (error) {
       console.error('Error loading images:', error);
     }
-  };
-
-  // Simple fuzzy match function
-  fuzzyMatch = (text, pattern) => {
-    if (!pattern) return true;
-    const textLower = text.toLowerCase();
-    const patternLower = pattern.toLowerCase();
-
-    // Exact match gets highest priority
-    if (textLower === patternLower) return { score: 100, match: true };
-
-    // Starts with pattern
-    if (textLower.startsWith(patternLower)) return { score: 80, match: true };
-
-    // Contains pattern
-    if (textLower.includes(patternLower)) return { score: 60, match: true };
-
-    // Fuzzy match: check if all pattern characters appear in order
-    let patternIndex = 0;
-    for (
-      let i = 0;
-      i < textLower.length && patternIndex < patternLower.length;
-      i++
-    ) {
-      if (textLower[i] === patternLower[patternIndex]) {
-        patternIndex++;
-      }
-    }
-
-    if (patternIndex === patternLower.length) {
-      return { score: 40, match: true };
-    }
-
-    return { score: 0, match: false };
   };
 
   processMarkdownLinks = (content) => {
@@ -419,46 +394,49 @@ class DocsPage extends Component {
     processed = processed.replace(
       /@([\w]+(?:\s+[\w]+)*?)(?=\s*\n|\s+[a-z]|$|@|\[|\(|\)|,|\.|;|:|!|\?|{|})/g,
       (match, name) => {
-      const trimmedName = name.trim();
-      if (!trimmedName) return match;
-      
-      // Try exact match first (case-insensitive)
-      let found = allTitles.get(trimmedName.toLowerCase());
-      
-      if (found) {
-        if (found.type === 'node') {
-          return `[@${found.title}](node:${found.id})`;
-        } 
+        const trimmedName = name.trim();
+        if (!trimmedName) return match;
+
+        // Try exact match first (case-insensitive)
+        const found = allTitles.get(trimmedName.toLowerCase());
+
+        if (found) {
+          if (found.type === 'node') {
+            return `[@${found.title}](node:${found.id})`;
+          }
           return `[@${found.title}](parent:${found.id})`;
-        
-      }
-      
-      // Try to find the longest matching title that the mention starts with
-      // This handles cases like "@My Node" matching "My Node Name"
-      const nameLower = trimmedName.toLowerCase();
-      for (const [titleLower, item] of sortedTitles) {
-        if (nameLower === titleLower || nameLower.startsWith(titleLower + ' ')) {
-          if (item.type === 'node') {
-            return `[@${item.title}](node:${item.id})`;
-          } else {
+        }
+
+        // Try to find the longest matching title that the mention starts with
+        // This handles cases like "@My Node" matching "My Node Name"
+        const nameLower = trimmedName.toLowerCase();
+        const sortedTitlesArray = Array.from(sortedTitles);
+        for (let i = 0; i < sortedTitlesArray.length; i += 1) {
+          const [titleLower, item] = sortedTitlesArray[i];
+          if (
+            nameLower === titleLower ||
+            nameLower.startsWith(`${titleLower} `)
+          ) {
+            if (item.type === 'node') {
+              return `[@${item.title}](node:${item.id})`;
+            }
             return `[@${item.title}](parent:${item.id})`;
           }
         }
-      }
-      
-      // Try reverse: see if any title starts with the mention
-      for (const [titleLower, item] of sortedTitles) {
-        if (titleLower.startsWith(nameLower)) {
-          if (item.type === 'node') {
-            return `[@${item.title}](node:${item.id})`;
-          } else {
+
+        // Try reverse: see if any title starts with the mention
+        for (let i = 0; i < sortedTitlesArray.length; i += 1) {
+          const [titleLower, item] = sortedTitlesArray[i];
+          if (titleLower.startsWith(nameLower)) {
+            if (item.type === 'node') {
+              return `[@${item.title}](node:${item.id})`;
+            }
             return `[@${item.title}](parent:${item.id})`;
           }
         }
-      }
-      
-      return match; // Keep original if not found
-    });
+
+        return match; // Keep original if not found
+      },
     );
 
     // Process wiki-style [[docName]] links
@@ -475,17 +453,14 @@ class DocsPage extends Component {
       parents: [],
       docs: [],
     };
+    const { nodes, parents } = this.state;
 
     // Extract @ mentions
     const nodeMatches = content.match(/@(\w+)/g) || [];
     nodeMatches.forEach((match) => {
       const name = match.substring(1);
-      const node = Object.values(this.state.nodes || {}).find(
-        (n) => n.title === name,
-      );
-      const parent = Object.values(this.state.parents || {}).find(
-        (p) => p.title === name,
-      );
+      const node = Object.values(nodes || {}).find((n) => n.title === name);
+      const parent = Object.values(parents || {}).find((p) => p.title === name);
 
       if (node && !references.nodes.find((n) => n.id === node.id)) {
         references.nodes.push({ id: node.id, title: node.title });
@@ -511,10 +486,11 @@ class DocsPage extends Component {
 
   getBacklinks = async (docPath) => {
     try {
+      const { isGlobal } = this.state;
       const allDocs = await ipcRenderer.invoke(
         'docs:list',
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
       const backlinks = [];
 
@@ -535,32 +511,41 @@ class DocsPage extends Component {
       const flatDocs = flattenDocs(allDocs);
 
       // Check each doc for references to current doc
-      for (const doc of flatDocs) {
-        if (doc.path === docPath) continue;
+      const docChecks = flatDocs
+        .filter((doc) => doc.path !== docPath)
+        .map(async (doc) => {
+          try {
+            const { isGlobal: isGlobalState } = this.state;
+            const docData = await ipcRenderer.invoke(
+              'docs:read',
+              doc.path,
+              this.projectName,
+              isGlobalState,
+            );
+            const docName = docPath.replace('.md', '');
 
-        try {
-          const docData = await ipcRenderer.invoke(
-            'docs:read',
-            doc.path,
-            this.projectName,
-            this.state.isGlobal,
-          );
-          const docName = docPath.replace('.md', '');
-
-          // Check for wiki links
-          if (
-            docData.content.includes(`[[${docName}]]`) ||
-            docData.content.includes(`[[${docPath}]]`)
-          ) {
-            backlinks.push({
-              path: doc.path,
-              name: doc.name,
-            });
+            // Check for wiki links
+            if (
+              docData.content.includes(`[[${docName}]]`) ||
+              docData.content.includes(`[[${docPath}]]`)
+            ) {
+              return {
+                path: doc.path,
+                name: doc.name,
+              };
+            }
+          } catch (err) {
+            // Skip if can't read
           }
-        } catch (err) {
-          // Skip if can't read
+          return null;
+        });
+
+      const results = await Promise.all(docChecks);
+      results.forEach((result) => {
+        if (result) {
+          backlinks.push(result);
         }
-      }
+      });
 
       return backlinks;
     } catch (error) {
@@ -609,53 +594,20 @@ class DocsPage extends Component {
     return suggestions.sort((a, b) => b.score - a.score).slice(0, 10);
   };
 
-  getWikiLinkSuggestions = (query) => {
-    const { docs } = this.state;
-    const queryLower = query.toLowerCase();
-    const suggestions = [];
-
-    const flattenDocs = (items) => {
-      const result = [];
-      items.forEach((item) => {
-        if (
-          item.type === 'file' &&
-          item.name.toLowerCase().includes(queryLower)
-        ) {
-          result.push(item.name);
-        }
-        if (item.children) {
-          result.push(...flattenDocs(item.children));
-        }
-      });
-      return result;
-    };
-
-    return flattenDocs(docs).slice(0, 10);
-  };
-
-  handleMentionInsert = (mention) => {
-    const { docContent } = this.state;
-    // This will be handled by the markdown processor
-    return `@${mention.title}`;
-  };
-
-  handleWikiLinkInsert = (docName) => {
-    return `[[${docName}]]`;
-  };
-
   handleImageUpload = async (file) => {
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target.result;
         const imageName = file.name;
+        const { isGlobal } = this.state;
 
         await ipcRenderer.invoke(
           'docs:saveImage',
           imageName,
           base64,
           this.projectName,
-          this.state.isGlobal,
+          isGlobal,
         );
 
         message.success('Image uploaded');
@@ -669,13 +621,13 @@ class DocsPage extends Component {
   };
 
   insertImageMarkdown = (imageName) => {
-    const imagePath = this.state.isGlobal
+    const { isGlobal, docContent } = this.state;
+    const imagePath = isGlobal
       ? `global/images/${imageName}`
       : `${this.projectName}/images/${imageName}`;
 
     const markdown = `![${imageName}](${imagePath})`;
-    const { docContent } = this.state;
-    const newContent = `${docContent  }\n${  markdown}`;
+    const newContent = `${docContent}\n${markdown}`;
 
     this.setState({
       docContent: newContent,
@@ -685,15 +637,16 @@ class DocsPage extends Component {
   };
 
   saveDoc = async () => {
-    if (!this.state.currentDoc) return;
+    const { currentDoc, docContent, isGlobal } = this.state;
+    if (!currentDoc) return;
 
     try {
       await ipcRenderer.invoke(
         'docs:save',
-        this.state.currentDoc,
-        this.state.docContent,
+        currentDoc,
+        docContent,
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
       this.setState({ isDirty: false });
       message.success('Document saved');
@@ -720,12 +673,13 @@ class DocsPage extends Component {
           ? this.templates[selectedTemplate]?.content || `# ${newDocName}\n\n`
           : `# ${newDocName}\n\n`;
 
+      const { isGlobal: isGlobalState } = this.state;
       await ipcRenderer.invoke(
         'docs:save',
         docPath,
         initialContent,
         this.projectName,
-        this.state.isGlobal,
+        isGlobalState,
       );
 
       this.setState({
@@ -756,11 +710,12 @@ class DocsPage extends Component {
     }
 
     try {
+      const { isGlobal: isGlobalState } = this.state;
       await ipcRenderer.invoke(
         'docs:createFolder',
         newFolderName,
         this.projectName,
-        this.state.isGlobal,
+        isGlobalState,
       );
 
       this.setState({
@@ -778,12 +733,13 @@ class DocsPage extends Component {
 
   deleteItem = async (item) => {
     try {
+      const { isGlobal } = this.state;
       if (item.type === 'file') {
         await ipcRenderer.invoke(
           'docs:delete',
           item.path,
           this.projectName,
-          this.state.isGlobal,
+          isGlobal,
         );
         message.success('Document deleted');
       } else {
@@ -796,7 +752,8 @@ class DocsPage extends Component {
         itemToDelete: null,
       });
 
-      if (this.state.currentDoc === item.path) {
+      const { currentDoc } = this.state;
+      if (currentDoc === item.path) {
         this.setState({
           currentDoc: null,
           docContent: '',
@@ -809,14 +766,6 @@ class DocsPage extends Component {
       console.error('Error deleting item:', error);
       message.error('Failed to delete item');
     }
-  };
-
-  countWords = (text) => {
-    if (!text) return 0;
-    return text
-      .trim()
-      .split(/\s+/)
-      .filter((word) => word.length > 0).length;
   };
 
   calculateReadingTime = (text) => {
@@ -868,14 +817,13 @@ class DocsPage extends Component {
   };
 
   toggleGlobal = async () => {
-    const newIsGlobal = !this.state.isGlobal;
     this.setState(
-      {
-        isGlobal: newIsGlobal,
+      (prevState) => ({
+        isGlobal: !prevState.isGlobal,
         currentDoc: null,
         docContent: '',
         docMetadata: null,
-      },
+      }),
       () => {
         this.loadDocs();
       },
@@ -951,18 +899,21 @@ class DocsPage extends Component {
       expandedKeys,
       createDocModalVisible,
       createFolderModalVisible,
-      deleteConfirmVisible,
-      itemToDelete,
       newDocName,
       newFolderName,
       editorMode,
       isDirty,
       docMetadata,
       showMetadata,
-      templateModalVisible,
       selectedTemplate,
       imageGalleryVisible,
       images,
+      showMentionAutocomplete,
+      mentionQuery,
+      selectedMentionIndex,
+      showMentionHelper,
+      nodes,
+      parents,
     } = this.state;
 
     if (!lokiLoaded) {
@@ -1004,7 +955,10 @@ class DocsPage extends Component {
             collapsible
             collapsed={sidebarCollapsed}
             onCollapse={(collapsed) =>
-              this.setState({ sidebarCollapsed: collapsed })
+              this.setState((prevState) => ({
+                ...prevState,
+                sidebarCollapsed: collapsed,
+              }))
             }
             style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}
           >
@@ -1041,7 +995,10 @@ class DocsPage extends Component {
                   prefix={<SearchOutlined />}
                   value={searchText}
                   onChange={(e) =>
-                    this.setState({ searchText: e.target.value })
+                    this.setState((prevState) => ({
+                      ...prevState,
+                      searchText: e.target.value,
+                    }))
                   }
                   allowClear
                 />
@@ -1381,7 +1338,7 @@ class DocsPage extends Component {
                             preview="edit"
                           />
                         </div>
-                        {this.state.showMentionAutocomplete && (
+                        {showMentionAutocomplete && (
                           <div
                             style={{
                               position: 'absolute',
@@ -1400,24 +1357,24 @@ class DocsPage extends Component {
                             <List
                               size="small"
                               dataSource={this.getMentionSuggestions(
-                                this.state.mentionQuery,
+                                mentionQuery,
                               )}
                               renderItem={(item, index) => (
                                 <List.Item
                                   style={{
                                     cursor: 'pointer',
                                     background:
-                                      index === this.state.selectedMentionIndex
+                                      index === selectedMentionIndex
                                         ? '#e6f7ff'
                                         : 'transparent',
                                     padding: '8px 12px',
                                   }}
                                   onClick={() => this.insertMention(item)}
-                                  onMouseEnter={() =>
+                                  onMouseEnter={() => {
                                     this.setState({
                                       selectedMentionIndex: index,
-                                    })
-                                  }
+                                    });
+                                  }}
                                 >
                                   <Space>
                                     <Tag
@@ -1454,10 +1411,9 @@ class DocsPage extends Component {
                               type="link"
                               size="small"
                               onClick={() =>
-                                this.setState({
-                                  showMentionHelper:
-                                    !this.state.showMentionHelper,
-                                })
+                                this.setState((prevState) => ({
+                                  showMentionHelper: !prevState.showMentionHelper,
+                                }))
                               }
                             >
                               {this.state.showMentionHelper ? 'Hide' : 'Show'}{' '}
@@ -1465,7 +1421,7 @@ class DocsPage extends Component {
                             </Button>
                           </Space>
                         </div>
-                        {this.state.showMentionHelper && (
+                        {showMentionHelper && (
                           <div
                             style={{
                               padding: '12px',
@@ -1492,7 +1448,7 @@ class DocsPage extends Component {
                                     gap: '4px',
                                   }}
                                 >
-                                  {Object.values(this.state.nodes || {})
+                                  {Object.values(nodes || {})
                                     .slice(0, 20)
                                     .map((node) => (
                                       <Tag
@@ -1503,13 +1459,13 @@ class DocsPage extends Component {
                                           fontSize: '11px',
                                         }}
                                         onClick={() => {
-                                          const cursorPos = docContent.length;
-                                          const newContent =
-                                            docContent +
-                                            (docContent.endsWith(' ')
+                                          const { docContent: currentContent } =
+                                            this.state;
+                                          const separator =
+                                            currentContent.endsWith(' ')
                                               ? ''
-                                              : ' ') +
-                                            `@${node.title} `;
+                                              : ' ';
+                                          const newContent = `${currentContent}${separator}@${node.title} `;
                                           this.setState({
                                             docContent: newContent,
                                             isDirty: true,
@@ -1533,7 +1489,7 @@ class DocsPage extends Component {
                                     gap: '4px',
                                   }}
                                 >
-                                  {Object.values(this.state.parents || {})
+                                  {Object.values(parents || {})
                                     .slice(0, 20)
                                     .map((parent) => (
                                       <Tag
@@ -1544,12 +1500,13 @@ class DocsPage extends Component {
                                           fontSize: '11px',
                                         }}
                                         onClick={() => {
-                                          const newContent =
-                                            docContent +
-                                            (docContent.endsWith(' ')
+                                          const { docContent: currentContent } =
+                                            this.state;
+                                          const separator =
+                                            currentContent.endsWith(' ')
                                               ? ''
-                                              : ' ') +
-                                            `@${parent.title} `;
+                                              : ' ';
+                                          const newContent = `${currentContent}${separator}@${parent.title} `;
                                           this.setState({
                                             docContent: newContent,
                                             isDirty: true,
@@ -1573,84 +1530,15 @@ class DocsPage extends Component {
                         <MDEditor.Markdown
                           source={this.processMarkdownLinks(docContent)}
                           components={{
-                            a: ({ href, children, ...props }) => {
-                              if (href?.startsWith('node:')) {
-                                const nodeId = href.replace('node:', '');
-                                const node = Object.values(
-                                  this.state.nodes || {},
-                                ).find((n) => n.id === nodeId);
-                                return (
-                                  <a
-                                    href="#"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      // Navigate to project page with node parameter
-                                      const projectName =
-                                        this.projectName.replace(/\//g, '@');
-                                      window.location.hash = `#/projectPage/${projectName}?node=${nodeId}`;
-                                    }}
-                                    style={{
-                                      color: '#1890ff',
-                                      textDecoration: 'none',
-                                      cursor: 'pointer',
-                                    }}
-                                    {...props}
-                                  >
-                                    {children}
-                                  </a>
-                                );
-                              }
-                              if (href?.startsWith('parent:')) {
-                                const parentId = href.replace('parent:', '');
-                                const parent = Object.values(
-                                  this.state.parents || {},
-                                ).find((p) => p.id === parentId);
-                                return (
-                                  <a
-                                    href="#"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      // Navigate to project page with parent parameter
-                                      const projectName =
-                                        this.projectName.replace(/\//g, '@');
-                                      window.location.hash = `#/projectPage/${projectName}?parent=${parentId}`;
-                                    }}
-                                    style={{
-                                      color: '#52c41a',
-                                      textDecoration: 'none',
-                                      cursor: 'pointer',
-                                    }}
-                                    {...props}
-                                  >
-                                    {children}
-                                  </a>
-                                );
-                              }
-                              if (href?.startsWith('doc:')) {
-                                const docName = href.replace('doc:', '');
-                                return (
-                                  <a
-                                    href="#"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      this.loadDoc(docName);
-                                    }}
-                                    style={{
-                                      color: '#722ed1',
-                                      textDecoration: 'none',
-                                    }}
-                                    {...props}
-                                  >
-                                    {children}
-                                  </a>
-                                );
-                              }
-                              return (
-                                <a href={href} {...props}>
-                                  {children}
-                                </a>
-                              );
-                            },
+                            a: ({ href, children }) => (
+                              <MarkdownLink
+                                href={href}
+                                projectName={projectName}
+                                onLoadDoc={this.loadDoc}
+                              >
+                                {children}
+                              </MarkdownLink>
+                            ),
                           }}
                         />
                       </div>
@@ -1705,6 +1593,15 @@ class DocsPage extends Component {
                       : '1px solid #d9d9d9',
                   cursor: 'pointer',
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.handleTemplateSelect(key);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
+                aria-label={`Select template ${template.name}`}
               >
                 <Text strong>{template.name}</Text>
               </Card>
@@ -1714,7 +1611,7 @@ class DocsPage extends Component {
 
         {/* Create Document Modal */}
         <Modal
-          title={`Create New Document${selectedTemplate ? ` - ${this.templates[selectedTemplate]?.name}` : ''}`}
+          title={`Create New Document${selectedTemplate ? ` - ${this.templates[selectedTemplate]?.name || ''}` : ''}`}
           visible={createDocModalVisible}
           onOk={() => this.createDoc()}
           onCancel={() =>
@@ -1792,7 +1689,16 @@ class DocsPage extends Component {
           visible={imageGalleryVisible}
           onCancel={() => this.setState({ imageGalleryVisible: false })}
           footer={[
-            <Button key="upload" type="primary" icon={<UploadOutlined />}>
+            <Button
+              key="upload"
+              type="primary"
+              icon={<UploadOutlined />}
+              onClick={() => {
+                const input = document.querySelector('input[type="file"]');
+                if (input) input.click();
+              }}
+            >
+              Upload Image
               <input
                 type="file"
                 accept="image/*"
@@ -1802,24 +1708,7 @@ class DocsPage extends Component {
                     this.handleImageUpload(e.target.files[0]);
                   }
                 }}
-                ref={(input) => {
-                  if (input) {
-                    input.addEventListener('click', (e) => {
-                      e.stopPropagation();
-                    });
-                  }
-                }}
               />
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const input =
-                    e.target.parentElement.querySelector('input[type="file"]');
-                  if (input) input.click();
-                }}
-              >
-                Upload Image
-              </span>
             </Button>,
             <Button
               key="close"
@@ -1830,7 +1719,7 @@ class DocsPage extends Component {
           ]}
           width={800}
         >
-          {this.state.images.length === 0 ? (
+          {images.length === 0 ? (
             <div
               style={{ textAlign: 'center', padding: '40px', color: '#999' }}
             >
@@ -1847,67 +1736,72 @@ class DocsPage extends Component {
                 gap: '16px',
               }}
             >
-              {this.state.images.map((image) => (
-                <Card
-                  key={image.path}
-                  hoverable
-                  cover={
-                    <ImageThumbnail
-                      image={image}
-                      projectName={this.projectName}
-                      isGlobal={this.state.isGlobal}
+              {images.map((image) => {
+                const { isGlobal: isGlobalState } = this.state;
+                return (
+                  <Card
+                    key={image.path}
+                    hoverable
+                    cover={
+                      <ImageThumbnail
+                        image={image}
+                        projectName={this.projectName}
+                        isGlobal={isGlobalState}
+                      />
+                    }
+                    actions={[
+                      <EyeOutlined
+                        key="view"
+                        onClick={() => {
+                          window.open(`file://${image.fullPath}`, '_blank');
+                        }}
+                      />,
+                      <EditOutlined
+                        key="insert"
+                        onClick={() => this.insertImageMarkdown(image.name)}
+                      />,
+                      <DeleteOutlined
+                        key="delete"
+                        onClick={() => {
+                          Modal.confirm({
+                            title: 'Delete Image',
+                            content: `Are you sure you want to delete ${image.name}?`,
+                            onOk: async () => {
+                              try {
+                                const { isGlobal: currentIsGlobal } =
+                                  this.state;
+                                await ipcRenderer.invoke(
+                                  'docs:deleteImage',
+                                  image.path,
+                                  this.projectName,
+                                  currentIsGlobal,
+                                );
+                                message.success('Image deleted');
+                                await this.loadImages();
+                              } catch (error) {
+                                message.error('Failed to delete image');
+                              }
+                            },
+                          });
+                        }}
+                      />,
+                    ]}
+                  >
+                    <Card.Meta
+                      title={
+                        <Text ellipsis style={{ fontSize: '12px' }}>
+                          {image.name}
+                        </Text>
+                      }
+                      description={
+                        <Text type="secondary" style={{ fontSize: '11px' }}>
+                          {image.size ? (image.size / 1024).toFixed(1) : '0'} KB
+                        </Text>
+                      }
                     />
-                  }
-                  actions={[
-                    <EyeOutlined
-                      key="view"
-                      onClick={() => {
-                        window.open(`file://${image.fullPath}`, '_blank');
-                      }}
-                    />,
-                    <EditOutlined
-                      key="insert"
-                      onClick={() => this.insertImageMarkdown(image.name)}
-                    />,
-                    <DeleteOutlined
-                      key="delete"
-                      onClick={() => {
-                        Modal.confirm({
-                          title: 'Delete Image',
-                          content: `Are you sure you want to delete ${image.name}?`,
-                          onOk: async () => {
-                            try {
-                              await ipcRenderer.invoke(
-                                'docs:deleteImage',
-                                image.path,
-                                this.projectName,
-                                this.state.isGlobal,
-                              );
-                              message.success('Image deleted');
-                              await this.loadImages();
-                            } catch (error) {
-                              message.error('Failed to delete image');
-                            }
-                          },
-                        });
-                      }}
-                    />,
-                  ]}
-                >
-                  <Card.Meta
-                    title={
-                      <Text ellipsis style={{ fontSize: '12px' }}>
-                        {image.name}
-                      </Text>
-                    }
-                    description={
-                      <Text type="secondary" style={{ fontSize: '11px' }}>
-                        {(image.size / 1024).toFixed(1)} KB
-                      </Text>
-                    }
-                  />
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </Modal>
@@ -1915,9 +1809,11 @@ class DocsPage extends Component {
         {/* Metadata Manager Modal */}
         <MetadataManager
           visible={this.state.metadataManagerVisible}
-          isGlobal={this.state.isGlobal}
+          isGlobal={isGlobal}
           projectName={this.projectName}
-          onClose={() => this.setState({ metadataManagerVisible: false })}
+          onClose={() => {
+            this.setState({ metadataManagerVisible: false });
+          }}
         />
       </LayoutWrapper>
     );

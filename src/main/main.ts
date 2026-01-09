@@ -958,7 +958,7 @@ const createBackup = async (projectName: string): Promise<string> => {
           fs.mkdirSync(dest, { recursive: true });
         }
         const entries = fs.readdirSync(src, { withFileTypes: true });
-        for (const entry of entries) {
+        entries.forEach((entry) => {
           const srcPath = path.join(src, entry.name);
           const destPath = path.join(dest, entry.name);
           if (entry.isDirectory()) {
@@ -966,7 +966,7 @@ const createBackup = async (projectName: string): Promise<string> => {
           } else {
             fs.copyFileSync(srcPath, destPath);
           }
-        }
+        });
       };
 
       copyDir(projectFolder, backupProjectFolder);
@@ -1006,7 +1006,7 @@ const cleanupOldBackups = async (projectName: string, maxBackups: number) => {
     // Keep only the most recent maxBackups
     if (backupFiles.length > maxBackups) {
       const toDelete = backupFiles.slice(maxBackups);
-      for (const backup of toDelete) {
+      toDelete.forEach((backup) => {
         try {
           fs.unlinkSync(backup.path);
           // Also delete associated folder if it exists
@@ -1021,7 +1021,7 @@ const cleanupOldBackups = async (projectName: string, maxBackups: number) => {
         } catch (err) {
           console.error(`Error deleting backup ${backup.name}:`, err);
         }
-      }
+      });
     }
   } catch (error) {
     console.error('Error cleaning up backups:', error);
@@ -1118,7 +1118,7 @@ ipcMain.handle(
       const projects = fs.readdirSync(allBackupsDir);
       const allBackups: any[] = [];
 
-      for (const project of projects) {
+      projects.forEach((project) => {
         const projectBackupDir = path.join(allBackupsDir, project);
         if (fs.statSync(projectBackupDir).isDirectory()) {
           const files = fs.readdirSync(projectBackupDir);
@@ -1137,7 +1137,7 @@ ipcMain.handle(
               });
             });
         }
-      }
+      });
 
       return allBackups.sort(
         (a: any, b: any) =>
@@ -1206,7 +1206,7 @@ ipcMain.handle(
               fs.mkdirSync(dest, { recursive: true });
             }
             const entries = fs.readdirSync(src, { withFileTypes: true });
-            for (const entry of entries) {
+            entries.forEach((entry) => {
               const srcPath = path.join(src, entry.name);
               const destPath = path.join(dest, entry.name);
               if (entry.isDirectory()) {
@@ -1214,7 +1214,7 @@ ipcMain.handle(
               } else {
                 fs.copyFileSync(srcPath, destPath);
               }
-            }
+            });
           };
 
           copyDir(backupProjectFolder, projectFolder);
@@ -2076,9 +2076,9 @@ ipcMain.handle('git:listFiles', async (event, repoPath) => {
 
     function walkDir(dir: string, prefix = '') {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.name.startsWith('.') && entry.name !== '.env') continue;
-        if (ignoreDirs.has(entry.name)) continue;
+      entries.forEach((entry) => {
+        if (entry.name.startsWith('.') && entry.name !== '.env') return;
+        if (ignoreDirs.has(entry.name)) return;
 
         const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
         if (entry.isDirectory()) {
@@ -2086,7 +2086,7 @@ ipcMain.handle('git:listFiles', async (event, repoPath) => {
         } else {
           files.push(relativePath);
         }
-      }
+      });
     }
 
     walkDir(repoPath);
@@ -2200,7 +2200,7 @@ ipcMain.handle(
 
         const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-        for (const entry of entries) {
+        entries.forEach((entry) => {
           const fullPath = path.join(dir, entry.name);
           const relativePath = baseDir
             ? path.join(baseDir, entry.name)
@@ -2225,7 +2225,7 @@ ipcMain.handle(
               modified: stats.mtime,
             });
           }
-        }
+        });
 
         return items.sort((a, b) => {
           if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
@@ -2589,7 +2589,7 @@ ipcMain.handle(
 
         const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-        for (const entry of entries) {
+        entries.forEach((entry) => {
           const fullPath = path.join(dir, entry.name);
           const relativePath = baseDir
             ? path.join(baseDir, entry.name)
@@ -2613,7 +2613,7 @@ ipcMain.handle(
               modified: stats.mtime.toISOString(),
             });
           }
-        }
+        });
 
         return items.sort((a, b) => {
           if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;

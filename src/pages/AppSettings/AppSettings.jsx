@@ -9,13 +9,11 @@ import {
   Select,
   Divider,
   Typography,
-  message,
   Row,
   Col,
   InputNumber,
   Radio,
   Alert,
-  Tag,
   Table,
   Popconfirm,
   Modal,
@@ -158,18 +156,20 @@ class AppSettings extends Component {
       // Get all projects and start/update backup schedules
       try {
         const projects = (await ipcRenderer.invoke('api:getProjects')) || [];
-        for (const project of projects) {
-          const projectName = project.text || project.name || project;
-          if (projectName && !projectName.startsWith('_')) {
-            await ipcRenderer.invoke('backup:stopSchedule', projectName);
-            await ipcRenderer.invoke(
-              'backup:startSchedule',
-              projectName,
-              backupInterval,
-              maxBackups,
-            );
-          }
-        }
+        await Promise.all(
+          projects.map(async (project) => {
+            const projectName = project.text || project.name || project;
+            if (projectName && !projectName.startsWith('_')) {
+              await ipcRenderer.invoke('backup:stopSchedule', projectName);
+              await ipcRenderer.invoke(
+                'backup:startSchedule',
+                projectName,
+                backupInterval,
+                maxBackups,
+              );
+            }
+          }),
+        );
       } catch (error) {
         console.error('Error updating backup schedules:', error);
       }
@@ -177,12 +177,14 @@ class AppSettings extends Component {
       // Stop all backup schedules
       try {
         const projects = (await ipcRenderer.invoke('api:getProjects')) || [];
-        for (const project of projects) {
-          const projectName = project.text || project.name || project;
-          if (projectName && !projectName.startsWith('_')) {
-            await ipcRenderer.invoke('backup:stopSchedule', projectName);
-          }
-        }
+        await Promise.all(
+          projects.map(async (project) => {
+            const projectName = project.text || project.name || project;
+            if (projectName && !projectName.startsWith('_')) {
+              await ipcRenderer.invoke('backup:stopSchedule', projectName);
+            }
+          }),
+        );
       } catch (error) {
         console.error('Error stopping backup schedules:', error);
       }
@@ -220,30 +222,53 @@ class AppSettings extends Component {
   };
 
   handleSaveAll = () => {
+    const {
+      theme,
+      primaryColor,
+      sidebarColor,
+      headerColor,
+      backgroundGradient,
+      customCSS,
+      defaultPage,
+      autoSave,
+      saveInterval,
+      showNotifications,
+      minimizeToTray,
+      startMinimized,
+      trelloEnabled,
+      dataPath,
+      backupEnabled,
+      backupInterval,
+      maxBackups,
+      debugMode,
+      devTools,
+      gameModeEnabled,
+    } = this.state;
+
     this.setState({ saving: true });
 
     // Save all settings
     const appSettings = {
-      theme: this.state.theme,
-      primaryColor: this.state.primaryColor,
-      sidebarColor: this.state.sidebarColor,
-      headerColor: this.state.headerColor,
-      backgroundGradient: this.state.backgroundGradient,
-      customCSS: this.state.customCSS,
-      defaultPage: this.state.defaultPage,
-      autoSave: this.state.autoSave,
-      saveInterval: this.state.saveInterval,
-      showNotifications: this.state.showNotifications,
-      minimizeToTray: this.state.minimizeToTray,
-      startMinimized: this.state.startMinimized,
-      trelloEnabled: this.state.trelloEnabled,
-      dataPath: this.state.dataPath,
-      backupEnabled: this.state.backupEnabled,
-      backupInterval: this.state.backupInterval,
-      maxBackups: this.state.maxBackups,
-      debugMode: this.state.debugMode,
-      devTools: this.state.devTools,
-      gameModeEnabled: this.state.gameModeEnabled,
+      theme,
+      primaryColor,
+      sidebarColor,
+      headerColor,
+      backgroundGradient,
+      customCSS,
+      defaultPage,
+      autoSave,
+      saveInterval,
+      showNotifications,
+      minimizeToTray,
+      startMinimized,
+      trelloEnabled,
+      dataPath,
+      backupEnabled,
+      backupInterval,
+      maxBackups,
+      debugMode,
+      devTools,
+      gameModeEnabled,
     };
 
     localStorage.setItem('appSettings', JSON.stringify(appSettings));
@@ -837,28 +862,32 @@ class AppSettings extends Component {
                           // Get all projects and backup each
                           const projects =
                             (await ipcRenderer.invoke('api:getProjects')) || [];
-                          let successCount = 0;
-                          let failCount = 0;
 
-                          for (const project of projects) {
-                            const projectName =
-                              project.text || project.name || project;
-                            if (projectName && !projectName.startsWith('_')) {
-                              try {
-                                const result = await ipcRenderer.invoke(
-                                  'backup:create',
-                                  projectName,
-                                );
-                                if (result.success) {
-                                  successCount++;
-                                } else {
-                                  failCount++;
+                          const results = await Promise.all(
+                            projects.map(async (project) => {
+                              const projectName =
+                                project.text || project.name || project;
+                              if (projectName && !projectName.startsWith('_')) {
+                                try {
+                                  const result = await ipcRenderer.invoke(
+                                    'backup:create',
+                                    projectName,
+                                  );
+                                  return result.success ? 'success' : 'fail';
+                                } catch (err) {
+                                  return 'fail';
                                 }
-                              } catch (err) {
-                                failCount++;
                               }
-                            }
-                          }
+                              return null;
+                            }),
+                          );
+
+                          const successCount = results.filter(
+                            (r) => r === 'success',
+                          ).length;
+                          const failCount = results.filter(
+                            (r) => r === 'fail',
+                          ).length;
 
                           if (successCount > 0) {
                             message.success(

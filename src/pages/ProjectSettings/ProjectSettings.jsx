@@ -14,12 +14,10 @@ import {
   Row,
   Col,
   InputNumber,
-  Radio,
   Alert,
   Tag,
   Descriptions,
   Image,
-  Modal,
 } from 'antd';
 import {
   SettingOutlined,
@@ -43,11 +41,20 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 class ProjectSettings extends Component {
+  static formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
   constructor(props) {
     super(props);
     const location = window.location.href;
     this.projectName = location.split('/').pop();
-    this.projectName = this.projectName.split('?')[0];
+    [this.projectName] = this.projectName.split('?');
     this.projectName = this.projectName.replace(/[@]/g, '/');
 
     this.currentProject = this.projectName;
@@ -107,14 +114,15 @@ class ProjectSettings extends Component {
     );
 
     this.setState(
-      {
-        ...this.state,
+      (prevState) => ({
+        ...prevState,
         ...newState,
         lokiLoaded: newState.lokiLoaded || false,
         projectSettings: newState.projectSettings || {},
-      },
+      }),
       () => {
-        if (this.state.lokiLoaded) {
+        const { lokiLoaded } = this.state;
+        if (lokiLoaded) {
           this.loadProjectData();
           this.loadProjectSettings();
         }
@@ -167,50 +175,40 @@ class ProjectSettings extends Component {
     }
   };
 
-  saveProjectSetting = async (key, value) => {
-    const { projectSettings } = this.state;
-    const updatedSettings = {
-      ...projectSettings,
-      [key]: value,
-      lastModified: new Date().toISOString(),
-    };
-
-    this.setState({ projectSettings: updatedSettings });
-
-    // Save to database via IPC
-    try {
-      await ipcRenderer.invoke(
-        'api:updateProjectSettings',
-        this.projectName,
-        updatedSettings,
-      );
-      this.setState({ [key]: value });
-      message.success('Setting saved');
-    } catch (error) {
-      console.error('Error saving setting:', error);
-      message.error('Failed to save setting');
-    }
-  };
-
   handleSaveAll = async () => {
     this.setState({ saving: true });
 
-    const { projectSettings } = this.state;
+    const {
+      projectSettings,
+      projectDescription,
+      bannerImageUrl,
+      logoImageUrl,
+      themeOverride,
+      primaryColor,
+      accentColor,
+      defaultIteration,
+      defaultParent,
+      autoArchiveCompleted,
+      archiveAfterDays,
+      trelloBoard,
+      trelloSyncEnabled,
+      syncInterval,
+    } = this.state;
     const updatedSettings = {
       ...projectSettings,
-      description: this.state.projectDescription,
-      bannerImage: this.state.bannerImageUrl,
-      logoImage: this.state.logoImageUrl,
-      themeOverride: this.state.themeOverride,
-      primaryColor: this.state.primaryColor,
-      accentColor: this.state.accentColor,
-      defaultIteration: this.state.defaultIteration,
-      defaultParent: this.state.defaultParent,
-      autoArchiveCompleted: this.state.autoArchiveCompleted,
-      archiveAfterDays: this.state.archiveAfterDays,
-      trello: this.state.trelloBoard,
-      trelloSyncEnabled: this.state.trelloSyncEnabled,
-      syncInterval: this.state.syncInterval,
+      description: projectDescription,
+      bannerImage: bannerImageUrl,
+      logoImage: logoImageUrl,
+      themeOverride,
+      primaryColor,
+      accentColor,
+      defaultIteration,
+      defaultParent,
+      autoArchiveCompleted,
+      archiveAfterDays,
+      trello: trelloBoard,
+      trelloSyncEnabled,
+      syncInterval,
       lastModified: new Date().toISOString(),
     };
 
@@ -317,6 +315,7 @@ class ProjectSettings extends Component {
       .then((boards) => {
         this.setState({ boards });
         message.success(`Found ${boards.length} boards`);
+        return undefined;
       })
       .catch((err) => {
         console.error(err);
@@ -332,15 +331,6 @@ class ProjectSettings extends Component {
 
   handleAuthApp = () => {
     window.open(this.authLink, '_blank');
-  };
-
-  formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
   };
 
   render() {
@@ -371,6 +361,8 @@ class ProjectSettings extends Component {
       activeTab,
       saving,
       previewBannerVisible,
+      iterations,
+      parents,
     } = this.state;
 
     const boardName = trelloBoard?.name || selectedBoard;
@@ -637,7 +629,7 @@ class ProjectSettings extends Component {
                     style={{ width: '100%', marginTop: 8 }}
                     placeholder="Select default iteration"
                   >
-                    {Object.values(this.state.iterations || {}).map((iter) => (
+                    {Object.values(iterations || {}).map((iter) => (
                       <Option key={iter.id} value={iter.id}>
                         {iter.name || `Iteration ${iter.id}`}
                       </Option>
@@ -661,7 +653,7 @@ class ProjectSettings extends Component {
                     style={{ width: '100%', marginTop: 8 }}
                     placeholder="Select default parent"
                   >
-                    {Object.values(this.state.parents || {}).map((parent) => (
+                    {Object.values(parents || {}).map((parent) => (
                       <Option key={parent.id} value={parent.id}>
                         {parent.title}
                       </Option>

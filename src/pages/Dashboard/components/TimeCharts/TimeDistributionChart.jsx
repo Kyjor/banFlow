@@ -3,6 +3,17 @@ import { Card, Empty } from 'antd';
 import PropTypes from 'prop-types';
 import './TimeCharts.scss';
 
+function formatTime(seconds) {
+  if (!seconds || seconds === 0) return '0s';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+  return `${minutes}m`;
+}
+
 function TimeDistributionChart({
   data,
   title = 'Time Distribution by Status',
@@ -68,19 +79,8 @@ function TimeDistributionChart({
   );
 }
 
-function formatTime(seconds) {
-  if (!seconds || seconds === 0) return '0s';
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (hours > 0) {
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
-  return `${minutes}m`;
-}
-
 TimeDistributionChart.propTypes = {
-  data: PropTypes.object,
+  data: PropTypes.shape({}),
   title: PropTypes.string,
 };
 

@@ -6,6 +6,34 @@ import './TimeCharts.scss';
 
 const { Option } = Select;
 
+// Format time for chart display - simplified based on max value
+function formatTimeForChart(seconds, maxValue) {
+  if (!seconds || seconds === 0) return '0';
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+
+  // If max value is >= 1 hour, show only hours
+  if (maxValue >= 3600) {
+    if (hours > 0) {
+      return `${hours}h`;
+    }
+    return '0';
+  }
+
+  // If max value is >= 1 minute, show hours and minutes (no seconds)
+  if (maxValue >= 60) {
+    if (hours > 0) {
+      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+    }
+    return minutes > 0 ? `${minutes}m` : '0';
+  }
+
+  // Otherwise show seconds
+  return `${secs}s`;
+}
+
 function TimeTrendChart({
   data,
   title = 'Time Trend',
@@ -55,7 +83,7 @@ function TimeTrendChart({
   // Generate Y-axis labels (0 at bottom, max at top)
   const yAxisLabels = [];
   const numLabels = 5;
-  for (let i = 0; i <= numLabels; i++) {
+  for (let i = 0; i <= numLabels; i += 1) {
     const value = (maxValue / numLabels) * i; // Start from 0, go to maxValue
     yAxisLabels.push({
       value: Math.round(value),
@@ -83,9 +111,9 @@ function TimeTrendChart({
       <div className="trend-chart-container">
         {/* Y-axis labels */}
         <div className="trend-chart-y-axis">
-          {yAxisLabels.map((label, index) => (
+          {yAxisLabels.map((label) => (
             <div
-              key={index}
+              key={label.value}
               className="trend-chart-y-label"
               style={{ bottom: `${label.position}px` }}
             >
@@ -97,12 +125,12 @@ function TimeTrendChart({
         {/* Chart area */}
         <div className="trend-chart" style={{ height: `${chartHeight}px` }}>
           <div className="trend-chart-bars">
-            {data.map((item, index) => {
+            {data.map((item) => {
               const barHeight =
                 maxValue > 0 ? (item.value / maxValue) * yAxisHeight : 0;
               return (
                 <Tooltip
-                  key={index}
+                  key={item.label || item.date}
                   title={
                     <div>
                       <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
@@ -143,34 +171,6 @@ function TimeTrendChart({
   );
 }
 
-// Format time for chart display - simplified based on max value
-function formatTimeForChart(seconds, maxValue) {
-  if (!seconds || seconds === 0) return '0';
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  // If max value is >= 1 hour, show only hours
-  if (maxValue >= 3600) {
-    if (hours > 0) {
-      return `${hours}h`;
-    }
-    return '0';
-  }
-
-  // If max value is >= 1 minute, show hours and minutes (no seconds)
-  if (maxValue >= 60) {
-    if (hours > 0) {
-      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    }
-    return minutes > 0 ? `${minutes}m` : '0';
-  }
-
-  // Otherwise show seconds
-  return `${secs}s`;
-}
-
 TimeTrendChart.propTypes = {
   data: PropTypes.arrayOf(
     PropTypes.shape({
@@ -187,6 +187,7 @@ TimeTrendChart.defaultProps = {
   data: [],
   title: 'Time Trend',
   selectedPeriod: 'week',
+  onPeriodChange: null,
 };
 
 export default TimeTrendChart;

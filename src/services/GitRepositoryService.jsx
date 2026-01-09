@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 export default class GitRepositoryService {
   constructor(lokiService) {
     this.lokiService = lokiService;
@@ -252,7 +254,6 @@ export default class GitRepositoryService {
    */
   cleanupNonExistentRepositories() {
     try {
-      const fs = require('fs');
       const repos = this.getProjectRepositories();
       const removedPaths = [];
 

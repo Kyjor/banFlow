@@ -343,7 +343,7 @@ function ChunkStaging({
 
   const stageSelectedChunks = useCallback(() => {
     selectedChunks.forEach((chunkId) => {
-      const hunkIndex = parseInt(chunkId.split('-')[1]);
+      const hunkIndex = parseInt(chunkId.split('-')[1], 10);
       stageChunk(hunkIndex);
     });
     setSelectedChunks(new Set());
@@ -351,7 +351,7 @@ function ChunkStaging({
 
   const unstageSelectedChunks = useCallback(() => {
     selectedChunks.forEach((chunkId) => {
-      const hunkIndex = parseInt(chunkId.split('-')[1]);
+      const hunkIndex = parseInt(chunkId.split('-')[1], 10);
       unstageChunk(hunkIndex);
     });
     setSelectedChunks(new Set());

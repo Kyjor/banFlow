@@ -2,24 +2,23 @@
   margin-bottom: 24px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  
+
   .comparison-table {
     .ant-table-thead > tr > th {
       background-color: #fafafa;
       font-weight: 600;
     }
-    
+
     .ant-table-tbody > tr {
       transition: background-color 0.2s;
-      
+
       &:hover {
         background-color: rgba(102, 126, 234, 0.05);
       }
     }
-    
+
     .ant-progress {
       margin: 0;
     }
   }
 }
-

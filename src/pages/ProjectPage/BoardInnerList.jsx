@@ -66,4 +66,9 @@ BoardInnerList.propTypes = {
   updateParentProperty: PropTypes.func.isRequired,
 };
 
+BoardInnerList.defaultProps = {
+  showParentModal: () => {},
+  filterNode: () => {},
+};
+
 export default BoardInnerList;

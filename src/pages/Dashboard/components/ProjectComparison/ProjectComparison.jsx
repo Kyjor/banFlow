@@ -21,7 +21,7 @@ function ProjectComparison({ projects, onProjectClick }) {
       title: 'Project',
       dataIndex: 'projectName',
       key: 'projectName',
-      render: (text, record) => (
+      render: (text) => (
         <Link
           to={`/projectPage/${text}`}
           onClick={(e) => {
@@ -69,9 +69,11 @@ function ProjectComparison({ projects, onProjectClick }) {
           <Progress
             percent={rate}
             size="small"
-            strokeColor={
-              rate >= 75 ? '#52c41a' : rate >= 50 ? '#faad14' : '#ff4d4f'
-            }
+            strokeColor={(() => {
+              if (rate >= 75) return '#52c41a';
+              if (rate >= 50) return '#faad14';
+              return '#ff4d4f';
+            })()}
             format={() => `${rate}%`}
           />
         </div>
@@ -136,6 +138,7 @@ ProjectComparison.propTypes = {
 
 ProjectComparison.defaultProps = {
   projects: [],
+  onProjectClick: null,
 };
 
 export default ProjectComparison;

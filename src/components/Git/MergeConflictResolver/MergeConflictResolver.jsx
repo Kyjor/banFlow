@@ -76,15 +76,17 @@ function parseConflicts(content) {
   const nonConflictLines = [];
   let lastNonConflictEnd = 0;
 
-  for (let i = 0; i < lines.length; i++) {
+  for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     lineNumber = i + 1;
 
     if (line.startsWith('<<<<<<<')) {
       // Start of conflict - capture context before
       const contextStart = Math.max(0, i - 3);
+      const currentConflictId = conflictId;
+      conflictId += 1;
       currentConflict = {
-        id: `conflict-${conflictId++}`,
+        id: `conflict-${currentConflictId}`,
         startLine: lineNumber,
         endLine: null,
         oursMarker: line,

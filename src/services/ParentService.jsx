@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+const ISO8601ServiceInstance = require('./ISO8601Service').default;
+
 const ParentService = {
   /**
    * @function getParents
@@ -155,7 +157,6 @@ const ParentService = {
 
     // If the destination parent has markAsDoneOnDrag enabled, mark the node as complete
     if (parentToUpdate && parentToUpdate.markAsDoneOnDrag && nodeToUpdate) {
-      const ISO8601ServiceInstance = require('./ISO8601Service').default;
       console.log(
         `Marking node ${nodeId} as complete due to markAsDoneOnDrag on parent ${parentToUpdate.id}`,
       );

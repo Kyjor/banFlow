@@ -10,7 +10,6 @@ import {
   Col,
   Tag,
   Badge,
-  Tooltip,
   Checkbox,
   Dropdown,
   Menu,
@@ -19,16 +18,12 @@ import {
   Statistic,
   Divider,
   DatePicker,
-  Typography,
-  Switch,
 } from 'antd';
 import {
   SearchOutlined,
   DownloadOutlined,
   SettingOutlined,
   EyeOutlined,
-  EyeInvisibleOutlined,
-  FilterOutlined,
   SaveOutlined,
   DeleteOutlined,
   CheckCircleOutlined,
@@ -43,12 +38,10 @@ import moment from 'moment';
 import Layout from '../../layouts/App';
 import NodeModal from '../../components/NodeModal/NodeModal';
 import NodeController from '../../api/nodes/NodeController';
-import ParentController from '../../api/parent/ParentController';
 import { formatTimeHuman } from '../Dashboard/utils/statisticsCalculations';
 import './SheetPage.scss';
 
 const { Option } = Select;
-const { Text } = Typography;
 const { RangePicker } = DatePicker;
 
 class SheetPage extends Component {
@@ -58,7 +51,7 @@ class SheetPage extends Component {
     const location = window.location.href;
     this.projectName = location.split('/').pop();
     // Remove query parameters (everything after ?)
-    this.projectName = this.projectName.split('?')[0];
+    [this.projectName] = this.projectName.split('?');
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
     this.currentProject = this.projectName;
@@ -141,10 +134,10 @@ class SheetPage extends Component {
       this.projectName,
     );
 
-    this.setState({
-      ...this.state,
+    this.setState((prevState) => ({
+      ...prevState,
       ...newState,
-    });
+    }));
 
     // Listen for updates
     ipcRenderer.on('UpdateProjectPageState', this.handleStateUpdate);
@@ -275,7 +268,8 @@ class SheetPage extends Component {
 
   // Column definitions
   getColumns = () => {
-    const { selectedColumns, sortedInfo, parents, nodeStates } = this.state;
+    const { selectedColumns, sortedInfo, parents, nodeStates, filters } =
+      this.state;
     const allColumns = {
       title: {
         title: 'Title',
@@ -313,9 +307,7 @@ class SheetPage extends Component {
           text: p.title,
           value: p.id,
         })),
-        filteredValue: this.state.filters.parent
-          ? [this.state.filters.parent]
-          : null,
+        filteredValue: filters.parent ? [filters.parent] : null,
         onFilter: (value, record) => record.parent === value,
         sorter: (a, b) => {
           const aParent = this.getParentName(a.parent);
@@ -337,9 +329,7 @@ class SheetPage extends Component {
           text: state.name || state,
           value: state.name || state,
         })),
-        filteredValue: this.state.filters.status
-          ? [this.state.filters.status]
-          : null,
+        filteredValue: filters.status ? [filters.status] : null,
         onFilter: (value, record) => record.nodeState === value,
         render: (status) => {
           if (!status) return <Tag>None</Tag>;
@@ -355,9 +345,7 @@ class SheetPage extends Component {
           { text: 'Completed', value: 'completed' },
           { text: 'Incomplete', value: 'incomplete' },
         ],
-        filteredValue: this.state.filters.completion
-          ? [this.state.filters.completion]
-          : null,
+        filteredValue: filters.completion ? [filters.completion] : null,
         onFilter: (value, record) => {
           if (value === 'completed') return record.isComplete;
           return !record.isComplete;
@@ -485,8 +473,8 @@ class SheetPage extends Component {
           }
           return (
             <Space size="small" wrap>
-              {tags.map((tag, index) => (
-                <Tag key={index}>{tag}</Tag>
+              {tags.map((tag) => (
+                <Tag key={tag}>{tag}</Tag>
               ))}
             </Space>
           );
@@ -533,20 +521,19 @@ class SheetPage extends Component {
 
   // Handle table change (sorting, filtering, pagination)
   handleTableChange = (pagination, filters, sorter) => {
-    this.setState({
+    this.setState((prevState) => ({
       pagination: {
-        ...this.state.pagination,
+        ...prevState.pagination,
         current: pagination.current,
         pageSize: pagination.pageSize,
       },
       sortedInfo: sorter,
-    });
+    }));
   };
 
   // Export functions
   exportToCSV = () => {
     const data = this.getTableData();
-    const { selectedColumns } = this.state;
     const columns = this.getColumns();
 
     const headers = columns.map((col) => col.title);
@@ -638,14 +625,21 @@ class SheetPage extends Component {
           onPressEnter={(e) => {
             const name = e.target.value;
             if (name) {
+              const {
+                filters,
+                selectedColumns,
+                pagination,
+                sortedInfo,
+                savedViews: currentSavedViews,
+              } = this.state;
               const view = {
                 name,
-                filters: this.state.filters,
-                selectedColumns: this.state.selectedColumns,
-                pagination: this.state.pagination,
-                sortedInfo: this.state.sortedInfo,
+                filters,
+                selectedColumns,
+                pagination,
+                sortedInfo,
               };
-              const savedViews = [...this.state.savedViews, view];
+              const savedViews = [...currentSavedViews, view];
               localStorage.setItem('sheetViews', JSON.stringify(savedViews));
               this.setState({ savedViews, currentView: name });
               Modal.destroyAll();
@@ -670,10 +664,11 @@ class SheetPage extends Component {
   };
 
   deleteView = (viewName) => {
-    const savedViews = this.state.savedViews.filter((v) => v.name !== viewName);
+    const { savedViews: currentSavedViews, currentView } = this.state;
+    const savedViews = currentSavedViews.filter((v) => v.name !== viewName);
     localStorage.setItem('sheetViews', JSON.stringify(savedViews));
     this.setState({ savedViews });
-    if (this.state.currentView === viewName) {
+    if (currentView === viewName) {
       this.setState({ currentView: null });
     }
     message.success('View deleted');
@@ -906,13 +901,14 @@ class SheetPage extends Component {
     const data = this.getTableData();
     const columns = this.getColumns();
     const stats = this.calculateStatistics();
-    const node = modalNodeId ? this.state.nodes[modalNodeId] : null;
+    const { nodes, nodeStates, groupBy } = this.state;
+    const node = modalNodeId ? nodes[modalNodeId] : null;
 
     return (
       <Layout>
         <div className="sheet-page">
           <div className="sheet-header">
-            <h1>{this.projectName}'s Table</h1>
+            <h1>{this.projectName}&apos;s Table</h1>
             <Space>
               <Input
                 placeholder="Search nodes..."
@@ -957,7 +953,7 @@ class SheetPage extends Component {
                 allowClear
                 style={{ width: 150 }}
               >
-                {this.state.nodeStates.map((state) => (
+                {nodeStates.map((state) => (
                   <Option key={state.name || state} value={state.name || state}>
                     {state.name || state}
                   </Option>
@@ -990,7 +986,7 @@ class SheetPage extends Component {
               />
               <Select
                 placeholder="Group By"
-                value={this.state.groupBy}
+                value={groupBy}
                 onChange={(value) => this.setState({ groupBy: value })}
                 allowClear
                 style={{ width: 150 }}
@@ -1228,7 +1224,7 @@ class SheetPage extends Component {
           )}
 
           <Card>
-            {this.state.groupBy ? (
+            {groupBy ? (
               <div>
                 {Object.entries(this.getGroupedData()).map(
                   ([groupName, groupData]) => (

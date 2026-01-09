@@ -1,58 +1,25 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Row,
-  Col,
-  Spin,
-  message,
-  DatePicker,
-  Select,
-  Space,
-  Button,
-  Tabs,
-  Calendar,
-  List,
-  Checkbox,
-  Badge,
-  Collapse,
-} from 'antd';
-import TabPane from 'antd/lib/tabs/TabPane';
-import { ReloadOutlined, FilterOutlined } from '@ant-design/icons';
+import React, { useState, useMemo } from 'react';
+import { Row, Col, Spin, Calendar } from 'antd';
 import PropTypes from 'prop-types';
 import moment from 'moment';
-import dateFormat from 'dateformat';
 import StatisticsCards from '../StatisticsCards/StatisticsCards';
-import {
-  TimeDistributionChart,
-  TimeTrendChart,
-  ActivityHeatmap,
-} from '../TimeCharts';
-import ProjectComparison from '../ProjectComparison/ProjectComparison';
+import { ActivityHeatmap } from '../TimeCharts';
 import DayByDayCalendar from '../../../../components/DayByDayCalendar/DayByDayCalendar';
-import {
-  aggregateProjectStats,
-  compareProjects,
-  getAggregateRecentActivity,
-} from '../../utils/aggregateCalculations';
-import { calculateTimeInDateRange } from '../../utils/statisticsCalculations';
+import { aggregateProjectStats } from '../../utils/aggregateCalculations';
 import './AggregateView.scss';
-
-const { RangePicker } = DatePicker;
-const { Option } = Select;
 
 function AggregateView({
   projectsData,
   selectedProjects,
-  onProjectClick,
   isLoading,
   dayCellRender,
   dateCellRender,
 }) {
-  const [dateRange, setDateRange] = useState(null);
-  const [selectedTag, setSelectedTag] = useState(null);
-  const [selectedIteration, setSelectedIteration] = useState(null);
-  const [trendPeriod, setTrendPeriod] = useState('week');
+  const [dateRange] = useState(null);
+  const [selectedTag] = useState(null);
+  const [selectedIteration] = useState(null);
+  const [trendPeriod] = useState('week');
   const [selectedDate, setSelectedDate] = useState(moment());
-  const [analyticsCollapsed, setAnalyticsCollapsed] = useState(false);
 
   // Calculate aggregate statistics
   const aggregateStats = useMemo(() => {
@@ -111,93 +78,11 @@ function AggregateView({
     return aggregateProjectStats(filteredData);
   }, [projectsData, dateRange, selectedTag, selectedIteration]);
 
-  // Get all available tags
-  const availableTags = useMemo(() => {
-    const tagSet = new Set();
-    projectsData.forEach((project) => {
-      project.nodes?.forEach((node) => {
-        const tags = node.tags || [];
-        tags.forEach((tag) => {
-          const tagName = typeof tag === 'string' ? tag : tag.title || tag.name;
-          if (tagName) tagSet.add(tagName);
-        });
-      });
-    });
-    return Array.from(tagSet).sort();
-  }, [projectsData]);
-
-  // Get all available iterations
-  const availableIterations = useMemo(() => {
-    const iterationMap = new Map();
-    projectsData.forEach((project) => {
-      project.iterations?.forEach((iter) => {
-        if (!iterationMap.has(iter.id)) {
-          iterationMap.set(iter.id, iter.title || iter.id);
-        }
-      });
-    });
-    return Array.from(iterationMap.entries()).map(([id, title]) => ({
-      id,
-      title,
-    }));
-  }, [projectsData]);
-
-  // Prepare chart data
-  const distributionData = useMemo(() => {
-    if (!aggregateStats) return {};
-    return aggregateStats.timeByParent || {};
-  }, [aggregateStats]);
-
-  const trendData = useMemo(() => {
-    if (!projectsData || projectsData.length === 0) return [];
-
-    let daysToShow = 7;
-    let dateFormat = 'MMM D';
-
-    if (trendPeriod === 'month') {
-      daysToShow = 30;
-      dateFormat = 'MMM D';
-    } else if (trendPeriod === 'quarter') {
-      daysToShow = 90;
-      dateFormat = 'MMM D';
-    }
-
-    const days = [];
-    const now = moment();
-
-    for (let i = daysToShow - 1; i >= 0; i--) {
-      const date = moment(now).subtract(i, 'days');
-      const dateStr = date.format('YYYY-MM-DD');
-      let totalTime = 0;
-
-      projectsData.forEach((project) => {
-        project.nodes?.forEach((node) => {
-          const sessions = node.sessionHistory || [];
-          sessions.forEach((session) => {
-            if (session.startDateTime) {
-              const sessionDate = moment(session.startDateTime);
-              if (sessionDate.format('YYYY-MM-DD') === dateStr) {
-                totalTime += session.length || 0;
-              }
-            }
-          });
-        });
-      });
-
-      days.push({
-        label: date.format(dateFormat),
-        value: Math.round(totalTime), // Ensure we're using rounded seconds
-        date: dateStr,
-      });
-    }
-    return days;
-  }, [projectsData, trendPeriod]);
-
   const heatmapData = useMemo(() => {
     const data = {};
     const today = moment();
 
-    for (let i = 29; i >= 0; i--) {
+    for (let i = 29; i >= 0; i -= 1) {
       const date = today.clone().subtract(i, 'days');
       const dateStr = date.format('YYYY-MM-DD');
       let totalTime = 0;
@@ -220,17 +105,6 @@ function AggregateView({
     }
     return data;
   }, [projectsData]);
-
-  const comparisonData = useMemo(() => {
-    if (!projectsData || projectsData.length === 0) return [];
-    return compareProjects(projectsData);
-  }, [projectsData]);
-
-  const handleClearFilters = () => {
-    setDateRange(null);
-    setSelectedTag(null);
-    setSelectedIteration(null);
-  };
 
   if (isLoading) {
     return (
@@ -327,14 +201,32 @@ AggregateView.propTypes = {
   projectsData: PropTypes.arrayOf(
     PropTypes.shape({
       projectName: PropTypes.string.isRequired,
-      nodes: PropTypes.array,
-      parents: PropTypes.array,
-      iterations: PropTypes.array,
-      tags: PropTypes.array,
+      nodes: PropTypes.arrayOf(
+        PropTypes.shape({
+          sessionHistory: PropTypes.array,
+          tags: PropTypes.array,
+          iterationId: PropTypes.string,
+          iteration: PropTypes.string,
+        }),
+      ),
+      parents: PropTypes.arrayOf(
+        PropTypes.shape({
+          id: PropTypes.string,
+          title: PropTypes.string,
+        }),
+      ),
+      iterations: PropTypes.arrayOf(
+        PropTypes.shape({
+          id: PropTypes.string,
+          title: PropTypes.string,
+        }),
+      ),
+      tags: PropTypes.arrayOf(
+        PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+      ),
     }),
   ).isRequired,
   selectedProjects: PropTypes.arrayOf(PropTypes.string).isRequired,
-  onProjectClick: PropTypes.func,
   isLoading: PropTypes.bool,
   dayCellRender: PropTypes.func,
   dateCellRender: PropTypes.func,
@@ -342,6 +234,8 @@ AggregateView.propTypes = {
 
 AggregateView.defaultProps = {
   isLoading: false,
+  dayCellRender: null,
+  dateCellRender: null,
 };
 
 export default AggregateView;

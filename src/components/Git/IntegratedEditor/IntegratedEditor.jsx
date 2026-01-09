@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import PropTypes from 'prop-types';
 import {
   Card,
   Button,
@@ -12,11 +13,8 @@ import {
   Col,
   Input,
   Select,
-  Modal,
   message,
   Divider,
-  Badge,
-  Popconfirm,
   Alert,
 } from 'antd';
 import {
@@ -30,11 +28,7 @@ import {
   RedoOutlined,
   PlusOutlined,
   MinusOutlined,
-  CheckOutlined,
-  CloseOutlined,
   SettingOutlined,
-  InfoCircleOutlined,
-  BranchesOutlined,
   HistoryOutlined,
 } from '@ant-design/icons';
 import { ipcRenderer } from 'electron';
@@ -42,7 +36,7 @@ import { useGit } from '../../../contexts/GitContext';
 import { useHeartbeat } from '../../../hooks/useHeartbeat';
 import './IntegratedEditor.scss';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -55,10 +49,7 @@ function IntegratedEditor({
 }) {
   const {
     currentRepository,
-    currentDiff,
     stagedFiles,
-    modifiedFiles,
-    getDiff,
     stageFiles,
     unstageFiles,
     refreshRepositoryStatus,
@@ -66,7 +57,7 @@ function IntegratedEditor({
     operationInProgress,
   } = useGit();
 
-  const [selectedFile, setSelectedFile] = useState(file);
+  const [selectedFile] = useState(file);
   const [fileContent, setFileContent] = useState('');
   const [originalContent, setOriginalContent] = useState('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -111,12 +102,97 @@ function IntegratedEditor({
     };
   }, [selectedFile, currentRepository, hasUnsavedChanges]);
 
+  const loadFileContent = useCallback(async (filename) => {
+    if (!currentRepository || !filename) {
+      return;
+    }
+
+    try {
+      const result = await ipcRenderer.invoke(
+        'git:readFile',
+        currentRepository,
+        filename,
+      );
+
+      if (result.success) {
+        setFileContent(result.content);
+        setOriginalContent(result.content);
+        lastFileContentRef.current = result.content; // Track loaded content
+        setHasUnsavedChanges(false);
+        setUndoStack([result.content]);
+        setRedoStack([]);
+      } else {
+        throw new Error('Failed to load file');
+      }
+    } catch (error) {
+      // If file doesn't exist, treat it as a new file
+      if (error.message && error.message.includes('not found')) {
+        setFileContent('');
+        setOriginalContent('');
+        lastFileContentRef.current = '';
+        setHasUnsavedChanges(false);
+        setUndoStack(['']);
+        setRedoStack([]);
+      } else {
+        console.error('Failed to load file content:', error);
+        message.error(
+          `Failed to load file: ${error.message || 'Unknown error'}`,
+        );
+      }
+    }
+  }, [currentRepository]); // Add currentRepository to dependencies
+
+  const checkFileStagingStatus = useCallback((filename) => {
+    const isStaged = stagedFiles.includes(filename);
+    setIsFileStaged(isStaged);
+  }, [stagedFiles]); // Add stagedFiles to dependencies
+
+  const saveFile = useCallback(async () => {
+    if (!currentRepository || !selectedFile) {
+      message.error('No file selected or repository not available');
+      return;
+    }
+
+    try {
+      const result = await ipcRenderer.invoke(
+        'git:writeFile',
+        currentRepository,
+        selectedFile,
+        fileContent,
+      );
+
+      if (result.success) {
+        setOriginalContent(fileContent);
+        setHasUnsavedChanges(false);
+        message.success('File saved successfully');
+
+        // Refresh repository status to detect the file change
+        await refreshRepositoryStatus();
+
+        if (onFileChange) {
+          onFileChange(fileContent, false);
+        }
+      } else {
+        throw new Error('Failed to save file');
+      }
+    } catch (error) {
+      console.error('Failed to save file:', error);
+      message.error(`Failed to save file: ${error.message || 'Unknown error'}`);
+    }
+  }, [
+    fileContent,
+    selectedFile,
+    currentRepository,
+    refreshRepositoryStatus,
+    onFileChange,
+  ]);
+
   useEffect(() => {
     if (selectedFile && currentRepository) {
       loadFileContent(selectedFile);
       checkFileStagingStatus(selectedFile);
     }
-  }, [selectedFile, currentRepository]);
+  }, [selectedFile, currentRepository, loadFileContent, checkFileStagingStatus]); // Added loadFileContent and checkFileStagingStatus to dependencies
 
   // Periodically check if the file has changed on disk and reload if safe
   const checkForExternalChanges = async () => {
@@ -191,52 +267,7 @@ function IntegratedEditor({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [hasUnsavedChanges, autoSave]);
-
-  const loadFileContent = async (filename) => {
-    if (!currentRepository || !filename) {
-      return;
-    }
-
-    try {
-      const result = await ipcRenderer.invoke(
-        'git:readFile',
-        currentRepository,
-        filename,
-      );
-
-      if (result.success) {
-        setFileContent(result.content);
-        setOriginalContent(result.content);
-        lastFileContentRef.current = result.content; // Track loaded content
-        setHasUnsavedChanges(false);
-        setUndoStack([result.content]);
-        setRedoStack([]);
-      } else {
-        throw new Error('Failed to load file');
-      }
-    } catch (error) {
-      // If file doesn't exist, treat it as a new file
-      if (error.message && error.message.includes('not found')) {
-        setFileContent('');
-        setOriginalContent('');
-        lastFileContentRef.current = '';
-        setHasUnsavedChanges(false);
-        setUndoStack(['']);
-        setRedoStack([]);
-      } else {
-        console.error('Failed to load file content:', error);
-        message.error(
-          `Failed to load file: ${error.message || 'Unknown error'}`,
-        );
-      }
-    }
-  };
-
-  const checkFileStagingStatus = (filename) => {
-    const isStaged = stagedFiles.includes(filename);
-    setIsFileStaged(isStaged);
-  };
+  }, [hasUnsavedChanges, autoSave, saveFile]); // Added saveFile to dependencies
 
   const handleContentChange = useCallback(
     (newContent) => {
@@ -256,46 +287,6 @@ function IntegratedEditor({
     },
     [originalContent, onFileChange],
   );
-
-  const saveFile = useCallback(async () => {
-    if (!currentRepository || !selectedFile) {
-      message.error('No file selected or repository not available');
-      return;
-    }
-
-    try {
-      const result = await ipcRenderer.invoke(
-        'git:writeFile',
-        currentRepository,
-        selectedFile,
-        fileContent,
-      );
-
-      if (result.success) {
-        setOriginalContent(fileContent);
-        setHasUnsavedChanges(false);
-        message.success('File saved successfully');
-
-        // Refresh repository status to detect the file change
-        await refreshRepositoryStatus();
-
-        if (onFileChange) {
-          onFileChange(fileContent, false);
-        }
-      } else {
-        throw new Error('Failed to save file');
-      }
-    } catch (error) {
-      console.error('Failed to save file:', error);
-      message.error(`Failed to save file: ${error.message || 'Unknown error'}`);
-    }
-  }, [
-    fileContent,
-    selectedFile,
-    currentRepository,
-    refreshRepositoryStatus,
-    onFileChange,
-  ]);
 
   const undo = useCallback(() => {
     if (undoStack.length > 1) {
@@ -337,8 +328,8 @@ function IntegratedEditor({
 
   const goToLine = useCallback(
     (lineNumber) => {
-      const lineNum = parseInt(lineNumber);
-      if (isNaN(lineNum) || lineNum < 1) {
+      const lineNum = parseInt(lineNumber, 10);
+      if (Number.isNaN(lineNum) || lineNum < 1) {
         message.warning('Please enter a valid line number');
         return;
       }
@@ -359,7 +350,7 @@ function IntegratedEditor({
       if (editorRef.current) {
         const textarea = editorRef.current.resizableTextArea?.textArea;
         if (textarea) {
-          const lineHeight = parseInt(editorSettings.fontSize) * 1.5;
+          const lineHeight = parseInt(editorSettings.fontSize, 10) * 1.5;
           textarea.scrollTop = (lineNum - 1) * lineHeight;
           textarea.focus();
         }
@@ -389,46 +380,6 @@ function IntegratedEditor({
       message.error('Failed to unstage file');
     }
   }, [selectedFile, unstageFiles]);
-
-  const getLanguageFromFilename = (filename) => {
-    if (!filename) return 'text';
-
-    const extension = filename.split('.').pop()?.toLowerCase();
-    const languageMap = {
-      js: 'javascript',
-      jsx: 'jsx',
-      ts: 'typescript',
-      tsx: 'tsx',
-      py: 'python',
-      java: 'java',
-      cpp: 'cpp',
-      c: 'c',
-      cs: 'csharp',
-      php: 'php',
-      rb: 'ruby',
-      go: 'go',
-      rs: 'rust',
-      html: 'markup',
-      xml: 'markup',
-      css: 'css',
-      scss: 'scss',
-      sass: 'sass',
-      less: 'less',
-      json: 'json',
-      yaml: 'yaml',
-      yml: 'yaml',
-      md: 'markdown',
-      sql: 'sql',
-      sh: 'bash',
-      bash: 'bash',
-      zsh: 'bash',
-      ps1: 'powershell',
-      dockerfile: 'dockerfile',
-      jl: 'julia',
-    };
-
-    return languageMap[extension] || 'text';
-  };
 
   const renderEditor = () => {
     return (
@@ -555,7 +506,7 @@ function IntegratedEditor({
                     onChange={(e) =>
                       setEditorSettings((prev) => ({
                         ...prev,
-                        fontSize: parseInt(e.target.value) || 14,
+                        fontSize: parseInt(e.target.value, 10) || 14,
                       }))
                     }
                     min={10}
@@ -572,7 +523,7 @@ function IntegratedEditor({
                     onChange={(e) =>
                       setEditorSettings((prev) => ({
                         ...prev,
-                        tabSize: parseInt(e.target.value) || 2,
+                        tabSize: parseInt(e.target.value, 10) || 2,
                       }))
                     }
                     min={1}
@@ -584,8 +535,9 @@ function IntegratedEditor({
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Text strong>Options</Text>
                   <Space direction="vertical">
-                    <label>
+                    <label htmlFor="wordWrapCheckbox">
                       <input
+                        id="wordWrapCheckbox"
                         type="checkbox"
                         checked={editorSettings.wordWrap}
                         onChange={(e) =>
@@ -597,8 +549,9 @@ function IntegratedEditor({
                       />
                       Word Wrap
                     </label>
-                    <label>
+                    <label htmlFor="showLineNumbersCheckbox">
                       <input
+                        id="showLineNumbersCheckbox"
                         type="checkbox"
                         checked={editorSettings.showLineNumbers}
                         onChange={(e) =>
@@ -811,5 +764,13 @@ function IntegratedEditor({
     </div>
   );
 }
+
+IntegratedEditor.propTypes = {
+  file: PropTypes.string,
+  onFileChange: PropTypes.func,
+  showStagingControls: PropTypes.bool,
+  autoSave: PropTypes.bool,
+  theme: PropTypes.string,
+};
 
 export default IntegratedEditor;

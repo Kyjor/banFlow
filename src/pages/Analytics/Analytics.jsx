@@ -319,7 +319,7 @@ class Analytics extends Component {
     const days = [];
     const now = moment();
 
-    for (let i = daysToShow - 1; i >= 0; i--) {
+    for (let i = daysToShow - 1; i >= 0; i -= 1) {
       const date = moment(now).subtract(i, 'days');
       const dateStr = date.format('YYYY-MM-DD');
       let totalTime = 0;
@@ -352,7 +352,7 @@ class Analytics extends Component {
     const data = {};
     const today = moment();
 
-    for (let i = 29; i >= 0; i--) {
+    for (let i = 29; i >= 0; i -= 1) {
       const date = today.clone().subtract(i, 'days');
       const dateStr = date.format('YYYY-MM-DD');
       let totalTime = 0;
@@ -410,6 +410,7 @@ class Analytics extends Component {
   };
 
   saveCurrentReport = () => {
+    const { selectedProjects, dateRange, selectedTag, selectedIteration, filterRules, queryConjunction, trendPeriod } = this.state;
     const name = window.prompt('Save report as:');
     if (!name) return;
 
@@ -417,18 +418,18 @@ class Analytics extends Component {
       name,
       createdAt: new Date().toISOString(),
       state: {
-        selectedProjects: this.state.selectedProjects,
-        dateRange: this.state.dateRange
+        selectedProjects,
+        dateRange: dateRange
           ? [
-              this.state.dateRange[0]?.toISOString(),
-              this.state.dateRange[1]?.toISOString(),
+              dateRange[0]?.toISOString(),
+              dateRange[1]?.toISOString(),
             ]
           : null,
-        selectedTag: this.state.selectedTag,
-        selectedIteration: this.state.selectedIteration,
-        filterRules: this.state.filterRules,
-        queryConjunction: this.state.queryConjunction,
-        trendPeriod: this.state.trendPeriod,
+        selectedTag: selectedTag,
+        selectedIteration: selectedIteration,
+        filterRules: filterRules,
+        queryConjunction: queryConjunction,
+        trendPeriod: trendPeriod,
       },
     };
 
@@ -442,7 +443,7 @@ class Analytics extends Component {
       () => {
         localStorage.setItem(
           'analyticsSavedReports',
-          JSON.stringify(this.state.savedReports),
+          JSON.stringify(savedReports),
         );
         message.success('Report saved');
       },
@@ -471,7 +472,7 @@ class Analytics extends Component {
         trendPeriod: state.trendPeriod || 'week',
       },
       () => {
-        this.loadProjectsData(this.state.selectedProjects);
+        this.loadProjectsData(selectedProjects);
         message.success(`Loaded report: ${report.name}`);
       },
     );
@@ -805,7 +806,7 @@ class Analytics extends Component {
 
     const exportData = {
       exportDate: moment().toISOString(),
-      selectedProjects: this.state.selectedProjects,
+        selectedProjects,
       filters: {
         dateRange: this.state.dateRange
           ? [

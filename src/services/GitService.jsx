@@ -1,6 +1,11 @@
 const simpleGit = require('simple-git');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
+const { URL } = require('url');
+const crypto = require('crypto');
+const { execSync } = require('child_process');
+const os = require('os');
 
 export default class GitService {
   constructor() {
@@ -139,40 +144,40 @@ export default class GitService {
       const deletedFiles = [];
       const conflictedFiles = [];
 
-      for (const file of status.files || []) {
-        const { path, index, working_dir } = file;
+      (status.files || []).forEach((file) => {
+        const { path: filePath, index, working_dir: workingDir } = file;
 
         // Check for conflicts (both have changes)
         if (
           index === 'U' ||
-          working_dir === 'U' ||
-          (index === 'A' && working_dir === 'A') ||
-          (index === 'D' && working_dir === 'D')
+          workingDir === 'U' ||
+          (index === 'A' && workingDir === 'A') ||
+          (index === 'D' && workingDir === 'D')
         ) {
-          conflictedFiles.push(path);
-          continue;
+          conflictedFiles.push(filePath);
+          return;
         }
 
         // Staged changes (index has a status other than ' ' or '?')
         if (index && index !== ' ' && index !== '?') {
-          stagedFiles.push(path);
+          stagedFiles.push(filePath);
         }
 
-        // Unstaged modifications (working_dir is 'M')
-        if (working_dir === 'M') {
-          unstagedModified.push(path);
+        // Unstaged modifications (workingDir is 'M')
+        if (workingDir === 'M') {
+          unstagedModified.push(filePath);
         }
 
         // Deleted in working dir
-        if (working_dir === 'D') {
-          deletedFiles.push(path);
+        if (workingDir === 'D') {
+          deletedFiles.push(filePath);
         }
 
-        // Untracked files (working_dir is '?')
-        if (working_dir === '?') {
-          untrackedFiles.push(path);
+        // Untracked files (workingDir is '?')
+        if (workingDir === '?') {
+          untrackedFiles.push(filePath);
         }
-      }
+      });
 
       // Create clean, serializable status object
       const statusInfo = {
@@ -555,7 +560,7 @@ export default class GitService {
     }
   }
 
-  async getStashFileDiff(stashIndex = 0, filename) {
+  async getStashFileDiff(filename, stashIndex = 0) {
     if (!this.git) throw new Error('No repository selected');
 
     try {
@@ -574,7 +579,7 @@ export default class GitService {
     }
   }
 
-  parseStatus(statusCode) {
+  static parseStatus(statusCode) {
     const statusMap = {
       M: 'modified',
       A: 'added',
@@ -746,19 +751,20 @@ export default class GitService {
         .filter(Boolean)
         .map((line) => {
           const [status, ...pathParts] = line.split('\t');
-          const path = pathParts.join('\t'); // Handle paths with tabs
+          const filePath = pathParts.join('\t'); // Handle paths with tabs
+          let fileStatus = 'changed';
+          if (status === 'A') {
+            fileStatus = 'added';
+          } else if (status === 'D') {
+            fileStatus = 'deleted';
+          } else if (status === 'M') {
+            fileStatus = 'modified';
+          } else if (status.startsWith('R')) {
+            fileStatus = 'renamed';
+          }
           return {
-            path,
-            status:
-              status === 'A'
-                ? 'added'
-                : status === 'D'
-                  ? 'deleted'
-                  : status === 'M'
-                    ? 'modified'
-                    : status.startsWith('R')
-                      ? 'renamed'
-                      : 'changed',
+            path: filePath,
+            status: fileStatus,
           };
         });
       return files;
@@ -1172,13 +1178,13 @@ export default class GitService {
   }
 
   // Helper: Extract hunks from raw diff output
-  extractHunksFromDiff(diffString) {
+  static extractHunksFromDiff(diffString) {
     const hunks = [];
     const lines = diffString.split('\n');
     let currentHunk = null;
     const headerInfo = { aFile: '', bFile: '' };
 
-    for (const line of lines) {
+    lines.forEach((line) => {
       // Capture file headers
       if (line.startsWith('--- ')) {
         headerInfo.aFile = line;
@@ -1197,7 +1203,7 @@ export default class GitService {
       } else if (currentHunk) {
         currentHunk.lines.push(line);
       }
-    }
+    });
 
     if (currentHunk) {
       hunks.push(currentHunk);
@@ -1207,26 +1213,27 @@ export default class GitService {
   }
 
   // Helper: Create a patch from a single hunk
-  createPatchFromHunk(filePath, hunk, fullDiff) {
+  static createPatchFromHunk(filePath, hunk, fullDiff) {
     const lines = fullDiff.split('\n');
     let header = '';
 
     // Find the diff header (everything before first @@)
-    for (const line of lines) {
-      if (line.startsWith('@@')) break;
-      header += `${line}\n`;
+    const headerEndIndex = lines.findIndex((line) => line.startsWith('@@'));
+    if (headerEndIndex !== -1) {
+      header = `${lines.slice(0, headerEndIndex).join('\n')}\n`;
     }
 
-    return `${header + hunk.lines.join('\n')}\n`;
+    return `${header}${hunk.lines.join('\n')}\n`;
   }
 
   // Helper: Create a patch from specific lines within a hunk
-  createPatchFromLines(filePath, hunk, lineIndices, fullDiff) {
+  static createPatchFromLines(filePath, hunk, lineIndices, fullDiff) {
     const lines = fullDiff.split('\n');
     let header = '';
 
     // Find the diff header
-    for (const line of lines) {
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
       if (line.startsWith('@@')) break;
       header += `${line}\n`;
     }
@@ -1239,8 +1246,8 @@ export default class GitService {
       throw new Error('Invalid hunk header format');
     }
 
-    const oldStart = parseInt(hunkHeaderMatch[1]);
-    const newStart = parseInt(hunkHeaderMatch[3]);
+    const oldStart = parseInt(hunkHeaderMatch[1], 10);
+    const newStart = parseInt(hunkHeaderMatch[3], 10);
 
     // Build new hunk with only selected changed lines (keep context)
     const lineIndicesSet = new Set(lineIndices);
@@ -1248,50 +1255,45 @@ export default class GitService {
     let oldCount = 0;
     let newCount = 0;
 
-    hunk.lines.forEach((line, idx) => {
-      if (idx === 0) return; // Skip hunk header
+    for (let idx = 1; idx < hunk.lines.length; idx += 1) {
+      const line = hunk.lines[idx];
 
       const firstChar = line[0];
 
       if (firstChar === ' ' || firstChar === undefined) {
         // Context line - always include
         newLines.push(line);
-        oldCount++;
-        newCount++;
+        oldCount += 1;
+        newCount += 1;
       } else if (firstChar === '-') {
         if (lineIndicesSet.has(idx)) {
           // Include this deletion
           newLines.push(line);
-          oldCount++;
+          oldCount += 1;
         } else {
           // Convert to context line
           newLines.push(` ${line.substring(1)}`);
-          oldCount++;
-          newCount++;
+          oldCount += 1;
+          newCount += 1;
         }
       } else if (firstChar === '+') {
         if (lineIndicesSet.has(idx)) {
           // Include this addition
           newLines.push(line);
-          newCount++;
+          newCount += 1;
         }
         // If not selected, just skip the line
       }
-    });
+    }
 
     // Create new hunk header
     const newHeader = `@@ -${oldStart},${oldCount} +${newStart},${newCount} @@`;
 
-    return `${header + newHeader}\n${newLines.join('\n')}\n`;
+    return `${header}${newHeader}\n${newLines.join('\n')}\n`;
   }
 
   // Helper: Apply patch to index (staging area)
   async applyPatchToIndex(patchContent, reverse = false) {
-    const { execSync } = require('child_process');
-    const fs = require('fs');
-    const path = require('path');
-    const os = require('os');
-
     // Write patch to temp file
     const tempFile = path.join(os.tmpdir(), `git-patch-${Date.now()}.patch`);
     fs.writeFileSync(tempFile, patchContent);
@@ -1315,11 +1317,6 @@ export default class GitService {
 
   // Helper: Apply patch to working directory
   async applyPatchToWorkingDir(patchContent, reverse = false) {
-    const { execSync } = require('child_process');
-    const fs = require('fs');
-    const path = require('path');
-    const os = require('os');
-
     // Write patch to temp file
     const tempFile = path.join(os.tmpdir(), `git-patch-${Date.now()}.patch`);
     fs.writeFileSync(tempFile, patchContent);
@@ -1346,16 +1343,13 @@ export default class GitService {
     try {
       if (!this.git) throw new Error('No repository selected');
 
-      const fs = require('fs');
-      const path = require('path');
-
       // Delete files from filesystem
-      for (const file of files) {
+      files.forEach((file) => {
         const fullPath = path.join(this.currentRepo, file);
         if (fs.existsSync(fullPath)) {
           fs.unlinkSync(fullPath);
         }
-      }
+      });
 
       return {
         success: true,
@@ -1393,13 +1387,11 @@ export default class GitService {
   }
 
   // GitHub OAuth Integration (PKCE flow for public clients)
-  generateOAuthState() {
-    const crypto = require('crypto');
+  static generateOAuthState() {
     return crypto.randomBytes(32).toString('hex');
   }
 
-  generatePKCE() {
-    const crypto = require('crypto');
+  static generatePKCE() {
     // Generate code verifier (base64url encoded random bytes)
     const codeVerifier = crypto
       .randomBytes(32)
@@ -1420,7 +1412,7 @@ export default class GitService {
     return { codeVerifier, codeChallenge };
   }
 
-  getOAuthUrl(state, codeChallenge) {
+  static getOAuthUrl(state, codeChallenge) {
     const clientId = process.env.GITHUB_CLIENT_ID || 'Ov23liBd1HNOGPQyC90C';
     // Use localhost for development (more reliable on Linux), custom protocol for production
     const redirectUri =
@@ -1439,10 +1431,7 @@ export default class GitService {
     return `https://github.com/login/oauth/authorize?${params.toString()}`;
   }
 
-  async exchangeOAuthCode(code, codeVerifier, state) {
-    const https = require('https');
-    const { URL } = require('url');
-
+  static async exchangeOAuthCode(code, codeVerifier) {
     return new Promise((resolve, reject) => {
       const clientId = process.env.GITHUB_CLIENT_ID || 'Ov23liBd1HNOGPQyC90C';
       const clientSecret = process.env.GITHUB_CLIENT_SECRET || ''; // Not needed for PKCE
@@ -1546,8 +1535,6 @@ export default class GitService {
   async authenticateGitHub(token) {
     try {
       // Use Node's native https module to avoid fetch/Octokit compatibility issues
-      const https = require('https');
-      const { URL } = require('url');
 
       return new Promise((resolve, reject) => {
         const url = new URL('https://api.github.com/user');
@@ -1670,8 +1657,6 @@ export default class GitService {
 
     try {
       // Use Node's native https module to avoid fetch/Octokit compatibility issues
-      const https = require('https');
-      const { URL } = require('url');
 
       return new Promise((resolve, reject) => {
         const url = new URL('https://api.github.com/user/repos');
@@ -1744,13 +1729,13 @@ export default class GitService {
   }
 
   // Utility Methods
-  parseDiff(diffString) {
+  static parseDiff(diffString) {
     const lines = diffString.split('\n');
     const files = [];
     let currentFile = null;
     let currentHunk = null;
 
-    for (const line of lines) {
+    lines.forEach((line) => {
       if (line.startsWith('diff --git')) {
         if (currentFile) files.push(currentFile);
 
@@ -1768,19 +1753,21 @@ export default class GitService {
           lines: [],
         };
       } else if (currentHunk) {
+        let lineType = 'context';
+        if (line.startsWith('+')) {
+          lineType = 'added';
+          currentFile.added += 1;
+        } else if (line.startsWith('-')) {
+          lineType = 'deleted';
+          currentFile.deleted += 1;
+        }
+
         currentHunk.lines.push({
           content: line,
-          type: line.startsWith('+')
-            ? 'added'
-            : line.startsWith('-')
-              ? 'deleted'
-              : 'context',
+          type: lineType,
         });
-
-        if (line.startsWith('+')) currentFile.added++;
-        if (line.startsWith('-')) currentFile.deleted++;
       }
-    }
+    });
 
     if (currentHunk) currentFile.hunks.push(currentHunk);
     if (currentFile) files.push(currentFile);

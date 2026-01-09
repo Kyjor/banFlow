@@ -200,14 +200,16 @@ function DiffViewer({
       // Parse hunk header to get line numbers
       const headerMatch = hunk.header.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
       if (headerMatch) {
-        leftLineNum = parseInt(headerMatch[1]);
-        rightLineNum = parseInt(headerMatch[2]);
+        leftLineNum = parseInt(headerMatch[1], 10);
+        rightLineNum = parseInt(headerMatch[2], 10);
       }
 
       hunk.lines.forEach((line) => {
         if (line.type === 'deleted') {
+          const currentLeft = leftLineNum;
+          leftLineNum += 1;
           leftLines.push({
-            number: leftLineNum++,
+            number: currentLeft,
             content: line.content.substring(1),
             type: 'deleted',
           });
@@ -222,19 +224,25 @@ function DiffViewer({
             content: '',
             type: 'empty',
           });
+          const currentRight = rightLineNum;
+          rightLineNum += 1;
           rightLines.push({
-            number: rightLineNum++,
+            number: currentRight,
             content: line.content.substring(1),
             type: 'added',
           });
         } else {
+          const currentLeft = leftLineNum;
+          leftLineNum += 1;
+          const currentRight = rightLineNum;
+          rightLineNum += 1;
           leftLines.push({
-            number: leftLineNum++,
+            number: currentLeft,
             content: line.content.substring(1),
             type: 'context',
           });
           rightLines.push({
-            number: rightLineNum++,
+            number: currentRight,
             content: line.content.substring(1),
             type: 'context',
           });

@@ -21,7 +21,7 @@
   .staged-files {
     border: 2px solid #52c41a;
     background: linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%);
-    
+
     .ant-card-head {
       background: rgba(82, 196, 26, 0.1);
       border-bottom: 1px solid #b7eb8f;
@@ -33,7 +33,7 @@
     border-radius: 4px;
     margin-bottom: 4px;
     padding: 8px;
-    
+
     &:hover {
       background-color: #fafafa;
     }
@@ -43,7 +43,7 @@
     .ant-collapse-item {
       .ant-collapse-header {
         font-weight: 500;
-        
+
         .ant-collapse-arrow {
           color: #1890ff;
         }
@@ -53,7 +53,7 @@
 
   .ant-alert {
     border-radius: 8px;
-    
+
     &.ant-alert-info {
       background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
       border-color: #91d5ff;
@@ -67,25 +67,25 @@
         border-left: 3px solid #52c41a;
       }
     }
-    
+
     &.modified {
       .ant-list-item {
         border-left: 3px solid #faad14;
       }
     }
-    
+
     &.untracked {
       .ant-list-item {
         border-left: 3px solid #1890ff;
       }
     }
-    
+
     &.deleted {
       .ant-list-item {
         border-left: 3px solid #ff4d4f;
       }
     }
-    
+
     &.conflicted {
       .ant-list-item {
         border-left: 3px solid #ff4d4f;
@@ -99,7 +99,7 @@
     text-align: center;
     background: linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%);
     border: 2px solid #b7eb8f;
-    
+
     .ant-card-body {
       padding: 24px;
     }
@@ -110,7 +110,7 @@
     .ant-btn {
       margin-right: 8px;
       margin-bottom: 8px;
-      
+
       &:last-child {
         margin-right: 0;
       }
@@ -122,7 +122,7 @@
     .ant-form-item-label {
       font-weight: 500;
     }
-    
+
     .commit-preview {
       background: #fafafa;
       border: 1px solid #d9d9d9;
@@ -137,25 +137,25 @@
   .ant-tag {
     border-radius: 12px;
     font-size: 11px;
-    
+
     &.ant-tag-success {
       background: #f6ffed;
       border-color: #b7eb8f;
       color: #389e0d;
     }
-    
+
     &.ant-tag-warning {
       background: #fffbe6;
       border-color: #ffe58f;
       color: #d48806;
     }
-    
+
     &.ant-tag-error {
       background: #fff2f0;
       border-color: #ffccc7;
       color: #cf1322;
     }
-    
+
     &.ant-tag-processing {
       background: #f0f9ff;
       border-color: #91d5ff;
@@ -175,18 +175,18 @@
     text-align: center;
     padding: 40px 20px;
     color: #999;
-    
+
     .anticon {
       font-size: 48px;
       margin-bottom: 16px;
       color: #d9d9d9;
     }
-    
+
     h4 {
       color: #999;
       margin-bottom: 8px;
     }
-    
+
     p {
       color: #bfbfbf;
     }
@@ -199,17 +199,17 @@
     .ant-col {
       margin-bottom: 16px;
     }
-    
+
     .ant-tabs {
       .ant-tabs-tab {
         padding: 8px 12px;
-        
+
         .ant-tabs-tab-btn {
           font-size: 12px;
         }
       }
     }
-    
+
     .operation-buttons {
       .ant-btn {
         margin-bottom: 8px;
@@ -242,24 +242,24 @@
     .staged-files {
       background: linear-gradient(135deg, #162312 0%, #1c1c1c 100%);
       border-color: #237804;
-      
+
       .ant-card-head {
         background: rgba(35, 120, 4, 0.2);
         border-bottom-color: #237804;
       }
     }
-    
+
     .current-branch-card {
       background: linear-gradient(135deg, #162312 0%, #1c1c1c 100%);
       border-color: #237804;
     }
-    
+
     .ant-list-item {
       &:hover {
         background-color: #1f1f1f;
       }
     }
-    
+
     .file-status {
       &.conflicted {
         .ant-list-item {
@@ -267,19 +267,19 @@
         }
       }
     }
-    
+
     .empty-state {
       .anticon {
         color: #434343;
       }
-      
+
       h4 {
         color: #8c8c8c;
       }
-      
+
       p {
         color: #595959;
       }
     }
   }
-} 
+}

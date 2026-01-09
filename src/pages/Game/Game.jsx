@@ -14,7 +14,7 @@ import {
 import Layout from '../../layouts/App';
 import gameService from '../../services/GameService';
 import eventSystem from '../../services/EventSystem';
-import playPlatformer from './games/Platformer';
+import { playPlatformer } from './games/Platformer';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -41,12 +41,12 @@ class GameLibraryPage extends Component {
       this.projectName,
     );
 
-    this.setState({
-      ...this.state,
+    this.setState((prevState) => ({
+      ...prevState,
       ...newState,
       goldBalance: gameService.getInventory().gold || 0,
       lokiLoaded: true,
-    });
+    }));
   }
 
   awardGold = (amount, reason = 'game_reward', meta = {}) => {
@@ -63,7 +63,7 @@ class GameLibraryPage extends Component {
   };
 
   playSelectedGame = () => {
-    const { selectedGame, canvasKey } = this.state;
+    const { canvasKey } = this.state;
     this.setState({ showLibrary: false, canvasKey: canvasKey + 1 }, () => {
       this.startGame();
     });

@@ -8,7 +8,6 @@ import ProjectSettings from '../pages/ProjectSettings/ProjectSettings';
 import AppSettings from '../pages/AppSettings/AppSettings';
 import SheetPage from '../pages/SheetPage/SheetPage';
 import Game from '../pages/Game/Game';
-import TextEditor from '../components/TextEditor/TextEditor';
 import DocsPage from '../pages/DocsPage/DocsPage';
 import ChartPage from '../pages/ChartPage/ChartPage';
 import GitPage from '../pages/Git/GitPage';

@@ -32,24 +32,24 @@
 
 .create-project-form {
   margin-bottom: 16px;
-  
+
   .ant-input {
     border-radius: 8px 0 0 8px;
     border-right: none;
     background: rgba(255, 255, 255, 0.95);
     color: #262626;
-    
+
     &::placeholder {
       color: #8c8c8c;
     }
-    
+
     &:focus {
       border-color: rgba(255, 255, 255, 0.5);
       box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
       background: #ffffff;
     }
   }
-  
+
   .ant-btn-primary {
     border-radius: 0 8px 8px 0;
     background: rgba(255, 255, 255, 0.2);
@@ -57,7 +57,7 @@
     backdrop-filter: blur(10px);
     color: #ffffff;
     font-weight: 500;
-    
+
     &:hover {
       background: rgba(255, 255, 255, 0.3);
       border-color: rgba(255, 255, 255, 0.4);
@@ -70,46 +70,46 @@
   display: flex;
   gap: 12px;
   margin-bottom: 16px;
-  
+
   .search-input {
     flex: 1;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.95);
-    
+
     .ant-input {
       background: transparent;
       color: #262626;
-      
+
       &::placeholder {
         color: #8c8c8c;
       }
     }
-    
+
     &:focus,
     &:hover {
       border-color: rgba(255, 255, 255, 0.5);
-      
+
       .ant-input {
         background: #ffffff;
       }
     }
   }
-  
+
   .sort-select {
     width: 140px;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.95);
-    
+
     .ant-select-selector {
       border-radius: 8px !important;
       background: transparent !important;
       color: #262626 !important;
     }
-    
+
     .ant-select-selection-item {
       color: #262626 !important;
     }
-    
+
     &:hover,
     &.ant-select-focused {
       .ant-select-selector {
@@ -127,7 +127,7 @@
   border-color: rgba(255, 255, 255, 0.3);
   color: #ffffff;
   backdrop-filter: blur(10px);
-  
+
   &:hover {
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.4);
@@ -141,20 +141,20 @@
   overflow-y: auto;
   padding: 16px;
   background: #f5f7fa;
-  
+
   &::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 4px;
-    
+
     &:hover {
       background: #a8a8a8;
     }
@@ -164,7 +164,7 @@
 .project-list-item {
   margin-bottom: 16px;
   padding: 0 !important;
-  
+
   &:last-child {
     margin-bottom: 0;
   }
@@ -176,53 +176,53 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   overflow: hidden;
-  
+
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     border-color: #3498db;
   }
-  
+
   &.project-card-selected {
     border: 2px solid #3498db;
     background: rgba(52, 152, 219, 0.08);
     box-shadow: 0 4px 16px rgba(52, 152, 219, 0.2);
     transform: translateY(-2px);
-    
+
     .project-icon {
       transform: scale(1.08);
       box-shadow: 0 4px 12px rgba(52, 152, 219, 0.25);
     }
-    
+
     .project-title {
       color: #3498db;
       font-weight: 700;
-      
+
       .ant-typography {
         color: #3498db;
       }
     }
-    
+
     &:hover {
       transform: translateY(-4px);
       box-shadow: 0 8px 24px rgba(52, 152, 219, 0.3);
     }
   }
-  
+
   .ant-card-body {
     padding: 20px;
   }
-  
+
   .ant-card-actions {
     background: #fafafa;
     border-top: 1px solid #f0f0f0;
-    
+
     li {
       margin: 8px 0;
-      
+
       .ant-btn {
         color: #8c8c8c;
-        
+
         &:hover {
           color: #3498db;
         }
@@ -252,7 +252,7 @@
   justify-content: center;
   flex-shrink: 0;
   transition: transform 0.2s;
-  
+
   .project-card:hover & {
     transform: scale(1.05);
   }
@@ -261,13 +261,13 @@
 .project-title-wrapper {
   flex: 1;
   min-width: 0;
-  
+
   .project-title {
     margin: 0 !important;
     font-size: 18px;
     font-weight: 600;
     color: #262626;
-    
+
     .ant-typography {
       margin: 0;
       color: #262626;
@@ -277,7 +277,7 @@
 
 .project-card-meta {
   margin-top: 4px;
-  
+
   .ant-tag {
     border-radius: 6px;
     padding: 4px 10px;
@@ -294,7 +294,7 @@
   justify-content: center;
   padding: 48px 24px;
   background: #f5f7fa;
-  
+
   .ant-empty {
     .ant-empty-description {
       color: #8c8c8c;
@@ -307,7 +307,7 @@
   .header input {
     padding: 10px;
     font-size: 16px;
-    border: 2px solid #FFF;
+    border: 2px solid #fff;
     width: 165px;
   }
 
@@ -316,7 +316,7 @@
     font-size: 16px;
     margin: 10px;
     margin-right: 0px;
-    border: 2px solid #0066FF;
+    border: 2px solid #0066ff;
   }
 
   .header button:hover {

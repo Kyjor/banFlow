@@ -36,7 +36,7 @@ const getProjectColor = (name) => {
     '#fa8c16', // Orange
   ];
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
+  for (let i = 0; i < name.length; i += 1) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   return colors[Math.abs(hash) % colors.length];

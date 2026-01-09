@@ -3,6 +3,17 @@ import { Card, Empty, Tooltip } from 'antd';
 import PropTypes from 'prop-types';
 import './TimeCharts.scss';
 
+function formatTime(seconds) {
+  if (!seconds || seconds === 0) return 'No activity';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+  return `${minutes}m`;
+}
+
 function ActivityHeatmap({ data, title = 'Activity Heatmap' }) {
   if (!data || Object.keys(data).length === 0) {
     return (
@@ -15,7 +26,7 @@ function ActivityHeatmap({ data, title = 'Activity Heatmap' }) {
   // Generate last 30 days
   const days = [];
   const today = new Date();
-  for (let i = 29; i >= 0; i--) {
+  for (let i = 29; i >= 0; i -= 1) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     days.push(date);
@@ -50,14 +61,14 @@ function ActivityHeatmap({ data, title = 'Activity Heatmap' }) {
     <Card title={title} className="time-chart-card">
       <div className="heatmap-container">
         <div className="heatmap-grid">
-          {days.map((date, index) => {
+          {days.map((date) => {
             const intensity = getIntensity(date);
             const dateStr = date.toISOString().split('T')[0];
             const activity = data[dateStr] || 0;
 
             return (
               <Tooltip
-                key={index}
+                key={dateStr}
                 title={
                   <div>
                     <div>{formatDate(date)}</div>
@@ -93,19 +104,8 @@ function ActivityHeatmap({ data, title = 'Activity Heatmap' }) {
   );
 }
 
-function formatTime(seconds) {
-  if (!seconds || seconds === 0) return 'No activity';
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (hours > 0) {
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
-  return `${minutes}m`;
-}
-
 ActivityHeatmap.propTypes = {
-  data: PropTypes.object, // { 'YYYY-MM-DD': seconds }
+  data: PropTypes.shape({}), // { 'YYYY-MM-DD': seconds }
   title: PropTypes.string,
 };
 

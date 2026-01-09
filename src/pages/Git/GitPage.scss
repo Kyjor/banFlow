@@ -1,36 +1,36 @@
 .git-page {
   min-height: calc(100vh - 120px);
-  
+
   .git-header {
     background: linear-gradient(135deg, #f0f9ff 0%, #f6ffed 100%);
     border-radius: 8px;
     padding: 16px;
     border: 1px solid #b7eb8f;
-    
+
     .repository-manager-compact {
       .ant-card {
         background: transparent;
         border: none;
         box-shadow: none;
-        
+
         .ant-card-body {
           padding: 0;
         }
       }
     }
   }
-  
+
   .no-repository-state {
     .ant-card {
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      
+
       .ant-card-body {
         padding: 0;
       }
     }
   }
-  
+
   // Responsive layout adjustments
   @media (max-width: 1200px) {
     .ant-row {
@@ -39,15 +39,15 @@
       }
     }
   }
-  
+
   @media (max-width: 768px) {
     padding: 16px !important;
-    
+
     .git-header {
       padding: 12px;
       margin-bottom: 16px !important;
     }
-    
+
     .ant-row {
       .ant-col {
         flex: 0 0 100%;
@@ -64,7 +64,7 @@
       background: linear-gradient(135deg, #0f1419 0%, #162312 100%);
       border-color: #237804;
     }
-    
+
     .no-repository-state {
       .ant-card {
         background: #1f1f1f;
@@ -72,4 +72,4 @@
       }
     }
   }
-} 
+}

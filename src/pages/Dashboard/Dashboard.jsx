@@ -161,26 +161,6 @@ class Dashboard extends Component {
   };
 
   // eslint-disable-next-line class-methods-use-this
-  getProjectTotalTimeSpent = () => {
-    try {
-      const cardList = NodeController.getNodesWithQuery({
-        timeSpent: { $gte: 1 },
-      });
-
-      if (!cardList) return 0;
-
-      let totalTime = 0;
-      Object.values(cardList).forEach((card) => {
-        totalTime += card.timeSpent || 0;
-      });
-
-      return totalTime;
-    } catch (error) {
-      console.error('Error getting project total time:', error);
-      return 0;
-    }
-  };
-
   getListData = (value) => {
     try {
       const listData = [];
@@ -249,6 +229,7 @@ class Dashboard extends Component {
     }
   };
 
+  // eslint-disable-next-line react/no-unused-class-component-methods
   handleProjectSelectionChange = (selectedProjects) => {
     this.setState({ selectedProjects, isLoadingProjects: true });
     localStorage.setItem(
@@ -261,15 +242,6 @@ class Dashboard extends Component {
     } else {
       this.setState({ projectsData: [], isLoadingProjects: false });
     }
-  };
-
-  handleSelectAll = () => {
-    const { availableProjects } = this.state;
-    this.handleProjectSelectionChange([...availableProjects]);
-  };
-
-  handleDeselectAll = () => {
-    this.handleProjectSelectionChange([]);
   };
 
   loadProjectsData = async (projectNames) => {
@@ -295,7 +267,8 @@ class Dashboard extends Component {
   dateCellRender = (value) => {
     // Check if this date is from a different month
     const cellMoment = moment(value);
-    const currentMonth = moment(this.state.selectedDate || moment());
+    const { selectedDate } = this.state;
+    const currentMonth = moment(selectedDate || moment());
 
     // If date is from a different month, return null to hide it
     if (!cellMoment.isSame(currentMonth, 'month')) {
@@ -305,8 +278,8 @@ class Dashboard extends Component {
     const listData = this.getListData(value);
     return (
       <ul className="events">
-        {listData.map((item, index) => (
-          <li key={`${item.content}-${index}`}>
+        {listData.map((item) => (
+          <li key={`${item.content}-${item.nodeId}`}>
             <Tooltip title={`${item.content} - ${item.projectName}`}>
               <Badge
                 status={item.type}
@@ -412,17 +385,99 @@ class Dashboard extends Component {
     }
   };
 
+  handleQuickAdd = async () => {
+    const {
+      quickAddProject,
+      quickAddTitle,
+      quickAddDueDate,
+      selectedProjects,
+    } = this.state;
+
+    if (!quickAddProject || !quickAddTitle.trim()) {
+      message.warning('Please select a project and enter a title');
+      return;
+    }
+
+    try {
+      // Open the project first
+      ProjectController.openProject(quickAddProject);
+
+      // Wait a bit for project to load
+      await new Promise((resolve) => {
+        setTimeout(() => {
+          resolve();
+        }, 500);
+      });
+
+      // Get the first parent (or default parent)
+      const parents = ParentController.getParents();
+      const parentOrder = ParentController.getParentOrder();
+      let firstParentId = null;
+      if (parentOrder && parentOrder.length > 0) {
+        firstParentId = parentOrder[0].id;
+      } else if (parents && Object.keys(parents).length > 0) {
+        firstParentId = Object.keys(parents)[0];
+      }
+
+      if (!firstParentId) {
+        message.error(
+          'No parent column found in project. Please create one first.',
+        );
+        return;
+      }
+
+      // Create the node
+      const node = await NodeController.createNode(
+        'child',
+        quickAddTitle.trim(),
+        firstParentId,
+        '', // No iteration
+      );
+
+      // If due date is set, update it
+      if (quickAddDueDate) {
+        // eslint-disable-next-line no-underscore-dangle
+        const dueDateValue = quickAddDueDate._d || quickAddDueDate;
+        const dueDateStr = dateFormat(dueDateValue, 'yyyy-mm-dd');
+        NodeController.updateNodeProperty('dueDate', node.id, dueDateStr);
+      }
+
+      message.success('Todo added successfully!');
+
+      // Refresh projects data
+      this.loadProjectsData(selectedProjects);
+
+      // Close modal and reset
+      this.setState({
+        quickAddModalVisible: false,
+        quickAddProject: null,
+        quickAddTitle: '',
+        quickAddDueDate: null,
+      });
+    } catch (error) {
+      console.error('Error creating todo:', error);
+      message.error('Failed to create todo');
+    }
+  };
+
   render() {
     const {
       selectedProject,
       viewMode,
-      availableProjects,
       selectedProjects,
       projectsData,
       isLoadingProjects,
       nodes,
       parents,
       isLokiLoaded,
+      selectedDate,
+      quickAddModalVisible,
+      quickAddProject,
+      quickAddTitle,
+      quickAddDueDate,
+      availableProjects,
+      calendarItemModalVisible,
+      selectedCalendarItem,
     } = this.state;
 
     // Calculate single project stats
@@ -475,8 +530,7 @@ class Dashboard extends Component {
                     onClick={() => {
                       this.setState({
                         quickAddModalVisible: true,
-                        quickAddProject:
-                          this.state.availableProjects[0] || null,
+                        quickAddProject: availableProjects[0] || null,
                         quickAddTitle: '',
                         quickAddDueDate: null,
                       });
@@ -559,19 +613,15 @@ class Dashboard extends Component {
                                 }}
                               >
                                 <Calendar
-                                  value={moment(this.state.selectedDate)}
+                                  value={moment(selectedDate)}
                                   onSelect={(date) => {
                                     this.setState({ selectedDate: date });
                                   }}
                                   dateCellRender={this.dateCellRender}
                                   fullscreen={false}
                                   validRange={[
-                                    moment(this.state.selectedDate).startOf(
-                                      'month',
-                                    ),
-                                    moment(this.state.selectedDate).endOf(
-                                      'month',
-                                    ),
+                                    moment(selectedDate).startOf('month'),
+                                    moment(selectedDate).endOf('month'),
                                   ]}
                                 />
                               </div>
@@ -585,7 +635,7 @@ class Dashboard extends Component {
                             >
                               <DayByDayCalendar
                                 dayCellRender={this.dayCellRender}
-                                currentDate={this.state.selectedDate}
+                                currentDate={selectedDate}
                                 onDateChange={(date) => {
                                   this.setState({ selectedDate: date });
                                 }}
@@ -619,7 +669,7 @@ class Dashboard extends Component {
               {/* Quick Add Modal */}
               <Modal
                 title="Quick Add Todo"
-                open={this.state.quickAddModalVisible}
+                open={quickAddModalVisible}
                 onOk={this.handleQuickAdd}
                 onCancel={() => this.setState({ quickAddModalVisible: false })}
                 okText="Add"
@@ -633,14 +683,14 @@ class Dashboard extends Component {
                   <div>
                     <Text strong>Project</Text>
                     <Select
-                      value={this.state.quickAddProject}
+                      value={quickAddProject}
                       onChange={(value) =>
                         this.setState({ quickAddProject: value })
                       }
                       style={{ width: '100%', marginTop: 8 }}
                       placeholder="Select project"
                     >
-                      {this.state.availableProjects.map((project) => (
+                      {availableProjects.map((project) => (
                         <Select.Option key={project} value={project}>
                           {project}
                         </Select.Option>
@@ -650,7 +700,7 @@ class Dashboard extends Component {
                   <div>
                     <Text strong>Title</Text>
                     <Input
-                      value={this.state.quickAddTitle}
+                      value={quickAddTitle}
                       onChange={(e) =>
                         this.setState({ quickAddTitle: e.target.value })
                       }
@@ -662,7 +712,7 @@ class Dashboard extends Component {
                   <div>
                     <Text strong>Due Date (Optional)</Text>
                     <DatePicker
-                      value={this.state.quickAddDueDate}
+                      value={quickAddDueDate}
                       onChange={(date) =>
                         this.setState({ quickAddDueDate: date })
                       }
@@ -676,7 +726,7 @@ class Dashboard extends Component {
               {/* Calendar Item Detail Modal */}
               <Modal
                 title="Todo Details"
-                open={this.state.calendarItemModalVisible}
+                open={calendarItemModalVisible}
                 onCancel={() =>
                   this.setState({
                     calendarItemModalVisible: false,
@@ -688,13 +738,10 @@ class Dashboard extends Component {
                     key="open"
                     type="primary"
                     onClick={() => {
-                      const item = this.state.selectedCalendarItem;
-                      if (item) {
-                        const projectName = item.projectName.replace(
-                          /\//g,
-                          '@',
-                        );
-                        window.location.hash = `#/projectPage/${projectName}?node=${item.nodeId}`;
+                      if (selectedCalendarItem) {
+                        const projectName =
+                          selectedCalendarItem.projectName.replace(/\//g, '@');
+                        window.location.hash = `#/projectPage/${projectName}?node=${selectedCalendarItem.nodeId}`;
                         this.setState({
                           calendarItemModalVisible: false,
                           selectedCalendarItem: null,
@@ -718,9 +765,9 @@ class Dashboard extends Component {
                 ]}
                 width={600}
               >
-                {this.state.selectedCalendarItem &&
+                {selectedCalendarItem &&
                   (() => {
-                    const item = this.state.selectedCalendarItem;
+                    const item = selectedCalendarItem;
                     const node = item.node || {};
 
                     // Format date
@@ -775,7 +822,10 @@ class Dashboard extends Component {
                                   ? tag
                                   : tag.title || tag.name || tag;
                               return (
-                                <Tag key={idx} color={tag.color || 'default'}>
+                                <Tag
+                                  key={`tag-${tagName}-${idx}`}
+                                  color={tag.color || 'default'}
+                                >
                                   {tagName}
                                 </Tag>
                               );
@@ -802,73 +852,6 @@ class Dashboard extends Component {
       </Layout>
     );
   }
-
-  handleQuickAdd = async () => {
-    const { quickAddProject, quickAddTitle, quickAddDueDate } = this.state;
-
-    if (!quickAddProject || !quickAddTitle.trim()) {
-      message.warning('Please select a project and enter a title');
-      return;
-    }
-
-    try {
-      // Open the project first
-      ProjectController.openProject(quickAddProject);
-
-      // Wait a bit for project to load
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Get the first parent (or default parent)
-      const parents = ParentController.getParents();
-      const parentOrder = ParentController.getParentOrder();
-      const firstParentId =
-        parentOrder && parentOrder.length > 0
-          ? parentOrder[0].id
-          : parents && Object.keys(parents).length > 0
-            ? Object.keys(parents)[0]
-            : null;
-
-      if (!firstParentId) {
-        message.error(
-          'No parent column found in project. Please create one first.',
-        );
-        return;
-      }
-
-      // Create the node
-      const node = await NodeController.createNode(
-        'child',
-        quickAddTitle.trim(),
-        firstParentId,
-        '', // No iteration
-      );
-
-      // If due date is set, update it
-      if (quickAddDueDate) {
-        const dueDateStr = dateFormat(
-          quickAddDueDate._d || quickAddDueDate,
-          'yyyy-mm-dd',
-        );
-        NodeController.updateNodeProperty('dueDate', node.id, dueDateStr);
-      }
-
-      message.success('Todo added successfully!');
-
-      // Refresh projects data
-      this.loadProjectsData(this.state.selectedProjects);
-
-      // Close modal and reset
-      this.setState({
-        quickAddModalVisible: false,
-        quickAddProject: null,
-        quickAddTitle: '',
-        quickAddDueDate: null,
-      });
-    } catch (error) {
-      console.error('Error creating todo:', error);
-      message.error('Failed to create todo');
-    }
-  };
 }
 
 export default Dashboard;

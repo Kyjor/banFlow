@@ -95,6 +95,11 @@ ParentInnerList.propTypes = {
   saveTime: PropTypes.func.isRequired,
   selectedIteration: PropTypes.string.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
+  filterNode: PropTypes.func,
+};
+
+ParentInnerList.defaultProps = {
+  filterNode: () => {},
 };
 
 function Parent(props) {
@@ -161,13 +166,10 @@ function Parent(props) {
                     border: 'none',
                   }}
                   placeholder="Add node title here..."
-                  updateText={(value) =>
-                    // eslint-disable-next-line no-sequences
-                    (
-                      setIsEditing(false),
-                      updateParentProperty('title', parent.id, value)
-                    )
-                  }
+                  updateText={(value) => {
+                    setIsEditing(false);
+                    updateParentProperty('title', parent.id, value);
+                  }}
                 />
               ) : (
                 <span
@@ -249,4 +251,9 @@ Parent.propTypes = {
   updateParentProperty: PropTypes.func.isRequired,
   updateNodeTitle: PropTypes.func.isRequired,
   filterNode: PropTypes.func,
+};
+
+Parent.defaultProps = {
+  showParentModal: () => {},
+  filterNode: () => {},
 };

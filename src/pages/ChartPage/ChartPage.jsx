@@ -1,5 +1,6 @@
 // Libs
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
 import {
   Layout,
@@ -15,7 +16,6 @@ import {
   Divider,
   Popconfirm,
   Tooltip,
-  Select,
   AutoComplete,
   Upload,
   Drawer,
@@ -34,14 +34,9 @@ import {
   GlobalOutlined,
   ProjectOutlined,
   PlusOutlined,
-  MinusOutlined,
-  ZoomInOutlined,
-  ZoomOutOutlined,
-  FullscreenOutlined,
   CloseOutlined,
   PictureOutlined,
   UploadOutlined,
-  LinkOutlined,
 } from '@ant-design/icons';
 import ReactFlow, {
   Background,
@@ -55,12 +50,10 @@ import './ChartPage.scss';
 
 const { Sider, Content } = Layout;
 const { Text, Title } = Typography;
-const { Option } = Select;
 
 // Custom Node Component with Node/Parent Reference
 function CustomNode({ data, selected, onClick }) {
-  const node = data.referencedNode;
-  const parent = data.referencedParent;
+  const { referencedNode: node, referencedParent: parent } = data;
 
   const handleNodeClick = (e, nodeId) => {
     e.stopPropagation();
@@ -132,6 +125,27 @@ function CustomNode({ data, selected, onClick }) {
   );
 }
 
+CustomNode.propTypes = {
+  data: PropTypes.shape({
+    referencedNode: PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      title: PropTypes.string.isRequired,
+    }),
+    referencedParent: PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      title: PropTypes.string.isRequired,
+    }),
+    projectName: PropTypes.string,
+    color: PropTypes.string,
+    borderColor: PropTypes.string,
+    image: PropTypes.string,
+    label: PropTypes.string,
+    description: PropTypes.string,
+  }).isRequired,
+  selected: PropTypes.bool,
+  onClick: PropTypes.func,
+};
+
 const nodeTypes = {
   custom: CustomNode,
 };
@@ -143,7 +157,7 @@ class ChartPage extends Component {
     const location = window.location.href;
     this.projectName = location.split('/').pop();
     // Remove query parameters
-    this.projectName = this.projectName.split('?')[0];
+    [this.projectName] = this.projectName.split('?');
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
 
@@ -189,11 +203,11 @@ class ChartPage extends Component {
     );
 
     this.setState(
-      {
-        ...this.state,
+      (prevState) => ({
+        ...prevState,
         ...newState,
         lokiLoaded: true,
-      },
+      }),
       () => {
         this.loadDiagrams();
         this.loadImages();
@@ -217,10 +231,11 @@ class ChartPage extends Component {
 
   loadDiagrams = async () => {
     try {
+      const { isGlobal } = this.state;
       const diagrams = await ipcRenderer.invoke(
         'diagrams:list',
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
       this.setState({ diagrams });
     } catch (error) {
@@ -231,11 +246,12 @@ class ChartPage extends Component {
 
   loadDiagram = async (diagramPath) => {
     try {
+      const { isGlobal } = this.state;
       const diagram = await ipcRenderer.invoke(
         'diagrams:read',
         diagramPath,
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
 
       // Restore node/parent references from IDs

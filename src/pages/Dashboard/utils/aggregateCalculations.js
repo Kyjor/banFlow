@@ -209,12 +209,7 @@ export const compareProjects = (projectsData) => {
 
   return projectsData
     .map((projectData) => {
-      const {
-        projectName,
-        nodes = [],
-        parents = [],
-        iterations = [],
-      } = projectData;
+      const { projectName, nodes = [], parents = [] } = projectData;
       const nodeStats = calculateNodeStats(nodes);
       const totalTime = calculateTotalTimeSpent(nodes);
       const health = calculateProjectHealth(nodes, parents);

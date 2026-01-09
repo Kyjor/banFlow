@@ -15,7 +15,8 @@
     "start:preload": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
     "start:renderer": "cross-env NODE_ENV=development TS_NODE_TRANSPILE_ONLY=true webpack serve --config ./.erb/configs/webpack.config.renderer.dev.ts",
     "test": "jest",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,scss,json,md}\""
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

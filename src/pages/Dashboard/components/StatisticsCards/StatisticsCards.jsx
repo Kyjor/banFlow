@@ -48,13 +48,11 @@ function StatisticsCards({ stats, isAggregate = false }) {
         <Progress
           percent={completionRate}
           size="small"
-          strokeColor={
-            completionRate >= 75
-              ? '#52c41a'
-              : completionRate >= 50
-                ? '#faad14'
-                : '#ff4d4f'
-          }
+          strokeColor={(() => {
+            if (completionRate >= 75) return '#52c41a';
+            if (completionRate >= 50) return '#faad14';
+            return '#ff4d4f';
+          })()}
           showInfo={false}
           style={{ marginTop: '8px' }}
         />
@@ -65,12 +63,11 @@ function StatisticsCards({ stats, isAggregate = false }) {
       value: isAggregate ? activeProjects : completed,
       icon: isAggregate ? <ProjectOutlined /> : <CheckCircleOutlined />,
       color: isAggregate ? '#13c2c2' : '#52c41a',
-      suffix:
-        isAggregate && projectCount > 0
-          ? `of ${projectCount} total`
-          : incomplete > 0
-            ? `(${incomplete} remaining)`
-            : '',
+      suffix: (() => {
+        if (isAggregate && projectCount > 0) return `of ${projectCount} total`;
+        if (incomplete > 0) return `(${incomplete} remaining)`;
+        return '';
+      })(),
     },
   ];
 
@@ -86,8 +83,8 @@ function StatisticsCards({ stats, isAggregate = false }) {
 
   return (
     <Row gutter={[16, 16]} className="statistics-cards">
-      {cards.map((card, index) => (
-        <Col xs={24} sm={12} lg={8} xl={6} key={index}>
+      {cards.map((card) => (
+        <Col xs={24} sm={12} lg={8} xl={6} key={card.title}>
           <Card className="stat-card" hoverable>
             <Statistic
               title={

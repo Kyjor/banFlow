@@ -8,7 +8,7 @@
   .current-repo-card {
     background: linear-gradient(135deg, #f6ffed 0%, #f0f9ff 100%);
     border: 1px solid #87e8de;
-    
+
     .ant-card-head {
       background: rgba(255, 255, 255, 0.8);
       border-bottom: 1px solid #b7eb8f;
@@ -21,12 +21,12 @@
       border-radius: 8px;
       padding: 8px;
       margin-bottom: 8px;
-      
+
       &:hover {
         background-color: #f9f9f9;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
-      
+
       &.active {
         background: linear-gradient(135deg, #e6f7ff 0%, #f6ffed 100%);
         border: 1px solid #91d5ff;
@@ -40,7 +40,7 @@
   .ant-select-selector {
     border-radius: 6px;
   }
-  
+
   .ant-tag {
     margin: 2px;
     font-size: 11px;
@@ -58,7 +58,7 @@
 .repo-status-badges {
   .ant-badge {
     margin-right: 8px;
-    
+
     &:last-child {
       margin-right: 0;
     }
@@ -91,7 +91,7 @@
         }
       }
     }
-    
+
     .repository-list {
       .repo-item {
         .ant-list-item-meta {
@@ -110,19 +110,19 @@
     .current-repo-card {
       background: linear-gradient(135deg, #162312 0%, #0f1419 100%);
       border-color: #237804;
-      
+
       .ant-card-head {
         background: rgba(0, 0, 0, 0.4);
         border-bottom-color: #237804;
       }
     }
-    
+
     .repository-list {
       .repo-item {
         &:hover {
           background-color: #1f1f1f;
         }
-        
+
         &.active {
           background: linear-gradient(135deg, #111a2c 0%, #162312 100%);
           border-color: #1890ff;
@@ -130,4 +130,4 @@
       }
     }
   }
-} 
+}

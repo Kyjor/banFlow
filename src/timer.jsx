@@ -1,8 +1,10 @@
 // Libs
 import React from 'react';
-import { render } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 // Styles
 import './themes/App.global.scss';
 import ViewManager from './ViewManager';
 
-render(<ViewManager name="timer" />, document.getElementById('root'));
+const container = document.getElementById('root');
+const root = createRoot(container);
+root.render(<ViewManager name="timer" />);

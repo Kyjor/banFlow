@@ -1,8 +1,5 @@
 import React, { Component } from 'react';
-import { Button } from 'antd';
 import { ipcRenderer } from 'electron';
-import Spreadsheet from 'react-spreadsheet';
-import ReactDOM from 'react-dom';
 import { Flowchart } from '@ant-design/flowchart';
 import Layout from '../../layouts/App';
 
@@ -21,9 +18,6 @@ class SheetPage extends Component {
     super(props);
 
     this.currentProject = localStorage.getItem('currentProject');
-    this.trelloToken = localStorage.getItem('trelloToken');
-    this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
-    this.authLink = `https://trello.com/1/authorize?expiration=30days&scope=read,write&response_type=token&key=${this.trelloKey}`;
 
     this.state = {
       lokiLoaded: false,
@@ -37,10 +31,10 @@ class SheetPage extends Component {
       this.projectName,
     );
 
-    this.setState({
-      ...this.state,
+    this.setState((prevState) => ({
+      ...prevState,
       ...newState,
-    });
+    }));
   }
 
   render() {

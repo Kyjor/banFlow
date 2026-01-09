@@ -199,13 +199,10 @@ function Node(props) {
                           marginBottom: '10px',
                         }}
                         placeholder="Add node title here..."
-                        updateText={(value) =>
-                          // eslint-disable-next-line no-sequences
-                          (
-                            setIsEditing(false),
-                            updateNodeTitle(value, node.id, false)
-                          )
-                        }
+                        updateText={(value) => {
+                          setIsEditing(false);
+                          updateNodeTitle(value, node.id, false);
+                        }}
                       />
                     ) : (
                       <span

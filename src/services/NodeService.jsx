@@ -164,8 +164,8 @@ const NodeService = {
           parents
             .chain()
             .find({ id: parentId })
-            .update((parent) => {
-              parent.nodeIds = [...parent.nodeIds, `node-${nextId}`];
+            .update((parentItem) => {
+              parentItem.nodeIds = [...parentItem.nodeIds, `node-${nextId}`];
             });
 
           lokiService.saveDB();
@@ -183,8 +183,8 @@ const NodeService = {
     parents
       .chain()
       .find({ id: parentId })
-      .update((parent) => {
-        parent.nodeIds = [...parent.nodeIds, `node-${nextId}`];
+      .update((p) => {
+        p.nodeIds = [...p.nodeIds, `node-${nextId}`];
       });
 
     lokiService.saveDB();
@@ -329,6 +329,7 @@ const NodeService = {
 
           lokiService.saveDB();
           console.log(`Node's trello data saved successfully.`);
+          return nodeToReturn;
         })
         .catch((err) => {
           console.error(err);
@@ -361,11 +362,13 @@ const NodeService = {
     let timeSpent = null;
     if (sepIndex !== -1) {
       // Look for banflow:timeSpent in the lines after the separator
-      for (let i = sepIndex + 1; i < lines.length; i++) {
-        const match = lines[i].match(/^banflow:timeSpent=(\d+)/);
+      const timeSpentLine = lines
+        .slice(sepIndex + 1)
+        .find((line) => /^banflow:timeSpent=(\d+)/.test(line));
+      if (timeSpentLine) {
+        const match = timeSpentLine.match(/^banflow:timeSpent=(\d+)/);
         if (match) {
           timeSpent = parseInt(match[1], 10);
-          break;
         }
       }
     }

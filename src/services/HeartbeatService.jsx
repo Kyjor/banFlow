@@ -53,8 +53,9 @@ class HeartbeatService {
       throw new Error('HeartbeatService: intervalMs must be a positive number');
     }
 
-    const id = this.nextId++;
-    const { immediate = false, runOnBackground = true } = options;
+    this.nextId += 1;
+    const id = this.nextId;
+    const { immediate = false } = options;
 
     // Execute immediately if requested
     if (immediate) {
@@ -120,12 +121,12 @@ class HeartbeatService {
    */
   unregisterByName(name) {
     let count = 0;
-    for (const [id, timer] of this.timers.entries()) {
+    this.timers.forEach((timer, id) => {
       if (timer.name === name) {
         this.unregister(id);
-        count++;
+        count += 1;
       }
-    }
+    });
     return count;
   }
 
@@ -134,9 +135,9 @@ class HeartbeatService {
    */
   unregisterAll() {
     const count = this.timers.size;
-    for (const [id] of this.timers.entries()) {
+    this.timers.forEach((timer, id) => {
       this.unregister(id);
-    }
+    });
     console.log(`HeartbeatService: Unregistered all ${count} heartbeats`);
   }
 

@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { ipcRenderer, ipcMain } from 'electron';
+import { ipcRenderer } from 'electron';
 import lokiService from './LokiService';
 // eslint-disable-next-line import/no-cycle
 import { ValidateProjectName } from '../validators/Validator';

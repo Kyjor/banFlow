@@ -224,7 +224,7 @@ export function AccessibilityProvider({ children }) {
       if (!rgb) return 0;
 
       const [r, g, b] = rgb.map((c) => {
-        c = parseInt(c) / 255;
+        c = parseInt(c, 10) / 255;
         return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
       });
 

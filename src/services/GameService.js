@@ -112,7 +112,7 @@ class GameService {
    * Handle session completion event
    */
   handleSessionCompleted(data) {
-    const { duration, nodeId, nodeTitle } = data; // duration in seconds
+    const { duration, nodeTitle } = data; // duration in seconds
 
     if (!duration || duration < this.rewardRules.minSessionLength) {
       return; // Session too short, no reward
@@ -147,15 +147,13 @@ class GameService {
       sessionDuration: duration,
       nodeTitle,
     });
-
-    return goldEarned;
   }
 
   /**
    * Handle node completion event
    */
   handleNodeCompleted(data) {
-    const { nodeId, nodeTitle, timeSpent } = data;
+    const { nodeTitle } = data;
 
     this.stats.totalTasksCompleted += 1;
 
@@ -177,7 +175,7 @@ class GameService {
   /**
    * Handle time spent updates
    */
-  handleTimeSpent(data) {
+  static handleTimeSpent() {
     // Could track incremental time updates here if needed
     // For now, we mainly use session completion
   }

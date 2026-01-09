@@ -2,11 +2,9 @@
 import React, { Component } from 'react';
 // Layouts
 import { ipcRenderer } from 'electron';
-import PropTypes from 'prop-types';
 import {
   Button,
   Card,
-  Collapse,
   DatePicker,
   Input,
   InputNumber,
@@ -28,22 +26,141 @@ import NodeModal from '../../components/NodeModal/NodeModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
-import IterationDisplay from '../../components/IterationDisplay/IterationDisplay';
 import IterationController from '../../api/iterations/IterationController';
 import IterationModal from '../../components/IterationModal/IterationModal';
 import ParentModal from '../../components/ParentModal/ParentModal';
-import parentController from '../../api/parent/ParentController';
 
 const { RangePicker } = DatePicker;
 
 class ProjectPage extends Component {
+  static parseBanflowDescription = (description) => {
+    if (!description) {
+      return { cleanDescription: '', banflowFields: {} };
+    }
+
+    const banflowSeparator =
+      '---Banflow fields, do not edit this line or below it---';
+    const parts = description.split(banflowSeparator);
+
+    const cleanDescription = parts[0].trim();
+    const banflowFields = {};
+
+    if (parts.length > 1) {
+      const fieldsSection = parts[1].trim();
+      const fieldLines = fieldsSection.split('\n');
+
+      fieldLines.forEach((line) => {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('banflow:')) {
+          const fieldPart = trimmedLine.substring(8); // Remove 'banflow:' prefix
+          const [key, value] = fieldPart.split('=');
+          if (key && value !== undefined) {
+            // Convert numeric values
+            if (key === 'timeSpent' && !Number.isNaN(value)) {
+              banflowFields[key] = parseInt(value, 10);
+            } else {
+              banflowFields[key] = value;
+            }
+          }
+        }
+      });
+    }
+
+    return { cleanDescription, banflowFields };
+  };
+
+  static evaluateRule = (node, rule) => {
+    if (!rule || !rule.field) return true;
+    const { value } = rule;
+    const lc = (text) => (text || '').toString().toLowerCase();
+
+    switch (rule.field) {
+      case 'titleDescription':
+        return (
+          lc(node.title).includes(lc(value)) ||
+          lc(node.description).includes(lc(value))
+        );
+      case 'status':
+        return value ? node.nodeState === value : true;
+      case 'parent':
+        return value ? node.parent === value : true;
+      case 'tags':
+        if (!value || value.length === 0) return true;
+        return (
+          Array.isArray(node.tags) && node.tags.some((t) => value.includes(t))
+        );
+      case 'labels':
+        if (!value || value.length === 0) return true;
+        return (
+          Array.isArray(node.labels) &&
+          node.labels.some((l) => value.includes(l))
+        );
+      case 'dueDate': {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+        const due = node.dueDate ? new Date(node.dueDate) : null;
+        if (!due) return false;
+        if (start && due < new Date(start)) return false;
+        if (end && due > new Date(end)) return false;
+        return true;
+      }
+      case 'created': {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+        const created = node.created ? new Date(node.created) : null;
+        if (!created) return false;
+        if (start && created < new Date(start)) return false;
+        if (end && created > new Date(end)) return false;
+        return true;
+      }
+      case 'updated': {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+        const updated = node.lastUpdated ? new Date(node.lastUpdated) : null;
+        if (!updated) return false;
+        if (start && updated < new Date(start)) return false;
+        if (end && updated > new Date(end)) return false;
+        return true;
+      }
+      case 'estimatedTime': {
+        if (!value) return true;
+        const min = value.min ?? null;
+        const max = value.max ?? null;
+        const num = node.estimatedTime ?? 0;
+        if (min !== null && num < min) return false;
+        if (max !== null && num > max) return false;
+        return true;
+      }
+      case 'timeSpent': {
+        if (!value) return true;
+        const min = value.min ?? null;
+        const max = value.max ?? null;
+        const num = node.timeSpent ?? 0;
+        if (min !== null && num < min) return false;
+        if (max !== null && num > max) return false;
+        return true;
+      }
+      case 'completion': {
+        if (value === undefined || value === null || value === '') return true;
+        const boolVal = value === 'complete';
+        return !!node.isComplete === boolVal;
+      }
+      case 'iteration': {
+        if (!value && value !== 0) return true;
+        return node.iterationId === value;
+      }
+      default:
+        return true;
+    }
+  };
+
   constructor(props) {
     super(props);
 
     const location = window.location.href; // Get the current URL
     this.projectName = location.split('/').pop();
     // Remove query parameters (everything after ?)
-    this.projectName = this.projectName.split('?')[0];
+    [this.projectName] = this.projectName.split('?');
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
@@ -73,10 +190,10 @@ class ProjectPage extends Component {
     );
 
     this.setState(
-      {
-        ...this.state,
+      (prevState) => ({
+        ...prevState,
         ...newState,
-      },
+      }),
       () => {
         // Check URL parameters for node or parent to open
         this.checkUrlParameters();
@@ -84,16 +201,22 @@ class ProjectPage extends Component {
     );
 
     const self = this;
-    ipcRenderer.on('UpdateProjectPageState', function (e, newState) {
-      self.setState(newState);
+    ipcRenderer.on('UpdateProjectPageState', function (e, updatedState) {
+      self.setState(updatedState);
     });
   }
 
   componentDidUpdate(prevProps, prevState) {
     // Check URL parameters when state updates (e.g., after nodes/parents are loaded)
-    if (!prevState.lokiLoaded && this.state.lokiLoaded) {
+    const { lokiLoaded } = this.state;
+    if (!prevState.lokiLoaded && lokiLoaded) {
       this.checkUrlParameters();
     }
+  }
+
+  componentWillUnmount() {
+    ipcRenderer.removeAllListeners('UpdateProjectPageState');
+    // todo: close timer window
   }
 
   checkUrlParameters = () => {
@@ -106,9 +229,10 @@ class ProjectPage extends Component {
     const urlParams = new URLSearchParams(queryString);
     const nodeId = urlParams.get('node');
     const parentId = urlParams.get('parent');
+    const { nodes, parents } = this.state;
 
-    if (nodeId && this.state.nodes && this.state.nodes[nodeId]) {
-      const node = this.state.nodes[nodeId];
+    if (nodeId && nodes && nodes[nodeId]) {
+      const node = nodes[nodeId];
       // Small delay to ensure modal can render
       setTimeout(() => {
         this.showModal(node);
@@ -116,8 +240,8 @@ class ProjectPage extends Component {
         const newHash = hashParts[0];
         window.history.replaceState({}, '', window.location.pathname + newHash);
       }, 100);
-    } else if (parentId && this.state.parents && this.state.parents[parentId]) {
-      const parent = this.state.parents[parentId];
+    } else if (parentId && parents && parents[parentId]) {
+      const parent = parents[parentId];
       // Small delay to ensure modal can render
       setTimeout(() => {
         this.showParentModal(parent);
@@ -127,11 +251,6 @@ class ProjectPage extends Component {
       }, 100);
     }
   };
-
-  componentWillUnmount() {
-    ipcRenderer.removeAllListeners('UpdateProjectPageState');
-    // todo: close timer window
-  }
 
   createNewParent = (parentTitle) => {
     ParentController.createParent(parentTitle);
@@ -262,11 +381,6 @@ class ProjectPage extends Component {
   };
 
   updateNodeTitle = (newTitle, nodeId) => {
-    const trelloAuth = {
-      key: this.trelloKey,
-      token: this.trelloToken,
-    };
-
     this.updateNodeProperty(`title`, nodeId, newTitle);
     const newState = {
       ...this.state,
@@ -376,6 +490,7 @@ class ProjectPage extends Component {
     ipcRenderer.invoke('api:setProjectState', {
       ...newState,
     });
+    return undefined;
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -389,9 +504,10 @@ class ProjectPage extends Component {
     ipcRenderer.invoke('api:setProjectState', {
       ...newState,
     });
+    return undefined;
   };
 
-  syncTrelloCard = (node, event) => {
+  syncTrelloCard = (node) => {
     console.log('syncing trello card');
     fetch(
       `https://api.trello.com/1/cards/${node.trello.id}?key=${this.trelloKey}&token=${this.trelloToken}`,
@@ -419,10 +535,9 @@ class ProjectPage extends Component {
         if (local > remote) {
           console.log('need to update remote');
           NodeController.updateNodeProperty('title', node.id, node.title);
-        } else if (
-          !node.lastUpdated ||
-          remote.getTime() - local.getTime() >= 10000
-        ) {
+          return undefined;
+        }
+        if (!node.lastUpdated || remote.getTime() - local.getTime() >= 10000) {
           console.log('need to update local');
           console.log(card);
           NodeController.updateNodeProperty('trello', node.id, card, false);
@@ -437,7 +552,7 @@ class ProjectPage extends Component {
 
           // Parse description and BanFlow fields
           const { cleanDescription, banflowFields } =
-            this.parseBanflowDescription(card.desc);
+            ProjectPage.parseBanflowDescription(card.desc);
           if (cleanDescription !== node.description) {
             NodeController.updateNodeProperty(
               'description',
@@ -481,7 +596,7 @@ class ProjectPage extends Component {
               ...newParent,
               nodeIds: finishNodeIds,
             };
-            parentController.updateNodesInParents(newStart, newFinish, node.id);
+            ParentController.updateNodesInParents(newStart, newFinish, node.id);
           }
 
           const newState = {
@@ -493,11 +608,15 @@ class ProjectPage extends Component {
           ipcRenderer.invoke('api:setProjectState', {
             ...newState,
           });
-        } else {
-          console.log('nothing to sync here...');
+          return undefined;
         }
+        console.log('nothing to sync here...');
+        return undefined;
       })
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error(err);
+        return undefined;
+      });
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -589,91 +708,6 @@ class ProjectPage extends Component {
     this.setState({ filterRules: filterRules.filter((r) => r.id !== id) });
   };
 
-  evaluateRule = (node, rule) => {
-    if (!rule || !rule.field) return true;
-    const { value } = rule;
-    const lc = (text) => (text || '').toString().toLowerCase();
-
-    switch (rule.field) {
-      case 'titleDescription':
-        return (
-          lc(node.title).includes(lc(value)) ||
-          lc(node.description).includes(lc(value))
-        );
-      case 'status':
-        return value ? node.nodeState === value : true;
-      case 'parent':
-        return value ? node.parent === value : true;
-      case 'tags':
-        if (!value || value.length === 0) return true;
-        return (
-          Array.isArray(node.tags) && node.tags.some((t) => value.includes(t))
-        );
-      case 'labels':
-        if (!value || value.length === 0) return true;
-        return (
-          Array.isArray(node.labels) &&
-          node.labels.some((l) => value.includes(l))
-        );
-      case 'dueDate': {
-        if (!value || value.length === 0) return true;
-        const [start, end] = value;
-        const due = node.dueDate ? new Date(node.dueDate) : null;
-        if (!due) return false;
-        if (start && due < new Date(start)) return false;
-        if (end && due > new Date(end)) return false;
-        return true;
-      }
-      case 'created': {
-        if (!value || value.length === 0) return true;
-        const [start, end] = value;
-        const created = node.created ? new Date(node.created) : null;
-        if (!created) return false;
-        if (start && created < new Date(start)) return false;
-        if (end && created > new Date(end)) return false;
-        return true;
-      }
-      case 'updated': {
-        if (!value || value.length === 0) return true;
-        const [start, end] = value;
-        const updated = node.lastUpdated ? new Date(node.lastUpdated) : null;
-        if (!updated) return false;
-        if (start && updated < new Date(start)) return false;
-        if (end && updated > new Date(end)) return false;
-        return true;
-      }
-      case 'estimatedTime': {
-        if (!value) return true;
-        const min = value.min ?? null;
-        const max = value.max ?? null;
-        const num = node.estimatedTime ?? 0;
-        if (min !== null && num < min) return false;
-        if (max !== null && num > max) return false;
-        return true;
-      }
-      case 'timeSpent': {
-        if (!value) return true;
-        const min = value.min ?? null;
-        const max = value.max ?? null;
-        const num = node.timeSpent ?? 0;
-        if (min !== null && num < min) return false;
-        if (max !== null && num > max) return false;
-        return true;
-      }
-      case 'completion': {
-        if (value === undefined || value === null || value === '') return true;
-        const boolVal = value === 'complete';
-        return !!node.isComplete === boolVal;
-      }
-      case 'iteration': {
-        if (!value && value !== 0) return true;
-        return node.iterationId === value;
-      }
-      default:
-        return true;
-    }
-  };
-
   filterNode = (node) => {
     const { searchText, filterRules, queryConjunction } = this.state;
     const lc = (text) => (text || '').toString().toLowerCase();
@@ -726,6 +760,7 @@ class ProjectPage extends Component {
             console.log('Parent already exists');
           }
         });
+        return undefined;
       })
       .then(() => {
         // refresh page
@@ -742,9 +777,10 @@ class ProjectPage extends Component {
           .then((text) => {
             console.log(JSON.parse(text));
             const cards = JSON.parse(text);
+            const { nodes } = this.state;
             cards.forEach((card) => {
               // check if node exists
-              const nodeExists = Object.values(this.state.nodes).find(
+              const nodeExists = Object.values(nodes).find(
                 (node) => node?.trello?.id === card.id,
               );
               const nodeParent = Object.values(
@@ -792,7 +828,7 @@ class ProjectPage extends Component {
                     ...newParent,
                     nodeIds: finishNodeIds,
                   };
-                  parentController.updateNodesInParents(
+                  ParentController.updateNodesInParents(
                     newStart,
                     newFinish,
                     nodeExists.id,
@@ -840,50 +876,22 @@ class ProjectPage extends Component {
                 );
               }
             });
+            return undefined;
           })
           .then(() => {
             window.location.reload();
+            return undefined;
           })
-          .catch((err) => console.error(err));
+          .catch((err) => {
+            console.error(err);
+            return undefined;
+          });
+        return undefined;
       })
-      .catch((err) => console.error(err));
-  };
-
-  // Parse Trello description to separate clean description from BanFlow fields
-  parseBanflowDescription = (description) => {
-    if (!description) {
-      return { cleanDescription: '', banflowFields: {} };
-    }
-
-    const banflowSeparator =
-      '---Banflow fields, do not edit this line or below it---';
-    const parts = description.split(banflowSeparator);
-
-    const cleanDescription = parts[0].trim();
-    const banflowFields = {};
-
-    if (parts.length > 1) {
-      const fieldsSection = parts[1].trim();
-      const fieldLines = fieldsSection.split('\n');
-
-      fieldLines.forEach((line) => {
-        const trimmedLine = line.trim();
-        if (trimmedLine.startsWith('banflow:')) {
-          const fieldPart = trimmedLine.substring(8); // Remove 'banflow:' prefix
-          const [key, value] = fieldPart.split('=');
-          if (key && value !== undefined) {
-            // Convert numeric values
-            if (key === 'timeSpent' && !isNaN(value)) {
-              banflowFields[key] = parseInt(value, 10);
-            } else {
-              banflowFields[key] = value;
-            }
-          }
-        }
+      .catch((err) => {
+        console.error(err);
+        return undefined;
       });
-    }
-
-    return { cleanDescription, banflowFields };
   };
 
   render() {
@@ -1111,7 +1119,8 @@ class ProjectPage extends Component {
                       );
                       return (
                         <Select
-                          {...commonProps}
+                          style={commonProps.style}
+                          size={commonProps.size}
                           placeholder="Select status"
                           value={rule.value}
                           onChange={(val) =>
@@ -1130,7 +1139,8 @@ class ProjectPage extends Component {
                     if (field === 'parent') {
                       return (
                         <Select
-                          {...commonProps}
+                          style={commonProps.style}
+                          size={commonProps.size}
                           placeholder="Select parent"
                           value={rule.value}
                           onChange={(val) =>
@@ -1160,7 +1170,8 @@ class ProjectPage extends Component {
                       );
                       return (
                         <Select
-                          {...commonProps}
+                          style={commonProps.style}
+                          size={commonProps.size}
                           mode="multiple"
                           placeholder="Select tags"
                           value={rule.value}
@@ -1189,7 +1200,8 @@ class ProjectPage extends Component {
                       );
                       return (
                         <Select
-                          {...commonProps}
+                          style={commonProps.style}
+                          size={commonProps.size}
                           mode="multiple"
                           placeholder="Select labels"
                           value={rule.value}
@@ -1213,7 +1225,8 @@ class ProjectPage extends Component {
                     ) {
                       return (
                         <RangePicker
-                          {...commonProps}
+                          style={commonProps.style}
+                          size={commonProps.size}
                           onChange={(dates) =>
                             this.updateFilterRule(rule.id, {
                               value: dates
@@ -1228,7 +1241,8 @@ class ProjectPage extends Component {
                       return (
                         <Space size={4} style={{ width: '100%' }}>
                           <InputNumber
-                            {...commonProps}
+                            style={commonProps.style}
+                            size={commonProps.size}
                             placeholder="Min (seconds)"
                             value={rule.value?.min}
                             onChange={(val) =>
@@ -1238,7 +1252,8 @@ class ProjectPage extends Component {
                             }
                           />
                           <InputNumber
-                            {...commonProps}
+                            style={commonProps.style}
+                            size={commonProps.size}
                             placeholder="Max (seconds)"
                             value={rule.value?.max}
                             onChange={(val) =>
@@ -1253,7 +1268,8 @@ class ProjectPage extends Component {
                     if (field === 'completion') {
                       return (
                         <Select
-                          {...commonProps}
+                          style={commonProps.style}
+                          size={commonProps.size}
                           placeholder="Completion"
                           value={rule.value}
                           onChange={(val) =>
@@ -1279,7 +1295,8 @@ class ProjectPage extends Component {
                       }));
                       return (
                         <Select
-                          {...commonProps}
+                          style={commonProps.style}
+                          size={commonProps.size}
                           placeholder="Select iteration"
                           value={rule.value}
                           onChange={(val) =>
@@ -1298,7 +1315,8 @@ class ProjectPage extends Component {
                     }
                     return (
                       <Input
-                        {...commonProps}
+                        style={commonProps.style}
+                        size={commonProps.size}
                         placeholder="Contains text"
                         value={rule.value}
                         onChange={(e) =>
@@ -1422,8 +1440,3 @@ class ProjectPage extends Component {
 }
 
 export default ProjectPage;
-
-ProjectPage.propTypes = {
-  // eslint-disable-next-line react/forbid-prop-types
-  match: PropTypes.any.isRequired,
-};

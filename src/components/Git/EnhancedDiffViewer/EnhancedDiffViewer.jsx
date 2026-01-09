@@ -565,7 +565,7 @@ function EnhancedDiffViewer({
     try {
       // Stage lines for each hunk
       for (const [hunkIndex, lineIndices] of Object.entries(hunkGroups)) {
-        await stageLines(selectedFile, parseInt(hunkIndex), lineIndices);
+        await stageLines(selectedFile, parseInt(hunkIndex, 10), lineIndices);
       }
       clearLineSelection();
       loadDiff(selectedFile);
@@ -591,7 +591,7 @@ function EnhancedDiffViewer({
     try {
       // Discard lines for each hunk
       for (const [hunkIndex, lineIndices] of Object.entries(hunkGroups)) {
-        await discardLines(selectedFile, parseInt(hunkIndex), lineIndices);
+        await discardLines(selectedFile, parseInt(hunkIndex, 10), lineIndices);
       }
       clearLineSelection();
       loadDiff(selectedFile);
@@ -745,11 +745,11 @@ function EnhancedDiffViewer({
         const headerMatch = hunk.header.match(/@@ -\d+,?\d* \+(\d+),?\d* @@/);
         if (!headerMatch) return;
 
-        let newLineNum = parseInt(headerMatch[1]);
-        for (let i = 0; i < lineIdx; i++) {
+        let newLineNum = parseInt(headerMatch[1], 10);
+        for (let i = 0; i < lineIdx; i += 1) {
           const prevLine = hunk.lines[i];
           if (prevLine.type === 'added' || prevLine.type === 'context') {
-            newLineNum++;
+            newLineNum += 1;
           }
         }
 
@@ -1022,8 +1022,8 @@ function EnhancedDiffViewer({
             /@@ -(\d+),?\d* \+(\d+),?\d* @@/,
           );
           if (headerMatch) {
-            oldLineNum = parseInt(headerMatch[1]);
-            newLineNum = parseInt(headerMatch[2]);
+            oldLineNum = parseInt(headerMatch[1], 10);
+            newLineNum = parseInt(headerMatch[2], 10);
           }
 
           // Store line numbers for this hunk
@@ -1032,12 +1032,20 @@ function EnhancedDiffViewer({
             let newLine = null;
 
             if (line.type === 'deleted') {
-              oldLine = oldLineNum++;
+              const currentOld = oldLineNum;
+              oldLineNum += 1;
+              oldLine = currentOld;
             } else if (line.type === 'added') {
-              newLine = newLineNum++;
+              const currentNew = newLineNum;
+              newLineNum += 1;
+              newLine = currentNew;
             } else if (line.type === 'context') {
-              oldLine = oldLineNum++;
-              newLine = newLineNum++;
+              const currentOld = oldLineNum;
+              oldLineNum += 1;
+              oldLine = currentOld;
+              const currentNew = newLineNum;
+              newLineNum += 1;
+              newLine = currentNew;
             }
 
             return { oldLine, newLine };
@@ -1078,14 +1086,16 @@ function EnhancedDiffViewer({
     filteredHunks.forEach((hunk, hunkIndex) => {
       const headerMatch = hunk.header.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
       if (headerMatch) {
-        leftLineNum = parseInt(headerMatch[1]);
-        rightLineNum = parseInt(headerMatch[2]);
+        leftLineNum = parseInt(headerMatch[1], 10);
+        rightLineNum = parseInt(headerMatch[2], 10);
       }
 
       hunk.lines.forEach((line, lineIndex) => {
         if (line.type === 'deleted') {
+          const currentLeft = leftLineNum;
+          leftLineNum += 1;
           leftLines.push({
-            number: leftLineNum++,
+            number: currentLeft,
             content: line.content.substring(1),
             type: 'deleted',
             hunkIndex,
@@ -1106,23 +1116,29 @@ function EnhancedDiffViewer({
             hunkIndex,
             lineIndex,
           });
+          const currentRight = rightLineNum;
+          rightLineNum += 1;
           rightLines.push({
-            number: rightLineNum++,
+            number: currentRight,
             content: line.content.substring(1),
             type: 'added',
             hunkIndex,
             lineIndex,
           });
         } else {
+          const currentLeft = leftLineNum;
+          leftLineNum += 1;
+          const currentRight = rightLineNum;
+          rightLineNum += 1;
           leftLines.push({
-            number: leftLineNum++,
+            number: currentLeft,
             content: line.content.substring(1),
             type: 'context',
             hunkIndex,
             lineIndex,
           });
           rightLines.push({
-            number: rightLineNum++,
+            number: currentRight,
             content: line.content.substring(1),
             type: 'context',
             hunkIndex,

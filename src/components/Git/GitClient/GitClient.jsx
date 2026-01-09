@@ -2150,7 +2150,7 @@ function GitClient() {
             onChange={async (key) => {
               if (key && !popStashFiles[key]) {
                 try {
-                  const files = await getStashFiles(parseInt(key));
+                  const files = await getStashFiles(parseInt(key, 10));
                   setPopStashFiles((prev) => ({ ...prev, [key]: files }));
                 } catch (e) {
                   console.error('Failed to load stash files:', e);
