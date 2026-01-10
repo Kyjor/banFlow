@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
   Card,
@@ -61,7 +61,7 @@ function PRReview({ pr, onRefresh }) {
     }
   };
 
-  const loadPRDetails = async () => {
+  const loadPRDetails = useCallback(async () => {
     if (!pr || !githubRepoInfo) return;
 
     setLoading(true);
@@ -91,7 +91,13 @@ function PRReview({ pr, onRefresh }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    pr,
+    githubRepoInfo,
+    getPullRequestFiles,
+    getPullRequestCommits,
+    getPullRequestReviews,
+  ]);
 
   useEffect(() => {
     if (pr && githubRepoInfo) {
@@ -366,6 +372,10 @@ PRReview.propTypes = {
     comments: PropTypes.number,
   }),
   onRefresh: PropTypes.func,
+};
+
+PRReview.defaultProps = {
+  onRefresh: () => {},
 };
 
 export default PRReview;

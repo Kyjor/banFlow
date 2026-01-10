@@ -26,11 +26,12 @@ class DayByDayCalendar extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (this.props.currentDate) {
-      const prevMoment = prevProps.currentDate
-        ? moment(prevProps.currentDate)
-        : null;
-      const currentMoment = moment(this.props.currentDate);
+    const { currentDate, onDateChange } = this.props;
+    const { currentDate: prevCurrentDate } = prevProps;
+
+    if (currentDate) {
+      const prevMoment = prevCurrentDate ? moment(prevCurrentDate) : null;
+      const currentMoment = moment(currentDate);
       if (!prevMoment || !prevMoment.isSame(currentMoment, 'day')) {
         this.setState({ currentDate: currentMoment });
       }
@@ -63,10 +64,12 @@ class DayByDayCalendar extends React.Component {
             borderRadius: '4px',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) =>
-            (e.target.style.background = 'rgba(255, 255, 255, 0.2)')
-          }
-          onMouseLeave={(e) => (e.target.style.background = 'transparent')}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'transparent';
+          }}
           onClick={() => {
             this.incrementDays(-7);
           }}
@@ -79,10 +82,12 @@ class DayByDayCalendar extends React.Component {
             borderRadius: '4px',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) =>
-            (e.target.style.background = 'rgba(255, 255, 255, 0.2)')
-          }
-          onMouseLeave={(e) => (e.target.style.background = 'transparent')}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'transparent';
+          }}
           onClick={() => {
             this.incrementDays(-1);
           }}
@@ -107,10 +112,12 @@ class DayByDayCalendar extends React.Component {
             borderRadius: '4px',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) =>
-            (e.target.style.background = 'rgba(255, 255, 255, 0.2)')
-          }
-          onMouseLeave={(e) => (e.target.style.background = 'transparent')}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'transparent';
+          }}
           onClick={() => {
             this.incrementDays(1);
           }}
@@ -123,10 +130,12 @@ class DayByDayCalendar extends React.Component {
             borderRadius: '4px',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) =>
-            (e.target.style.background = 'rgba(255, 255, 255, 0.2)')
-          }
-          onMouseLeave={(e) => (e.target.style.background = 'transparent')}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'transparent';
+          }}
           onClick={() => {
             this.incrementDays(7);
           }}
@@ -137,10 +146,11 @@ class DayByDayCalendar extends React.Component {
 
   incrementDays = (days) => {
     const { currentDate } = this.state;
+    const { onDateChange } = this.props;
     const newDay = moment(currentDate).add(days, 'days');
     this.setState({ currentDate: newDay });
-    if (this.props.onDateChange) {
-      this.props.onDateChange(newDay);
+    if (onDateChange) {
+      onDateChange(newDay);
     }
   };
 
@@ -179,5 +189,10 @@ DayByDayCalendar.propTypes = {
     PropTypes.object, // moment object
   ]),
   onDateChange: PropTypes.func,
+};
+
+DayByDayCalendar.defaultProps = {
+  currentDate: new Date(),
+  onDateChange: () => {},
 };
 export default DayByDayCalendar;

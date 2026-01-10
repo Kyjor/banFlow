@@ -26,7 +26,7 @@ class GameNotification extends Component {
     }
   }
 
-  formatDuration(seconds) {
+  static formatDuration(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
@@ -45,7 +45,7 @@ class GameNotification extends Component {
 
     if (type === 'gold') {
       if (reason === 'session_completed') {
-        const duration = this.formatDuration(sessionDuration);
+        const duration = GameNotification.formatDuration(sessionDuration);
         return `Earned ${amount} gold for completing a ${duration} session${nodeTitle ? ` on "${nodeTitle}"` : ''}!`;
       }
       if (reason === 'task_completed') {
@@ -56,7 +56,7 @@ class GameNotification extends Component {
     return `Earned ${amount} ${type}!`;
   }
 
-  getRewardIcon(type) {
+  static getRewardIcon(type) {
     switch (type) {
       case 'gold':
         return <DollarOutlined style={{ color: '#ffd700' }} />;
@@ -70,9 +70,9 @@ class GameNotification extends Component {
   }
 
   showRewardNotification(data) {
-    const { type, amount } = data;
+    const { type } = data;
     const message = this.getRewardMessage(data);
-    const icon = this.getRewardIcon(type);
+    const icon = GameNotification.getRewardIcon(type);
 
     notification.open({
       message: 'Reward Earned!',

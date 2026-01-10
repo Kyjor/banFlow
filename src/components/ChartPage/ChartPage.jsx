@@ -42,7 +42,7 @@ class SheetPage extends Component {
 
     return lokiLoaded ? (
       <Layout>
-        <h1 style={{ fontSize: 50 }}>{this.currentProject}'s Settings</h1>
+        <h1 style={{ fontSize: 50 }}>{this.currentProject}&apos;s Settings</h1>
         <span>Test</span>
         <div style={{ height: 600 }}>
           <Flowchart

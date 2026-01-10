@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import {
   Table,
   Tag,
@@ -21,8 +22,6 @@ import {
   SearchOutlined,
   PlusOutlined,
   EyeOutlined,
-  MergeOutlined,
-  DeleteOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import './PRList.scss';
@@ -85,12 +84,11 @@ function PRList({ onCreatePR, onViewPR }) {
         <Space>
           <PullRequestOutlined
             style={{
-              color:
-                pr.state === 'open'
+              color: pr.merged
+                ? '#1890ff'
+                : pr.state === 'open'
                   ? '#52c41a'
-                  : pr.merged
-                    ? '#1890ff'
-                    : '#999',
+                  : '#999',
             }}
           />
           <Text strong>#{pr.number}</Text>
@@ -280,5 +278,10 @@ function PRList({ onCreatePR, onViewPR }) {
     </div>
   );
 }
+
+PRList.propTypes = {
+  onCreatePR: PropTypes.func.isRequired,
+  onViewPR: PropTypes.func.isRequired,
+};
 
 export default PRList;

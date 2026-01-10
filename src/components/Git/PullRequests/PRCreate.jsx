@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Modal,
   Form,
@@ -7,11 +8,9 @@ import {
   Space,
   Typography,
   Button,
-  Tag,
-  Divider,
   Alert,
 } from 'antd';
-import { BranchesOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { BranchesOutlined } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 
 const { TextArea } = Input;
@@ -189,5 +188,11 @@ function PRCreate({ visible, onCancel, onSuccess }) {
     </Modal>
   );
 }
+
+PRCreate.propTypes = {
+  visible: PropTypes.bool.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  onSuccess: PropTypes.func.isRequired,
+};
 
 export default PRCreate;

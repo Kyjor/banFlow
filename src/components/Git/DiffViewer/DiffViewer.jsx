@@ -12,14 +12,7 @@ import {
   Row,
   Col,
 } from 'antd';
-import {
-  FileTextOutlined,
-  SwapOutlined,
-  FullscreenOutlined,
-  CopyOutlined,
-  DownloadOutlined,
-  EyeOutlined,
-} from '@ant-design/icons';
+import { FileTextOutlined, CopyOutlined, EyeOutlined } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import {
   tomorrow,
@@ -130,16 +123,8 @@ function DiffViewer({
     return languageMap[extension] || 'text';
   };
 
-  const getFileIcon = (filename) => {
+  const getFileIcon = () => {
     return <FileTextOutlined style={{ color: '#1890ff' }} />;
-  };
-
-  const renderLineNumbers = (lines, startLine = 1) => {
-    return lines.map((_, index) => (
-      <div key={index} className="line-number">
-        {startLine + index}
-      </div>
-    ));
   };
 
   const renderUnifiedDiff = (diff) => {
@@ -260,7 +245,10 @@ function DiffViewer({
             </div>
             <div className="diff-content">
               {leftLines.map((line, index) => (
-                <div key={index} className={`diff-line diff-line-${line.type}`}>
+                <div
+                  key={`left-${index}`}
+                  className={`diff-line diff-line-${line.type}`}
+                >
                   <span className="line-number">{line.number || ''}</span>
                   <div className="line-content">
                     <SyntaxHighlighter
@@ -290,7 +278,10 @@ function DiffViewer({
             </div>
             <div className="diff-content">
               {rightLines.map((line, index) => (
-                <div key={index} className={`diff-line diff-line-${line.type}`}>
+                <div
+                  key={`right-${index}`}
+                  className={`diff-line diff-line-${line.type}`}
+                >
                   <span className="line-number">{line.number || ''}</span>
                   <div className="line-content">
                     <SyntaxHighlighter
@@ -440,19 +431,16 @@ function DiffViewer({
                   : renderUnifiedDiff(selectedDiff)}
               </div>
             </div>
-          ) : availableFiles.length === 0 ? (
-            <Empty
-              image={
-                <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
-              }
-              description="No modified files to compare"
-            />
           ) : (
             <Empty
               image={
                 <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
               }
-              description="Select a file to view differences"
+              description={
+                availableFiles.length === 0
+                  ? 'No modified files to compare'
+                  : 'Select a file to view differences'
+              }
             />
           )}
         </Spin>

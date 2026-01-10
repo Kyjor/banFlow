@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Button,
@@ -22,18 +22,11 @@ import {
 import {
   PlusOutlined,
   MinusOutlined,
-  CheckOutlined,
-  CloseOutlined,
   EyeOutlined,
   UndoOutlined,
   RedoOutlined,
-  SaveOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
-  ExclamationCircleOutlined,
-  CaretRightOutlined,
-  CaretDownOutlined,
-  DragOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
 import './ChunkStaging.scss';
@@ -49,21 +42,15 @@ function ChunkStaging({
   const {
     currentRepository,
     currentDiff,
-    stagedFiles,
-    modifiedFiles,
-    untrackedFiles,
     getDiff,
-    stageFiles,
-    unstageFiles,
     isLoading,
     operationInProgress,
   } = useGit();
 
-  const [selectedFile, setSelectedFile] = useState(file);
+  const [selectedFile] = useState(file);
   const [stagedChunks, setStagedChunks] = useState(new Set());
   const [unstagedChunks, setUnstagedChunks] = useState(new Set());
   const [selectedChunks, setSelectedChunks] = useState(new Set());
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [stagingHistory, setStagingHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showHelp, setShowHelp] = useState(false);
@@ -361,7 +348,6 @@ function ChunkStaging({
     const chunkId = `hunk-${hunkIndex}`;
     const chunkInfo = getChunkInfo(hunkIndex);
     const isStaged = stagedChunks.has(chunkId);
-    const isUnstaged = unstagedChunks.has(chunkId);
     const isSelected = selectedChunks.has(chunkId);
 
     if (!chunkInfo) return null;
@@ -588,9 +574,7 @@ function ChunkStaging({
                   }
                   strokeColor="#52c41a"
                   showInfo
-                  format={(percent) =>
-                    `${stagedCount}/${totalChunks} chunks staged`
-                  }
+                  format={() => `${stagedCount}/${totalChunks} chunks staged`}
                 />
               </div>
 
