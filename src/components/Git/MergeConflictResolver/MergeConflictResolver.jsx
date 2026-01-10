@@ -29,7 +29,6 @@ import {
 } from 'antd';
 import {
   CheckOutlined,
-  CloseOutlined,
   EyeOutlined,
   EditOutlined,
   SaveOutlined,
@@ -37,13 +36,7 @@ import {
   RedoOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
-  ExclamationCircleOutlined,
-  CaretLeftOutlined,
-  CaretRightOutlined,
-  CaretDownOutlined,
   MergeOutlined,
-  BranchesOutlined,
-  WarningOutlined,
   CopyOutlined,
   SwapOutlined,
   ArrowLeftOutlined,
@@ -51,7 +44,6 @@ import {
   LeftOutlined,
   RightOutlined,
   CheckCircleOutlined,
-  SyncOutlined,
 } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import {
@@ -61,7 +53,7 @@ import {
 import { useGit } from '../../../contexts/GitContext';
 import './MergeConflictResolver.scss';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 // Parse conflict markers from file content
