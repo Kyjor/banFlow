@@ -20,10 +20,8 @@ import {
   Col,
   Switch,
   Slider,
-  InputNumber,
   Divider,
   Badge,
-  Progress,
   Alert,
   Input,
   Modal,
@@ -32,17 +30,12 @@ import {
 } from 'antd';
 import {
   FileTextOutlined,
-  SwapOutlined,
-  FullscreenOutlined,
   CopyOutlined,
-  DownloadOutlined,
   EyeOutlined,
   MinusOutlined,
   PlusOutlined,
   SettingOutlined,
   SearchOutlined,
-  BookOutlined,
-  InfoCircleOutlined,
   CaretRightOutlined,
   CaretDownOutlined,
   CheckOutlined,
@@ -50,7 +43,6 @@ import {
   UndoOutlined,
   EditOutlined,
   FileSearchOutlined,
-  FolderOpenOutlined,
   HistoryOutlined,
 } from '@ant-design/icons';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';

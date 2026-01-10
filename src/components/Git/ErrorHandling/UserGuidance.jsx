@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
-  Card,
   Button,
   Space,
   Typography,
@@ -9,7 +9,6 @@ import {
   Collapse,
   Tag,
   List,
-  Tooltip,
   Modal,
   Progress,
 } from 'antd';
@@ -17,12 +16,7 @@ import {
   BookOutlined,
   PlayCircleOutlined,
   CheckCircleOutlined,
-  InfoCircleOutlined,
-  ExclamationCircleOutlined,
-  QuestionCircleOutlined,
-  RocketOutlined,
   CodeOutlined,
-  GitlabOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
@@ -41,8 +35,8 @@ function UserGuidance({ visible, onClose, userLevel = 'beginner' }) {
         <div>
           <Paragraph>
             Git is a version control system that helps you track changes to your
-            code over time. Think of it as a "save game" system for your code,
-            where you can go back to any previous version.
+            code over time. Think of it as a &ldquo;save game&rdquo; system for
+            your code, where you can go back to any previous version.
           </Paragraph>
           <Alert
             message="Key Concepts"
@@ -102,8 +96,9 @@ function UserGuidance({ visible, onClose, userLevel = 'beginner' }) {
       content: (
         <div>
           <Paragraph>
-            When you modify files, Git tracks these changes. The "Changes" tab
-            shows you exactly what has been added, removed, or modified.
+            When you modify files, Git tracks these changes. The
+            &ldquo;Changes&rdquo; tab shows you exactly what has been added,
+            removed, or modified.
           </Paragraph>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Alert
@@ -137,8 +132,9 @@ function UserGuidance({ visible, onClose, userLevel = 'beginner' }) {
       content: (
         <div>
           <Paragraph>
-            Before committing, you need to "stage" your changes. This tells Git
-            which changes you want to include in your next commit.
+            Before committing, you need to &ldquo;stage&rdquo; your changes.
+            This tells Git which changes you want to include in your next
+            commit.
           </Paragraph>
           <List
             size="small"
@@ -173,12 +169,18 @@ function UserGuidance({ visible, onClose, userLevel = 'beginner' }) {
             message="Commit Message Best Practices"
             description={
               <ul>
-                <li>Use present tense: "Add feature" not "Added feature"</li>
-                <li>Keep it concise but descriptive</li>
-                <li>Start with a verb: "Fix", "Add", "Update", "Remove"</li>
                 <li>
-                  Examples: "Fix login bug", "Add user authentication", "Update
-                  documentation"
+                  Use present tense: &ldquo;Add feature&rdquo; not &ldquo;Added
+                  feature&rdquo;
+                </li>
+                <li>Keep it concise but descriptive</li>
+                <li>
+                  Start with a verb: &ldquo;Fix&rdquo;, &ldquo;Add&rdquo;,
+                  &ldquo;Update&rdquo;, &ldquo;Remove&rdquo;
+                </li>
+                <li>
+                  Examples: &ldquo;Fix login bug&rdquo;, &ldquo;Add user
+                  authentication&rdquo;, &ldquo;Update documentation&rdquo;
                 </li>
               </ul>
             }
@@ -227,8 +229,9 @@ function UserGuidance({ visible, onClose, userLevel = 'beginner' }) {
       content: (
         <div>
           <Paragraph>
-            Conflicts happen when Git can't automatically merge changes. The
-            three-pane view helps you choose which changes to keep.
+            Conflicts happen when Git can&apos;t automatically merge changes.
+            The &ldquo;three-pane view&rdquo; helps you choose which changes to
+            keep.
           </Paragraph>
           <Alert
             message="Conflict Resolution Options"
@@ -432,14 +435,20 @@ function UserGuidance({ visible, onClose, userLevel = 'beginner' }) {
             current={currentStep}
             onChange={handleStepClick}
             size="small"
-            items={steps.map((step, index) => ({
-              title: step.title,
-              status: completedSteps.has(index)
-                ? 'finish'
-                : index === currentStep
-                  ? 'process'
-                  : 'wait',
-            }))}
+            items={steps.map((step, index) => {
+              let status;
+              if (completedSteps.has(index)) {
+                status = 'finish';
+              } else if (index === currentStep) {
+                status = 'process';
+              } else {
+                status = 'wait';
+              }
+              return {
+                title: step.title,
+                status,
+              };
+            })}
           />
         </div>
 
@@ -482,5 +491,11 @@ function UserGuidance({ visible, onClose, userLevel = 'beginner' }) {
     </Modal>
   );
 }
+
+UserGuidance.propTypes = {
+  visible: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  userLevel: PropTypes.oneOf(['beginner', 'intermediate', 'advanced']),
+};
 
 export default UserGuidance;

@@ -816,7 +816,7 @@ class Dashboard extends Component {
                         )}
                         {node.tags && node.tags.length > 0 && (
                           <Descriptions.Item label="Tags">
-                            {node.tags.map((tag, idx) => {
+                            {node.tags.map((tag) => {
                               const tagName =
                                 typeof tag === 'string'
                                   ? tag

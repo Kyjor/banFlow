@@ -1273,7 +1273,7 @@ class ChartPage extends Component {
                                 <AutoComplete
                                   style={{ width: '100%' }}
                                   options={this.getNodeSuggestions('')}
-                                  onSelect={(value, _option) =>
+                                  onSelect={(value) =>
                                     this.handleNodeReferenceSelect(value)
                                   }
                                   onSearch={(text) =>
@@ -1326,7 +1326,7 @@ class ChartPage extends Component {
                                 <AutoComplete
                                   style={{ width: '100%' }}
                                   options={this.getParentSuggestions('')}
-                                  onSelect={(value, _option) =>
+                                  onSelect={(value) =>
                                     this.handleParentReferenceSelect(value)
                                   }
                                   onSearch={(text) =>

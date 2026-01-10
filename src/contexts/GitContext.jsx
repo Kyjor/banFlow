@@ -1012,12 +1012,7 @@ export function GitProvider({ children }) {
   const loadGitHubRepoInfo = useCallback(async () => {
     // This would load info about the current repo if it's a GitHub repo
     // Implementation depends on your needs
-    try {
-      // Placeholder - implement based on your needs
-      return null;
-    } catch (error) {
-      handleError(error, 'load GitHub repo info');
-    }
+    // Placeholder - implement based on your needs
     return null;
   }, [handleError]);
 

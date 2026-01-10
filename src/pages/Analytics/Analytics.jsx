@@ -1001,7 +1001,7 @@ class Analytics extends Component {
                   })()}
                 />
                 <Badge
-                  count={this.state.filterRules.length}
+                  count={filterRules.length}
                   showZero={false}
                   offset={[8, 0]}
                 >
@@ -1012,7 +1012,7 @@ class Analytics extends Component {
                         filtersOpen: !prev.filtersOpen,
                       }))
                     }
-                    type={this.state.filtersOpen ? 'default' : 'text'}
+                    type={filtersOpen ? 'default' : 'text'}
                   >
                     <FilterOutlined /> Query Builder
                   </Button>
@@ -1069,7 +1069,7 @@ class Analytics extends Component {
                     </Radio.Group>
                   </div>
                   <div style={{ marginBottom: '8px' }}>
-                    {this.state.filterRules.map((rule) => {
+                    {filterRules.map((rule) => {
                       const { field } = rule;
                       const commonProps = {
                         style: { width: '100%' },
