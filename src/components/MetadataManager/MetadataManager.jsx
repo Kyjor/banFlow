@@ -1,15 +1,14 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
 import {
   Modal,
   Tabs,
-  Card,
   Space,
   Button,
   Tag,
   Input,
   Select,
-  DatePicker,
   Typography,
   Table,
   Upload,
@@ -32,13 +31,11 @@ import moment from 'moment';
 
 const { TabPane } = Tabs;
 const { Text, Title } = Typography;
-const { TextArea } = Input;
 
 class MetadataManager extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      visible: false,
       activeTab: 'images',
       images: [],
       tags: [],
@@ -56,26 +53,31 @@ class MetadataManager extends Component {
   }
 
   componentDidMount() {
-    if (this.props.visible) {
+    const { visible } = this.props;
+    if (visible) {
       this.loadData();
     }
   }
 
   componentDidUpdate(prevProps) {
-    if (this.props.visible && !prevProps.visible) {
+    const { visible, isGlobal, projectName } = this.props;
+    const {
+      visible: prevVisible,
+      isGlobal: prevIsGlobal,
+      projectName: prevProjectName,
+    } = prevProps;
+
+    if (visible && !prevVisible) {
       this.loadData();
     }
-    if (
-      this.props.isGlobal !== prevProps.isGlobal ||
-      this.props.projectName !== prevProps.projectName
-    ) {
+    if (isGlobal !== prevIsGlobal || projectName !== prevProjectName) {
       this.setState(
         {
-          isGlobal: this.props.isGlobal || false,
-          projectName: this.props.projectName || null,
+          isGlobal: isGlobal || false,
+          projectName: projectName || null,
         },
         () => {
-          if (this.props.visible) {
+          if (visible) {
             this.loadData();
           }
         },
@@ -93,10 +95,11 @@ class MetadataManager extends Component {
 
   loadImages = async () => {
     try {
+      const { projectName, isGlobal } = this.state;
       const images = await ipcRenderer.invoke(
         'docs:listImages',
-        this.state.projectName,
-        this.state.isGlobal,
+        projectName,
+        isGlobal,
       );
       this.setState({ images });
     } catch (error) {
@@ -123,6 +126,7 @@ class MetadataManager extends Component {
   handleImageUpload = async (file) => {
     this.setState({ uploading: true });
     try {
+      const { projectName, isGlobal } = this.state;
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target.result;
@@ -130,8 +134,8 @@ class MetadataManager extends Component {
           'docs:saveImage',
           file.name,
           base64,
-          this.state.projectName,
-          this.state.isGlobal,
+          projectName,
+          isGlobal,
         );
         message.success('Image uploaded');
         await this.loadImages();
@@ -148,11 +152,12 @@ class MetadataManager extends Component {
 
   handleImageDelete = async (imagePath) => {
     try {
+      const { projectName, isGlobal } = this.state;
       await ipcRenderer.invoke(
         'docs:deleteImage',
         imagePath,
-        this.state.projectName,
-        this.state.isGlobal,
+        projectName,
+        isGlobal,
       );
       message.success('Image deleted');
       await this.loadImages();
@@ -199,10 +204,12 @@ class MetadataManager extends Component {
   };
 
   toggleGlobal = async () => {
-    const newIsGlobal = !this.state.isGlobal;
-    this.setState({ isGlobal: newIsGlobal }, () => {
-      this.loadData();
-    });
+    this.setState(
+      (prevState) => ({ isGlobal: !prevState.isGlobal }),
+      () => {
+        this.loadData();
+      },
+    );
   };
 
   render() {
@@ -218,7 +225,8 @@ class MetadataManager extends Component {
       newCategoryName,
     } = this.state;
 
-    const visible = this.props.visible || false;
+    const { visible, onClose } = this.props;
+    const modalVisible = visible || false;
 
     const imageColumns = [
       {
@@ -237,15 +245,12 @@ class MetadataManager extends Component {
                 borderRadius: '4px',
               }}
               onError={(e) => {
+                const { projectName } = this.state;
                 ipcRenderer
-                  .invoke(
-                    'docs:getImage',
-                    record.path,
-                    this.state.projectName,
-                    isGlobal,
-                  )
+                  .invoke('docs:getImage', record.path, projectName, isGlobal)
                   .then((dataUrl) => {
                     e.target.src = dataUrl;
+                    return undefined;
                   })
                   .catch(() => {
                     e.target.style.display = 'none';
@@ -309,8 +314,8 @@ class MetadataManager extends Component {
             </Button>
           </Space>
         }
-        visible={visible}
-        onCancel={() => this.props.onClose && this.props.onClose()}
+        visible={modalVisible}
+        onCancel={() => onClose && onClose()}
         footer={null}
         width={900}
       >
@@ -473,5 +478,12 @@ class MetadataManager extends Component {
     );
   }
 }
+
+MetadataManager.propTypes = {
+  isGlobal: PropTypes.bool,
+  projectName: PropTypes.string,
+  visible: PropTypes.bool,
+  onClose: PropTypes.func,
+};
 
 export default MetadataManager;

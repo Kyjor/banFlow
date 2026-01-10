@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Card,
   Typography,
@@ -11,9 +12,7 @@ import {
   Tabs,
   Spin,
   Empty,
-  Alert,
   Input,
-  Modal,
 } from 'antd';
 import {
   PullRequestOutlined,
@@ -34,14 +33,13 @@ const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { TabPane } = Tabs;
 
-function PRReview({ pr, onClose, onRefresh }) {
+function PRReview({ pr, onRefresh }) {
   const {
     githubRepoInfo,
     getPullRequestFiles,
     getPullRequestCommits,
     getPullRequestReviews,
     addPullRequestComment,
-    pullRequestLoading,
   } = useGit();
 
   const [files, setFiles] = useState([]);
@@ -52,11 +50,16 @@ function PRReview({ pr, onClose, onRefresh }) {
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (pr && githubRepoInfo) {
-      loadPRDetails();
+  const getReviewStateColor = (state) => {
+    switch (state) {
+      case 'APPROVED':
+        return 'green';
+      case 'CHANGES_REQUESTED':
+        return 'red';
+      default:
+        return 'default';
     }
-  }, [pr, githubRepoInfo]);
+  };
 
   const loadPRDetails = async () => {
     if (!pr || !githubRepoInfo) return;
@@ -89,6 +92,12 @@ function PRReview({ pr, onClose, onRefresh }) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (pr && githubRepoInfo) {
+      loadPRDetails();
+    }
+  }, [pr, githubRepoInfo, loadPRDetails]);
 
   const handleAddComment = async () => {
     if (!comment.trim()) return;
@@ -300,15 +309,7 @@ function PRReview({ pr, onClose, onRefresh }) {
                     <Space>
                       <Avatar src={review.user.avatar_url} />
                       <Text strong>{review.user.login}</Text>
-                      <Tag
-                        color={
-                          review.state === 'APPROVED'
-                            ? 'green'
-                            : review.state === 'CHANGES_REQUESTED'
-                              ? 'red'
-                              : 'default'
-                        }
-                      >
+                      <Tag color={getReviewStateColor(review.state)}>
                         {review.state}
                       </Tag>
                       <Text type="secondary">
@@ -340,5 +341,31 @@ function PRReview({ pr, onClose, onRefresh }) {
     </div>
   );
 }
+
+PRReview.propTypes = {
+  pr: PropTypes.shape({
+    number: PropTypes.number,
+    title: PropTypes.string,
+    state: PropTypes.string,
+    mergeable: PropTypes.bool,
+    merged: PropTypes.bool,
+    user: PropTypes.shape({
+      avatar_url: PropTypes.string,
+      login: PropTypes.string,
+    }),
+    created_at: PropTypes.string,
+    head: PropTypes.shape({
+      ref: PropTypes.string,
+    }),
+    base: PropTypes.shape({
+      ref: PropTypes.string,
+    }),
+    body: PropTypes.string,
+    additions: PropTypes.number,
+    deletions: PropTypes.number,
+    comments: PropTypes.number,
+  }),
+  onRefresh: PropTypes.func,
+};
 
 export default PRReview;

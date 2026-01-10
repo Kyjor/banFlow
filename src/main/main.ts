@@ -871,13 +871,11 @@ ipcMain.handle(
 );
 
 ipcMain.handle('app:getDataPath', async () => {
-  const path = require('path');
   return path.join(__dirname, '../../banFlowProjects');
 });
 
 ipcMain.handle('app:openDataPath', async () => {
   const { shell: electronShell } = require('electron');
-  const path = require('path');
   const dataPath = path.join(__dirname, '../../banFlowProjects');
   electronShell.openPath(dataPath);
   return { success: true };
@@ -885,12 +883,11 @@ ipcMain.handle('app:openDataPath', async () => {
 
 // ==================== BACKUP & RECOVERY SYSTEM ====================
 
-const backupIntervals: Map<string, NodeJS.Timeout> = new Map();
-const backupTimers: Map<string, NodeJS.Timeout> = new Map();
+const backupIntervals: Map<string, any> = new Map();
+const backupTimers: Map<string, any> = new Map();
 
 const getBackupPath = (projectName: string) => {
   const fs = require('fs');
-  const path = require('path');
   const backupDir = path.join(
     __dirname,
     '../../banFlowProjects',
@@ -905,7 +902,6 @@ const getBackupPath = (projectName: string) => {
 
 const getAllBackupsPath = () => {
   const fs = require('fs');
-  const path = require('path');
   const backupDir = path.join(__dirname, '../../banFlowProjects', '_backups');
   if (!fs.existsSync(backupDir)) {
     fs.mkdirSync(backupDir, { recursive: true });
@@ -915,7 +911,6 @@ const getAllBackupsPath = () => {
 
 const createBackup = async (projectName: string): Promise<string> => {
   const fs = require('fs');
-  const path = require('path');
 
   try {
     const projectPath =
@@ -984,7 +979,6 @@ const createBackup = async (projectName: string): Promise<string> => {
 
 const cleanupOldBackups = async (projectName: string, maxBackups: number) => {
   const fs = require('fs');
-  const path = require('path');
 
   try {
     const backupDir = getBackupPath(projectName);
@@ -1241,7 +1235,6 @@ ipcMain.handle(
 ipcMain.handle('backup:delete', async (event, backupPath: string) => {
   try {
     const fs = require('fs');
-    const path = require('path');
 
     if (!fs.existsSync(backupPath)) {
       throw new Error(`Backup file not found: ${backupPath}`);
@@ -1299,7 +1292,6 @@ ipcMain.handle('backup:stopSchedule', async (event, projectName: string) => {
 // This will be called after app is ready
 const initializeBackupSchedules = () => {
   const fs = require('fs');
-  const path = require('path');
 
   // Try to load settings from localStorage (stored in renderer)
   // For now, we'll initialize based on default settings
@@ -1434,297 +1426,155 @@ ipcMain.handle('git:addRepository', async (event, repoPath) => {
 });
 
 ipcMain.handle('git:switchRepository', async (event, repoPath) => {
-  try {
-    return await gitService.switchRepository(repoPath);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.switchRepository(repoPath);
 });
 
 ipcMain.handle('git:getRepositories', async () => {
-  try {
-    console.log('Getting repositories...');
-    const repos = gitService.getRepositories();
-    console.log('Found repositories:', repos.length);
-    return repos;
-  } catch (error) {
-    console.error('Error in git:getRepositories:', error);
-    throw error;
-  }
+  console.log('Getting repositories...');
+  const repos = gitService.getRepositories();
+  console.log('Found repositories:', repos.length);
+  return repos;
 });
 
 ipcMain.handle('git:getCurrentRepository', async () => {
-  try {
-    return gitService.getCurrentRepository();
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getCurrentRepository();
 });
 
 ipcMain.handle('git:getRepositoryStatus', async () => {
-  try {
-    return await gitService.getRepositoryStatus();
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getRepositoryStatus();
 });
 
 // Core Git Operations
 ipcMain.handle('git:createBranch', async (event, branchName, startPoint) => {
-  try {
-    return await gitService.createBranch(branchName, startPoint);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.createBranch(branchName, startPoint);
 });
 
 ipcMain.handle('git:switchBranch', async (event, branchName) => {
-  try {
-    return await gitService.switchBranch(branchName);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.switchBranch(branchName);
 });
 
 ipcMain.handle('git:deleteBranch', async (event, branchName, force) => {
-  try {
-    return await gitService.deleteBranch(branchName, force);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.deleteBranch(branchName, force);
 });
 
 ipcMain.handle('git:getBranchesWithDates', async () => {
-  try {
-    return await gitService.getBranchesWithDates();
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getBranchesWithDates();
 });
 
 ipcMain.handle('git:stageFiles', async (event, files) => {
-  try {
-    return await gitService.stageFiles(files);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.stageFiles(files);
 });
 
 ipcMain.handle('git:unstageFiles', async (event, files) => {
-  try {
-    return await gitService.unstageFiles(files);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.unstageFiles(files);
 });
 
 ipcMain.handle('git:commit', async (event, message, description) => {
-  try {
-    return await gitService.commit(message, description);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.commit(message, description);
 });
 
 ipcMain.handle('git:fetch', async (event, remote, prune) => {
-  try {
-    return await gitService.fetch(remote, prune);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.fetch(remote, prune);
 });
 
 ipcMain.handle('git:pull', async (event, remote, branch, strategy) => {
-  try {
-    return await gitService.pull(remote, branch, strategy);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.pull(remote, branch, strategy);
 });
 
 ipcMain.handle('git:push', async (event, remote, branch) => {
-  try {
-    return await gitService.push(remote, branch);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.push(remote, branch);
 });
 
 // Stash Operations
 ipcMain.handle('git:stashChanges', async (event, message) => {
-  try {
-    return await gitService.stashChanges(message);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.stashChanges(message);
 });
 
 ipcMain.handle('git:stashFiles', async (event, files, message) => {
-  try {
-    return await gitService.stashFiles(files, message);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.stashFiles(files, message);
 });
 
 ipcMain.handle('git:getStashList', async () => {
-  try {
-    return await gitService.getStashList();
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getStashList();
 });
 
 ipcMain.handle('git:getStashFiles', async (event, stashIndex) => {
-  try {
-    return await gitService.getStashFiles(stashIndex);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getStashFiles(stashIndex);
 });
 
 ipcMain.handle('git:getStashFileDiff', async (event, stashIndex, filename) => {
-  try {
-    return await gitService.getStashFileDiff(stashIndex, filename);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getStashFileDiff(stashIndex, filename);
 });
 
 ipcMain.handle('git:applyStash', async (event, stashIndex) => {
-  try {
-    return await gitService.applyStash(stashIndex);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.applyStash(stashIndex);
 });
 
 ipcMain.handle('git:popStash', async (event, stashIndex) => {
-  try {
-    return await gitService.popStash(stashIndex);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.popStash(stashIndex);
 });
 
 ipcMain.handle('git:dropStash', async (event, stashIndex) => {
-  try {
-    return await gitService.dropStash(stashIndex);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.dropStash(stashIndex);
 });
 
 // Diff and History
 ipcMain.handle('git:getDiff', async (event, file, staged) => {
   console.log('IPC git:getDiff called with:', { file, staged });
-  try {
-    const result = await gitService.getDiff(file, staged);
-    console.log('IPC git:getDiff result:', result);
-    return result;
-  } catch (error) {
-    console.error('IPC git:getDiff error:', error);
-    throw error;
-  }
+  const result = await gitService.getDiff(file, staged);
+  console.log('IPC git:getDiff result:', result);
+  return result;
 });
 
 ipcMain.handle('git:getCommitHistory', async (event, options) => {
-  try {
-    return await gitService.getCommitHistory(options);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getCommitHistory(options);
 });
 
 ipcMain.handle('git:getCommitFiles', async (event, commitHash) => {
-  try {
-    return await gitService.getCommitFiles(commitHash);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getCommitFiles(commitHash);
 });
 
 ipcMain.handle('git:getCommitDiff', async (event, commitHash, file) => {
-  try {
-    return await gitService.getCommitDiff(commitHash, file);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getCommitDiff(commitHash, file);
 });
 
 ipcMain.handle('git:getFileHistory', async (event, filePath, maxCount) => {
-  try {
-    return await gitService.getFileHistory(filePath, maxCount);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getFileHistory(filePath, maxCount);
 });
 
 ipcMain.handle('git:getFileAtCommit', async (event, filePath, commitHash) => {
-  try {
-    return await gitService.getFileAtCommit(filePath, commitHash);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getFileAtCommit(filePath, commitHash);
 });
 
 // Merge and Rebase
 ipcMain.handle('git:merge', async (event, branchName, options) => {
-  try {
-    return await gitService.merge(branchName, options);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.merge(branchName, options);
 });
 
 ipcMain.handle('git:rebase', async (event, branchName, interactive) => {
-  try {
-    return await gitService.rebase(branchName, interactive);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.rebase(branchName, interactive);
 });
 
 // Undo System
 ipcMain.handle('git:undoLastOperation', async () => {
-  try {
-    return await gitService.undoLastOperation();
-  } catch (error) {
-    throw error;
-  }
+  return gitService.undoLastOperation();
 });
 
 ipcMain.handle('git:getOperationHistory', async () => {
-  try {
-    return gitService.getOperationHistory();
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getOperationHistory();
 });
 
 // GitHub Integration
 ipcMain.handle('git:authenticateGitHub', async (event, token) => {
-  try {
-    return await gitService.authenticateGitHub(token);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.authenticateGitHub(token);
 });
 
 ipcMain.handle('git:cloneRepository', async (event, repoUrl, targetPath) => {
-  try {
-    return await gitService.cloneRepository(repoUrl, targetPath);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.cloneRepository(repoUrl, targetPath);
 });
 
 ipcMain.handle('git:initRepository', async (event, targetPath) => {
-  try {
-    return await gitService.initRepository(targetPath);
-  } catch (error) {
-    throw error;
-  }
+  return gitService.initRepository(targetPath);
 });
 
 ipcMain.handle('git:selectDirectory', async () => {
@@ -1740,421 +1590,301 @@ ipcMain.handle('git:selectDirectory', async () => {
 });
 
 ipcMain.handle('git:getGitHubRepositories', async () => {
-  try {
-    return await gitService.getGitHubRepositories();
-  } catch (error) {
-    throw error;
-  }
+  return gitService.getGitHubRepositories();
 });
 
 // File System Operations for Repository Selection
 ipcMain.handle('git:selectRepository', async () => {
-  try {
-    const result = dialog.showOpenDialogSync(mainWindow, {
-      properties: ['openDirectory'],
-      title: 'Select Git Repository Folder',
-    });
+  const result = dialog.showOpenDialogSync(mainWindow as any, {
+    properties: ['openDirectory'],
+    title: 'Select Git Repository Folder',
+  });
 
-    if (result && result.length > 0) {
-      return result[0];
-    }
-    return null;
-  } catch (error) {
-    throw error;
+  if (result && result.length > 0) {
+    return result[0];
   }
+  return null;
 });
 
 // Project-specific Git Repository Management
 ipcMain.handle('git:getProjectRepositoryStats', async () => {
-  try {
-    return gitService.getProjectRepositoryStats();
-  } catch (error) {
-    console.error('Error getting project repository stats:', error);
-    throw error;
-  }
+  return gitService.getProjectRepositoryStats();
 });
 
 ipcMain.handle('git:cleanupProjectRepositories', async () => {
-  try {
-    return await gitService.cleanupProjectRepositories();
-  } catch (error) {
-    console.error('Error cleaning up project repositories:', error);
-    throw error;
-  }
+  return gitService.cleanupProjectRepositories();
 });
 
 ipcMain.handle('git:loadProjectRepositories', async () => {
-  try {
-    return await gitService.loadProjectRepositories();
-  } catch (error) {
-    console.error('Error loading project repositories:', error);
-    throw error;
-  }
+  return gitService.loadProjectRepositories();
 });
 
 // GitHub OAuth Integration
 ipcMain.handle('git:startOAuthFlow', async () => {
-  try {
-    console.log('git:startOAuthFlow handler called');
-    const state = gitService.generateOAuthState();
-    const { codeVerifier, codeChallenge } = gitService.generatePKCE();
-    const authUrl = gitService.getOAuthUrl(state, codeChallenge);
+  console.log('git:startOAuthFlow handler called');
+  const state = gitService.generateOAuthState();
+  const { codeVerifier, codeChallenge } = gitService.generatePKCE();
+  const authUrl = gitService.getOAuthUrl(state, codeChallenge);
 
-    console.log('Generated OAuth URL:', authUrl);
+  console.log('Generated OAuth URL:', authUrl);
 
-    // Store state and codeVerifier temporarily (in memory)
-    // In production, you'd want to store this more securely
-    (gitService as any).pendingOAuth = { state, codeVerifier };
+  // Store state and codeVerifier temporarily (in memory)
+  // In production, you'd want to store this more securely
+  (gitService as any).pendingOAuth = { state, codeVerifier };
 
-    // Open browser with the OAuth URL
-    console.log('Opening browser with URL:', authUrl);
-    log.info('Opening OAuth URL in browser:', authUrl);
-    const result = await shell.openExternal(authUrl);
-    console.log('shell.openExternal result:', result);
-    log.info('Browser opened successfully');
+  // Open browser with the OAuth URL
+  console.log('Opening browser with URL:', authUrl);
+  log.info('Opening OAuth URL in browser:', authUrl);
+  const result = await shell.openExternal(authUrl);
+  console.log('shell.openExternal result:', result);
+  log.info('Browser opened successfully');
 
-    return { state, authUrl };
-  } catch (error) {
-    console.error('Failed to start OAuth flow:', error);
-    log.error('Failed to start OAuth flow:', error);
-    throw error;
-  }
+  return { state, authUrl };
 });
 
 ipcMain.handle('git:completeOAuthFlow', async (event, code, state) => {
-  try {
-    const pending = (gitService as any).pendingOAuth;
-    if (!pending || pending.state !== state) {
-      throw new Error('Invalid OAuth state');
-    }
-
-    const token = await gitService.exchangeOAuthCode(
-      code,
-      pending.codeVerifier,
-      state,
-    );
-
-    // Clear pending OAuth
-    delete (gitService as any).pendingOAuth;
-
-    // Authenticate with the token
-    return await gitService.authenticateGitHub(token);
-  } catch (error) {
-    throw error;
+  const pending = (gitService as any).pendingOAuth;
+  if (!pending || pending.state !== state) {
+    throw new Error('Invalid OAuth state');
   }
+
+  const token = await gitService.exchangeOAuthCode(
+    code,
+    pending.codeVerifier,
+    state,
+  );
+
+  // Clear pending OAuth
+  delete (gitService as any).pendingOAuth;
+
+  // Authenticate with the token
+  return gitService.authenticateGitHub(token);
 });
 
 // File Management Operations
 ipcMain.handle('git:discardChanges', async (event, files) => {
-  try {
-    return await gitService.discardChanges(files);
-  } catch (error) {
-    console.error('Error discarding changes:', error);
-    throw error;
-  }
+  return gitService.discardChanges(files);
 });
 
 ipcMain.handle('git:deleteUntrackedFiles', async (event, files) => {
-  try {
-    return await gitService.deleteUntrackedFiles(files);
-  } catch (error) {
-    console.error('Error deleting untracked files:', error);
-    throw error;
-  }
+  return gitService.deleteUntrackedFiles(files);
 });
 
 ipcMain.handle('git:cleanUntrackedFiles', async (event, dryRun) => {
-  try {
-    return await gitService.cleanUntrackedFiles(dryRun);
-  } catch (error) {
-    console.error('Error cleaning untracked files:', error);
-    throw error;
-  }
+  return gitService.cleanUntrackedFiles(dryRun);
 });
 
 // Dashboard project data loading handlers
 ipcMain.handle('dashboard:loadProjectData', async (event, projectName) => {
-  try {
+  const fs = require('fs');
+  const Loki = require('lokijs');
+
+  const projectPath =
+    projectName.includes('/') ||
+    projectName.includes('\\') ||
+    projectName.includes(':')
+      ? projectName
+      : `../banFlowProjects/${projectName}.json`;
+
+  if (!fs.existsSync(projectPath)) {
+    throw new Error(`Project file not found: ${projectPath}`);
+  }
+
+  return new Promise((resolve, reject) => {
+    const db = new Loki(projectPath, {
+      autoload: true,
+      autosave: false,
+      verbose: false,
+      autoloadCallback: () => {
+        const nodes = db.getCollection('nodes');
+        const parents = db.getCollection('parents');
+        const parentOrder = db.getCollection('parentOrder');
+        const iterations = db.getCollection('iterations');
+        const tags = db.getCollection('tags');
+
+        const projectData = {
+          projectName: projectName.replace('.json', ''),
+          nodes: nodes ? nodes.data : [],
+          parents: parents ? parents.data : [],
+          parentOrder: parentOrder ? parentOrder.data : [],
+          iterations: iterations ? iterations.data : [],
+          tags: tags ? tags.data : [],
+        };
+
+        resolve(projectData);
+      },
+    });
+  });
+});
+
+ipcMain.handle(
+  'dashboard:loadMultipleProjectsData',
+  async (event, projectNames) => {
     const fs = require('fs');
     const Loki = require('lokijs');
 
-    const projectPath =
-      projectName.includes('/') ||
-      projectName.includes('\\') ||
-      projectName.includes(':')
-        ? projectName
-        : `../banFlowProjects/${projectName}.json`;
+    const loadProject = (projectName) => {
+      return new Promise((resolve) => {
+        const projectPath =
+          projectName.includes('/') ||
+          projectName.includes('\\') ||
+          projectName.includes(':')
+            ? projectName
+            : `../banFlowProjects/${projectName}.json`;
 
-    if (!fs.existsSync(projectPath)) {
-      throw new Error(`Project file not found: ${projectPath}`);
-    }
+        if (!fs.existsSync(projectPath)) {
+          resolve(null);
+          return;
+        }
 
-    return new Promise((resolve, reject) => {
-      const db = new Loki(projectPath, {
-        autoload: true,
-        autosave: false,
-        verbose: false,
-        autoloadCallback: () => {
-          try {
+        const db = new Loki(projectPath, {
+          autoload: true,
+          autosave: false,
+          verbose: false,
+          autoloadCallback: () => {
             const nodes = db.getCollection('nodes');
             const parents = db.getCollection('parents');
             const parentOrder = db.getCollection('parentOrder');
             const iterations = db.getCollection('iterations');
             const tags = db.getCollection('tags');
 
-            const projectData = {
+            resolve({
               projectName: projectName.replace('.json', ''),
               nodes: nodes ? nodes.data : [],
               parents: parents ? parents.data : [],
               parentOrder: parentOrder ? parentOrder.data : [],
               iterations: iterations ? iterations.data : [],
               tags: tags ? tags.data : [],
-            };
-
-            resolve(projectData);
-          } catch (error) {
-            reject(error);
-          }
-        },
-      });
-    });
-  } catch (error) {
-    console.error('Error loading project data:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle(
-  'dashboard:loadMultipleProjectsData',
-  async (event, projectNames) => {
-    try {
-      const fs = require('fs');
-      const Loki = require('lokijs');
-
-      const loadProject = (projectName) => {
-        return new Promise((resolve) => {
-          try {
-            const projectPath =
-              projectName.includes('/') ||
-              projectName.includes('\\') ||
-              projectName.includes(':')
-                ? projectName
-                : `../banFlowProjects/${projectName}.json`;
-
-            if (!fs.existsSync(projectPath)) {
-              resolve(null);
-              return;
-            }
-
-            const db = new Loki(projectPath, {
-              autoload: true,
-              autosave: false,
-              verbose: false,
-              autoloadCallback: () => {
-                try {
-                  const nodes = db.getCollection('nodes');
-                  const parents = db.getCollection('parents');
-                  const parentOrder = db.getCollection('parentOrder');
-                  const iterations = db.getCollection('iterations');
-                  const tags = db.getCollection('tags');
-
-                  resolve({
-                    projectName: projectName.replace('.json', ''),
-                    nodes: nodes ? nodes.data : [],
-                    parents: parents ? parents.data : [],
-                    parentOrder: parentOrder ? parentOrder.data : [],
-                    iterations: iterations ? iterations.data : [],
-                    tags: tags ? tags.data : [],
-                  });
-                } catch (err) {
-                  console.error(`Error processing ${projectName}:`, err);
-                  resolve(null);
-                }
-              },
             });
-          } catch (error) {
-            console.error(`Error loading project ${projectName}:`, error);
-            resolve(null);
-          }
+          },
         });
-      };
+      });
+    };
 
-      const results = await Promise.all(projectNames.map(loadProject));
-      return results.filter((result) => result !== null);
-    } catch (error) {
-      console.error('Error loading multiple projects:', error);
-      throw error;
-    }
+    const results = await Promise.all(projectNames.map(loadProject));
+    return results.filter((result) => result !== null);
   },
 );
 
 ipcMain.on('dashboard:getAllProjectNames', (event) => {
-  try {
-    const fs = require('fs');
-    const projectFolder = '../banFlowProjects';
+  const fs = require('fs');
+  const projectFolder = '../banFlowProjects';
 
-    if (!fs.existsSync(projectFolder)) {
-      event.returnValue = [];
-      return;
-    }
-
-    const files = fs.readdirSync(projectFolder);
-    const projectNames = files
-      .filter((file) => file.endsWith('.json') && !file.endsWith('.json~'))
-      .map((file) => file.replace('.json', ''));
-
-    event.returnValue = projectNames;
-  } catch (error) {
-    console.error('Error getting project names:', error);
+  if (!fs.existsSync(projectFolder)) {
     event.returnValue = [];
+    return;
   }
+
+  const files = fs.readdirSync(projectFolder);
+  const projectNames = files
+    .filter((file) => file.endsWith('.json') && !file.endsWith('.json~'))
+    .map((file) => file.replace('.json', ''));
+
+  event.returnValue = projectNames;
 });
 
 // File Editor Operations
 ipcMain.handle('git:readFile', async (event, repoPath, filePath) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
+  const fs = require('fs');
 
-    // Resolve file path relative to repository root
-    const fullPath = path.join(repoPath, filePath);
+  // Resolve file path relative to repository root
+  const fullPath = path.join(repoPath, filePath);
 
-    // Check if file exists
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`File not found: ${filePath}`);
-    }
-
-    // Read file content
-    const content = fs.readFileSync(fullPath, 'utf-8');
-    return {
-      success: true,
-      content,
-      path: fullPath,
-    };
-  } catch (error) {
-    console.error('Error reading file:', error);
-    throw error;
+  // Check if file exists
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`File not found: ${filePath}`);
   }
+
+  // Read file content
+  const content = fs.readFileSync(fullPath, 'utf-8');
+  return {
+    success: true,
+    content,
+    path: fullPath,
+  };
 });
 
 ipcMain.handle('git:writeFile', async (event, repoPath, filePath, content) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
+  const fs = require('fs');
 
-    // Resolve file path relative to repository root
-    const fullPath = path.join(repoPath, filePath);
+  // Resolve file path relative to repository root
+  const fullPath = path.join(repoPath, filePath);
 
-    // Ensure directory exists
-    const dir = path.dirname(fullPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    // Write file content
-    fs.writeFileSync(fullPath, content, 'utf-8');
-
-    return {
-      success: true,
-      path: fullPath,
-      message: 'File saved successfully',
-    };
-  } catch (error) {
-    console.error('Error writing file:', error);
-    throw error;
+  // Ensure directory exists
+  const dir = path.dirname(fullPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
+
+  // Write file content
+  fs.writeFileSync(fullPath, content, 'utf-8');
+
+  return {
+    success: true,
+    path: fullPath,
+    message: 'File saved successfully',
+  };
 });
 
 ipcMain.handle('git:listFiles', async (event, repoPath) => {
-  try {
-    const path = require('path');
-    const fs = require('fs');
+  const fs = require('fs');
 
-    const files: string[] = [];
-    const ignoreDirs = new Set([
-      '.git',
-      'node_modules',
-      'dist',
-      'build',
-      '.next',
-      '__pycache__',
-      '.venv',
-      'venv',
-    ]);
+  const files: string[] = [];
+  const ignoreDirs = new Set([
+    '.git',
+    'node_modules',
+    'dist',
+    'build',
+    '.next',
+    '__pycache__',
+    '.venv',
+    'venv',
+  ]);
 
-    const walkDir = (dir: string, prefix = '') => {
-      const entries = fs.readdirSync(dir, { withFileTypes: true });
-      entries.forEach((entry) => {
-        if (entry.name.startsWith('.') && entry.name !== '.env') return;
-        if (ignoreDirs.has(entry.name)) return;
+  const walkDir = (dir: string, prefix = '') => {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    entries.forEach((entry) => {
+      if (entry.name.startsWith('.') && entry.name !== '.env') return;
+      if (ignoreDirs.has(entry.name)) return;
 
-        const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
-        if (entry.isDirectory()) {
-          walkDir(path.join(dir, entry.name), relativePath);
-        } else {
-          files.push(relativePath);
-        }
-      });
-    };
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walkDir(path.join(dir, entry.name), relativePath);
+      } else {
+        files.push(relativePath);
+      }
+    });
+  };
 
-    walkDir(repoPath);
-    return files.sort();
-  } catch (error) {
-    console.error('Error listing files:', error);
-    throw error;
-  }
+  walkDir(repoPath);
+  return files.sort();
 });
 
 // Partial Staging Operations (Hunk/Line level)
 ipcMain.handle('git:stageHunk', async (event, filePath, hunkIndex) => {
-  try {
-    return await gitService.stageHunk(filePath, hunkIndex);
-  } catch (error) {
-    console.error('Error staging hunk:', error);
-    throw error;
-  }
+  return gitService.stageHunk(filePath, hunkIndex);
 });
 
 ipcMain.handle('git:discardHunk', async (event, filePath, hunkIndex) => {
-  try {
-    return await gitService.discardHunk(filePath, hunkIndex);
-  } catch (error) {
-    console.error('Error discarding hunk:', error);
-    throw error;
-  }
+  return gitService.discardHunk(filePath, hunkIndex);
 });
 
 ipcMain.handle(
   'git:stageLines',
   async (event, filePath, hunkIndex, lineIndices) => {
-    try {
-      return await gitService.stageLines(filePath, hunkIndex, lineIndices);
-    } catch (error) {
-      console.error('Error staging lines:', error);
-      throw error;
-    }
+    return gitService.stageLines(filePath, hunkIndex, lineIndices);
   },
 );
 
 ipcMain.handle(
   'git:discardLines',
   async (event, filePath, hunkIndex, lineIndices) => {
-    try {
-      return await gitService.discardLines(filePath, hunkIndex, lineIndices);
-    } catch (error) {
-      console.error('Error discarding lines:', error);
-      throw error;
-    }
+    return gitService.discardLines(filePath, hunkIndex, lineIndices);
   },
 );
 
 ipcMain.handle('git:applyPatch', async (event, patchContent, options = {}) => {
-  try {
-    return await gitService.applyPatch(patchContent, options);
-  } catch (error) {
-    console.error('Error applying patch:', error);
-    throw error;
-  }
+  return gitService.applyPatch(patchContent, options);
 });
 
 // ==================== DOCS MANAGEMENT ====================
@@ -2162,7 +1892,6 @@ ipcMain.handle('git:applyPatch', async (event, patchContent, options = {}) => {
 // Get base paths for project and global docs
 const getProjectDocsPath = (projectName: string) => {
   const fs = require('fs');
-  const path = require('path');
   const basePath = path.join(__dirname, '../../banFlowProjects', projectName);
   const docsPath = path.join(basePath, 'docs');
   const imagesPath = path.join(basePath, 'images');
@@ -2177,7 +1906,6 @@ const getProjectDocsPath = (projectName: string) => {
 
 const getGlobalDocsPath = () => {
   const fs = require('fs');
-  const path = require('path');
   const basePath = path.join(__dirname, '../../banFlowProjects', 'global');
   const docsPath = path.join(basePath, 'docs');
   const imagesPath = path.join(basePath, 'images');
@@ -2194,58 +1922,53 @@ const getGlobalDocsPath = () => {
 ipcMain.handle(
   'docs:list',
   async (event, projectName: string | null, isGlobal: boolean = false) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { docsPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
+    const { docsPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
 
-      const listFiles = (dir: string, baseDir: string = ''): any[] => {
-        const items: any[] = [];
-        if (!fs.existsSync(dir)) return items;
+    const listFiles = (dir: string, baseDir: string = ''): any[] => {
+      const items: any[] = [];
+      if (!fs.existsSync(dir)) return items;
 
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-        entries.forEach((entry) => {
-          const fullPath = path.join(dir, entry.name);
-          const relativePath = baseDir
-            ? path.join(baseDir, entry.name)
-            : entry.name;
+      entries.forEach((entry) => {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = baseDir
+          ? path.join(baseDir, entry.name)
+          : entry.name;
 
-          if (entry.isDirectory()) {
-            items.push({
-              name: entry.name,
-              path: relativePath,
-              type: 'folder',
-              children: listFiles(fullPath, relativePath),
-            });
-          } else if (entry.name.endsWith('.md')) {
-            const stats = fs.statSync(fullPath);
-            items.push({
-              name: entry.name.replace('.md', ''),
-              path: relativePath,
-              type: 'file',
-              fullPath,
-              size: stats.size,
-              created: stats.birthtime,
-              modified: stats.mtime,
-            });
-          }
-        });
+        if (entry.isDirectory()) {
+          items.push({
+            name: entry.name,
+            path: relativePath,
+            type: 'folder',
+            children: listFiles(fullPath, relativePath),
+          });
+        } else if (entry.name.endsWith('.md')) {
+          const stats = fs.statSync(fullPath);
+          items.push({
+            name: entry.name.replace('.md', ''),
+            path: relativePath,
+            type: 'file',
+            fullPath,
+            size: stats.size,
+            created: stats.birthtime,
+            modified: stats.mtime,
+          });
+        }
+      });
 
-        return items.sort((a, b) => {
-          if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-          return a.name.localeCompare(b.name);
-        });
-      };
+      return items.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    };
 
-      return listFiles(docsPath);
-    } catch (error) {
-      console.error('Error listing docs:', error);
-      throw error;
-    }
+    return listFiles(docsPath);
   },
 );
 
@@ -2258,36 +1981,31 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { docsPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
-      const fullPath = path.join(
-        docsPath,
-        docPath.endsWith('.md') ? docPath : `${docPath}.md`,
-      );
+    const { docsPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(
+      docsPath,
+      docPath.endsWith('.md') ? docPath : `${docPath}.md`,
+    );
 
-      if (!fs.existsSync(fullPath)) {
-        throw new Error(`Document not found: ${docPath}`);
-      }
-
-      const content = fs.readFileSync(fullPath, 'utf-8');
-      const stats = fs.statSync(fullPath);
-
-      return {
-        content,
-        path: docPath,
-        created: stats.birthtime,
-        modified: stats.mtime,
-        size: stats.size,
-      };
-    } catch (error) {
-      console.error('Error reading doc:', error);
-      throw error;
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`Document not found: ${docPath}`);
     }
+
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    const stats = fs.statSync(fullPath);
+
+    return {
+      content,
+      path: docPath,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      size: stats.size,
+    };
   },
 );
 
@@ -2301,37 +2019,32 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { docsPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
-      const fullPath = path.join(
-        docsPath,
-        docPath.endsWith('.md') ? docPath : `${docPath}.md`,
-      );
+    const { docsPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(
+      docsPath,
+      docPath.endsWith('.md') ? docPath : `${docPath}.md`,
+    );
 
-      // Ensure parent directories exist
-      const dir = path.dirname(fullPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-
-      fs.writeFileSync(fullPath, content, 'utf-8');
-
-      const stats = fs.statSync(fullPath);
-      return {
-        path: docPath,
-        created: stats.birthtime,
-        modified: stats.mtime,
-        size: stats.size,
-      };
-    } catch (error) {
-      console.error('Error saving doc:', error);
-      throw error;
+    // Ensure parent directories exist
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
+
+    fs.writeFileSync(fullPath, content, 'utf-8');
+
+    const stats = fs.statSync(fullPath);
+    return {
+      path: docPath,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      size: stats.size,
+    };
   },
 );
 
@@ -2344,28 +2057,23 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { docsPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
-      const fullPath = path.join(
-        docsPath,
-        docPath.endsWith('.md') ? docPath : `${docPath}.md`,
-      );
+    const { docsPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(
+      docsPath,
+      docPath.endsWith('.md') ? docPath : `${docPath}.md`,
+    );
 
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-        return { success: true };
-      }
-
-      throw new Error(`Document not found: ${docPath}`);
-    } catch (error) {
-      console.error('Error deleting doc:', error);
-      throw error;
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      return { success: true };
     }
+
+    throw new Error(`Document not found: ${docPath}`);
   },
 );
 
@@ -2378,24 +2086,19 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { docsPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
-      const fullPath = path.join(docsPath, folderPath);
+    const { docsPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(docsPath, folderPath);
 
-      if (!fs.existsSync(fullPath)) {
-        fs.mkdirSync(fullPath, { recursive: true });
-      }
-
-      return { success: true, path: folderPath };
-    } catch (error) {
-      console.error('Error creating folder:', error);
-      throw error;
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
     }
+
+    return { success: true, path: folderPath };
   },
 );
 
@@ -2403,37 +2106,32 @@ ipcMain.handle(
 ipcMain.handle(
   'docs:listImages',
   async (event, projectName: string | null, isGlobal: boolean = false) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { imagesPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
+    const { imagesPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
 
-      if (!fs.existsSync(imagesPath)) return [];
+    if (!fs.existsSync(imagesPath)) return [];
 
-      const files = fs.readdirSync(imagesPath);
-      const images = files
-        .filter((file: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file))
-        .map((file: string) => {
-          const fullPath = path.join(imagesPath, file);
-          const stats = fs.statSync(fullPath);
-          return {
-            name: file,
-            path: file,
-            fullPath,
-            size: stats.size,
-            created: stats.birthtime,
-            modified: stats.mtime,
-          };
-        });
+    const files = fs.readdirSync(imagesPath);
+    const images = files
+      .filter((file: string) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file))
+      .map((file: string) => {
+        const fullPath = path.join(imagesPath, file);
+        const stats = fs.statSync(fullPath);
+        return {
+          name: file,
+          path: file,
+          fullPath,
+          size: stats.size,
+          created: stats.birthtime,
+          modified: stats.mtime,
+        };
+      });
 
-      return images;
-    } catch (error) {
-      console.error('Error listing images:', error);
-      throw error;
-    }
+    return images;
   },
 );
 
@@ -2446,29 +2144,24 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { imagesPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
-      const fullPath = path.join(imagesPath, imagePath);
+    const { imagesPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(imagesPath, imagePath);
 
-      if (!fs.existsSync(fullPath)) {
-        throw new Error(`Image not found: ${imagePath}`);
-      }
-
-      const imageBuffer = fs.readFileSync(fullPath);
-      const ext = path.extname(imagePath).toLowerCase().slice(1);
-      const mimeType = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
-      const base64 = imageBuffer.toString('base64');
-
-      return `data:${mimeType};base64,${base64}`;
-    } catch (error) {
-      console.error('Error getting image:', error);
-      throw error;
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`Image not found: ${imagePath}`);
     }
+
+    const imageBuffer = fs.readFileSync(fullPath);
+    const ext = path.extname(imagePath).toLowerCase().slice(1);
+    const mimeType = ext === 'svg' ? 'image/svg+xml' : `image/${ext}`;
+    const base64 = imageBuffer.toString('base64');
+
+    return `data:${mimeType};base64,${base64}`;
   },
 );
 
@@ -2482,38 +2175,33 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { imagesPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
-      const fullPath = path.join(imagesPath, imageName);
+    const { imagesPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(imagesPath, imageName);
 
-      // Handle base64 data URL
-      let buffer: Buffer;
-      if (imageData.startsWith('data:')) {
-        const base64Data = imageData.split(',')[1];
-        buffer = Buffer.from(base64Data, 'base64');
-      } else {
-        buffer = Buffer.from(imageData, 'base64');
-      }
-
-      fs.writeFileSync(fullPath, buffer);
-
-      const stats = fs.statSync(fullPath);
-      return {
-        name: imageName,
-        path: imageName,
-        size: stats.size,
-        created: stats.birthtime,
-        modified: stats.mtime,
-      };
-    } catch (error) {
-      console.error('Error saving image:', error);
-      throw error;
+    // Handle base64 data URL
+    let buffer: Buffer;
+    if (imageData.startsWith('data:')) {
+      const base64Data = imageData.split(',')[1];
+      buffer = Buffer.from(base64Data, 'base64');
+    } else {
+      buffer = Buffer.from(imageData, 'base64');
     }
+
+    fs.writeFileSync(fullPath, buffer);
+
+    const stats = fs.statSync(fullPath);
+    return {
+      name: imageName,
+      path: imageName,
+      size: stats.size,
+      created: stats.birthtime,
+      modified: stats.mtime,
+    };
   },
 );
 
@@ -2526,25 +2214,20 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { imagesPath } = isGlobal
-        ? getGlobalDocsPath()
-        : getProjectDocsPath(projectName || '');
-      const fullPath = path.join(imagesPath, imagePath);
+    const { imagesPath } = isGlobal
+      ? getGlobalDocsPath()
+      : getProjectDocsPath(projectName || '');
+    const fullPath = path.join(imagesPath, imagePath);
 
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-        return { success: true };
-      }
-
-      throw new Error(`Image not found: ${imagePath}`);
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      throw error;
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      return { success: true };
     }
+
+    throw new Error(`Image not found: ${imagePath}`);
   },
 );
 
@@ -2553,7 +2236,6 @@ ipcMain.handle(
 // Get base paths for project and global diagrams
 const getProjectDiagramsPath = (projectName: string) => {
   const fs = require('fs');
-  const path = require('path');
   const basePath = path.join(__dirname, '../../banFlowProjects', projectName);
   const diagramsPath = path.join(basePath, 'diagrams');
 
@@ -2567,7 +2249,6 @@ const getProjectDiagramsPath = (projectName: string) => {
 
 const getGlobalDiagramsPath = () => {
   const fs = require('fs');
-  const path = require('path');
   const basePath = path.join(__dirname, '../../banFlowProjects', 'global');
   const diagramsPath = path.join(basePath, 'diagrams');
 
@@ -2583,57 +2264,52 @@ const getGlobalDiagramsPath = () => {
 ipcMain.handle(
   'diagrams:list',
   async (event, projectName: string | null, isGlobal: boolean = false) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { diagramsPath } = isGlobal
-        ? getGlobalDiagramsPath()
-        : getProjectDiagramsPath(projectName || '');
+    const { diagramsPath } = isGlobal
+      ? getGlobalDiagramsPath()
+      : getProjectDiagramsPath(projectName || '');
 
-      const listFiles = (dir: string, baseDir: string = ''): any[] => {
-        const items: any[] = [];
-        if (!fs.existsSync(dir)) return items;
+    const listFiles = (dir: string, baseDir: string = ''): any[] => {
+      const items: any[] = [];
+      if (!fs.existsSync(dir)) return items;
 
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-        entries.forEach((entry) => {
-          const fullPath = path.join(dir, entry.name);
-          const relativePath = baseDir
-            ? path.join(baseDir, entry.name)
-            : entry.name;
+      entries.forEach((entry: any) => {
+        const fullPath = path.join(dir, entry.name);
+        const relativePath = baseDir
+          ? path.join(baseDir, entry.name)
+          : entry.name;
 
-          if (entry.isDirectory()) {
-            items.push({
-              name: entry.name,
-              path: relativePath,
-              type: 'folder',
-              children: listFiles(fullPath, relativePath),
-            });
-          } else if (entry.name.endsWith('.json')) {
-            const stats = fs.statSync(fullPath);
-            items.push({
-              name: entry.name.replace('.json', ''),
-              path: relativePath,
-              type: 'file',
-              size: stats.size,
-              created: stats.birthtime.toISOString(),
-              modified: stats.mtime.toISOString(),
-            });
-          }
-        });
+        if (entry.isDirectory()) {
+          items.push({
+            name: entry.name,
+            path: relativePath,
+            type: 'folder',
+            children: listFiles(fullPath, relativePath),
+          });
+        } else if (entry.name.endsWith('.json')) {
+          const stats = fs.statSync(fullPath);
+          items.push({
+            name: entry.name.replace('.json', ''),
+            path: relativePath,
+            type: 'file',
+            size: stats.size,
+            created: stats.birthtime.toISOString(),
+            modified: stats.mtime.toISOString(),
+          });
+        }
+      });
 
-        return items.sort((a, b) => {
-          if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-          return a.name.localeCompare(b.name);
-        });
-      };
+      return items.sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+    };
 
-      return listFiles(diagramsPath);
-    } catch (error) {
-      console.error('Error listing diagrams:', error);
-      throw error;
-    }
+    return listFiles(diagramsPath);
   },
 );
 
@@ -2646,37 +2322,32 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { diagramsPath } = isGlobal
-        ? getGlobalDiagramsPath()
-        : getProjectDiagramsPath(projectName || '');
-      const fullPath = path.join(
-        diagramsPath,
-        diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
-      );
+    const { diagramsPath } = isGlobal
+      ? getGlobalDiagramsPath()
+      : getProjectDiagramsPath(projectName || '');
+    const fullPath = path.join(
+      diagramsPath,
+      diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
+    );
 
-      if (!fs.existsSync(fullPath)) {
-        throw new Error(`Diagram not found: ${diagramPath}`);
-      }
-
-      const content = fs.readFileSync(fullPath, 'utf-8');
-      const stats = fs.statSync(fullPath);
-
-      return {
-        content: JSON.parse(content),
-        path: diagramPath,
-        name: path.basename(diagramPath, '.json'),
-        size: stats.size,
-        created: stats.birthtime.toISOString(),
-        modified: stats.mtime.toISOString(),
-      };
-    } catch (error) {
-      console.error('Error reading diagram:', error);
-      throw error;
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`Diagram not found: ${diagramPath}`);
     }
+
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    const stats = fs.statSync(fullPath);
+
+    return {
+      content: JSON.parse(content),
+      path: diagramPath,
+      name: path.basename(diagramPath, '.json'),
+      size: stats.size,
+      created: stats.birthtime.toISOString(),
+      modified: stats.mtime.toISOString(),
+    };
   },
 );
 
@@ -2690,31 +2361,26 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { diagramsPath } = isGlobal
-        ? getGlobalDiagramsPath()
-        : getProjectDiagramsPath(projectName || '');
-      const fullPath = path.join(
-        diagramsPath,
-        diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
-      );
+    const { diagramsPath } = isGlobal
+      ? getGlobalDiagramsPath()
+      : getProjectDiagramsPath(projectName || '');
+    const fullPath = path.join(
+      diagramsPath,
+      diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
+    );
 
-      // Ensure parent directories exist
-      const dir = path.dirname(fullPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-
-      fs.writeFileSync(fullPath, JSON.stringify(content, null, 2), 'utf-8');
-
-      return { success: true, path: diagramPath };
-    } catch (error) {
-      console.error('Error saving diagram:', error);
-      throw error;
+    // Ensure parent directories exist
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
+
+    fs.writeFileSync(fullPath, JSON.stringify(content, null, 2), 'utf-8');
+
+    return { success: true, path: diagramPath };
   },
 );
 
@@ -2727,28 +2393,23 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { diagramsPath } = isGlobal
-        ? getGlobalDiagramsPath()
-        : getProjectDiagramsPath(projectName || '');
-      const fullPath = path.join(
-        diagramsPath,
-        diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
-      );
+    const { diagramsPath } = isGlobal
+      ? getGlobalDiagramsPath()
+      : getProjectDiagramsPath(projectName || '');
+    const fullPath = path.join(
+      diagramsPath,
+      diagramPath.endsWith('.json') ? diagramPath : `${diagramPath}.json`,
+    );
 
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-        return { success: true };
-      }
-
-      throw new Error(`Diagram not found: ${diagramPath}`);
-    } catch (error) {
-      console.error('Error deleting diagram:', error);
-      throw error;
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+      return { success: true };
     }
+
+    throw new Error(`Diagram not found: ${diagramPath}`);
   },
 );
 
@@ -2761,23 +2422,18 @@ ipcMain.handle(
     projectName: string | null,
     isGlobal: boolean = false,
   ) => {
-    try {
-      const fs = require('fs');
-      const pathModule = require('path');
+    const fs = require('fs');
+    const pathModule = require('path');
 
-      const { diagramsPath } = isGlobal
-        ? getGlobalDiagramsPath()
-        : getProjectDiagramsPath(projectName || '');
-      const fullPath = path.join(diagramsPath, folderPath);
+    const { diagramsPath } = isGlobal
+      ? getGlobalDiagramsPath()
+      : getProjectDiagramsPath(projectName || '');
+    const fullPath = path.join(diagramsPath, folderPath);
 
-      if (!fs.existsSync(fullPath)) {
-        fs.mkdirSync(fullPath, { recursive: true });
-      }
-
-      return { success: true, path: folderPath };
-    } catch (error) {
-      console.error('Error creating folder:', error);
-      throw error;
+    if (!fs.existsSync(fullPath)) {
+      fs.mkdirSync(fullPath, { recursive: true });
     }
+
+    return { success: true, path: folderPath };
   },
 );

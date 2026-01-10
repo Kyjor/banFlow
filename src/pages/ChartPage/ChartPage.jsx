@@ -671,6 +671,7 @@ class ChartPage extends Component {
   };
 
   handleImageUpload = async (file) => {
+    const { isGlobal } = this.state;
     try {
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -682,7 +683,7 @@ class ChartPage extends Component {
           imageName,
           base64,
           this.projectName,
-          this.state.isGlobal,
+          isGlobal,
         );
 
         await this.loadImages();
@@ -1000,13 +1001,13 @@ class ChartPage extends Component {
                 treeData={buildTreeData(diagrams)}
                 selectedKeys={selectedKeys}
                 expandedKeys={expandedKeys}
-                onSelect={(keys) => this.setState({ selectedKeys: keys })}
-                onExpand={(keys) => this.setState({ expandedKeys: keys })}
                 onSelect={(keys, info) => {
-                  if (info.node.isLeaf) {
+                  this.setState({ selectedKeys: keys });
+                  if (info && info.node.isLeaf) {
                     this.loadDiagram(info.node.key);
                   }
                 }}
+                onExpand={(keys) => this.setState({ expandedKeys: keys })}
               />
             </div>
           </Sider>
@@ -1272,7 +1273,7 @@ class ChartPage extends Component {
                                 <AutoComplete
                                   style={{ width: '100%' }}
                                   options={this.getNodeSuggestions('')}
-                                  onSelect={(value, option) =>
+                                  onSelect={(value, _option) =>
                                     this.handleNodeReferenceSelect(value)
                                   }
                                   onSearch={(text) =>
@@ -1325,7 +1326,7 @@ class ChartPage extends Component {
                                 <AutoComplete
                                   style={{ width: '100%' }}
                                   options={this.getParentSuggestions('')}
-                                  onSelect={(value, option) =>
+                                  onSelect={(value, _option) =>
                                     this.handleParentReferenceSelect(value)
                                   }
                                   onSearch={(text) =>

@@ -54,6 +54,91 @@ const { RangePicker } = DatePicker;
 const { Title, Text } = Typography;
 
 class Analytics extends Component {
+  static evaluateRule(node, rule) {
+    if (!rule || !rule.field) return true;
+    const { value } = rule;
+    const lc = (text) => (text || '').toString().toLowerCase();
+
+    switch (rule.field) {
+      case 'titleDescription':
+        return (
+          lc(node.title).includes(lc(value)) ||
+          lc(node.description).includes(lc(value))
+        );
+      case 'status':
+        return value ? node.nodeState === value : true;
+      case 'parent':
+        return value ? node.parent === value : true;
+      case 'tags':
+        if (!value || value.length === 0) return true;
+        return (
+          Array.isArray(node.tags) && node.tags.some((t) => value.includes(t))
+        );
+      case 'labels':
+        if (!value || value.length === 0) return true;
+        return (
+          Array.isArray(node.labels) &&
+          node.labels.some((l) => value.includes(l))
+        );
+      case 'completion': {
+        if (value === undefined || value === null || value === '') return true;
+        const boolVal = value === 'complete';
+        return !!node.isComplete === boolVal;
+      }
+      case 'iteration': {
+        if (!value && value !== 0) return true;
+        return node.iterationId === value;
+      }
+      case 'dueDate': {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+        const due = node.dueDate ? new Date(node.dueDate) : null;
+        if (!due) return false;
+        if (start && due < new Date(start)) return false;
+        if (end && due > new Date(end)) return false;
+        return true;
+      }
+      case 'created': {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+        const created = node.created ? new Date(node.created) : null;
+        if (!created) return false;
+        if (start && created < new Date(start)) return false;
+        if (end && created > new Date(end)) return false;
+        return true;
+      }
+      case 'updated': {
+        if (!value || value.length === 0) return true;
+        const [start, end] = value;
+        const updated = node.lastUpdated ? new Date(node.lastUpdated) : null;
+        if (!updated) return false;
+        if (start && updated < new Date(start)) return false;
+        if (end && updated > new Date(end)) return false;
+        return true;
+      }
+      case 'estimatedTime': {
+        if (!value) return true;
+        const min = value.min ?? null;
+        const max = value.max ?? null;
+        const num = node.estimatedTime ?? 0;
+        if (min !== null && num < min) return false;
+        if (max !== null && num > max) return false;
+        return true;
+      }
+      case 'timeSpent': {
+        if (!value) return true;
+        const min = value.min ?? null;
+        const max = value.max ?? null;
+        const num = node.timeSpent ?? 0;
+        if (min !== null && num < min) return false;
+        if (max !== null && num > max) return false;
+        return true;
+      }
+      default:
+        return true;
+    }
+  }
+
   constructor(props) {
     super(props);
 
@@ -142,91 +227,6 @@ class Analytics extends Component {
     const { filterRules } = this.state;
     this.setState({ filterRules: filterRules.filter((r) => r.id !== id) });
   };
-
-  static evaluateRule(node, rule) {
-    if (!rule || !rule.field) return true;
-    const { value } = rule;
-    const lc = (text) => (text || '').toString().toLowerCase();
-
-    switch (rule.field) {
-      case 'titleDescription':
-        return (
-          lc(node.title).includes(lc(value)) ||
-          lc(node.description).includes(lc(value))
-        );
-      case 'status':
-        return value ? node.nodeState === value : true;
-      case 'parent':
-        return value ? node.parent === value : true;
-      case 'tags':
-        if (!value || value.length === 0) return true;
-        return (
-          Array.isArray(node.tags) && node.tags.some((t) => value.includes(t))
-        );
-      case 'labels':
-        if (!value || value.length === 0) return true;
-        return (
-          Array.isArray(node.labels) &&
-          node.labels.some((l) => value.includes(l))
-        );
-      case 'completion': {
-        if (value === undefined || value === null || value === '') return true;
-        const boolVal = value === 'complete';
-        return !!node.isComplete === boolVal;
-      }
-      case 'iteration': {
-        if (!value && value !== 0) return true;
-        return node.iterationId === value;
-      }
-      case 'dueDate': {
-        if (!value || value.length === 0) return true;
-        const [start, end] = value;
-        const due = node.dueDate ? new Date(node.dueDate) : null;
-        if (!due) return false;
-        if (start && due < new Date(start)) return false;
-        if (end && due > new Date(end)) return false;
-        return true;
-      }
-      case 'created': {
-        if (!value || value.length === 0) return true;
-        const [start, end] = value;
-        const created = node.created ? new Date(node.created) : null;
-        if (!created) return false;
-        if (start && created < new Date(start)) return false;
-        if (end && created > new Date(end)) return false;
-        return true;
-      }
-      case 'updated': {
-        if (!value || value.length === 0) return true;
-        const [start, end] = value;
-        const updated = node.lastUpdated ? new Date(node.lastUpdated) : null;
-        if (!updated) return false;
-        if (start && updated < new Date(start)) return false;
-        if (end && updated > new Date(end)) return false;
-        return true;
-      }
-      case 'estimatedTime': {
-        if (!value) return true;
-        const min = value.min ?? null;
-        const max = value.max ?? null;
-        const num = node.estimatedTime ?? 0;
-        if (min !== null && num < min) return false;
-        if (max !== null && num > max) return false;
-        return true;
-      }
-      case 'timeSpent': {
-        if (!value) return true;
-        const min = value.min ?? null;
-        const max = value.max ?? null;
-        const num = node.timeSpent ?? 0;
-        if (min !== null && num < min) return false;
-        if (max !== null && num > max) return false;
-        return true;
-      }
-      default:
-        return true;
-    }
-  }
 
   filterNodes = (nodes) => {
     const { filterRules, queryConjunction } = this.state;
@@ -436,21 +436,16 @@ class Analytics extends Component {
       },
     };
 
-    this.setState(
-      (prev) => {
-        const withoutExisting = prev.savedReports.filter(
-          (r) => r.name !== name,
-        );
-        return { savedReports: [...withoutExisting, report] };
-      },
-      () => {
-        localStorage.setItem(
-          'analyticsSavedReports',
-          JSON.stringify(this.state.savedReports),
-        );
-        message.success('Report saved');
-      },
-    );
+    this.setState((prev) => {
+      const withoutExisting = prev.savedReports.filter((r) => r.name !== name);
+      const updatedReports = [...withoutExisting, report];
+      localStorage.setItem(
+        'analyticsSavedReports',
+        JSON.stringify(updatedReports),
+      );
+      message.success('Report saved');
+      return { savedReports: updatedReports };
+    });
   };
 
   loadReport = (report) => {
@@ -482,46 +477,46 @@ class Analytics extends Component {
   };
 
   deleteReport = (name) => {
-    this.setState(
-      (prev) => ({
-        savedReports: prev.savedReports.filter((r) => r.name !== name),
-      }),
-      () => {
-        localStorage.setItem(
-          'analyticsSavedReports',
-          JSON.stringify(this.state.savedReports),
-        );
-        message.success('Report deleted');
-      },
-    );
+    this.setState((prev) => {
+      const updatedReports = prev.savedReports.filter((r) => r.name !== name);
+      localStorage.setItem(
+        'analyticsSavedReports',
+        JSON.stringify(updatedReports),
+      );
+      message.success('Report deleted');
+      return { savedReports: updatedReports };
+    });
   };
 
-  getSavedReportsMenu = () => (
-    <Menu>
-      {this.state.savedReports.length === 0 && (
-        <Menu.Item disabled key="empty">
-          No saved reports
-        </Menu.Item>
-      )}
-      {this.state.savedReports.map((report) => (
-        <Menu.Item key={report.name} onClick={() => this.loadReport(report)}>
-          {report.name}
-          <Button
-            size="small"
-            type="text"
-            danger
-            style={{ float: 'right' }}
-            onClick={(e) => {
-              e.domEvent?.stopPropagation?.();
-              this.deleteReport(report.name);
-            }}
-          >
-            Delete
-          </Button>
-        </Menu.Item>
-      ))}
-    </Menu>
-  );
+  getSavedReportsMenu = () => {
+    const { savedReports } = this.state;
+    return (
+      <Menu>
+        {savedReports.length === 0 && (
+          <Menu.Item disabled key="empty">
+            No saved reports
+          </Menu.Item>
+        )}
+        {savedReports.map((report) => (
+          <Menu.Item key={report.name} onClick={() => this.loadReport(report)}>
+            {report.name}
+            <Button
+              size="small"
+              type="text"
+              danger
+              style={{ float: 'right' }}
+              onClick={(e) => {
+                e.domEvent?.stopPropagation?.();
+                this.deleteReport(report.name);
+              }}
+            >
+              Delete
+            </Button>
+          </Menu.Item>
+        ))}
+      </Menu>
+    );
+  };
 
   getForecasting = () => {
     const completion = this.getCompletionAnalytics();
@@ -882,6 +877,9 @@ class Analytics extends Component {
       selectedTag,
       selectedIteration,
       projectsData,
+      filterRules,
+      filtersOpen,
+      queryConjunction,
     } = this.state;
 
     const filteredProjects = this.getFilteredProjects();
@@ -1008,11 +1006,11 @@ class Analytics extends Component {
                   offset={[8, 0]}
                 >
                   <Button
-                    icon={
-                      this.state.filtersOpen ? <UpOutlined /> : <DownOutlined />
-                    }
+                    icon={filtersOpen ? <UpOutlined /> : <DownOutlined />}
                     onClick={() =>
-                      this.setState({ filtersOpen: !this.state.filtersOpen })
+                      this.setState((prev) => ({
+                        filtersOpen: !prev.filtersOpen,
+                      }))
                     }
                     type={this.state.filtersOpen ? 'default' : 'text'}
                   >
@@ -1032,7 +1030,7 @@ class Analytics extends Component {
                   Clear All
                 </Button>
               </div>
-              {this.state.filtersOpen && (
+              {filtersOpen && (
                 <div
                   style={{
                     marginTop: '16px',
@@ -1058,7 +1056,7 @@ class Analytics extends Component {
                       Match:
                     </span>
                     <Radio.Group
-                      value={this.state.queryConjunction}
+                      value={queryConjunction}
                       onChange={(e) =>
                         this.setState({ queryConjunction: e.target.value })
                       }
@@ -1091,7 +1089,8 @@ class Analytics extends Component {
                           );
                           return (
                             <Select
-                              {...commonProps}
+                              style={{ width: '100%' }}
+                              size="small"
                               placeholder="Select status"
                               value={rule.value}
                               onChange={(val) =>
@@ -1116,7 +1115,8 @@ class Analytics extends Component {
                           });
                           return (
                             <Select
-                              {...commonProps}
+                              style={{ width: '100%' }}
+                              size="small"
                               placeholder="Select parent"
                               value={rule.value}
                               onChange={(val) =>
@@ -1153,7 +1153,8 @@ class Analytics extends Component {
                           );
                           return (
                             <Select
-                              {...commonProps}
+                              style={{ width: '100%' }}
+                              size="small"
                               mode="multiple"
                               placeholder="Select tags"
                               value={rule.value}
@@ -1189,7 +1190,8 @@ class Analytics extends Component {
                           );
                           return (
                             <Select
-                              {...commonProps}
+                              style={{ width: '100%' }}
+                              size="small"
                               mode="multiple"
                               placeholder="Select labels"
                               value={rule.value}
@@ -1213,7 +1215,8 @@ class Analytics extends Component {
                         ) {
                           return (
                             <RangePicker
-                              {...commonProps}
+                              style={{ width: '100%' }}
+                              size="small"
                               onChange={(dates) =>
                                 this.updateFilterRule(rule.id, {
                                   value: dates
@@ -1241,7 +1244,8 @@ class Analytics extends Component {
                           return (
                             <Space size={4} style={{ width: '100%' }}>
                               <InputNumber
-                                {...commonProps}
+                                style={{ width: '100%' }}
+                                size="small"
                                 placeholder="Min (seconds)"
                                 value={rule.value?.min}
                                 onChange={(val) =>
@@ -1251,7 +1255,8 @@ class Analytics extends Component {
                                 }
                               />
                               <InputNumber
-                                {...commonProps}
+                                style={{ width: '100%' }}
+                                size="small"
                                 placeholder="Max (seconds)"
                                 value={rule.value?.max}
                                 onChange={(val) =>
@@ -1266,7 +1271,8 @@ class Analytics extends Component {
                         if (field === 'completion') {
                           return (
                             <Select
-                              {...commonProps}
+                              style={{ width: '100%' }}
+                              size="small"
                               placeholder="Completion"
                               value={rule.value}
                               onChange={(val) =>
@@ -1293,7 +1299,8 @@ class Analytics extends Component {
                           );
                           return (
                             <Select
-                              {...commonProps}
+                              style={{ width: '100%' }}
+                              size="small"
                               placeholder="Select iteration"
                               value={rule.value}
                               onChange={(val) =>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import {
   Modal,
   Form,
@@ -124,5 +125,22 @@ function PRMergeModal({ visible, pr, onCancel, onSuccess }) {
     </Modal>
   );
 }
+
+PRMergeModal.propTypes = {
+  visible: PropTypes.bool.isRequired,
+  pr: PropTypes.shape({
+    number: PropTypes.number.isRequired,
+    title: PropTypes.string.isRequired,
+    head: PropTypes.shape({
+      ref: PropTypes.string.isRequired,
+    }).isRequired,
+    base: PropTypes.shape({
+      ref: PropTypes.string.isRequired,
+    }).isRequired,
+    mergeable: PropTypes.bool,
+  }).isRequired,
+  onCancel: PropTypes.func.isRequired,
+  onSuccess: PropTypes.func.isRequired,
+};
 
 export default PRMergeModal;
