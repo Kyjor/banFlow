@@ -102,50 +102,56 @@ function IntegratedEditor({
     };
   }, [selectedFile, currentRepository, hasUnsavedChanges]);
 
-  const loadFileContent = useCallback(async (filename) => {
-    if (!currentRepository || !filename) {
-      return;
-    }
-
-    try {
-      const result = await ipcRenderer.invoke(
-        'git:readFile',
-        currentRepository,
-        filename,
-      );
-
-      if (result.success) {
-        setFileContent(result.content);
-        setOriginalContent(result.content);
-        lastFileContentRef.current = result.content; // Track loaded content
-        setHasUnsavedChanges(false);
-        setUndoStack([result.content]);
-        setRedoStack([]);
-      } else {
-        throw new Error('Failed to load file');
+  const loadFileContent = useCallback(
+    async (filename) => {
+      if (!currentRepository || !filename) {
+        return;
       }
-    } catch (error) {
-      // If file doesn't exist, treat it as a new file
-      if (error.message && error.message.includes('not found')) {
-        setFileContent('');
-        setOriginalContent('');
-        lastFileContentRef.current = '';
-        setHasUnsavedChanges(false);
-        setUndoStack(['']);
-        setRedoStack([]);
-      } else {
-        console.error('Failed to load file content:', error);
-        message.error(
-          `Failed to load file: ${error.message || 'Unknown error'}`,
+
+      try {
+        const result = await ipcRenderer.invoke(
+          'git:readFile',
+          currentRepository,
+          filename,
         );
-      }
-    }
-  }, [currentRepository]); // Add currentRepository to dependencies
 
-  const checkFileStagingStatus = useCallback((filename) => {
-    const isStaged = stagedFiles.includes(filename);
-    setIsFileStaged(isStaged);
-  }, [stagedFiles]); // Add stagedFiles to dependencies
+        if (result.success) {
+          setFileContent(result.content);
+          setOriginalContent(result.content);
+          lastFileContentRef.current = result.content; // Track loaded content
+          setHasUnsavedChanges(false);
+          setUndoStack([result.content]);
+          setRedoStack([]);
+        } else {
+          throw new Error('Failed to load file');
+        }
+      } catch (error) {
+        // If file doesn't exist, treat it as a new file
+        if (error.message && error.message.includes('not found')) {
+          setFileContent('');
+          setOriginalContent('');
+          lastFileContentRef.current = '';
+          setHasUnsavedChanges(false);
+          setUndoStack(['']);
+          setRedoStack([]);
+        } else {
+          console.error('Failed to load file content:', error);
+          message.error(
+            `Failed to load file: ${error.message || 'Unknown error'}`,
+          );
+        }
+      }
+    },
+    [currentRepository],
+  ); // Add currentRepository to dependencies
+
+  const checkFileStagingStatus = useCallback(
+    (filename) => {
+      const isStaged = stagedFiles.includes(filename);
+      setIsFileStaged(isStaged);
+    },
+    [stagedFiles],
+  ); // Add stagedFiles to dependencies
 
   const saveFile = useCallback(async () => {
     if (!currentRepository || !selectedFile) {
@@ -192,7 +198,12 @@ function IntegratedEditor({
       loadFileContent(selectedFile);
       checkFileStagingStatus(selectedFile);
     }
-  }, [selectedFile, currentRepository, loadFileContent, checkFileStagingStatus]); // Added loadFileContent and checkFileStagingStatus to dependencies
+  }, [
+    selectedFile,
+    currentRepository,
+    loadFileContent,
+    checkFileStagingStatus,
+  ]); // Added loadFileContent and checkFileStagingStatus to dependencies
 
   // Periodically check if the file has changed on disk and reload if safe
   const checkForExternalChanges = async () => {

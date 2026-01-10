@@ -52,7 +52,7 @@ const { Sider, Content } = Layout;
 const { Text, Title } = Typography;
 
 // Custom Node Component with Node/Parent Reference
-function CustomNode({ data, selected, onClick }) {
+function CustomNode({ data, selected }) {
   const { referencedNode: node, referencedParent: parent } = data;
 
   const handleNodeClick = (e, nodeId) => {
@@ -143,7 +143,10 @@ CustomNode.propTypes = {
     description: PropTypes.string,
   }).isRequired,
   selected: PropTypes.bool,
-  onClick: PropTypes.func,
+};
+
+CustomNode.defaultProps = {
+  selected: false,
 };
 
 const nodeTypes = {
@@ -220,8 +223,9 @@ class ChartPage extends Component {
   componentWillUnmount() {
     ipcRenderer.removeAllListeners('UpdateProjectPageState');
     // Clear autosave timer
-    if (this.state.autosaveTimer) {
-      clearTimeout(this.state.autosaveTimer);
+    const { autosaveTimer } = this.state;
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer);
     }
   }
 
@@ -246,7 +250,7 @@ class ChartPage extends Component {
 
   loadDiagram = async (diagramPath) => {
     try {
-      const { isGlobal } = this.state;
+      const { isGlobal, nodes, parents } = this.state;
       const diagram = await ipcRenderer.invoke(
         'diagrams:read',
         diagramPath,
@@ -259,21 +263,16 @@ class ChartPage extends Component {
         const restoredData = { ...node.data };
 
         // Restore node reference
-        if (
-          node.data.nodeReferenceId &&
-          this.state.nodes[node.data.nodeReferenceId]
-        ) {
-          restoredData.referencedNode =
-            this.state.nodes[node.data.nodeReferenceId];
+        if (node.data.nodeReferenceId && nodes[node.data.nodeReferenceId]) {
+          restoredData.referencedNode = nodes[node.data.nodeReferenceId];
         }
 
         // Restore parent reference
         if (
           node.data.parentReferenceId &&
-          this.state.parents[node.data.parentReferenceId]
+          parents[node.data.parentReferenceId]
         ) {
-          restoredData.referencedParent =
-            this.state.parents[node.data.parentReferenceId];
+          restoredData.referencedParent = parents[node.data.parentReferenceId];
         }
 
         // Ensure projectName is set
@@ -302,7 +301,8 @@ class ChartPage extends Component {
   };
 
   saveDiagram = async (showMessage = true) => {
-    if (!this.state.currentDiagram || !this.state.diagramData) {
+    const { currentDiagram, diagramData, isGlobal } = this.state;
+    if (!currentDiagram || !diagramData) {
       if (showMessage) {
         message.warning('No diagram to save');
       }
@@ -312,8 +312,8 @@ class ChartPage extends Component {
     try {
       // Save only IDs for references, not full objects
       const dataToSave = {
-        ...this.state.diagramData,
-        nodes: (this.state.diagramData.nodes || []).map((node) => ({
+        ...diagramData,
+        nodes: (diagramData.nodes || []).map((node) => ({
           ...node,
           data: {
             ...node.data,
@@ -327,10 +327,10 @@ class ChartPage extends Component {
 
       await ipcRenderer.invoke(
         'diagrams:save',
-        this.state.currentDiagram,
+        currentDiagram,
         dataToSave,
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
       this.setState({ isDirty: false });
       if (showMessage) {
@@ -345,21 +345,19 @@ class ChartPage extends Component {
   };
 
   autosaveDiagram = () => {
+    const { autosaveEnabled, autosaveTimer, isDirty, currentDiagram } =
+      this.state;
     // Don't autosave if disabled
-    if (!this.state.autosaveEnabled) return;
+    if (!autosaveEnabled) return;
 
     // Clear existing timer
-    if (this.state.autosaveTimer) {
-      clearTimeout(this.state.autosaveTimer);
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer);
     }
 
     // Set new timer for autosave (2 seconds after last change)
     const timer = setTimeout(() => {
-      if (
-        this.state.isDirty &&
-        this.state.currentDiagram &&
-        this.state.autosaveEnabled
-      ) {
+      if (isDirty && currentDiagram && autosaveEnabled) {
         this.saveDiagram(false); // Save without showing message
       }
     }, 2000);
@@ -368,15 +366,16 @@ class ChartPage extends Component {
   };
 
   createDiagram = async () => {
-    if (!this.state.newDiagramName.trim()) {
+    const { newDiagramName, isGlobal } = this.state;
+    if (!newDiagramName.trim()) {
       message.warning('Please enter a diagram name');
       return;
     }
 
     try {
-      const diagramPath = this.state.newDiagramName.endsWith('.json')
-        ? this.state.newDiagramName
-        : `${this.state.newDiagramName}.json`;
+      const diagramPath = newDiagramName.endsWith('.json')
+        ? newDiagramName
+        : `${newDiagramName}.json`;
 
       const initialData = {
         nodes: [],
@@ -389,7 +388,7 @@ class ChartPage extends Component {
         diagramPath,
         initialData,
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
 
       this.setState(
@@ -411,7 +410,8 @@ class ChartPage extends Component {
   };
 
   createFolder = async () => {
-    if (!this.state.newFolderName.trim()) {
+    const { newFolderName, isGlobal } = this.state;
+    if (!newFolderName.trim()) {
       message.warning('Please enter a folder name');
       return;
     }
@@ -419,9 +419,9 @@ class ChartPage extends Component {
     try {
       await ipcRenderer.invoke(
         'diagrams:createFolder',
-        this.state.newFolderName,
+        newFolderName,
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
 
       this.setState(
@@ -442,6 +442,7 @@ class ChartPage extends Component {
   };
 
   deleteItem = async (item) => {
+    const { currentDiagram, isGlobal } = this.state;
     try {
       if (item.type === 'folder') {
         // For folders, we'd need a recursive delete - for now just show a message
@@ -453,10 +454,10 @@ class ChartPage extends Component {
         'diagrams:delete',
         item.path,
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
 
-      if (this.state.currentDiagram === item.path) {
+      if (currentDiagram === item.path) {
         this.setState({
           currentDiagram: null,
           diagramData: null,
@@ -472,18 +473,23 @@ class ChartPage extends Component {
   };
 
   toggleGlobal = () => {
-    this.setState({ isGlobal: !this.state.isGlobal }, () => {
-      this.loadDiagrams();
-      if (this.state.currentDiagram) {
-        this.loadDiagram(this.state.currentDiagram);
-      }
-    });
+    this.setState(
+      (prevState) => ({ isGlobal: !prevState.isGlobal }),
+      () => {
+        this.loadDiagrams();
+        const { currentDiagram } = this.state;
+        if (currentDiagram) {
+          this.loadDiagram(currentDiagram);
+        }
+      },
+    );
   };
 
   onNodesChange = (changes) => {
-    if (!this.state.diagramData) return;
+    const { diagramData, selectedNodeId } = this.state;
+    if (!diagramData) return;
 
-    const newNodes = [...this.state.diagramData.nodes];
+    const newNodes = [...diagramData.nodes];
     let shouldUpdateState = false;
 
     changes.forEach((change) => {
@@ -497,7 +503,7 @@ class ChartPage extends Component {
         const index = newNodes.findIndex((n) => n.id === change.id);
         if (index !== -1) {
           newNodes.splice(index, 1);
-          if (this.state.selectedNodeId === change.id) {
+          if (selectedNodeId === change.id) {
             this.setState({
               selectedNodeId: null,
               nodeEditPanelVisible: false,
@@ -512,7 +518,7 @@ class ChartPage extends Component {
             selectedNodeId: change.id,
             nodeEditPanelVisible: true,
           });
-        } else if (this.state.selectedNodeId === change.id) {
+        } else if (selectedNodeId === change.id) {
           this.setState({
             selectedNodeId: null,
             nodeEditPanelVisible: false,
@@ -530,13 +536,13 @@ class ChartPage extends Component {
 
     if (shouldUpdateState) {
       this.setState(
-        {
+        (prevState) => ({
           diagramData: {
-            ...this.state.diagramData,
+            ...prevState.diagramData,
             nodes: newNodes,
           },
           isDirty: true,
-        },
+        }),
         () => {
           this.autosaveDiagram();
         },
@@ -545,9 +551,10 @@ class ChartPage extends Component {
   };
 
   onEdgesChange = (changes) => {
-    if (!this.state.diagramData) return;
+    const { diagramData } = this.state;
+    if (!diagramData) return;
 
-    const newEdges = [...this.state.diagramData.edges];
+    const newEdges = [...diagramData.edges];
     changes.forEach((change) => {
       if (change.type === 'remove') {
         const index = newEdges.findIndex((e) => e.id === change.id);
@@ -558,13 +565,13 @@ class ChartPage extends Component {
     });
 
     this.setState(
-      {
+      (prevState) => ({
         diagramData: {
-          ...this.state.diagramData,
+          ...prevState.diagramData,
           edges: newEdges,
         },
         isDirty: true,
-      },
+      }),
       () => {
         this.autosaveDiagram();
       },
@@ -572,7 +579,8 @@ class ChartPage extends Component {
   };
 
   onConnect = (params) => {
-    if (!this.state.diagramData) return;
+    const { diagramData } = this.state;
+    if (!diagramData) return;
 
     const newEdge = {
       ...params,
@@ -585,13 +593,13 @@ class ChartPage extends Component {
     };
 
     this.setState(
-      {
+      (prevState) => ({
         diagramData: {
-          ...this.state.diagramData,
-          edges: [...this.state.diagramData.edges, newEdge],
+          ...prevState.diagramData,
+          edges: [...prevState.diagramData.edges, newEdge],
         },
         isDirty: true,
-      },
+      }),
       () => {
         this.autosaveDiagram();
       },
@@ -599,16 +607,17 @@ class ChartPage extends Component {
   };
 
   onMove = (event, viewport) => {
-    if (!this.state.diagramData) return;
+    const { diagramData } = this.state;
+    if (!diagramData) return;
 
     this.setState(
-      {
+      (prevState) => ({
         diagramData: {
-          ...this.state.diagramData,
+          ...prevState.diagramData,
           viewport,
         },
         isDirty: true,
-      },
+      }),
       () => {
         this.autosaveDiagram();
       },
@@ -616,7 +625,8 @@ class ChartPage extends Component {
   };
 
   addNode = (type = 'custom') => {
-    if (!this.state.diagramData) return;
+    const { diagramData } = this.state;
+    if (!diagramData) return;
 
     const newNode = {
       id: `node-${Date.now()}`,
@@ -631,15 +641,15 @@ class ChartPage extends Component {
     };
 
     this.setState(
-      {
+      (prevState) => ({
         diagramData: {
-          ...this.state.diagramData,
-          nodes: [...this.state.diagramData.nodes, newNode],
+          ...prevState.diagramData,
+          nodes: [...prevState.diagramData.nodes, newNode],
         },
         selectedNodeId: newNode.id,
         nodeEditPanelVisible: true,
         isDirty: true,
-      },
+      }),
       () => {
         this.autosaveDiagram();
       },
@@ -648,10 +658,11 @@ class ChartPage extends Component {
 
   loadImages = async () => {
     try {
+      const { isGlobal } = this.state;
       const images = await ipcRenderer.invoke(
         'docs:listImages',
         this.projectName,
-        this.state.isGlobal,
+        isGlobal,
       );
       this.setState({ images });
     } catch (error) {
@@ -682,29 +693,34 @@ class ChartPage extends Component {
     } catch (error) {
       console.error('Error uploading image:', error);
       message.error('Failed to upload image');
+      return false; // Ensure a return value in case of error
     }
   };
 
   handleImageSelect = (imagePath) => {
-    if (!this.state.selectedNodeId || !this.state.diagramData) return;
+    const { selectedNodeId, diagramData, isGlobal } = this.state;
+    if (!selectedNodeId || !diagramData) return;
 
     ipcRenderer
-      .invoke('docs:getImage', imagePath, this.projectName, this.state.isGlobal)
+      .invoke('docs:getImage', imagePath, this.projectName, isGlobal)
       .then((imageData) => {
-        this.updateNodeData(this.state.selectedNodeId, { image: imageData });
+        this.updateNodeData(selectedNodeId, { image: imageData });
         this.setState({ imageUploadVisible: false });
         message.success('Image added to node');
+        return imageData; // Explicitly return a value
       })
       .catch((error) => {
         console.error('Error loading image:', error);
         message.error('Failed to load image');
+        throw error; // Re-throw the error to ensure proper promise chain
       });
   };
 
   updateNodeData = (nodeId, newData) => {
-    if (!this.state.diagramData) return;
+    const { diagramData } = this.state;
+    if (!diagramData) return;
 
-    const newNodes = this.state.diagramData.nodes.map((node) => {
+    const newNodes = diagramData.nodes.map((node) => {
       if (node.id === nodeId) {
         return {
           ...node,
@@ -718,13 +734,13 @@ class ChartPage extends Component {
     });
 
     this.setState(
-      {
+      (prevState) => ({
         diagramData: {
-          ...this.state.diagramData,
+          ...prevState.diagramData,
           nodes: newNodes,
         },
         isDirty: true,
-      },
+      }),
       () => {
         this.autosaveDiagram();
       },
@@ -755,10 +771,11 @@ class ChartPage extends Component {
   };
 
   handleNodeReferenceSelect = (nodeId) => {
-    if (!this.state.selectedNodeId) return;
-    const node = this.state.nodes[nodeId];
+    const { selectedNodeId, nodes } = this.state;
+    if (!selectedNodeId) return;
+    const node = nodes[nodeId];
     if (node) {
-      this.updateNodeData(this.state.selectedNodeId, {
+      this.updateNodeData(selectedNodeId, {
         referencedNode: node,
         nodeReferenceId: nodeId,
       });
@@ -766,10 +783,11 @@ class ChartPage extends Component {
   };
 
   handleParentReferenceSelect = (parentId) => {
-    if (!this.state.selectedNodeId) return;
-    const parent = this.state.parents[parentId];
+    const { selectedNodeId, parents } = this.state;
+    if (!selectedNodeId) return;
+    const parent = parents[parentId];
     if (parent) {
-      this.updateNodeData(this.state.selectedNodeId, {
+      this.updateNodeData(selectedNodeId, {
         referencedParent: parent,
         parentReferenceId: parentId,
       });
@@ -777,24 +795,27 @@ class ChartPage extends Component {
   };
 
   removeNodeReference = () => {
-    if (!this.state.selectedNodeId) return;
-    this.updateNodeData(this.state.selectedNodeId, {
+    const { selectedNodeId } = this.state;
+    if (!selectedNodeId) return;
+    this.updateNodeData(selectedNodeId, {
       referencedNode: null,
       nodeReferenceId: null,
     });
   };
 
   removeParentReference = () => {
-    if (!this.state.selectedNodeId) return;
-    this.updateNodeData(this.state.selectedNodeId, {
+    const { selectedNodeId } = this.state;
+    if (!selectedNodeId) return;
+    this.updateNodeData(selectedNodeId, {
       referencedParent: null,
       parentReferenceId: null,
     });
   };
 
   removeImage = () => {
-    if (!this.state.selectedNodeId) return;
-    this.updateNodeData(this.state.selectedNodeId, { image: null });
+    const { selectedNodeId } = this.state;
+    if (!selectedNodeId) return;
+    this.updateNodeData(selectedNodeId, { image: null });
   };
 
   render() {
@@ -813,6 +834,11 @@ class ChartPage extends Component {
       newDiagramName,
       newFolderName,
       isDirty,
+      autosaveEnabled,
+      nodeEditPanelVisible,
+      selectedNodeId,
+      images,
+      imageUploadVisible,
     } = this.state;
 
     if (!lokiLoaded) {
@@ -1013,7 +1039,7 @@ class ChartPage extends Component {
                         Autosave
                       </Text>
                       <Switch
-                        checked={this.state.autosaveEnabled}
+                        checked={autosaveEnabled}
                         onChange={(checked) => {
                           this.setState({ autosaveEnabled: checked });
                           if (checked && isDirty) {
@@ -1068,11 +1094,11 @@ class ChartPage extends Component {
                     </ReactFlow>
                   </div>
 
-                  {this.state.nodeEditPanelVisible &&
-                    this.state.selectedNodeId &&
+                  {nodeEditPanelVisible &&
+                    selectedNodeId &&
                     (() => {
                       const selectedNode = (diagramData.nodes || []).find(
-                        (n) => n.id === this.state.selectedNodeId,
+                        (n) => n.id === selectedNodeId,
                       );
                       if (!selectedNode) return null;
 
@@ -1087,7 +1113,7 @@ class ChartPage extends Component {
                               selectedNodeId: null,
                             })
                           }
-                          visible={this.state.nodeEditPanelVisible}
+                          visible={nodeEditPanelVisible}
                         >
                           <Space
                             direction="vertical"
@@ -1099,10 +1125,9 @@ class ChartPage extends Component {
                               <Input
                                 value={selectedNode.data?.label || ''}
                                 onChange={(e) =>
-                                  this.updateNodeData(
-                                    this.state.selectedNodeId,
-                                    { label: e.target.value },
-                                  )
+                                  this.updateNodeData(selectedNodeId, {
+                                    label: e.target.value,
+                                  })
                                 }
                                 placeholder="Node label"
                               />
@@ -1113,10 +1138,9 @@ class ChartPage extends Component {
                               <Input.TextArea
                                 value={selectedNode.data?.description || ''}
                                 onChange={(e) =>
-                                  this.updateNodeData(
-                                    this.state.selectedNodeId,
-                                    { description: e.target.value },
-                                  )
+                                  this.updateNodeData(selectedNodeId, {
+                                    description: e.target.value,
+                                  })
                                 }
                                 placeholder="Node description"
                                 rows={3}
@@ -1131,10 +1155,9 @@ class ChartPage extends Component {
                                 type="color"
                                 value={selectedNode.data?.color || '#ffffff'}
                                 onChange={(e) =>
-                                  this.updateNodeData(
-                                    this.state.selectedNodeId,
-                                    { color: e.target.value },
-                                  )
+                                  this.updateNodeData(selectedNodeId, {
+                                    color: e.target.value,
+                                  })
                                 }
                                 style={{ width: '100%', height: '40px' }}
                               />
@@ -1148,10 +1171,9 @@ class ChartPage extends Component {
                                   selectedNode.data?.borderColor || '#d9d9d9'
                                 }
                                 onChange={(e) =>
-                                  this.updateNodeData(
-                                    this.state.selectedNodeId,
-                                    { borderColor: e.target.value },
-                                  )
+                                  this.updateNodeData(selectedNodeId, {
+                                    borderColor: e.target.value,
+                                  })
                                 }
                                 style={{ width: '100%', height: '40px' }}
                               />
@@ -1325,21 +1347,19 @@ class ChartPage extends Component {
                               danger
                               block
                               onClick={() => {
-                                if (!this.state.diagramData) return;
+                                if (!diagramData) return;
                                 const newNodes = (
-                                  this.state.diagramData.nodes || []
-                                ).filter(
-                                  (n) => n.id !== this.state.selectedNodeId,
-                                );
-                                this.setState({
+                                  diagramData.nodes || []
+                                ).filter((n) => n.id !== selectedNodeId);
+                                this.setState((prevState) => ({
                                   diagramData: {
-                                    ...this.state.diagramData,
+                                    ...prevState.diagramData,
                                     nodes: newNodes,
                                   },
                                   selectedNodeId: null,
                                   nodeEditPanelVisible: false,
                                   isDirty: true,
-                                });
+                                }));
                               }}
                             >
                               Delete Node
@@ -1403,7 +1423,7 @@ class ChartPage extends Component {
         {/* Image Upload/Select Modal */}
         <Modal
           title="Select or Upload Image"
-          visible={this.state.imageUploadVisible}
+          visible={imageUploadVisible}
           onCancel={() => this.setState({ imageUploadVisible: false })}
           footer={null}
           width={600}
@@ -1435,7 +1455,7 @@ class ChartPage extends Component {
               >
                 <List
                   grid={{ gutter: 16, column: 3 }}
-                  dataSource={this.state.images}
+                  dataSource={images}
                   renderItem={(image) => (
                     <List.Item>
                       <Card

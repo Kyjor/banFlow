@@ -1412,12 +1412,12 @@ class DocsPage extends Component {
                               size="small"
                               onClick={() =>
                                 this.setState((prevState) => ({
-                                  showMentionHelper: !prevState.showMentionHelper,
+                                  showMentionHelper:
+                                    !prevState.showMentionHelper,
                                 }))
                               }
                             >
-                              {this.state.showMentionHelper ? 'Hide' : 'Show'}{' '}
-                              suggestions
+                              {showMentionHelper ? 'Hide' : 'Show'} suggestions
                             </Button>
                           </Space>
                         </div>
@@ -1533,7 +1533,7 @@ class DocsPage extends Component {
                             a: ({ href, children }) => (
                               <MarkdownLink
                                 href={href}
-                                projectName={projectName}
+                                projectName={this.projectName}
                                 onLoadDoc={this.loadDoc}
                               >
                                 {children}
@@ -1562,9 +1562,7 @@ class DocsPage extends Component {
         {/* Template Selection Modal */}
         <Modal
           title="Choose Template"
-          visible={
-            this.state.templateModalVisible && !this.state.createDocModalVisible
-          }
+          visible={templateModalVisible && !createDocModalVisible}
           onOk={() =>
             this.setState({
               templateModalVisible: false,
@@ -1808,7 +1806,7 @@ class DocsPage extends Component {
 
         {/* Metadata Manager Modal */}
         <MetadataManager
-          visible={this.state.metadataManagerVisible}
+          visible={metadataManagerVisible}
           isGlobal={isGlobal}
           projectName={this.projectName}
           onClose={() => {

@@ -18,7 +18,6 @@ function AggregateView({
   const [dateRange] = useState(null);
   const [selectedTag] = useState(null);
   const [selectedIteration] = useState(null);
-  const [trendPeriod] = useState('week');
   const [selectedDate, setSelectedDate] = useState(moment());
 
   // Calculate aggregate statistics
@@ -203,8 +202,10 @@ AggregateView.propTypes = {
       projectName: PropTypes.string.isRequired,
       nodes: PropTypes.arrayOf(
         PropTypes.shape({
-          sessionHistory: PropTypes.array,
-          tags: PropTypes.array,
+          sessionHistory: PropTypes.arrayOf(PropTypes.object),
+          tags: PropTypes.arrayOf(
+            PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+          ),
           iterationId: PropTypes.string,
           iteration: PropTypes.string,
         }),

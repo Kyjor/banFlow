@@ -5,7 +5,9 @@ import React, {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
 } from 'react';
+import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
 import { message } from 'antd';
 import HeartbeatService from '../services/HeartbeatService';
@@ -469,7 +471,7 @@ export function GitProvider({ children }) {
   );
 
   const commit = useCallback(
-    async (message, description = '') => {
+    async (commitMessage, description = '') => {
       try {
         dispatch({
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
@@ -477,7 +479,7 @@ export function GitProvider({ children }) {
         });
         const result = await ipcRenderer.invoke(
           'git:commit',
-          message,
+          commitMessage,
           description,
         );
         dispatch({
@@ -543,12 +545,12 @@ export function GitProvider({ children }) {
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result.status,
         });
-        const strategyLabel =
-          strategy === 'rebase'
-            ? '(rebased)'
-            : strategy === 'ff-only'
-              ? '(fast-forward)'
-              : '';
+        let strategyLabel = '';
+        if (strategy === 'rebase') {
+          strategyLabel = '(rebased)';
+        } else if (strategy === 'ff-only') {
+          strategyLabel = '(fast-forward)';
+        }
         showSuccess('Pulled changes', `from ${remote} ${strategyLabel}`.trim());
         return result;
       } catch (error) {
@@ -593,13 +595,16 @@ export function GitProvider({ children }) {
 
   // Stash Operations
   const stashChanges = useCallback(
-    async (message = null) => {
+    async (stashMessage = null) => {
       try {
         dispatch({
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:stashChanges', message);
+        const result = await ipcRenderer.invoke(
+          'git:stashChanges',
+          stashMessage,
+        );
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result.status,
@@ -620,7 +625,7 @@ export function GitProvider({ children }) {
   );
 
   const stashFiles = useCallback(
-    async (files, message = null) => {
+    async (files, stashMessage = null) => {
       try {
         dispatch({
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
@@ -629,7 +634,7 @@ export function GitProvider({ children }) {
         const result = await ipcRenderer.invoke(
           'git:stashFiles',
           files,
-          message,
+          stashMessage,
         );
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
@@ -676,7 +681,7 @@ export function GitProvider({ children }) {
   );
 
   const getStashFileDiff = useCallback(
-    async (stashIndex = 0, filename) => {
+    async (filename, stashIndex = 0) => {
       try {
         return await ipcRenderer.invoke(
           'git:getStashFileDiff',
@@ -914,8 +919,9 @@ export function GitProvider({ children }) {
     try {
       console.log('startOAuthFlow called, invoking IPC...');
       dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-      const { state, authUrl } = await ipcRenderer.invoke('git:startOAuthFlow');
-      console.log('IPC call returned, state:', state, 'authUrl:', authUrl);
+      const { state: oauthState, authUrl } =
+        await ipcRenderer.invoke('git:startOAuthFlow');
+      console.log('IPC call returned, state:', oauthState, 'authUrl:', authUrl);
 
       // Listen for OAuth callback
       return new Promise((resolve, reject) => {
@@ -931,7 +937,7 @@ export function GitProvider({ children }) {
             return;
           }
 
-          if (callbackState !== state) {
+          if (callbackState !== oauthState) {
             dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
             reject(new Error('OAuth state mismatch'));
             return;
@@ -946,8 +952,8 @@ export function GitProvider({ children }) {
             dispatch({ type: GitActionTypes.SET_GITHUB_AUTH, payload: result });
             showSuccess('GitHub authenticated', result.user?.login);
             resolve(result);
-          } catch (error) {
-            reject(error);
+          } catch (oauthError) {
+            reject(oauthError);
           } finally {
             dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
           }
@@ -1005,14 +1011,14 @@ export function GitProvider({ children }) {
 
   const loadGitHubRepoInfo = useCallback(async () => {
     // This would load info about the current repo if it's a GitHub repo
-    // Implementation depends on what info you need
+    // Implementation depends on your needs
     try {
       // Placeholder - implement based on your needs
       return null;
     } catch (error) {
       handleError(error, 'load GitHub repo info');
-      return null;
     }
+    return null;
   }, [handleError]);
 
   const cloneRepository = useCallback(
@@ -1398,83 +1404,139 @@ export function GitProvider({ children }) {
   );
 
   // Context Value
-  const contextValue = {
-    // State
-    ...state,
+  const contextValue = useMemo(
+    () => ({
+      // State
+      ...state,
 
-    // Repository Management
-    addRepository,
-    switchRepository,
-    selectRepository,
-    refreshRepositoryStatus,
+      // Repository Management
+      addRepository,
+      switchRepository,
+      selectRepository,
+      refreshRepositoryStatus,
 
-    // Core Git Operations
-    createBranch,
-    switchBranch,
-    deleteBranch,
-    getBranchesWithDates,
-    stageFiles,
-    unstageFiles,
-    commit,
-    fetch,
-    pull,
-    push,
+      // Core Git Operations
+      createBranch,
+      switchBranch,
+      deleteBranch,
+      getBranchesWithDates,
+      stageFiles,
+      unstageFiles,
+      commit,
+      fetch,
+      pull,
+      push,
 
-    // Stash Operations
-    stashChanges,
-    stashFiles,
-    getStashList,
-    getStashFiles,
-    getStashFileDiff,
-    applyStash,
-    popStash,
-    dropStash,
+      // Stash Operations
+      stashChanges,
+      stashFiles,
+      getStashList,
+      getStashFiles,
+      getStashFileDiff,
+      applyStash,
+      popStash,
+      dropStash,
 
-    // Diff and History
-    getDiff,
-    getCommitHistory,
-    getCommitFiles,
-    getCommitDiff,
-    getFileHistory,
-    getFileAtCommit,
+      // Diff and History
+      getDiff,
+      getCommitHistory,
+      getCommitFiles,
+      getCommitDiff,
+      getFileHistory,
+      getFileAtCommit,
 
-    // Undo System
-    undoLastOperation,
+      // Undo System
+      undoLastOperation,
 
-    // GitHub Integration
-    authenticateGitHub,
-    startOAuthFlow,
-    loadGitHubRepositories,
-    logoutGitHub,
-    loadGitHubRepoInfo,
-    cloneRepository,
-    initRepository,
-    selectDirectory,
+      // GitHub Integration
+      authenticateGitHub,
+      startOAuthFlow,
+      loadGitHubRepositories,
+      logoutGitHub,
+      loadGitHubRepoInfo,
+      cloneRepository,
+      initRepository,
+      selectDirectory,
 
-    // Project-specific Repository Management
-    getProjectRepositoryStats,
-    cleanupProjectRepositories,
-    loadProjectRepositories,
+      // Project-specific Repository Management
+      getProjectRepositoryStats,
+      cleanupProjectRepositories,
+      loadProjectRepositories,
 
-    // File Management Operations
-    discardChanges,
-    deleteUntrackedFiles,
-    cleanUntrackedFiles,
+      // File Management Operations
+      discardChanges,
+      deleteUntrackedFiles,
+      cleanUntrackedFiles,
 
-    // Hunk/Line Staging Operations
-    stageHunk,
-    discardHunk,
-    stageLines,
-    discardLines,
+      // Hunk/Line Staging Operations
+      stageHunk,
+      discardHunk,
+      stageLines,
+      discardLines,
 
-    // Utility Functions
-    clearError: () => dispatch({ type: GitActionTypes.CLEAR_ERROR }),
-  };
+      // Utility Functions
+      clearError: () => dispatch({ type: GitActionTypes.CLEAR_ERROR }),
+    }),
+    [
+      state,
+      addRepository,
+      switchRepository,
+      selectRepository,
+      refreshRepositoryStatus,
+      createBranch,
+      switchBranch,
+      deleteBranch,
+      getBranchesWithDates,
+      stageFiles,
+      unstageFiles,
+      commit,
+      fetch,
+      pull,
+      push,
+      stashChanges,
+      stashFiles,
+      getStashList,
+      getStashFiles,
+      getStashFileDiff,
+      applyStash,
+      popStash,
+      dropStash,
+      getDiff,
+      getCommitHistory,
+      getCommitFiles,
+      getCommitDiff,
+      getFileHistory,
+      getFileAtCommit,
+      undoLastOperation,
+      authenticateGitHub,
+      startOAuthFlow,
+      loadGitHubRepositories,
+      logoutGitHub,
+      loadGitHubRepoInfo,
+      cloneRepository,
+      initRepository,
+      selectDirectory,
+      getProjectRepositoryStats,
+      cleanupProjectRepositories,
+      loadProjectRepositories,
+      discardChanges,
+      deleteUntrackedFiles,
+      cleanUntrackedFiles,
+      stageHunk,
+      discardHunk,
+      stageLines,
+      discardLines,
+    ],
+  );
 
   return (
     <GitContext.Provider value={contextValue}>{children}</GitContext.Provider>
   );
 }
+
+GitProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 // Custom Hook for using Git Context
 export function useGit() {

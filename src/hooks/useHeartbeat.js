@@ -35,7 +35,7 @@ export function useHeartbeat(name, callback, intervalMs, options = {}) {
     }
 
     if (!enabled) {
-      return;
+      return undefined;
     }
 
     // Register heartbeat with wrapper that uses current callback

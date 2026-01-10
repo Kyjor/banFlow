@@ -17,6 +17,7 @@ import {
   Table,
   Popconfirm,
   Modal,
+  message,
 } from 'antd';
 import {
   SettingOutlined,
@@ -39,6 +40,163 @@ import gameService from '../../services/GameService';
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+
+// Backup Manager Component
+class BackupManager extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      backups: [],
+      loading: false,
+    };
+  }
+
+  componentDidMount() {
+    this.loadBackups();
+  }
+
+  loadBackups = async () => {
+    this.setState({ loading: true });
+    try {
+      const backups = await ipcRenderer.invoke('backup:list');
+      this.setState({ backups: backups || [] });
+    } catch (error) {
+      console.error('Error loading backups:', error);
+      message.error('Failed to load backups');
+    } finally {
+      this.setState({ loading: false });
+    }
+  };
+
+  handleRestore = async (backup) => {
+    Modal.confirm({
+      title: 'Restore Backup',
+      content: `Are you sure you want to restore "${backup.name}" for project "${backup.projectName}"? This will replace the current project data. A safety backup will be created before restoring.`,
+      okText: 'Restore',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          const result = await ipcRenderer.invoke(
+            'backup:restore',
+            backup.path,
+            backup.projectName,
+          );
+          if (result.success) {
+            message.success('Backup restored successfully');
+            this.loadBackups();
+          } else {
+            message.error(`Restore failed: ${result.error}`);
+          }
+        } catch (error) {
+          message.error('Error restoring backup');
+        }
+      },
+    });
+  };
+
+  handleDelete = async (backup) => {
+    try {
+      const result = await ipcRenderer.invoke('backup:delete', backup.path);
+      if (result.success) {
+        message.success('Backup deleted');
+        this.loadBackups();
+      } else {
+        message.error(`Delete failed: ${result.error}`);
+      }
+    } catch (error) {
+      message.error('Error deleting backup');
+    }
+  };
+
+  static formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
+  };
+
+  render() {
+    const { backups, loading } = this.state;
+
+    const columns = [
+      {
+        title: 'Project',
+        dataIndex: 'projectName',
+        key: 'projectName',
+      },
+      {
+        title: 'Backup Name',
+        dataIndex: 'name',
+        key: 'name',
+      },
+      {
+        title: 'Size',
+        dataIndex: 'size',
+        key: 'size',
+        render: (size) => this.formatFileSize(size),
+      },
+      {
+        title: 'Created',
+        dataIndex: 'created',
+        key: 'created',
+        render: (date) => new Date(date).toLocaleString(),
+      },
+      {
+        title: 'Actions',
+        key: 'actions',
+        render: (_, record) => (
+          <Space>
+            <Button
+              type="primary"
+              size="small"
+              icon={<DownloadOutlined />}
+              onClick={() => this.handleRestore(record)}
+            >
+              Restore
+            </Button>
+            <Popconfirm
+              title="Delete this backup?"
+              onConfirm={() => this.handleDelete(record)}
+              okText="Yes"
+              cancelText="No"
+            >
+              <Button danger size="small" icon={<DeleteOutlined />}>
+                Delete
+              </Button>
+            </Popconfirm>
+          </Space>
+        ),
+      },
+    ];
+
+    return (
+      <Space direction="vertical" style={{ width: '100%' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Text strong>Available Backups</Text>
+          <Button icon={<HistoryOutlined />} onClick={this.loadBackups}>
+            Refresh
+          </Button>
+        </div>
+        <Table
+          columns={columns}
+          dataSource={backups}
+          rowKey="path"
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+          size="small"
+        />
+      </Space>
+    );
+  }
+}
 
 class AppSettings extends Component {
   constructor(props) {
@@ -94,19 +252,29 @@ class AppSettings extends Component {
 
   componentDidMount() {
     // Load data path from main process if available
-    ipcRenderer.invoke('app:getDataPath').then((path) => {
-      if (path) {
-        this.setState({ dataPath: path });
-      }
-    });
+    ipcRenderer
+      .invoke('app:getDataPath')
+      .then((path) => {
+        if (path) {
+          this.setState({ dataPath: path });
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to get data path:', error);
+      });
 
     // Load game mode state
-    ipcRenderer.invoke('game:getState').then((state) => {
-      if (state) {
-        this.setState({ gameModeEnabled: state.isEnabled || false });
-        gameService.setEnabled(state.isEnabled || false);
-      }
-    });
+    ipcRenderer
+      .invoke('game:getState')
+      .then((state) => {
+        if (state) {
+          this.setState({ gameModeEnabled: state.isEnabled || false });
+          gameService.setEnabled(state.isEnabled || false);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to get game state:', error);
+      });
 
     // Apply theme on mount
     this.applyTheme();
@@ -309,13 +477,9 @@ class AppSettings extends Component {
     window.open(this.authLink, '_blank');
   };
 
-  handleColorChange = (color, key) => {
-    const colorValue = typeof color === 'string' ? color : color.toHexString();
-    this.saveSetting(key, colorValue);
-  };
-
   handleGradientChange = (index, color) => {
-    const gradient = [...this.state.backgroundGradient];
+    const { backgroundGradient } = this.state;
+    const gradient = [...backgroundGradient];
     const colorValue = typeof color === 'string' ? color : color.toHexString();
     gradient[index] = colorValue;
     this.saveSetting('backgroundGradient', gradient);
@@ -765,9 +929,14 @@ class AppSettings extends Component {
                       <Button
                         type="link"
                         onClick={() => {
-                          ipcRenderer.invoke('app:openDataPath').then(() => {
-                            message.info('Opening data folder');
-                          });
+                          ipcRenderer
+                            .invoke('app:openDataPath')
+                            .then(() => {
+                              message.info('Opening data folder');
+                            })
+                            .catch((error) => {
+                              console.error('Failed to open data path:', error);
+                            });
                         }}
                       >
                         Open Folder
@@ -1126,163 +1295,6 @@ class AppSettings extends Component {
           </Space>
         </div>
       </Layout>
-    );
-  }
-}
-
-// Backup Manager Component
-class BackupManager extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      backups: [],
-      loading: false,
-    };
-  }
-
-  componentDidMount() {
-    this.loadBackups();
-  }
-
-  loadBackups = async () => {
-    this.setState({ loading: true });
-    try {
-      const backups = await ipcRenderer.invoke('backup:list');
-      this.setState({ backups: backups || [] });
-    } catch (error) {
-      console.error('Error loading backups:', error);
-      message.error('Failed to load backups');
-    } finally {
-      this.setState({ loading: false });
-    }
-  };
-
-  handleRestore = async (backup) => {
-    Modal.confirm({
-      title: 'Restore Backup',
-      content: `Are you sure you want to restore "${backup.name}" for project "${backup.projectName}"? This will replace the current project data. A safety backup will be created before restoring.`,
-      okText: 'Restore',
-      okType: 'danger',
-      cancelText: 'Cancel',
-      onOk: async () => {
-        try {
-          const result = await ipcRenderer.invoke(
-            'backup:restore',
-            backup.path,
-            backup.projectName,
-          );
-          if (result.success) {
-            message.success('Backup restored successfully');
-            this.loadBackups();
-          } else {
-            message.error(`Restore failed: ${result.error}`);
-          }
-        } catch (error) {
-          message.error('Error restoring backup');
-        }
-      },
-    });
-  };
-
-  handleDelete = async (backup) => {
-    try {
-      const result = await ipcRenderer.invoke('backup:delete', backup.path);
-      if (result.success) {
-        message.success('Backup deleted');
-        this.loadBackups();
-      } else {
-        message.error(`Delete failed: ${result.error}`);
-      }
-    } catch (error) {
-      message.error('Error deleting backup');
-    }
-  };
-
-  formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
-  };
-
-  render() {
-    const { backups, loading } = this.state;
-
-    const columns = [
-      {
-        title: 'Project',
-        dataIndex: 'projectName',
-        key: 'projectName',
-      },
-      {
-        title: 'Backup Name',
-        dataIndex: 'name',
-        key: 'name',
-      },
-      {
-        title: 'Size',
-        dataIndex: 'size',
-        key: 'size',
-        render: (size) => this.formatFileSize(size),
-      },
-      {
-        title: 'Created',
-        dataIndex: 'created',
-        key: 'created',
-        render: (date) => new Date(date).toLocaleString(),
-      },
-      {
-        title: 'Actions',
-        key: 'actions',
-        render: (_, record) => (
-          <Space>
-            <Button
-              type="primary"
-              size="small"
-              icon={<DownloadOutlined />}
-              onClick={() => this.handleRestore(record)}
-            >
-              Restore
-            </Button>
-            <Popconfirm
-              title="Delete this backup?"
-              onConfirm={() => this.handleDelete(record)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Button danger size="small" icon={<DeleteOutlined />}>
-                Delete
-              </Button>
-            </Popconfirm>
-          </Space>
-        ),
-      },
-    ];
-
-    return (
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <Text strong>Available Backups</Text>
-          <Button icon={<HistoryOutlined />} onClick={this.loadBackups}>
-            Refresh
-          </Button>
-        </div>
-        <Table
-          columns={columns}
-          dataSource={backups}
-          rowKey="path"
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-          size="small"
-        />
-      </Space>
     );
   }
 }

@@ -8,11 +8,9 @@ import {
   DatePicker,
   Select,
   Typography,
-  Divider,
   Radio,
   Input,
   InputNumber,
-  Collapse,
   Badge,
   Table,
   Row,
@@ -37,6 +35,7 @@ import StatisticsCards from '../Dashboard/components/StatisticsCards/StatisticsC
 import TimeTrendChart from '../Dashboard/components/TimeCharts/TimeTrendChart';
 import TimeDistributionChart from '../Dashboard/components/TimeCharts/TimeDistributionChart';
 import ActivityHeatmap from '../Dashboard/components/TimeCharts/ActivityHeatmap';
+import ProjectSelector from '../Dashboard/components/ProjectSelector/ProjectSelector';
 // Utils
 import {
   loadMultipleProjectsData,
@@ -49,7 +48,6 @@ import {
   calculateTimeByTag,
   calculateTimeByIteration,
   calculateAverageSessionDuration,
-  getRecentActivity,
 } from '../Dashboard/utils/statisticsCalculations';
 
 const { RangePicker } = DatePicker;
@@ -145,7 +143,7 @@ class Analytics extends Component {
     this.setState({ filterRules: filterRules.filter((r) => r.id !== id) });
   };
 
-  evaluateRule = (node, rule) => {
+  static evaluateRule(node, rule) {
     if (!rule || !rule.field) return true;
     const { value } = rule;
     const lc = (text) => (text || '').toString().toLowerCase();
@@ -228,7 +226,7 @@ class Analytics extends Component {
       default:
         return true;
     }
-  };
+  }
 
   filterNodes = (nodes) => {
     const { filterRules, queryConjunction } = this.state;
@@ -394,7 +392,7 @@ class Analytics extends Component {
     return {};
   };
 
-  formatDurationWithDays = (seconds) => {
+  static formatDurationWithDays(seconds) {
     if (!seconds || seconds <= 0) return '0s';
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
@@ -407,10 +405,18 @@ class Analytics extends Component {
       return parts.join(' ');
     }
     return formatTimeHuman(seconds);
-  };
+  }
 
   saveCurrentReport = () => {
-    const { selectedProjects, dateRange, selectedTag, selectedIteration, filterRules, queryConjunction, trendPeriod } = this.state;
+    const {
+      selectedProjects,
+      dateRange,
+      selectedTag,
+      selectedIteration,
+      filterRules,
+      queryConjunction,
+      trendPeriod,
+    } = this.state;
     const name = window.prompt('Save report as:');
     if (!name) return;
 
@@ -420,16 +426,13 @@ class Analytics extends Component {
       state: {
         selectedProjects,
         dateRange: dateRange
-          ? [
-              dateRange[0]?.toISOString(),
-              dateRange[1]?.toISOString(),
-            ]
+          ? [dateRange[0]?.toISOString(), dateRange[1]?.toISOString()]
           : null,
-        selectedTag: selectedTag,
-        selectedIteration: selectedIteration,
-        filterRules: filterRules,
-        queryConjunction: queryConjunction,
-        trendPeriod: trendPeriod,
+        selectedTag,
+        selectedIteration,
+        filterRules,
+        queryConjunction,
+        trendPeriod,
       },
     };
 
@@ -443,7 +446,7 @@ class Analytics extends Component {
       () => {
         localStorage.setItem(
           'analyticsSavedReports',
-          JSON.stringify(savedReports),
+          JSON.stringify(this.state.savedReports),
         );
         message.success('Report saved');
       },
@@ -472,7 +475,7 @@ class Analytics extends Component {
         trendPeriod: state.trendPeriod || 'week',
       },
       () => {
-        this.loadProjectsData(selectedProjects);
+        this.loadProjectsData(state.selectedProjects);
         message.success(`Loaded report: ${report.name}`);
       },
     );
@@ -631,8 +634,8 @@ class Analytics extends Component {
       .filter((n) => n.created && n.completedDate)
       .map((n) => {
         const created = moment(n.created);
-        const completed = moment(n.completedDate);
-        return completed.diff(created, 'seconds');
+        const completedDate = moment(n.completedDate);
+        return completedDate.diff(created, 'seconds');
       });
 
     const avgTimeToCompletion =
@@ -804,19 +807,24 @@ class Analytics extends Component {
     const productivity = this.getProductivityMetrics();
     const comparison = this.getProjectComparison();
 
+    const {
+      selectedProjects,
+      dateRange,
+      selectedTag,
+      selectedIteration,
+      filterRules,
+    } = this.state;
+
     const exportData = {
       exportDate: moment().toISOString(),
-        selectedProjects,
+      selectedProjects,
       filters: {
-        dateRange: this.state.dateRange
-          ? [
-              this.state.dateRange[0]?.toISOString(),
-              this.state.dateRange[1]?.toISOString(),
-            ]
+        dateRange: dateRange
+          ? [dateRange[0]?.toISOString(), dateRange[1]?.toISOString()]
           : null,
-        tag: this.state.selectedTag,
-        iteration: this.state.selectedIteration,
-        queryRules: this.state.filterRules,
+        tag: selectedTag,
+        iteration: selectedIteration,
+        queryRules: filterRules,
       },
       statistics: {
         aggregate: aggregateStats,

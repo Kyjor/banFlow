@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 /* eslint-disable no-use-before-define,@typescript-eslint/no-unused-vars */
 /* eslint global-require: off, no-console: off, promise/always-return: off */
 
@@ -332,8 +334,8 @@ app
     // Initialize backup schedules after a short delay to ensure everything is loaded
     setTimeout(() => {
       const fs = require('fs');
-      const path = require('path');
-      const projectsDir = path.join(__dirname, '../../banFlowProjects');
+      const pathModule = require('path');
+      const projectsDir = pathModule.join(__dirname, '../../banFlowProjects');
       if (fs.existsSync(projectsDir)) {
         const files = fs.readdirSync(projectsDir);
         files.forEach((file: string) => {
@@ -355,7 +357,7 @@ app
     ipcMain.handle('game:getState', async () => {
       try {
         const fs = require('fs');
-        const path = require('path');
+        const pathModule = require('path');
         const gameStatePath = path.join(
           __dirname,
           '../../banFlowProjects/_gameState.json',
@@ -374,7 +376,7 @@ app
     ipcMain.handle('game:saveState', async (event, state) => {
       try {
         const fs = require('fs');
-        const path = require('path');
+        const pathModule = require('path');
         const projectsDir = path.join(__dirname, '../../banFlowProjects');
         if (!fs.existsSync(projectsDir)) {
           fs.mkdirSync(projectsDir, { recursive: true });
@@ -619,6 +621,7 @@ const createNode = async (
     return result;
   } catch (error) {
     console.error('Error creating node:', error);
+    return null;
   }
 };
 
@@ -814,7 +817,7 @@ ipcMain.handle(
   async (event, projectName: string, settings: any) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
       const Loki = require('lokijs');
 
       const projectPath =
@@ -873,10 +876,10 @@ ipcMain.handle('app:getDataPath', async () => {
 });
 
 ipcMain.handle('app:openDataPath', async () => {
-  const { shell } = require('electron');
+  const { shell: electronShell } = require('electron');
   const path = require('path');
   const dataPath = path.join(__dirname, '../../banFlowProjects');
-  shell.openPath(dataPath);
+  electronShell.openPath(dataPath);
   return { success: true };
 });
 
@@ -1081,7 +1084,7 @@ ipcMain.handle(
   async (event, projectName: string | null = null) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       if (projectName) {
         const backupDir = getBackupPath(projectName);
@@ -1155,7 +1158,7 @@ ipcMain.handle(
   async (event, backupPath: string, projectName: string) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       if (!fs.existsSync(backupPath)) {
         throw new Error(`Backup file not found: ${backupPath}`);
@@ -1319,10 +1322,15 @@ const initializeBackupSchedules = () => {
   }
 };
 
-app.whenReady().then(() => {
-  // Initialize backup schedules after a short delay to ensure everything is loaded
-  setTimeout(initializeBackupSchedules, 2000);
-});
+app
+  .whenReady()
+  .then(() => {
+    // Initialize backup schedules after a short delay to ensure everything is loaded
+    setTimeout(initializeBackupSchedules, 2000);
+  })
+  .catch((error) => {
+    console.error('Failed to initialize app:', error);
+  });
 
 const setProjectState = (_event: any, values: any) => {
   individualProjectStateValue = {
@@ -1720,8 +1728,8 @@ ipcMain.handle('git:initRepository', async (event, targetPath) => {
 });
 
 ipcMain.handle('git:selectDirectory', async () => {
-  const { dialog } = require('electron');
-  const result = await dialog.showOpenDialog({
+  const { dialog: electronDialog } = require('electron');
+  const result = await electronDialog.showOpenDialog({
     properties: ['openDirectory', 'createDirectory'],
     title: 'Select Directory',
   });
@@ -2074,7 +2082,7 @@ ipcMain.handle('git:listFiles', async (event, repoPath) => {
       'venv',
     ]);
 
-    function walkDir(dir: string, prefix = '') {
+    const walkDir = (dir: string, prefix = '') => {
       const entries = fs.readdirSync(dir, { withFileTypes: true });
       entries.forEach((entry) => {
         if (entry.name.startsWith('.') && entry.name !== '.env') return;
@@ -2087,7 +2095,7 @@ ipcMain.handle('git:listFiles', async (event, repoPath) => {
           files.push(relativePath);
         }
       });
-    }
+    };
 
     walkDir(repoPath);
     return files.sort();
@@ -2188,7 +2196,7 @@ ipcMain.handle(
   async (event, projectName: string | null, isGlobal: boolean = false) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { docsPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2252,7 +2260,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { docsPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2295,7 +2303,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { docsPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2338,7 +2346,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { docsPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2372,7 +2380,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { docsPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2397,7 +2405,7 @@ ipcMain.handle(
   async (event, projectName: string | null, isGlobal: boolean = false) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { imagesPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2440,7 +2448,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { imagesPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2476,7 +2484,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { imagesPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2520,7 +2528,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { imagesPath } = isGlobal
         ? getGlobalDocsPath()
@@ -2577,7 +2585,7 @@ ipcMain.handle(
   async (event, projectName: string | null, isGlobal: boolean = false) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { diagramsPath } = isGlobal
         ? getGlobalDiagramsPath()
@@ -2640,7 +2648,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { diagramsPath } = isGlobal
         ? getGlobalDiagramsPath()
@@ -2684,7 +2692,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { diagramsPath } = isGlobal
         ? getGlobalDiagramsPath()
@@ -2721,7 +2729,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { diagramsPath } = isGlobal
         ? getGlobalDiagramsPath()
@@ -2755,7 +2763,7 @@ ipcMain.handle(
   ) => {
     try {
       const fs = require('fs');
-      const path = require('path');
+      const pathModule = require('path');
 
       const { diagramsPath } = isGlobal
         ? getGlobalDiagramsPath()

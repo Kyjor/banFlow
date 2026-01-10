@@ -416,7 +416,7 @@ class Dashboard extends Component {
       if (parentOrder && parentOrder.length > 0) {
         firstParentId = parentOrder[0].id;
       } else if (parents && Object.keys(parents).length > 0) {
-        firstParentId = Object.keys(parents)[0];
+        [firstParentId] = Object.keys(parents);
       }
 
       if (!firstParentId) {
@@ -823,7 +823,7 @@ class Dashboard extends Component {
                                   : tag.title || tag.name || tag;
                               return (
                                 <Tag
-                                  key={`tag-${tagName}-${idx}`}
+                                  key={`tag-${tagName}`}
                                   color={tag.color || 'default'}
                                 >
                                   {tagName}
