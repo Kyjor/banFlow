@@ -8,6 +8,14 @@ import {
 import { ipcRenderer } from 'electron';
 
 class BackupManager extends Component {
+  static formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
+  };
+
   constructor(props) {
     super(props);
     this.state = {
@@ -72,14 +80,6 @@ class BackupManager extends Component {
     } catch (error) {
       message.error('Error deleting backup');
     }
-  };
-
-  static formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`;
   };
 
   render() {

@@ -1014,7 +1014,7 @@ export function GitProvider({ children }) {
     // Implementation depends on your needs
     // Placeholder - implement based on your needs
     return null;
-  }, [handleError]);
+  }, []);
 
   const cloneRepository = useCallback(
     async (repoUrl, targetPath) => {

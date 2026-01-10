@@ -139,6 +139,21 @@ class Analytics extends Component {
     }
   }
 
+  static formatDurationWithDays(seconds) {
+    if (!seconds || seconds <= 0) return '0s';
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+
+    if (days > 0) {
+      const parts = [`${days}d`];
+      if (hours > 0) parts.push(`${hours}h`);
+      else if (minutes > 0) parts.push(`${minutes}m`);
+      return parts.join(' ');
+    }
+    return formatTimeHuman(seconds);
+  }
+
   constructor(props) {
     super(props);
 
@@ -391,21 +406,6 @@ class Analytics extends Component {
     }
     return {};
   };
-
-  static formatDurationWithDays(seconds) {
-    if (!seconds || seconds <= 0) return '0s';
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-
-    if (days > 0) {
-      const parts = [`${days}d`];
-      if (hours > 0) parts.push(`${hours}h`);
-      else if (minutes > 0) parts.push(`${minutes}m`);
-      return parts.join(' ');
-    }
-    return formatTimeHuman(seconds);
-  }
 
   saveCurrentReport = () => {
     const {
@@ -880,6 +880,7 @@ class Analytics extends Component {
       filterRules,
       filtersOpen,
       queryConjunction,
+      trendPeriod,
     } = this.state;
 
     const filteredProjects = this.getFilteredProjects();
@@ -1071,11 +1072,6 @@ class Analytics extends Component {
                   <div style={{ marginBottom: '8px' }}>
                     {filterRules.map((rule) => {
                       const { field } = rule;
-                      const commonProps = {
-                        style: { width: '100%' },
-                        size: 'small',
-                      };
-
                       const renderValueInput = () => {
                         if (field === 'status') {
                           const statuses = Array.from(
@@ -1319,7 +1315,8 @@ class Analytics extends Component {
                         }
                         return (
                           <Input
-                            {...commonProps}
+                            style={{ width: '100%' }}
+                            size="small"
                             placeholder="Contains text"
                             value={rule.value}
                             onChange={(e) =>
@@ -1457,7 +1454,7 @@ class Analytics extends Component {
                   onPeriodChange={(period) =>
                     this.setState({ trendPeriod: period })
                   }
-                  selectedPeriod={this.state.trendPeriod}
+                  selectedPeriod={trendPeriod}
                 />
                 <TimeDistributionChart
                   data={this.getDistributionData('parent')}
@@ -1678,7 +1675,7 @@ class Analytics extends Component {
                 })()}
               </Card>
 
-              {this.state.selectedProjects.length > 1 && (
+              {selectedProjects.length > 1 && (
                 <Card title="Project Comparison" style={{ marginTop: 16 }}>
                   {(() => {
                     const comparison = this.getProjectComparison();

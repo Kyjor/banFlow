@@ -202,6 +202,7 @@ AggregateView.propTypes = {
       projectName: PropTypes.string.isRequired,
       nodes: PropTypes.arrayOf(
         PropTypes.shape({
+          // eslint-disable-next-line react/forbid-prop-types
           sessionHistory: PropTypes.arrayOf(PropTypes.object),
           tags: PropTypes.arrayOf(
             PropTypes.oneOfType([PropTypes.string, PropTypes.object]),

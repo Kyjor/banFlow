@@ -8,11 +8,6 @@ class TextEditor extends Component {
   constructor(props) {
     super(props);
 
-    this.currentProject = localStorage.getItem('currentProject');
-    this.trelloToken = localStorage.getItem('trelloToken');
-    this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
-    this.authLink = `https://trello.com/1/authorize?expiration=30days&scope=read,write&response_type=token&key=${this.trelloKey}`;
-
     this.state = {
       boards: [],
       lokiLoaded: false,
@@ -27,10 +22,7 @@ class TextEditor extends Component {
       this.projectName,
     );
 
-    this.setState({
-      ...this.state,
-      ...newState,
-    });
+    this.setState(newState);
   }
 
   setValue = (value) => {
@@ -43,18 +35,13 @@ class TextEditor extends Component {
   };
 
   render() {
-    const { lokiLoaded, nodes } = this.state;
-    if (lokiLoaded) {
-    }
+    const { lokiLoaded, text } = this.state;
 
     return lokiLoaded ? (
       <Layout>
         <div className="container">
-          <MDEditor value={this.state.text} onChange={this.setValue} />
-          <MDEditor.Markdown
-            source={this.state.text}
-            style={{ whiteSpace: 'pre-wrap' }}
-          />
+          <MDEditor value={text} onChange={this.setValue} />
+          <MDEditor.Markdown source={text} style={{ whiteSpace: 'pre-wrap' }} />
         </div>
       </Layout>
     ) : (

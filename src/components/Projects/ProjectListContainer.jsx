@@ -103,6 +103,7 @@ class ProjectListContainer extends Component {
     this.setState({ newProjectName: e.target.value });
   };
 
+  // eslint-disable-next-line class-methods-use-this
   openProjectFile = () => {
     ipcRenderer.send('GetProjectFile');
   };
@@ -281,6 +282,10 @@ class ProjectListContainer extends Component {
 ProjectListContainer.propTypes = {
   openProjectDetails: PropTypes.func.isRequired,
   selectedProject: PropTypes.string,
+};
+
+ProjectListContainer.defaultProps = {
+  selectedProject: '',
 };
 
 export default ProjectListContainer;

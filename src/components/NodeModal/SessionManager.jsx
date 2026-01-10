@@ -13,6 +13,7 @@ import {
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import PropTypes from 'prop-types';
+import eventSystem, { EVENTS } from '../../services/EventSystem';
 import './SessionManager.scss';
 
 const { Option } = Select;
@@ -48,9 +49,28 @@ function SessionManager({
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }
+
+    return undefined;
   }, [editingField]);
 
-  const sessions = node?.sessionHistory || [];
+  const sessions = useMemo(
+    () => node?.sessionHistory || [],
+    [node?.sessionHistory],
+  );
+
+  const formatDuration = (seconds) => {
+    if (!seconds || seconds === 0) return '0s';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (secs > 0 && hours === 0) parts.push(`${secs}s`);
+
+    return parts.join(' ') || '0s';
+  };
 
   // Calculate total timeSpent from all sessions
   const recalculateTimeSpent = (updatedSessions) => {
@@ -387,24 +407,6 @@ function SessionManager({
     if (onSessionsChange) {
       onSessionsChange(updatedSessions, node.timeSpent || 0);
     }
-
-    message.success(
-      `Created session with ${formatDuration(unallocatedTime)} from unallocated time`,
-    );
-  };
-
-  const formatDuration = (seconds) => {
-    if (!seconds || seconds === 0) return '0s';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    const parts = [];
-    if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0) parts.push(`${minutes}m`);
-    if (secs > 0 && hours === 0) parts.push(`${secs}s`);
-
-    return parts.join(' ') || '0s';
   };
 
   const formatDateTime = (dateTime) => {
@@ -477,6 +479,14 @@ function SessionManager({
         return (
           <div
             onClick={() => startEditing(record, 'startDateTime')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                startEditing(record, 'startDateTime');
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               cursor: 'pointer',
               padding: '4px 8px',
@@ -554,6 +564,14 @@ function SessionManager({
         return (
           <div
             onClick={() => startEditing(record, 'finishDateTime')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                startEditing(record, 'finishDateTime');
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               cursor: 'pointer',
               padding: '4px 8px',
@@ -631,6 +649,14 @@ function SessionManager({
         return (
           <div
             onClick={() => startEditing(record, 'length')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                startEditing(record, 'length');
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               cursor: 'pointer',
               padding: '4px 8px',
@@ -706,6 +732,14 @@ function SessionManager({
         return (
           <div
             onClick={() => startEditing(record, 'parent')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                startEditing(record, 'parent');
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               cursor: 'pointer',
               padding: '4px 8px',
@@ -782,6 +816,14 @@ function SessionManager({
         return (
           <div
             onClick={() => startEditing(record, 'comment')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                startEditing(record, 'comment');
+              }
+            }}
+            tabIndex={0}
+            role="button"
             style={{
               cursor: 'pointer',
               padding: '4px 8px',
@@ -994,7 +1036,9 @@ function SessionManager({
 }
 
 SessionManager.propTypes = {
+  // eslint-disable-next-line react/forbid-prop-types
   node: PropTypes.object.isRequired,
+  // eslint-disable-next-line react/forbid-prop-types
   parents: PropTypes.object,
   updateNodeProperty: PropTypes.func.isRequired,
   onSessionsChange: PropTypes.func,

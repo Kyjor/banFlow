@@ -140,6 +140,29 @@ MarkdownLink.defaultProps = {
   onLoadDoc: () => {},
 };
 
+// Helper component for markdown link handling in editor
+function MarkdownLinkHandler({ href, children, projectName, onLoadDoc }) {
+  return (
+    <MarkdownLink href={href} projectName={projectName} onLoadDoc={onLoadDoc}>
+      {children}
+    </MarkdownLink>
+  );
+}
+
+MarkdownLinkHandler.propTypes = {
+  href: PropTypes.string,
+  children: PropTypes.node,
+  projectName: PropTypes.string,
+  onLoadDoc: PropTypes.func,
+};
+
+MarkdownLinkHandler.defaultProps = {
+  href: null,
+  children: null,
+  projectName: '',
+  onLoadDoc: () => {},
+};
+
 class DocsPage extends Component {
   static countWords = (text) => {
     if (!text) return 0;
@@ -816,6 +839,16 @@ class DocsPage extends Component {
     });
   };
 
+  renderMarkdownLink = ({ href, children }) => (
+    <MarkdownLink
+      href={href}
+      projectName={this.projectName}
+      onLoadDoc={this.loadDoc}
+    >
+      {children}
+    </MarkdownLink>
+  );
+
   toggleGlobal = async () => {
     this.setState(
       (prevState) => ({
@@ -914,6 +947,8 @@ class DocsPage extends Component {
       showMentionHelper,
       nodes,
       parents,
+      templateModalVisible,
+      metadataManagerVisible,
     } = this.state;
 
     if (!lokiLoaded) {
@@ -1530,15 +1565,7 @@ class DocsPage extends Component {
                         <MDEditor.Markdown
                           source={this.processMarkdownLinks(docContent)}
                           components={{
-                            a: ({ href, children }) => (
-                              <MarkdownLink
-                                href={href}
-                                projectName={this.projectName}
-                                onLoadDoc={this.loadDoc}
-                              >
-                                {children}
-                              </MarkdownLink>
-                            ),
+                            a: this.renderMarkdownLink,
                           }}
                         />
                       </div>

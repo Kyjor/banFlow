@@ -37,7 +37,7 @@ const getProjectColor = (name) => {
   ];
   let hash = 0;
   for (let i = 0; i < name.length; i += 1) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    hash = name.charCodeAt(i) + (hash * 31 - hash);
   }
   return colors[Math.abs(hash) % colors.length];
 };
@@ -291,6 +291,10 @@ ProjectList.propTypes = {
   renameProject: PropTypes.func.isRequired,
   openProjectDetails: PropTypes.func.isRequired,
   selectedProject: PropTypes.string,
+};
+
+ProjectList.defaultProps = {
+  selectedProject: '',
 };
 
 export default ProjectList;

@@ -38,6 +38,10 @@ Content.propTypes = {
   showParentModal: PropTypes.func,
 };
 
+Content.defaultProps = {
+  showParentModal: () => {},
+};
+
 export default function ParentQuickActions(props) {
   const { button, deleteParent, parent, showParentModal } = props;
 
@@ -65,4 +69,8 @@ ParentQuickActions.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   parent: PropTypes.object.isRequired,
   showParentModal: PropTypes.func,
+};
+
+ParentQuickActions.defaultProps = {
+  showParentModal: () => {},
 };
