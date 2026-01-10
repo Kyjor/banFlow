@@ -375,6 +375,7 @@ PRReview.propTypes = {
 };
 
 PRReview.defaultProps = {
+  pr: null,
   onRefresh: () => {},
 };
 

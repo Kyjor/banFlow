@@ -84,11 +84,11 @@ function PRList({ onCreatePR, onViewPR }) {
         <Space>
           <PullRequestOutlined
             style={{
-              color: pr.merged
-                ? '#1890ff'
-                : pr.state === 'open'
-                  ? '#52c41a'
-                  : '#999',
+              color: (() => {
+                if (pr.merged) return '#1890ff';
+                if (pr.state === 'open') return '#52c41a';
+                return '#999';
+              })(),
             }}
           />
           <Text strong>#{pr.number}</Text>

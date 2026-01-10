@@ -6,6 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import { ipcRenderer } from 'electron';
+import PropTypes from 'prop-types';
 import {
   Card,
   Button,
@@ -138,7 +139,9 @@ function buildResolvedContent(originalContent, conflicts) {
     (a, b) => a.startIndex - b.startIndex,
   );
 
-  for (const conflict of sortedConflicts) {
+  // eslint-disable-next-line no-restricted-syntax
+  for (let i = 0; i < sortedConflicts.length; i += 1) {
+    const conflict = sortedConflicts[i];
     // Add lines before this conflict
     result.push(...lines.slice(lastProcessedLine, conflict.startIndex));
 
@@ -185,7 +188,6 @@ function MergeConflictResolver({
     stageFiles,
     refreshRepositoryStatus,
     isLoading,
-    operationInProgress,
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -208,7 +210,7 @@ function MergeConflictResolver({
     if (file !== selectedFile) {
       setSelectedFile(file);
     }
-  }, [file]);
+  }, [file, selectedFile]);
 
   // Load file content when selected file changes
   useEffect(() => {
@@ -578,6 +580,14 @@ function MergeConflictResolver({
               <div
                 className={`minimap-item ${conflict.resolution ? 'resolved' : ''} ${index === currentConflictIndex ? 'current' : ''}`}
                 onClick={() => jumpToConflict(index)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    jumpToConflict(index);
+                  }
+                }}
+                tabIndex={0}
+                role="button"
               >
                 {conflict.resolution ? <CheckOutlined /> : index + 1}
               </div>
@@ -664,6 +674,7 @@ function MergeConflictResolver({
         {conflict.contextBefore.length > 0 && (
           <div className="context-lines before">
             {conflict.contextBefore.map((line, i) => (
+              // eslint-disable-next-line react/no-array-index-key
               <div key={`before-${i}`} className="context-line">
                 <span className="line-number">
                   {conflict.startLine - conflict.contextBefore.length + i}
@@ -690,6 +701,7 @@ function MergeConflictResolver({
             )}
           </div>
           {conflict.oursLines.map((line, i) => (
+            // eslint-disable-next-line react/no-array-index-key
             <div key={`ours-${i}`} className="conflict-line ours">
               <span className="line-marker">-</span>
               <span className="line-content">{line}</span>
@@ -713,6 +725,7 @@ function MergeConflictResolver({
             )}
           </div>
           {conflict.theirsLines.map((line, i) => (
+            // eslint-disable-next-line react/no-array-index-key
             <div key={`theirs-${i}`} className="conflict-line theirs">
               <span className="line-marker">+</span>
               <span className="line-content">{line}</span>
@@ -724,6 +737,7 @@ function MergeConflictResolver({
         {conflict.contextAfter.length > 0 && (
           <div className="context-lines after">
             {conflict.contextAfter.map((line, i) => (
+              // eslint-disable-next-line react/no-array-index-key
               <div key={`after-${i}`} className="context-line">
                 <span className="line-number">{conflict.endLine + 1 + i}</span>
                 <span className="line-content">{line}</span>
@@ -1185,5 +1199,20 @@ function MergeConflictResolver({
     </div>
   );
 }
+
+MergeConflictResolver.propTypes = {
+  // eslint-disable-next-line react/forbid-prop-types
+  file: PropTypes.object,
+  onConflictResolved: PropTypes.func,
+  onFileChange: PropTypes.func,
+  theme: PropTypes.string,
+};
+
+MergeConflictResolver.defaultProps = {
+  file: null,
+  onConflictResolved: null,
+  onFileChange: null,
+  theme: 'light',
+};
 
 export default MergeConflictResolver;

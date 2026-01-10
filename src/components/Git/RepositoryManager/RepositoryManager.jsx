@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Card,
   List,
@@ -107,18 +108,24 @@ function RepositoryManager({ compact = false }) {
           (p) => typeof p === 'string' && p && !existingPaths.has(p),
         );
         const addAll = async () => {
-          for (const p of toAdd) {
+          // eslint-disable-next-line no-restricted-syntax
+          for (let i = 0; i < toAdd.length; i += 1) {
+            const p = toAdd[i];
             try {
               // addRepository validates existence and repo status
               // Ignore failures silently
               // eslint-disable-next-line no-await-in-loop
               await addRepository(p);
-            } catch (_) {}
+            } catch (_) {
+              console.error('Failed to add repository:', p);
+            }
           }
           if (lastActive) {
             try {
               await switchRepository(lastActive);
-            } catch (_) {}
+            } catch (_) {
+              console.error('Failed to switch repository:', lastActive);
+            }
           }
         };
         addAll();
@@ -151,10 +158,10 @@ function RepositoryManager({ compact = false }) {
     }
   };
 
-  const handleSwitchRepository = async (repoPath) => {
+  const handleSwitchRepository = async (selectedRepoPath) => {
     try {
-      await switchRepository(repoPath);
-      setSelectedRepo(repoPath);
+      await switchRepository(selectedRepoPath);
+      setSelectedRepo(selectedRepoPath);
     } catch (error) {
       // Error handled by context
     }
@@ -653,5 +660,13 @@ function RepositoryManager({ compact = false }) {
     </div>
   );
 }
+
+RepositoryManager.propTypes = {
+  compact: PropTypes.bool,
+};
+
+RepositoryManager.defaultProps = {
+  compact: false,
+};
 
 export default RepositoryManager;

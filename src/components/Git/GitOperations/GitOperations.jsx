@@ -19,7 +19,6 @@ import {
   Col,
   Alert,
   Collapse,
-  message,
 } from 'antd';
 import {
   CloudUploadOutlined,
@@ -41,6 +40,7 @@ import {
   FileDeleteOutlined,
   EditOutlined,
 } from '@ant-design/icons';
+import PropTypes from 'prop-types';
 import { useGit } from '../../../contexts/GitContext';
 import './GitOperations.scss';
 
@@ -83,7 +83,6 @@ function GitOperations({ onViewDiff }) {
     refreshRepositoryStatus,
     discardChanges,
     deleteUntrackedFiles,
-    cleanUntrackedFiles,
   } = useGit();
 
   const [activeTab, setActiveTab] = useState('staging');
@@ -100,10 +99,10 @@ function GitOperations({ onViewDiff }) {
 
   // Load operation history when repository changes
   useEffect(() => {
-    if (currentRepository && typeof loadOperationHistory === 'function') {
-      loadOperationHistory().catch(() => {});
+    if (currentRepository) {
+      // loadOperationHistory functionality not implemented
     }
-  }, [currentRepository, loadOperationHistory]);
+  }, [currentRepository]);
 
   useEffect(() => {
     if (currentRepository) {
@@ -115,9 +114,7 @@ function GitOperations({ onViewDiff }) {
     try {
       await stageFiles(files);
       setSelectedFiles([]);
-      if (currentRepository && typeof loadOperationHistory === 'function') {
-        loadOperationHistory().catch(() => {});
-      }
+      // loadOperationHistory functionality not implemented
     } catch (error) {
       // Error handled by context
     }
@@ -126,9 +123,7 @@ function GitOperations({ onViewDiff }) {
   const handleUnstageFiles = async (files) => {
     try {
       await unstageFiles(files);
-      if (currentRepository && typeof loadOperationHistory === 'function') {
-        loadOperationHistory().catch(() => {});
-      }
+      // loadOperationHistory functionality not implemented
     } catch (error) {
       // Error handled by context
     }
@@ -137,9 +132,7 @@ function GitOperations({ onViewDiff }) {
   const handleDiscardChanges = async (files) => {
     try {
       await discardChanges(files);
-      if (currentRepository && typeof loadOperationHistory === 'function') {
-        loadOperationHistory().catch(() => {});
-      }
+      // loadOperationHistory functionality not implemented
     } catch (error) {
       // Error handled by context
     }
@@ -148,9 +141,7 @@ function GitOperations({ onViewDiff }) {
   const handleDeleteUntracked = async (files) => {
     try {
       await deleteUntrackedFiles(files);
-      if (currentRepository && typeof loadOperationHistory === 'function') {
-        loadOperationHistory().catch(() => {});
-      }
+      // loadOperationHistory functionality not implemented
     } catch (error) {
       // Error handled by context
     }
@@ -161,9 +152,7 @@ function GitOperations({ onViewDiff }) {
       await commit(values.message, values.description);
       commitForm.resetFields();
       setShowCommitModal(false);
-      if (currentRepository && typeof loadOperationHistory === 'function') {
-        loadOperationHistory().catch(() => {});
-      }
+      // loadOperationHistory functionality not implemented
     } catch (error) {
       // Error handled by context
     }
@@ -174,9 +163,7 @@ function GitOperations({ onViewDiff }) {
       await createBranch(values.branchName, values.startPoint);
       branchForm.resetFields();
       setShowBranchModal(false);
-      if (currentRepository && typeof loadOperationHistory === 'function') {
-        loadOperationHistory().catch(() => {});
-      }
+      // loadOperationHistory functionality not implemented
     } catch (error) {
       // Error handled by context
     }
@@ -187,9 +174,7 @@ function GitOperations({ onViewDiff }) {
       await stashChanges(stashMessage || null);
       setStashMessage('');
       setShowStashModal(false);
-      if (currentRepository && typeof loadOperationHistory === 'function') {
-        loadOperationHistory().catch(() => {});
-      }
+      // loadOperationHistory functionality not implemented
     } catch (error) {
       // Error handled by context
     }
@@ -1059,5 +1044,13 @@ function GitOperations({ onViewDiff }) {
     </div>
   );
 }
+
+GitOperations.propTypes = {
+  onViewDiff: PropTypes.func,
+};
+
+GitOperations.defaultProps = {
+  onViewDiff: () => {},
+};
 
 export default GitOperations;
