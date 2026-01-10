@@ -285,8 +285,13 @@ KanbanBoard.propTypes = {
   saveTime: PropTypes.func.isRequired,
   selectedIteration: PropTypes.string.isRequired,
   showModal: PropTypes.func.isRequired,
+  showParentModal: PropTypes.func.isRequired,
   filterNode: PropTypes.func,
   updateNodeTitle: PropTypes.func.isRequired,
   updateParentProperty: PropTypes.func.isRequired,
   updateParents: PropTypes.func.isRequired,
+};
+
+KanbanBoard.defaultProps = {
+  filterNode: () => {},
 };

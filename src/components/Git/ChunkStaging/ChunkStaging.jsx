@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import {
   Card,
   Button,
@@ -54,21 +55,7 @@ function ChunkStaging({
   const [stagingHistory, setStagingHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showHelp, setShowHelp] = useState(false);
-
-  useEffect(() => {
-    if (selectedFile && currentRepository) {
-      loadFileDiff(selectedFile);
-    }
-  }, [selectedFile, currentRepository]);
-
-  useEffect(() => {
-    if (currentDiff && currentDiff.length > 0) {
-      const fileDiff = currentDiff.find((diff) => diff.name === selectedFile);
-      if (fileDiff) {
-        initializeChunkStates(fileDiff);
-      }
-    }
-  }, [currentDiff, selectedFile]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const loadFileDiff = async (filename) => {
     try {
@@ -90,10 +77,25 @@ function ChunkStaging({
     setStagedChunks(new Set());
   };
 
-  const getFileDiff = () => {
+  useEffect(() => {
+    if (selectedFile && currentRepository) {
+      loadFileDiff(selectedFile);
+    }
+  }, [selectedFile, currentRepository, loadFileDiff]);
+
+  useEffect(() => {
+    if (currentDiff && currentDiff.length > 0) {
+      const fileDiff = currentDiff.find((diff) => diff.name === selectedFile);
+      if (fileDiff) {
+        initializeChunkStates(fileDiff);
+      }
+    }
+  }, [currentDiff, selectedFile]);
+
+  const getFileDiff = useCallback(() => {
     if (!currentDiff || !selectedFile) return null;
     return currentDiff.find((diff) => diff.name === selectedFile);
-  };
+  }, [currentDiff, selectedFile]);
 
   const getChunkInfo = (hunkIndex) => {
     const fileDiff = getFileDiff();
@@ -223,7 +225,7 @@ function ChunkStaging({
     }
 
     message.success('All chunks staged successfully');
-  }, [historyIndex, onStagingChange]);
+  }, [historyIndex, onStagingChange, getFileDiff]);
 
   const unstageAllChunks = useCallback(() => {
     const fileDiff = getFileDiff();
@@ -253,7 +255,7 @@ function ChunkStaging({
     }
 
     message.success('All chunks unstaged successfully');
-  }, [historyIndex, onStagingChange]);
+  }, [historyIndex, onStagingChange, getFileDiff]);
 
   const undoStaging = useCallback(() => {
     if (historyIndex < 0) return;
@@ -272,6 +274,8 @@ function ChunkStaging({
         break;
       case 'unstageAll':
         stageAllChunks();
+        break;
+      default:
         break;
     }
 
@@ -302,6 +306,8 @@ function ChunkStaging({
         break;
       case 'unstageAll':
         unstageAllChunks();
+        break;
+      default:
         break;
     }
 
@@ -728,5 +734,12 @@ function ChunkStaging({
     </div>
   );
 }
+
+ChunkStaging.propTypes = {
+  file: PropTypes.string,
+  onStagingChange: PropTypes.func,
+  showPreview: PropTypes.bool,
+  compact: PropTypes.bool,
+};
 
 export default ChunkStaging;

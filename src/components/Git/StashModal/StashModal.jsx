@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Modal,
   Form,
@@ -80,7 +81,7 @@ function StashModal({ visible, onCancel, onSuccess }) {
       );
       setSelectedFiles(initialSelected);
     }
-  }, [visible]);
+  }, [visible, stashableFiles]);
 
   const handleFileToggle = (filePath, checked) => {
     const newSelected = new Set(selectedFiles);
@@ -196,8 +197,8 @@ function StashModal({ visible, onCancel, onSuccess }) {
         {Object.entries(fileGroups).map(([type, files]) => {
           if (files.length === 0) return null;
 
-          const getIcon = (type) => {
-            switch (type) {
+          const getIcon = (fileType) => {
+            switch (fileType) {
               case 'modified':
                 return <EditOutlined />;
               case 'staged':
@@ -209,8 +210,8 @@ function StashModal({ visible, onCancel, onSuccess }) {
             }
           };
 
-          const getTitle = (type) => {
-            switch (type) {
+          const getTitle = (fileType) => {
+            switch (fileType) {
               case 'modified':
                 return 'Modified Files';
               case 'staged':
@@ -277,5 +278,11 @@ function StashModal({ visible, onCancel, onSuccess }) {
     </Modal>
   );
 }
+
+StashModal.propTypes = {
+  visible: PropTypes.bool.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  onSuccess: PropTypes.func.isRequired,
+};
 
 export default StashModal;

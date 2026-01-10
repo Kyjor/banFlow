@@ -168,7 +168,7 @@ class MetadataManager extends Component {
   };
 
   handleTagCreate = async () => {
-    const { newTagName, newTagColor } = this.state;
+    const { newTagName } = this.state;
     if (!newTagName.trim()) {
       message.warning('Please enter a tag name');
       return;
@@ -484,6 +484,13 @@ MetadataManager.propTypes = {
   projectName: PropTypes.string,
   visible: PropTypes.bool,
   onClose: PropTypes.func,
+};
+
+MetadataManager.defaultProps = {
+  isGlobal: false,
+  projectName: '',
+  visible: false,
+  onClose: () => {},
 };
 
 export default MetadataManager;

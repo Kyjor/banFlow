@@ -13,19 +13,6 @@ import {
 import eventSystem from '../../services/EventSystem';
 
 class GameNotification extends Component {
-  componentDidMount() {
-    // Listen for game reward events
-    this.unsubscribe = eventSystem.on('game:reward', (data) => {
-      this.showRewardNotification(data);
-    });
-  }
-
-  componentWillUnmount() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-    }
-  }
-
   static formatDuration(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -40,7 +27,20 @@ class GameNotification extends Component {
     return `${secs}s`;
   }
 
-  getRewardMessage(data) {
+  componentDidMount() {
+    // Listen for game reward events
+    this.unsubscribe = eventSystem.on('game:reward', (data) => {
+      this.showRewardNotification(data);
+    });
+  }
+
+  componentWillUnmount() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  }
+
+  static getRewardMessage(data) {
     const { type, amount, reason, sessionDuration, nodeTitle } = data;
 
     if (type === 'gold') {
@@ -71,7 +71,7 @@ class GameNotification extends Component {
 
   showRewardNotification(data) {
     const { type } = data;
-    const message = this.getRewardMessage(data);
+    const message = GameNotification.getRewardMessage(data);
     const icon = GameNotification.getRewardIcon(type);
 
     notification.open({

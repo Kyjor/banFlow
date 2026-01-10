@@ -4,8 +4,9 @@ import React, {
   useEffect,
   useCallback,
   useState,
+  useMemo,
 } from 'react';
-import { message } from 'antd';
+import PropTypes from 'prop-types';
 
 const AccessibilityContext = createContext();
 
@@ -54,6 +55,8 @@ export function AccessibilityProvider({ children }) {
         );
       };
     }
+
+    return undefined;
   }, []);
 
   // Register keyboard shortcuts
@@ -76,11 +79,11 @@ export function AccessibilityProvider({ children }) {
 
   // Announce to screen readers
   const announce = useCallback(
-    (message, priority = 'polite') => {
+    (announcementMessage, priority = 'polite') => {
       if (screenReaderMode) {
         setAnnouncements((prev) => [
           ...prev,
-          { message, priority, timestamp: Date.now() },
+          { message: announcementMessage, priority, timestamp: Date.now() },
         ]);
       }
     },
@@ -224,8 +227,10 @@ export function AccessibilityProvider({ children }) {
       if (!rgb) return 0;
 
       const [r, g, b] = rgb.map((c) => {
-        c = parseInt(c, 10) / 255;
-        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        const normalizedC = parseInt(c, 10) / 255;
+        return normalizedC <= 0.03928
+          ? normalizedC / 12.92
+          : ((normalizedC + 0.055) / 1.055) ** 2.4;
       });
 
       return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -278,45 +283,69 @@ export function AccessibilityProvider({ children }) {
     }
   }, []);
 
-  const contextValue = {
-    // State
-    highContrast,
-    reducedMotion,
-    screenReaderMode,
+  const contextValue = useMemo(
+    () => ({
+      // State
+      highContrast,
+      reducedMotion,
+      screenReaderMode,
 
-    // Actions
-    setHighContrast,
-    setReducedMotion,
-    setScreenReaderMode,
+      // Actions
+      setHighContrast,
+      setReducedMotion,
+      setScreenReaderMode,
 
-    // Shortcuts
-    registerShortcut,
-    unregisterShortcut,
+      // Shortcuts
+      registerShortcut,
+      unregisterShortcut,
 
-    // Announcements
-    announce,
+      // Announcements
+      announce,
 
-    // Focus management
-    focusElement,
-    trapFocus,
+      // Focus management
+      focusElement,
+      trapFocus,
 
-    // ARIA helpers
-    setAriaExpanded,
-    setAriaSelected,
-    setAriaLabel,
+      // ARIA helpers
+      setAriaExpanded,
+      setAriaSelected,
+      setAriaLabel,
 
-    // Color contrast
-    getContrastRatio,
-    isAccessibleContrast,
+      // Color contrast
+      getContrastRatio,
+      isAccessibleContrast,
 
-    // Motion preferences
-    shouldReduceMotion,
-    shouldUseHighContrast,
+      // Motion preferences
+      shouldReduceMotion,
+      shouldUseHighContrast,
 
-    // Voice navigation
-    speak,
-    stopSpeaking,
-  };
+      // Voice navigation
+      speak,
+      stopSpeaking,
+    }),
+    [
+      highContrast,
+      reducedMotion,
+      screenReaderMode,
+      setHighContrast,
+      setReducedMotion,
+      setScreenReaderMode,
+      registerShortcut,
+      unregisterShortcut,
+      announce,
+      focusElement,
+      trapFocus,
+      setAriaExpanded,
+      setAriaSelected,
+      setAriaLabel,
+      getContrastRatio,
+      isAccessibleContrast,
+      shouldReduceMotion,
+      shouldUseHighContrast,
+      speak,
+      stopSpeaking,
+    ],
+  );
 
   return (
     <AccessibilityContext.Provider value={contextValue}>
@@ -324,5 +353,9 @@ export function AccessibilityProvider({ children }) {
     </AccessibilityContext.Provider>
   );
 }
+
+AccessibilityProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 export default AccessibilityProvider;

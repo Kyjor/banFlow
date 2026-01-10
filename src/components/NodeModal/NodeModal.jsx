@@ -20,7 +20,6 @@ import {
   InfoCircleOutlined,
   CheckCircleOutlined,
   PlusOutlined,
-  CloseOutlined,
   BgColorsOutlined,
 } from '@ant-design/icons';
 import PropTypes from 'prop-types';
@@ -533,6 +532,7 @@ NodeModal.propTypes = {
   node: PropTypes.object.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   parents: PropTypes.object.isRequired,
+  syncTrelloCard: PropTypes.func.isRequired,
   updateNodeProperty: PropTypes.func.isRequired,
   visible: PropTypes.bool.isRequired,
 };

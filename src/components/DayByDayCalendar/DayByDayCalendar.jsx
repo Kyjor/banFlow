@@ -26,7 +26,7 @@ class DayByDayCalendar extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    const { currentDate, onDateChange } = this.props;
+    const { currentDate } = this.props;
     const { currentDate: prevCurrentDate } = prevProps;
 
     if (currentDate) {

@@ -1,8 +1,33 @@
 import * as fs from 'fs';
 import { ipcRenderer } from 'electron';
 import lokiService from './LokiService';
-// eslint-disable-next-line import/no-cycle
-import { ValidateProjectName } from '../validators/Validator';
+
+/**
+ * @function validateProjectName
+ * @desc validates project name - checks if it's not empty, doesn't contain invalid characters, and doesn't already exist
+ * @param {string} projectName - the name to validate
+ * @returns {boolean} - true if valid, false otherwise
+ */
+function validateProjectName(projectName) {
+  if (!projectName) {
+    return false;
+  }
+
+  const invalidRegex = /\\+|\/+/;
+  if (invalidRegex.test(projectName)) {
+    return false;
+  }
+
+  const items = ProjectService.getProjects();
+  let existingName = false;
+  items.forEach((item) => {
+    if (`${projectName}.json` === item.text || projectName === item.text) {
+      existingName = true;
+    }
+  });
+
+  return !existingName;
+}
 
 const ProjectService = {
   /**
@@ -41,7 +66,7 @@ const ProjectService = {
   },
 
   renameProject(oldName, newName) {
-    if (!ValidateProjectName(newName)) {
+    if (!validateProjectName(newName)) {
       // TODO: some notification/popup to indicate why this failed
       return;
     }
@@ -52,7 +77,7 @@ const ProjectService = {
   },
 
   setCurrentProjectName(projectName) {
-    if (!ValidateProjectName(projectName)) {
+    if (!validateProjectName(projectName)) {
       // TODO: some notification/popup to indicate why this failed
       return;
     }
@@ -60,7 +85,7 @@ const ProjectService = {
   },
 
   createProject(projectName) {
-    if (!ValidateProjectName(projectName)) {
+    if (!validateProjectName(projectName)) {
       // TODO: some notification/popup to indicate why this failed
       return false;
     }

@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import { Modal, Space, Typography, Tag, Divider } from 'antd';
 import { KeyboardOutlined } from '@ant-design/icons';
 
@@ -125,7 +126,7 @@ function KeyboardShortcuts({ visible, onClose }) {
       <div key={shortcut.description} style={{ marginBottom: '8px' }}>
         <Space>
           {shortcut.keys.map((key, index) => (
-            <React.Fragment key={index}>
+            <React.Fragment key={`${shortcut.description}-${key}-${index}`}>
               {renderKey(key)}
               {index < shortcut.keys.length - 1 && (
                 <Text type="secondary" style={{ fontSize: '12px' }}>
@@ -176,5 +177,10 @@ function KeyboardShortcuts({ visible, onClose }) {
     </Modal>
   );
 }
+
+KeyboardShortcuts.propTypes = {
+  visible: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+};
 
 export default KeyboardShortcuts;

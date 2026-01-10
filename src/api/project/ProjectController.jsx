@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/no-cycle
 import { ipcRenderer } from 'electron';
 import projectService from '../../services/ProjectService';
 
