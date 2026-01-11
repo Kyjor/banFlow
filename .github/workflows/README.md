@@ -32,6 +32,11 @@ For code signing and publishing to work properly, set these secrets in your GitH
 - `WIN_CSC_LINK`: Base64-encoded PKCS12 certificate for Windows
 - `WIN_CSC_KEY_PASSWORD`: Password for Windows certificate
 
+### Notes
+- If no code signing secrets are configured, builds will be unsigned but will still complete successfully
+- Code signing is automatically enabled when the appropriate secrets are present
+- macOS builds require notarization which needs Apple credentials
+
 ## Getting Started
 
 1. **Set up certificates**: Obtain code signing certificates for each platform
