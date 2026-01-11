@@ -27,6 +27,23 @@ class GameNotification extends Component {
     return `${secs}s`;
   }
 
+  static showRewardNotification(data) {
+    const { type } = data;
+    const message = GameNotification.getRewardMessage(data);
+    const icon = GameNotification.getRewardIcon(type);
+
+    notification.open({
+      message: 'Reward Earned!',
+      description: message,
+      icon,
+      placement: 'topRight',
+      duration: 4,
+      style: {
+        borderLeft: `4px solid ${type === 'gold' ? '#ffd700' : '#52c41a'}`,
+      },
+    });
+  }
+
   componentDidMount() {
     // Listen for game reward events
     this.unsubscribe = eventSystem.on('game:reward', (data) => {
@@ -67,23 +84,6 @@ class GameNotification extends Component {
       default:
         return <GiftOutlined />;
     }
-  }
-
-  static showRewardNotification(data) {
-    const { type } = data;
-    const message = GameNotification.getRewardMessage(data);
-    const icon = GameNotification.getRewardIcon(type);
-
-    notification.open({
-      message: 'Reward Earned!',
-      description: message,
-      icon,
-      placement: 'topRight',
-      duration: 4,
-      style: {
-        borderLeft: `4px solid ${type === 'gold' ? '#ffd700' : '#52c41a'}`,
-      },
-    });
   }
 
   render() {

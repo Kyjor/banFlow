@@ -1081,7 +1081,7 @@ function EnhancedDiffViewer({
           });
 
           return (
-            <div key={hunkIndex} className="diff-hunk">
+            <div key={hunk.header} className="diff-hunk">
               {renderHunkHeader(hunk, hunkIndex)}
               {expandedHunks.has(hunkIndex) && (
                 <div className="hunk-content">
@@ -1803,7 +1803,7 @@ function EnhancedDiffViewer({
         )}
 
         <Spin spinning={isLoading}>
-          {selectedDiff ? (
+          {selectedDiff && (
             <div className={`diff-container ${viewMode} ${theme}`}>
               {/* File-level actions */}
               {showStagingControls && (
@@ -2100,14 +2100,18 @@ function EnhancedDiffViewer({
                   </div>
                 )}
             </div>
-          ) : availableFiles.length === 0 ? (
+          )}
+
+          {!selectedDiff && availableFiles.length === 0 && (
             <Empty
               image={
                 <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
               }
               description="No modified files to compare"
             />
-          ) : (
+          )}
+
+          {!selectedDiff && availableFiles.length > 0 && (
             <Empty
               image={
                 <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
@@ -2200,7 +2204,17 @@ EnhancedDiffViewer.propTypes = {
   diffData: PropTypes.arrayOf(
     PropTypes.shape({
       name: PropTypes.string,
-      hunks: PropTypes.array,
+      hunks: PropTypes.arrayOf(
+        PropTypes.shape({
+          header: PropTypes.string,
+          lines: PropTypes.arrayOf(
+            PropTypes.shape({
+              type: PropTypes.string,
+              content: PropTypes.string,
+            }),
+          ),
+        }),
+      ),
       added: PropTypes.number,
       deleted: PropTypes.number,
     }),

@@ -797,9 +797,8 @@ function GitOperations({ onViewDiff }) {
                 expandIcon={ExpandIcon}
               >
                 {stashList.map((stash, index) => (
-                  // eslint-disable-next-line react/no-array-index-key
                   <Panel
-                    key={`stash-${index}-${stash.message || 'unnamed'}`}
+                    key={`stash-${stash.index}`}
                     header={
                       <Space direction="vertical" size={0}>
                         <Text strong>

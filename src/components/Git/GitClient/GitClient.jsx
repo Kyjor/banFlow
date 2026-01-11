@@ -70,6 +70,32 @@ const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 const { Option } = Select;
 
+// Helper function to normalize file status for icon display
+const getNormalizedStatus = (status) => {
+  switch (status) {
+    case 'added':
+      return 'untracked';
+    case 'deleted':
+      return 'modified';
+    default:
+      return 'modified';
+  }
+};
+
+// Helper function to get status color
+const getStatusColor = (status) => {
+  switch (status) {
+    case 'added':
+      return 'success';
+    case 'modified':
+      return 'warning';
+    case 'deleted':
+      return 'error';
+    default:
+      return 'default';
+  }
+};
+
 // DiffViewer component for displaying color-coded diffs
 function DiffViewer({ diff }) {
   const renderDiffLine = (line, index) => {
@@ -1372,14 +1398,16 @@ function GitClient() {
                     key={path}
                     className={`file-item ${selectedFile === path ? 'active' : ''}`}
                     onClick={() => handleCommitFileSelect(path)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleCommitFileSelect(path);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
-                    {getStatusIcon(
-                      status === 'added'
-                        ? 'untracked'
-                        : status === 'deleted'
-                          ? 'modified'
-                          : 'modified',
-                    )}
+                    {getStatusIcon(getNormalizedStatus(status))}
                     <Text className="filename" ellipsis>
                       {path}
                     </Text>
@@ -1426,6 +1454,14 @@ function GitClient() {
                     key={`staged-${file}`}
                     className={`file-item ${selectedFile === file && selectedFileStaged ? 'active' : ''}`}
                     onClick={() => handleFileSelect(file, true)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleFileSelect(file, true);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
                     {getStatusIcon('staged')}
                     <Text className="filename" ellipsis>
@@ -1473,6 +1509,14 @@ function GitClient() {
                     key={`unstaged-${path}`}
                     className={`file-item ${selectedFile === path && !selectedFileStaged ? 'active' : ''}`}
                     onClick={() => handleFileSelect(path, false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleFileSelect(path, false);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
                     {getStatusIcon(status)}
                     <Text className="filename" ellipsis>
@@ -1638,29 +1682,26 @@ function GitClient() {
 
         <Content className="middle-content">
           <Spin spinning={operationInProgress}>
-            {showPRView ? (
-              selectedPR ? (
-                <PRReview
-                  pr={selectedPR}
-                  onClose={() => setSelectedPR(null)}
-                  onRefresh={() => {
-                    if (githubRepoInfo) {
-                      loadPullRequests(
-                        githubRepoInfo.owner,
-                        githubRepoInfo.repo,
-                      );
-                    }
-                  }}
-                />
-              ) : (
-                <PRList
-                  onCreatePR={() => setShowPRCreate(true)}
-                  onViewPR={(pr) => setSelectedPR(pr)}
-                />
-              )
-            ) : (
-              renderMiddlePanel()
+            {showPRView && selectedPR && (
+              <PRReview
+                pr={selectedPR}
+                onClose={() => setSelectedPR(null)}
+                onRefresh={() => {
+                  if (githubRepoInfo) {
+                    loadPullRequests(githubRepoInfo.owner, githubRepoInfo.repo);
+                  }
+                }}
+              />
             )}
+
+            {showPRView && !selectedPR && (
+              <PRList
+                onCreatePR={() => setShowPRCreate(true)}
+                onViewPR={(pr) => setSelectedPR(pr)}
+              />
+            )}
+
+            {!showPRView && renderMiddlePanel()}
           </Spin>
         </Content>
 
@@ -2171,7 +2212,7 @@ function GitClient() {
           >
             {stashList.map((stash, index) => (
               <Collapse.Panel
-                key={`stash-${stash.message || 'stash'}-${index}`}
+                key={`stash-${stash.index}`}
                 header={
                   <Space
                     direction="vertical"
@@ -2222,12 +2263,15 @@ function GitClient() {
                     <Popconfirm
                       title="Delete this stash?"
                       description="This will permanently delete the stash. This action cannot be undone."
-                      onConfirm={() => {
-                        dropStash(index).then(() => {
+                      onConfirm={async () => {
+                        try {
+                          await dropStash(index);
                           getStashList();
                           setPopStashFiles({});
                           setStashFileDiffs({});
-                        });
+                        } catch (error) {
+                          console.error('Failed to drop stash:', error);
+                        }
                       }}
                       okText="Delete"
                       cancelText="Cancel"
@@ -2266,54 +2310,42 @@ function GitClient() {
                       );
                     }}
                   >
-                    {(popStashFiles[index].files || []).map(
-                      (file, _fileIndex) => (
-                        <Collapse.Panel
-                          key={file.filename}
-                          header={
-                            <Space>
-                              {file.status === 'added' && (
-                                <FileAddOutlined style={{ color: '#52c41a' }} />
-                              )}
-                              {file.status === 'modified' && (
-                                <EditOutlined style={{ color: '#faad14' }} />
-                              )}
-                              {file.status === 'deleted' && (
-                                <FileExcelOutlined
-                                  style={{ color: '#ff4d4f' }}
-                                />
-                              )}
-                              {!['added', 'modified', 'deleted'].includes(
-                                file.status,
-                              ) && <FileTextOutlined />}
-                              <Tag
-                                size="small"
-                                color={
-                                  file.status === 'added'
-                                    ? 'success'
-                                    : file.status === 'modified'
-                                      ? 'warning'
-                                      : file.status === 'deleted'
-                                        ? 'error'
-                                        : 'default'
-                                }
-                              >
-                                {file.status}
-                              </Tag>
-                              <Text>{file.filename}</Text>
-                            </Space>
-                          }
-                        >
-                          {stashFileDiffs[`${index}-${file.filename}`] ? (
-                            <DiffViewer
-                              diff={stashFileDiffs[`${index}-${file.filename}`]}
-                            />
-                          ) : (
-                            <Spin size="small" />
-                          )}
-                        </Collapse.Panel>
-                      ),
-                    )}
+                    {(popStashFiles[index].files || []).map((file) => (
+                      <Collapse.Panel
+                        key={file.filename}
+                        header={
+                          <Space>
+                            {file.status === 'added' && (
+                              <FileAddOutlined style={{ color: '#52c41a' }} />
+                            )}
+                            {file.status === 'modified' && (
+                              <EditOutlined style={{ color: '#faad14' }} />
+                            )}
+                            {file.status === 'deleted' && (
+                              <FileExcelOutlined style={{ color: '#ff4d4f' }} />
+                            )}
+                            {!['added', 'modified', 'deleted'].includes(
+                              file.status,
+                            ) && <FileTextOutlined />}
+                            <Tag
+                              size="small"
+                              color={getStatusColor(file.status)}
+                            >
+                              {file.status}
+                            </Tag>
+                            <Text>{file.filename}</Text>
+                          </Space>
+                        }
+                      >
+                        {stashFileDiffs[`${index}-${file.filename}`] ? (
+                          <DiffViewer
+                            diff={stashFileDiffs[`${index}-${file.filename}`]}
+                          />
+                        ) : (
+                          <Spin size="small" />
+                        )}
+                      </Collapse.Panel>
+                    ))}
                   </Collapse>
                 ) : (
                   <Spin size="small" />
