@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Card,
   Tabs,
@@ -40,12 +41,24 @@ import {
   FileDeleteOutlined,
   EditOutlined,
 } from '@ant-design/icons';
-import PropTypes from 'prop-types';
 import { useGit } from '../../../contexts/GitContext';
 import './GitOperations.scss';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
+
+// Component for expand icon to avoid defining during render
+function ExpandIcon({ isActive }) {
+  return <EyeOutlined rotate={isActive ? 90 : 0} />;
+}
+
+ExpandIcon.propTypes = {
+  isActive: PropTypes.bool,
+};
+
+ExpandIcon.defaultProps = {
+  isActive: false,
+};
 const { TabPane } = Tabs;
 const { Option } = Select;
 const { Panel } = Collapse;
@@ -96,6 +109,20 @@ function GitOperations({ onViewDiff }) {
   const [pullStrategy, setPullStrategy] = useState('merge');
   const [expandedStashes, setExpandedStashes] = useState(new Set());
   const [stashFiles, setStashFiles] = useState({});
+
+  // Helper function to get status color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'added':
+        return 'success';
+      case 'modified':
+        return 'warning';
+      case 'deleted':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
 
   // Load operation history when repository changes
   useEffect(() => {
@@ -388,12 +415,6 @@ function GitOperations({ onViewDiff }) {
                 onClick={async () => {
                   try {
                     await undoLastOperation();
-                    if (
-                      currentRepository &&
-                      typeof loadOperationHistory === 'function'
-                    ) {
-                      await loadOperationHistory();
-                    }
                   } catch (e) {
                     // errors are handled in context
                   }
@@ -773,13 +794,12 @@ function GitOperations({ onViewDiff }) {
               <Collapse
                 ghost
                 onChange={(keys) => handleStashExpand(keys)}
-                expandIcon={({ isActive }) => (
-                  <EyeOutlined rotate={isActive ? 90 : 0} />
-                )}
+                expandIcon={ExpandIcon}
               >
                 {stashList.map((stash, index) => (
+                  // eslint-disable-next-line react/no-array-index-key
                   <Panel
-                    key={index}
+                    key={`stash-${index}-${stash.message || 'unnamed'}`}
                     header={
                       <Space direction="vertical" size={0}>
                         <Text strong>
@@ -844,15 +864,7 @@ function GitOperations({ onViewDiff }) {
                                 )}
                                 <Tag
                                   size="small"
-                                  color={
-                                    file.status === 'added'
-                                      ? 'success'
-                                      : file.status === 'modified'
-                                        ? 'warning'
-                                        : file.status === 'deleted'
-                                          ? 'error'
-                                          : 'default'
-                                  }
+                                  color={getStatusColor(file.status)}
                                 >
                                   {file.status}
                                 </Tag>

@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
+import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
 import {
   Layout,
@@ -184,6 +185,11 @@ function DiffViewer({ diff }) {
     </div>
   );
 }
+
+DiffViewer.propTypes = {
+  diff: PropTypes.string.isRequired,
+};
+
 const { TextArea } = Input;
 
 function GitClient() {
@@ -206,7 +212,6 @@ function GitClient() {
     fetch,
     pull,
     push,
-    stashChanges,
     popStash,
     applyStash,
     dropStash,
@@ -240,11 +245,7 @@ function GitClient() {
     logoutGitHub,
     loadGitHubRepoInfo,
     // Pull Requests
-    pullRequests,
-    currentPullRequest,
     loadPullRequests,
-    getPullRequest,
-    createPullRequest,
   } = useGit();
 
   // UI State
@@ -262,9 +263,7 @@ function GitClient() {
   const [showStashModal, setShowStashModal] = useState(false);
   const [showPopStashModal, setShowPopStashModal] = useState(false);
   const [popStashFiles, setPopStashFiles] = useState({});
-  const [expandedPopStashes, setExpandedPopStashes] = useState(new Set());
   const [stashFileDiffs, setStashFileDiffs] = useState({});
-  const [expandedFileDiffs, setExpandedFileDiffs] = useState(new Set());
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchError, setNewBranchError] = useState('');
   const [commitFiles, setCommitFiles] = useState([]);
@@ -1079,6 +1078,14 @@ function GitClient() {
         <div
           className={`commit-item uncommitted ${!selectedCommit ? 'active' : ''}`}
           onClick={handleBackToChanges}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleBackToChanges();
+            }
+          }}
+          role="button"
+          tabIndex={0}
         >
           <div className="commit-graph">
             <div className="graph-line" />
@@ -1099,6 +1106,14 @@ function GitClient() {
             key={c.hash}
             className={`commit-item ${selectedCommit?.hash === c.hash ? 'active' : ''}`}
             onClick={() => handleCommitSelect(c)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleCommitSelect(c);
+              }
+            }}
+            role="button"
+            tabIndex={0}
           >
             <div className="commit-graph">
               <div className="graph-line" />
@@ -1779,7 +1794,7 @@ function GitClient() {
                 onClick={async () => {
                   setAuthenticatingGitHub(true);
                   try {
-                    await startOAuthFlow();
+                    await authenticateGitHub();
                     await loadGitHubRepositories();
                   } catch (error) {
                     // errors are surfaced via context message
@@ -2135,9 +2150,7 @@ function GitClient() {
         onCancel={() => {
           setShowPopStashModal(false);
           setPopStashFiles({});
-          setExpandedPopStashes(new Set());
           setStashFileDiffs({});
-          setExpandedFileDiffs(new Set());
         }}
         footer={null}
         width={700}
@@ -2158,7 +2171,7 @@ function GitClient() {
           >
             {stashList.map((stash, index) => (
               <Collapse.Panel
-                key={index}
+                key={`stash-${stash.message || 'stash'}-${index}`}
                 header={
                   <Space
                     direction="vertical"
@@ -2192,11 +2205,15 @@ function GitClient() {
                     <Button
                       size="small"
                       type="primary"
-                      onClick={() => {
-                        popStash(index);
-                        setShowPopStashModal(false);
-                        setPopStashFiles({});
-                        setStashFileDiffs({});
+                      onClick={async () => {
+                        try {
+                          await popStash(index);
+                          setShowPopStashModal(false);
+                          setPopStashFiles({});
+                          setStashFileDiffs({});
+                        } catch (error) {
+                          console.error('Failed to pop stash:', error);
+                        }
                       }}
                       loading={operationInProgress}
                     >
@@ -2232,23 +2249,25 @@ function GitClient() {
                     ghost
                     onChange={async (keys) => {
                       // Handle file diff expansion
-                      for (const key of keys) {
-                        if (!stashFileDiffs[`${index}-${key}`]) {
-                          try {
-                            const diff = await getStashFileDiff(index, key);
-                            setStashFileDiffs((prev) => ({
-                              ...prev,
-                              [`${index}-${key}`]: diff,
-                            }));
-                          } catch (e) {
-                            console.error('Failed to load file diff:', e);
+                      await Promise.all(
+                        keys.map(async (key) => {
+                          if (!stashFileDiffs[`${index}-${key}`]) {
+                            try {
+                              const diff = await getStashFileDiff(index, key);
+                              setStashFileDiffs((prev) => ({
+                                ...prev,
+                                [`${index}-${key}`]: diff,
+                              }));
+                            } catch (e) {
+                              console.error('Failed to load file diff:', e);
+                            }
                           }
-                        }
-                      }
+                        }),
+                      );
                     }}
                   >
                     {(popStashFiles[index].files || []).map(
-                      (file, fileIndex) => (
+                      (file, _fileIndex) => (
                         <Collapse.Panel
                           key={file.filename}
                           header={

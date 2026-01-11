@@ -498,4 +498,8 @@ UserGuidance.propTypes = {
   userLevel: PropTypes.oneOf(['beginner', 'intermediate', 'advanced']),
 };
 
+UserGuidance.defaultProps = {
+  userLevel: 'beginner',
+};
+
 export default UserGuidance;

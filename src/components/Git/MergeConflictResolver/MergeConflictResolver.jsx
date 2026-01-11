@@ -57,6 +57,24 @@ import './MergeConflictResolver.scss';
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
+// Helper function to get resolution label
+const getResolutionLabel = (resolution) => {
+  switch (resolution) {
+    case 'ours':
+      return 'Current';
+    case 'theirs':
+      return 'Incoming';
+    case 'both-ours-first':
+      return 'Both (Current First)';
+    case 'both-theirs-first':
+      return 'Both (Incoming First)';
+    case 'custom':
+      return 'Custom';
+    default:
+      return resolution;
+  }
+};
+
 // Parse conflict markers from file content
 function parseConflicts(content) {
   const conflicts = [];
@@ -689,6 +707,14 @@ function MergeConflictResolver({
         <div
           className={`conflict-section ours ${conflict.resolution === 'ours' || conflict.resolution?.includes('ours') ? 'selected' : ''}`}
           onClick={() => !conflict.resolution && resolveConflict('ours')}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && !conflict.resolution) {
+              e.preventDefault();
+              resolveConflict('ours');
+            }
+          }}
+          role="button"
+          tabIndex={0}
         >
           <div className="section-header">
             <Tag color="orange">
@@ -713,6 +739,14 @@ function MergeConflictResolver({
         <div
           className={`conflict-section theirs ${conflict.resolution === 'theirs' || conflict.resolution?.includes('theirs') ? 'selected' : ''}`}
           onClick={() => !conflict.resolution && resolveConflict('theirs')}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && !conflict.resolution) {
+              e.preventDefault();
+              resolveConflict('theirs');
+            }
+          }}
+          role="button"
+          tabIndex={0}
         >
           <div className="section-header">
             <Tag color="blue">
@@ -745,44 +779,6 @@ function MergeConflictResolver({
             ))}
           </div>
         )}
-      </div>
-    );
-  };
-
-  const renderResultPreview = () => {
-    const resolvedContent = buildResolvedContent(fileContent, conflicts);
-
-    return (
-      <div className="result-preview">
-        <div className="preview-header">
-          <Space>
-            <EyeOutlined />
-            <Text strong>Resolved File Preview</Text>
-          </Space>
-          {isAllResolved && (
-            <Tag color="success" icon={<CheckCircleOutlined />}>
-              Ready to Save
-            </Tag>
-          )}
-        </div>
-        <div className="preview-content">
-          <SyntaxHighlighter
-            language={getLanguageFromFilename(selectedFile)}
-            style={theme === 'dark' ? tomorrow : prism}
-            showLineNumbers={showLineNumbers}
-            customStyle={{
-              margin: 0,
-              padding: '12px',
-              background: 'transparent',
-              fontSize: '13px',
-              lineHeight: '22px',
-              maxHeight: '500px',
-              overflow: 'auto',
-            }}
-          >
-            {resolvedContent}
-          </SyntaxHighlighter>
-        </div>
       </div>
     );
   };
@@ -842,6 +838,79 @@ function MergeConflictResolver({
     );
   };
 
+  const renderResultPreview = () => {
+    const resolvedContent = buildResolvedContent(fileContent, conflicts);
+
+    return (
+      <div className="result-preview">
+        <div className="preview-header">
+          <Space>
+            <EyeOutlined />
+            <Text strong>Resolved File Preview</Text>
+          </Space>
+          {isAllResolved && (
+            <Tag color="success" icon={<CheckCircleOutlined />}>
+              Ready to Save
+            </Tag>
+          )}
+        </div>
+        <div className="preview-content">
+          <SyntaxHighlighter
+            language={getLanguageFromFilename(selectedFile)}
+            style={theme === 'dark' ? tomorrow : prism}
+            showLineNumbers={showLineNumbers}
+            customStyle={{
+              margin: 0,
+              padding: '12px',
+              background: 'transparent',
+              fontSize: '13px',
+              lineHeight: '22px',
+              maxHeight: '500px',
+              overflow: 'auto',
+            }}
+          >
+            {resolvedContent}
+          </SyntaxHighlighter>
+        </div>
+      </div>
+    );
+  };
+
+  const renderConflictView = () => {
+    if (editMode) {
+      return renderCustomEditor();
+    }
+
+    switch (viewMode) {
+      case 'side-by-side':
+        return (
+          <Row gutter={16}>
+            <Col span={12}>
+              {renderConflictPane(
+                'Current Changes',
+                getCurrentConflict()?.oursLines || [],
+                'ours',
+                getCurrentConflict()?.oursBranchName || 'HEAD',
+              )}
+            </Col>
+            <Col span={12}>
+              {renderConflictPane(
+                'Incoming Changes',
+                getCurrentConflict()?.theirsLines || [],
+                'theirs',
+                getCurrentConflict()?.theirsBranchName || '',
+              )}
+            </Col>
+          </Row>
+        );
+      case 'inline':
+        return renderInlineView();
+      case 'result':
+      default:
+        return renderResultPreview();
+    }
+  };
+
   const renderResolutionControls = () => {
     const conflict = getCurrentConflict();
     if (!conflict || editMode) return null;
@@ -886,16 +955,7 @@ function MergeConflictResolver({
         {conflict.resolution && (
           <div className="resolution-badge">
             <Tag color="success" icon={<CheckOutlined />}>
-              Resolved:{' '}
-              {conflict.resolution === 'ours'
-                ? 'Current'
-                : conflict.resolution === 'theirs'
-                  ? 'Incoming'
-                  : conflict.resolution === 'both-ours-first'
-                    ? 'Both (Current First)'
-                    : conflict.resolution === 'both-theirs-first'
-                      ? 'Both (Incoming First)'
-                      : 'Custom'}
+              Resolved: {getResolutionLabel(conflict.resolution)}
             </Tag>
             <Button
               size="small"
@@ -1081,34 +1141,7 @@ function MergeConflictResolver({
                   </div>
 
                   {/* Conflict view */}
-                  <div className="conflict-view">
-                    {editMode ? (
-                      renderCustomEditor()
-                    ) : viewMode === 'side-by-side' ? (
-                      <Row gutter={16}>
-                        <Col span={12}>
-                          {renderConflictPane(
-                            'Current Changes',
-                            getCurrentConflict()?.oursLines || [],
-                            'ours',
-                            getCurrentConflict()?.oursBranchName || 'HEAD',
-                          )}
-                        </Col>
-                        <Col span={12}>
-                          {renderConflictPane(
-                            'Incoming Changes',
-                            getCurrentConflict()?.theirsLines || [],
-                            'theirs',
-                            getCurrentConflict()?.theirsBranchName || '',
-                          )}
-                        </Col>
-                      </Row>
-                    ) : viewMode === 'inline' ? (
-                      renderInlineView()
-                    ) : (
-                      renderResultPreview()
-                    )}
-                  </div>
+                  <div className="conflict-view">{renderConflictView()}</div>
 
                   {/* Resolution controls */}
                   {renderResolutionControls()}
@@ -1170,9 +1203,9 @@ function MergeConflictResolver({
             <div className="step-content">
               <Text strong>Review & Save</Text>
               <Paragraph type="secondary">
-                Use the "Result Preview" tab to see the final file. Once all
-                conflicts are resolved, click "Save & Stage File" to apply your
-                changes.
+                Use the &quot;Result Preview&quot; tab to see the final file.
+                Once all conflicts are resolved, click &quot;Save &amp; Stage
+                File&quot; to apply your changes.
               </Paragraph>
             </div>
           </div>

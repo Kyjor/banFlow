@@ -685,7 +685,7 @@ export default class GitService {
       }
 
       console.log('Raw diff output:', diff);
-      const parsedDiff = this.parseDiff(diff);
+      const parsedDiff = GitService.parseDiff(diff);
       console.log('Parsed diff:', parsedDiff);
 
       return parsedDiff;
@@ -784,7 +784,7 @@ export default class GitService {
         args.push('--', file);
       }
       const diff = await this.git.raw(args);
-      return this.parseDiff(diff);
+      return GitService.parseDiff(diff);
     } catch (error) {
       // Handle first commit (no parent)
       if (error.message && error.message.includes('unknown revision')) {
@@ -794,7 +794,7 @@ export default class GitService {
             args.push('--', file);
           }
           const diff = await this.git.raw(args);
-          return this.parseDiff(diff);
+          return GitService.parseDiff(diff);
         } catch (innerError) {
           console.error('Error getting first commit diff:', innerError);
           throw innerError;

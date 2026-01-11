@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
+import PropTypes from 'prop-types';
 import { ipcRenderer } from 'electron';
 import {
   Card,
@@ -64,7 +65,6 @@ function EnhancedDiffViewer({
   showFileSelector = true,
   theme = 'light',
   showStagingControls = true,
-  editable = false,
   diffData = null,
   readOnly = false,
 }) {
@@ -86,7 +86,6 @@ function EnhancedDiffViewer({
     discardLines,
     getFileHistory,
     getFileAtCommit,
-    getCommitDiff,
   } = useGit();
 
   const [selectedFile, setSelectedFile] = useState(file);
@@ -126,6 +125,53 @@ function EnhancedDiffViewer({
   const fileSearchInputRef = useRef(null);
   const inlineEditInputRef = useRef(null);
 
+  // Utility functions
+  const isImageFile = (filename) => {
+    if (!filename) return false;
+    const extension = filename.split('.').pop()?.toLowerCase();
+    const imageExtensions = [
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'webp',
+      'svg',
+      'bmp',
+      'ico',
+    ];
+    return imageExtensions.includes(extension);
+  };
+
+  const loadDiff = useCallback(
+    async (filename) => {
+      try {
+        await getDiff(filename, staged);
+      } catch (error) {
+        console.error('Failed to load diff:', error);
+      }
+    },
+    [getDiff, staged],
+  );
+
+  const openFilePicker = useCallback(async () => {
+    if (!currentRepository) return;
+    setShowFilePicker(true);
+    setFileSearchTerm('');
+    setLoadingFiles(true);
+    try {
+      const files = await ipcRenderer.invoke(
+        'git:listFiles',
+        currentRepository,
+      );
+      setAllFiles(files || []);
+    } catch (error) {
+      console.error('Failed to load files:', error);
+      message.error('Failed to load file list');
+    } finally {
+      setLoadingFiles(false);
+    }
+  }, [currentRepository]);
+
   // Sync selectedFile with file prop when it changes
   useEffect(() => {
     if (file && file !== selectedFile) {
@@ -155,7 +201,7 @@ function EnhancedDiffViewer({
     if (selectedFile && currentRepository) {
       loadDiff(selectedFile);
     }
-  }, [selectedFile, staged, currentRepository, diffData]);
+  }, [selectedFile, staged, currentRepository, diffData, loadDiff]);
 
   useEffect(() => {
     // Skip if we have pre-loaded diffData
@@ -219,14 +265,6 @@ function EnhancedDiffViewer({
     loadImages();
   }, [selectedFile, currentRepository, staged]);
 
-  const loadDiff = async (filename) => {
-    try {
-      await getDiff(filename, staged);
-    } catch (error) {
-      console.error('Failed to load diff:', error);
-    }
-  };
-
   // Auto-refresh diff every 3 seconds when viewing a file (disabled for read-only/historical diffs)
   useHeartbeat(
     `diff-viewer-refresh-${selectedFile || 'none'}`,
@@ -276,7 +314,7 @@ function EnhancedDiffViewer({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentRepository, readOnly]);
+  }, [currentRepository, readOnly, openFilePicker]);
 
   // Focus search input when file picker opens
   useEffect(() => {
@@ -341,25 +379,6 @@ function EnhancedDiffViewer({
     })}`;
   };
 
-  const openFilePicker = async () => {
-    if (!currentRepository) return;
-    setShowFilePicker(true);
-    setFileSearchTerm('');
-    setLoadingFiles(true);
-    try {
-      const files = await ipcRenderer.invoke(
-        'git:listFiles',
-        currentRepository,
-      );
-      setAllFiles(files || []);
-    } catch (error) {
-      console.error('Failed to load files:', error);
-      message.error('Failed to load file list');
-    } finally {
-      setLoadingFiles(false);
-    }
-  };
-
   const handleFilePickerSelect = async (filePath) => {
     setShowFilePicker(false);
     setSelectedFile(filePath);
@@ -387,22 +406,6 @@ function EnhancedDiffViewer({
     const term = fileSearchTerm.toLowerCase();
     return allFiles.filter((f) => f.toLowerCase().includes(term)).slice(0, 50);
   }, [allFiles, fileSearchTerm]);
-
-  const isImageFile = (filename) => {
-    if (!filename) return false;
-    const extension = filename.split('.').pop()?.toLowerCase();
-    const imageExtensions = [
-      'jpg',
-      'jpeg',
-      'png',
-      'gif',
-      'webp',
-      'svg',
-      'bmp',
-      'ico',
-    ];
-    return imageExtensions.includes(extension);
-  };
 
   const getLanguageFromFilename = (filename) => {
     if (!filename) return 'text';
@@ -556,9 +559,11 @@ function EnhancedDiffViewer({
 
     try {
       // Stage lines for each hunk
-      for (const [hunkIndex, lineIndices] of Object.entries(hunkGroups)) {
-        await stageLines(selectedFile, parseInt(hunkIndex, 10), lineIndices);
-      }
+      await Promise.all(
+        Object.entries(hunkGroups).map(([hunkIndex, lineIndices]) =>
+          stageLines(selectedFile, parseInt(hunkIndex, 10), lineIndices),
+        ),
+      );
       clearLineSelection();
       loadDiff(selectedFile);
     } catch (error) {
@@ -582,9 +587,11 @@ function EnhancedDiffViewer({
 
     try {
       // Discard lines for each hunk
-      for (const [hunkIndex, lineIndices] of Object.entries(hunkGroups)) {
-        await discardLines(selectedFile, parseInt(hunkIndex, 10), lineIndices);
-      }
+      await Promise.all(
+        Object.entries(hunkGroups).map(([hunkIndex, lineIndices]) =>
+          discardLines(selectedFile, parseInt(hunkIndex, 10), lineIndices),
+        ),
+      );
       clearLineSelection();
       loadDiff(selectedFile);
     } catch (error) {
@@ -707,8 +714,6 @@ function EnhancedDiffViewer({
         selectedFile,
       );
       if (!result.success) throw new Error('Failed to read file');
-
-      const lines = result.content.split('\n');
 
       // Apply edits - we need to map line keys back to actual line numbers
       // For simplicity, we'll rebuild the file based on the modified content
@@ -2124,5 +2129,16 @@ function EnhancedDiffViewer({
     </div>
   );
 }
+
+EnhancedDiffViewer.propTypes = {
+  file: PropTypes.string,
+  staged: PropTypes.bool,
+  compact: PropTypes.bool,
+  showFileSelector: PropTypes.bool,
+  theme: PropTypes.string,
+  showStagingControls: PropTypes.bool,
+  diffData: PropTypes.object,
+  readOnly: PropTypes.bool,
+};
 
 export default EnhancedDiffViewer;

@@ -45,7 +45,6 @@ function IntegratedEditor({
   onFileChange = null,
   showStagingControls = true,
   autoSave = true,
-  theme = 'light',
 }) {
   const {
     currentRepository,
@@ -781,7 +780,13 @@ IntegratedEditor.propTypes = {
   onFileChange: PropTypes.func,
   showStagingControls: PropTypes.bool,
   autoSave: PropTypes.bool,
-  theme: PropTypes.string,
+};
+
+IntegratedEditor.defaultProps = {
+  file: null,
+  onFileChange: null,
+  showStagingControls: true,
+  autoSave: true,
 };
 
 export default IntegratedEditor;

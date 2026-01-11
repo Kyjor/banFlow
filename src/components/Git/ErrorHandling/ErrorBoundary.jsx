@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Result, Button, Space, Typography, Card, Alert } from 'antd';
 import {
   BugOutlined,
@@ -20,7 +21,7 @@ class ErrorBoundary extends React.Component {
     };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return {
       hasError: true,
       errorId: Date.now().toString(),
@@ -42,9 +43,9 @@ class ErrorBoundary extends React.Component {
     // this.logErrorToService(error, errorInfo);
   }
 
-  handleReload = () => {
+  static handleReload() {
     window.location.reload();
-  };
+  }
 
   handleReset = () => {
     this.setState({
@@ -55,13 +56,15 @@ class ErrorBoundary extends React.Component {
     });
   };
 
-  handleGoHome = () => {
+  static handleGoHome() {
     // Navigate to home or reset to initial state
     window.location.href = '/';
-  };
+  }
 
   render() {
-    if (this.state.hasError) {
+    const { hasError, errorId, error, errorInfo } = this.state;
+    const { children } = this.props;
+    if (hasError) {
       return (
         <div className="error-boundary">
           <Card className="error-card">
@@ -74,12 +77,12 @@ class ErrorBoundary extends React.Component {
               subTitle={
                 <Space direction="vertical" size="small">
                   <Text type="secondary">
-                    The Git client encountered an unexpected error. Don't worry,
-                    your work is safe.
+                    The Git client encountered an unexpected error. Don&apos;t
+                    worry, your work is safe.
                   </Text>
-                  {this.state.errorId && (
+                  {errorId && (
                     <Text type="secondary" style={{ fontSize: '12px' }}>
-                      Error ID: {this.state.errorId}
+                      Error ID: {errorId}
                     </Text>
                   )}
                 </Space>
@@ -116,31 +119,30 @@ class ErrorBoundary extends React.Component {
                     <div>
                       <Paragraph>
                         <Text strong>Error:</Text>{' '}
-                        {this.state.error?.message || 'Unknown error'}
+                        {error?.message || 'Unknown error'}
                       </Paragraph>
-                      {process.env.NODE_ENV === 'development' &&
-                        this.state.errorInfo && (
-                          <details style={{ marginTop: '16px' }}>
-                            <summary
-                              style={{ cursor: 'pointer', fontWeight: 'bold' }}
-                            >
-                              Stack Trace (Development Only)
-                            </summary>
-                            <pre
-                              style={{
-                                marginTop: '8px',
-                                padding: '12px',
-                                background: '#f5f5f5',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                overflow: 'auto',
-                                maxHeight: '200px',
-                              }}
-                            >
-                              {this.state.error?.stack}
-                            </pre>
-                          </details>
-                        )}
+                      {process.env.NODE_ENV === 'development' && errorInfo && (
+                        <details style={{ marginTop: '16px' }}>
+                          <summary
+                            style={{ cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            Stack Trace (Development Only)
+                          </summary>
+                          <pre
+                            style={{
+                              marginTop: '8px',
+                              padding: '12px',
+                              background: '#f5f5f5',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              overflow: 'auto',
+                              maxHeight: '200px',
+                            }}
+                          >
+                            {error?.stack}
+                          </pre>
+                        </details>
+                      )}
                     </div>
                   }
                   type="error"
@@ -153,8 +155,12 @@ class ErrorBoundary extends React.Component {
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }
+
+ErrorBoundary.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 export default ErrorBoundary;
