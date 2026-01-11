@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-commit lint check..."
+
+# Run linting and fail only on errors (allow warnings)
+if ! npm run lint -- --max-warnings 9999; then
+  echo "❌ Linting failed with errors. Please fix the errors before committing."
+  echo "   Warnings are allowed, but errors must be resolved."
+  exit 1
+fi
+
+echo "✅ Linting passed! Proceeding with commit..."

@@ -183,7 +183,7 @@
     "electron": "^18.3.15",
     "electron-builder": "^23.0.3",
     "electron-devtools-installer": "^3.2.0",
-    "electron-notarize": "^1.2.1",
+    "@electron/notarize": "^2.3.0",
     "electron-rebuild": "^3.2.7",
     "electronmon": "^2.0.2",
     "eslint": "^8.12.0",
