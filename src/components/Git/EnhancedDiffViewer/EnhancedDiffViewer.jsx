@@ -174,10 +174,13 @@ function EnhancedDiffViewer({
 
   // Sync selectedFile with file prop when it changes
   useEffect(() => {
-    if (file && file !== selectedFile) {
-      setSelectedFile(file);
-      setSelectedDiff(null); // Clear previous diff while loading new one
-    }
+    setSelectedFile((currentSelectedFile) => {
+      if (file && file !== currentSelectedFile) {
+        setSelectedDiff(null); // Clear previous diff while loading new one
+        return file;
+      }
+      return currentSelectedFile;
+    });
   }, [file]);
 
   // Use provided diffData if available (for historical commits)
@@ -447,8 +450,19 @@ function EnhancedDiffViewer({
     return languageMap[extension] || 'text';
   };
 
-  const getFileIcon = (filename) => {
+  const getFileIcon = () => {
     return <FileTextOutlined style={{ color: '#1890ff' }} />;
+  };
+
+  const getLinePrefix = (lineType) => {
+    switch (lineType) {
+      case 'added':
+        return '+';
+      case 'deleted':
+        return '-';
+      default:
+        return ' ';
+    }
   };
 
   const toggleHunkExpansion = useCallback((hunkIndex) => {
@@ -818,6 +832,14 @@ function EnhancedDiffViewer({
         <div
           className="hunk-header-info"
           onClick={() => toggleHunkExpansion(hunkIndex)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleHunkExpansion(hunkIndex);
+            }
+          }}
+          role="button"
+          tabIndex={0}
           style={{ cursor: 'pointer', flex: 1 }}
         >
           <Space>
@@ -838,7 +860,7 @@ function EnhancedDiffViewer({
           </Space>
         </div>
         {showStagingControls && !staged && (
-          <div className="hunk-actions" onClick={(e) => e.stopPropagation()}>
+          <div className="hunk-actions">
             <Space size="small">
               <Tooltip title="Stage this hunk">
                 <Button
@@ -897,10 +919,22 @@ function EnhancedDiffViewer({
             setSelectedHunk(lineKey);
           }
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (isEditable && !isEditing) {
+              handleInlineEditStart(lineKey, lineContent);
+            } else {
+              setSelectedHunk(lineKey);
+            }
+          }
+        }}
+        role="button"
+        tabIndex={0}
       >
         {/* Checkbox for line selection */}
         {showStagingControls && !staged && isChangedLine && !inlineEditMode && (
-          <div className="line-checkbox" onClick={(e) => e.stopPropagation()}>
+          <div className="line-checkbox">
             <input
               type="checkbox"
               checked={isLineSelected}
@@ -917,9 +951,7 @@ function EnhancedDiffViewer({
               {newLineNum !== null ? String(newLineNum).padStart(4) : '    '}
             </span>
           )}
-          <span className="line-prefix">
-            {line.type === 'added' ? '+' : line.type === 'deleted' ? '-' : ' '}
-          </span>
+          <span className="line-prefix">{getLinePrefix(line.type)}</span>
           {isEditing ? (
             <input
               ref={inlineEditInputRef}
@@ -969,7 +1001,7 @@ function EnhancedDiffViewer({
 
         {/* Line-level staging controls */}
         {showStagingControls && !staged && isChangedLine && !inlineEditMode && (
-          <div className="line-actions" onClick={(e) => e.stopPropagation()}>
+          <div className="line-actions">
             <Space size={2}>
               <Tooltip title="Stage this line">
                 <Button
@@ -1167,16 +1199,25 @@ function EnhancedDiffViewer({
               setSelectedHunk(lineKey);
             }
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              if (isEditable && !isEditing) {
+                handleInlineEditStart(lineKey, line.content);
+              } else {
+                setSelectedHunk(lineKey);
+              }
+            }
+          }}
+          role="button"
+          tabIndex={0}
         >
           {/* Checkbox for line selection (only on deleted lines in left pane or added lines in right pane) */}
           {showStagingControls &&
             !staged &&
             isChangedLine &&
             !inlineEditMode && (
-              <div
-                className="line-checkbox"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="line-checkbox">
                 <input
                   type="checkbox"
                   checked={isLineSelected}
@@ -1250,10 +1291,7 @@ function EnhancedDiffViewer({
             !staged &&
             isChangedLine &&
             !inlineEditMode && (
-              <div
-                className="line-actions"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="line-actions">
                 <Space size={2}>
                   <Tooltip title="Stage">
                     <Button
@@ -1564,11 +1602,11 @@ function EnhancedDiffViewer({
                   0
                 }
               >
-                {availableFiles.map((file) => (
-                  <Option key={file} value={file}>
+                {availableFiles.map((filePath) => (
+                  <Option key={filePath} value={filePath}>
                     <Space>
-                      {getFileIcon(file)}
-                      <Text>{file}</Text>
+                      {getFileIcon(filePath)}
+                      <Text>{filePath}</Text>
                     </Space>
                   </Option>
                 ))}
@@ -1916,7 +1954,7 @@ function EnhancedDiffViewer({
               )}
 
               {/* Edit mode panel */}
-              {editMode ? (
+              {editMode && (
                 <div className="edit-mode-container">
                   <div className="edit-mode-toolbar">
                     <Space>
@@ -1964,45 +2002,53 @@ function EnhancedDiffViewer({
                     />
                   </div>
                 </div>
-              ) : selectedHistoryCommit && historicalContent !== null ? (
-                <div className="full-file-container">
-                  <div className="full-file-header">
-                    <Space>
-                      <Tag color="purple">Historical Version</Tag>
-                      <Tag>{selectedHistoryCommit.substring(0, 7)}</Tag>
-                      <Text type="secondary">
-                        {historicalContent.split('\n').length} lines
-                      </Text>
-                      <Button
-                        size="small"
-                        onClick={() => {
-                          setSelectedHistoryCommit(null);
-                          setHistoricalContent(null);
+              )}
+
+              {/* Historical content view */}
+              {!editMode &&
+                selectedHistoryCommit &&
+                historicalContent !== null && (
+                  <div className="full-file-container">
+                    <div className="full-file-header">
+                      <Space>
+                        <Tag color="purple">Historical Version</Tag>
+                        <Tag>{selectedHistoryCommit.substring(0, 7)}</Tag>
+                        <Text type="secondary">
+                          {historicalContent.split('\n').length} lines
+                        </Text>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedHistoryCommit(null);
+                            setHistoricalContent(null);
+                          }}
+                        >
+                          Back to Current
+                        </Button>
+                      </Space>
+                    </div>
+                    <div className="full-file-content">
+                      <SyntaxHighlighter
+                        language={getLanguageFromFilename(selectedFile)}
+                        style={theme === 'dark' ? tomorrow : prism}
+                        showLineNumbers={showLineNumbers}
+                        wrapLines={wordWrap}
+                        customStyle={{
+                          margin: 0,
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          maxHeight: '600px',
+                          overflow: 'auto',
                         }}
                       >
-                        Back to Current
-                      </Button>
-                    </Space>
+                        {historicalContent}
+                      </SyntaxHighlighter>
+                    </div>
                   </div>
-                  <div className="full-file-content">
-                    <SyntaxHighlighter
-                      language={getLanguageFromFilename(selectedFile)}
-                      style={theme === 'dark' ? tomorrow : prism}
-                      showLineNumbers={showLineNumbers}
-                      wrapLines={wordWrap}
-                      customStyle={{
-                        margin: 0,
-                        borderRadius: '4px',
-                        fontSize: '13px',
-                        maxHeight: '600px',
-                        overflow: 'auto',
-                      }}
-                    >
-                      {historicalContent}
-                    </SyntaxHighlighter>
-                  </div>
-                </div>
-              ) : viewFullFile ? (
+                )}
+
+              {/* Full file view */}
+              {!editMode && !selectedHistoryCommit && viewFullFile && (
                 <div className="full-file-container">
                   <div className="full-file-header">
                     <Space>
@@ -2030,15 +2076,29 @@ function EnhancedDiffViewer({
                     </SyntaxHighlighter>
                   </div>
                 </div>
-              ) : isImageFile(selectedFile) ? (
-                <div className="diff-content-wrapper">{renderImageDiff()}</div>
-              ) : (
-                <div className="diff-content-wrapper">
-                  {viewMode === 'side-by-side'
-                    ? renderSideBySideDiff(selectedDiff)
-                    : renderUnifiedDiff(selectedDiff)}
-                </div>
               )}
+
+              {/* Image diff view */}
+              {!editMode &&
+                !selectedHistoryCommit &&
+                !viewFullFile &&
+                isImageFile(selectedFile) && (
+                  <div className="diff-content-wrapper">
+                    {renderImageDiff()}
+                  </div>
+                )}
+
+              {/* Normal diff view */}
+              {!editMode &&
+                !selectedHistoryCommit &&
+                !viewFullFile &&
+                !isImageFile(selectedFile) && (
+                  <div className="diff-content-wrapper">
+                    {viewMode === 'side-by-side'
+                      ? renderSideBySideDiff(selectedDiff)
+                      : renderUnifiedDiff(selectedDiff)}
+                  </div>
+                )}
             </div>
           ) : availableFiles.length === 0 ? (
             <Empty
@@ -2137,8 +2197,26 @@ EnhancedDiffViewer.propTypes = {
   showFileSelector: PropTypes.bool,
   theme: PropTypes.string,
   showStagingControls: PropTypes.bool,
-  diffData: PropTypes.object,
+  diffData: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string,
+      hunks: PropTypes.array,
+      added: PropTypes.number,
+      deleted: PropTypes.number,
+    }),
+  ),
   readOnly: PropTypes.bool,
+};
+
+EnhancedDiffViewer.defaultProps = {
+  file: null,
+  staged: false,
+  compact: false,
+  showFileSelector: true,
+  theme: 'light',
+  showStagingControls: true,
+  diffData: null,
+  readOnly: false,
 };
 
 export default EnhancedDiffViewer;

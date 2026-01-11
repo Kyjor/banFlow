@@ -126,7 +126,7 @@ function KeyboardShortcuts({ visible, onClose }) {
       <div key={shortcut.description} style={{ marginBottom: '8px' }}>
         <Space>
           {shortcut.keys.map((key, index) => (
-            <React.Fragment key={`${shortcut.description}-${key}-${index}`}>
+            <React.Fragment key={`${shortcut.description}-${key}`}>
               {renderKey(key)}
               {index < shortcut.keys.length - 1 && (
                 <Text type="secondary" style={{ fontSize: '12px' }}>

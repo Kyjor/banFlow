@@ -55,15 +55,17 @@ function ChunkStaging({
   const [stagingHistory, setStagingHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [showHelp, setShowHelp] = useState(false);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
-  const loadFileDiff = async (filename) => {
-    try {
-      await getDiff(filename, false); // Load unstaged changes
-    } catch (error) {
-      console.error('Failed to load file diff:', error);
-    }
-  };
+  const loadFileDiff = useCallback(
+    async (filename) => {
+      try {
+        await getDiff(filename, false); // Load unstaged changes
+      } catch (error) {
+        console.error('Failed to load file diff:', error);
+      }
+    },
+    [getDiff],
+  );
 
   const initializeChunkStates = (fileDiff) => {
     if (!fileDiff || !fileDiff.hunks) return;
@@ -428,7 +430,7 @@ function ChunkStaging({
                   icon={<EyeOutlined />}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowPreviewModal(true);
+                    // Preview modal functionality not implemented yet
                   }}
                 />
               </Tooltip>
@@ -740,6 +742,13 @@ ChunkStaging.propTypes = {
   onStagingChange: PropTypes.func,
   showPreview: PropTypes.bool,
   compact: PropTypes.bool,
+};
+
+ChunkStaging.defaultProps = {
+  file: null,
+  onStagingChange: null,
+  showPreview: true,
+  compact: false,
 };
 
 export default ChunkStaging;

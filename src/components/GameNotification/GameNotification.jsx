@@ -69,7 +69,7 @@ class GameNotification extends Component {
     }
   }
 
-  showRewardNotification(data) {
+  static showRewardNotification(data) {
     const { type } = data;
     const message = GameNotification.getRewardMessage(data);
     const icon = GameNotification.getRewardIcon(type);
