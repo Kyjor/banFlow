@@ -16,9 +16,9 @@ This directory contains GitHub Actions workflows for automated building and publ
 - **Triggers**: Pull requests to `main`/`master` branches
 - **Actions**: Runs linting, tests, and builds (no publishing)
 
-## Required GitHub Secrets
+## Optional GitHub Secrets (Code Signing)
 
-For code signing and publishing to work properly, set these secrets in your GitHub repository:
+For signed releases, set these secrets in your GitHub repository:
 
 ### macOS Code Signing & Notarization
 - `CSC_LINK`: Base64-encoded PKCS12 certificate (.p12 file)
@@ -28,20 +28,14 @@ For code signing and publishing to work properly, set these secrets in your GitH
 - `APPLE_APP_SPECIFIC_PASSWORD`: App-specific password for Apple ID
 - `APPLE_TEAM_ID`: Apple Developer Team ID
 
-### Windows Code Signing (Optional)
+### Windows Code Signing
 - `WIN_CSC_LINK`: Base64-encoded PKCS12 certificate for Windows
 - `WIN_CSC_KEY_PASSWORD`: Password for Windows certificate
 
-### Notes
-- If no code signing secrets are configured, builds will be unsigned but will still complete successfully
-- Code signing is automatically enabled when the appropriate secrets are present
-- macOS builds require notarization which needs Apple credentials
-
 ## Getting Started
 
-1. **Set up certificates**: Obtain code signing certificates for each platform
-2. **Configure secrets**: Add the required secrets to your GitHub repository
-3. **Push to main**: Every push to the main branch will trigger a full build and release
+1. **Push to main**: Every push to the main branch will trigger automatic builds and releases
+2. **Optional**: Set up code signing secrets for signed releases
 
 ## Build Artifacts
 

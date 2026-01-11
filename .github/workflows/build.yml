@@ -54,8 +54,7 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Package application (with code signing)
-        if: secrets.CSC_LINK != '' || secrets.WIN_CSC_LINK != ''
+      - name: Package application
         run: npm run package
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -66,10 +65,6 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASS: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-
-      - name: Package application (unsigned)
-        if: secrets.CSC_LINK == ''
-        run: npm run package
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
