@@ -64,6 +64,9 @@ import PRList from '../PullRequests/PRList';
 import PRCreate from '../PullRequests/PRCreate';
 import PRReview from '../PullRequests/PRReview';
 import StashModal from '../StashModal/StashModal';
+import ImageDiffRenderer from '../EnhancedDiffViewer/renderers/ImageDiffRenderer';
+import AsepriteDiffRenderer from '../EnhancedDiffViewer/renderers/AsepriteDiffRenderer';
+import { isImageFile, isAsepriteFile } from '../EnhancedDiffViewer/utils';
 import './GitClient.scss';
 
 const { Header, Sider, Content } = Layout;
@@ -305,6 +308,9 @@ function GitClient() {
   const [editingFile, setEditingFile] = useState(null);
   const [editedContent, setEditedContent] = useState('');
   const [originalContent, setOriginalContent] = useState('');
+  const [untrackedImage, setUntrackedImage] = useState(null);
+  const [untrackedAseprite, setUntrackedAseprite] = useState(null);
+  const [loadingUntrackedFile, setLoadingUntrackedFile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [showInitModal, setShowInitModal] = useState(false);
@@ -454,6 +460,8 @@ function GitClient() {
     setEditingFile(null);
     setEditedContent('');
     setOriginalContent('');
+    setUntrackedImage(null);
+    setUntrackedAseprite(null);
   }, []);
 
   const handleCommitSelect = useCallback(
@@ -753,6 +761,69 @@ function GitClient() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentRepository, openFilePicker]);
+
+  // Load image/Aseprite files for untracked files
+  useEffect(() => {
+    const loadUntrackedFile = async () => {
+      if (!selectedFile || !currentRepository) {
+        setUntrackedImage(null);
+        setUntrackedAseprite(null);
+        return;
+      }
+
+      const isUntracked = untrackedFiles?.includes(selectedFile);
+      if (!isUntracked) {
+        setUntrackedImage(null);
+        setUntrackedAseprite(null);
+        return;
+      }
+
+      if (isImageFile(selectedFile)) {
+        setLoadingUntrackedFile(true);
+        try {
+          const result = await ipcRenderer.invoke(
+            'git:readImageFile',
+            currentRepository,
+            selectedFile,
+          );
+          if (result.success) {
+            setUntrackedImage(result.dataUrl);
+          } else {
+            setUntrackedImage(null);
+          }
+        } catch (error) {
+          console.error('Failed to load untracked image:', error);
+          setUntrackedImage(null);
+        } finally {
+          setLoadingUntrackedFile(false);
+        }
+      } else if (isAsepriteFile(selectedFile)) {
+        setLoadingUntrackedFile(true);
+        try {
+          const result = await ipcRenderer.invoke(
+            'git:readAsepriteFile',
+            currentRepository,
+            selectedFile,
+          );
+          if (result.success) {
+            setUntrackedAseprite(result);
+          } else {
+            setUntrackedAseprite(null);
+          }
+        } catch (error) {
+          console.error('Failed to load untracked Aseprite file:', error);
+          setUntrackedAseprite(null);
+        } finally {
+          setLoadingUntrackedFile(false);
+        }
+      } else {
+        setUntrackedImage(null);
+        setUntrackedAseprite(null);
+      }
+    };
+
+    loadUntrackedFile();
+  }, [selectedFile, currentRepository, untrackedFiles]);
 
   const handleClone = useCallback(async () => {
     if (!cloneUrl.trim() || !cloneTargetPath.trim()) {
@@ -1296,26 +1367,90 @@ function GitClient() {
           <div className="diff-wrapper">
             {isUntracked ? (
               <div className="untracked-notice">
-                <Empty
-                  image={
-                    <PlusOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+                {(() => {
+                  if (isImageFile(selectedFile)) {
+                    return (
+                      <div style={{ padding: '20px' }}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <div>
+                            <Text strong>This is a new untracked file</Text>
+                            <Text
+                              type="secondary"
+                              style={{ display: 'block', marginTop: '8px' }}
+                            >
+                              Stage it to include in your next commit
+                            </Text>
+                          </div>
+                          <ImageDiffRenderer
+                            loadingImages={loadingUntrackedFile}
+                            originalImage={null}
+                            modifiedImage={untrackedImage}
+                          />
+                          <Button
+                            type="primary"
+                            onClick={() => handleStageFile(selectedFile)}
+                            style={{ marginTop: '16px' }}
+                          >
+                            Stage File
+                          </Button>
+                        </Space>
+                      </div>
+                    );
                   }
-                  description={
-                    <Space direction="vertical">
-                      <Text>This is a new untracked file</Text>
-                      <Text type="secondary">
-                        Stage it to include in your next commit
-                      </Text>
-                    </Space>
+                  if (isAsepriteFile(selectedFile)) {
+                    return (
+                      <div style={{ padding: '20px' }}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <div>
+                            <Text strong>This is a new untracked file</Text>
+                            <Text
+                              type="secondary"
+                              style={{ display: 'block', marginTop: '8px' }}
+                            >
+                              Stage it to include in your next commit
+                            </Text>
+                          </div>
+                          <AsepriteDiffRenderer
+                            loadingAseprite={loadingUntrackedFile}
+                            originalAseprite={null}
+                            modifiedAseprite={untrackedAseprite}
+                          />
+                          <Button
+                            type="primary"
+                            onClick={() => handleStageFile(selectedFile)}
+                            style={{ marginTop: '16px' }}
+                          >
+                            Stage File
+                          </Button>
+                        </Space>
+                      </div>
+                    );
                   }
-                >
-                  <Button
-                    type="primary"
-                    onClick={() => handleStageFile(selectedFile)}
-                  >
-                    Stage File
-                  </Button>
-                </Empty>
+                  return (
+                    <Empty
+                      image={
+                        <PlusOutlined
+                          style={{ fontSize: 48, color: '#1890ff' }}
+                        />
+                      }
+                      description={
+                        <Space direction="vertical">
+                          <Text>This is a new untracked file</Text>
+                          <Text type="secondary">
+                            Stage it to include in your next commit
+                          </Text>
+                        </Space>
+                      }
+                    >
+                      <Button
+                        type="primary"
+                        onClick={() => handleStageFile(selectedFile)}
+                      >
+                        Stage File
+                      </Button>
+                    </Empty>
+                  );
+                })()}
               </div>
             ) : (
               <EnhancedDiffViewer

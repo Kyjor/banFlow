@@ -40,6 +40,8 @@ import TimerService from '../services/TimerService';
 import IterationService from '../services/IterationService';
 import GitService from '../services/GitService';
 import GitRepositoryService from '../services/GitRepositoryService';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const AsepriteService = require('../services/AsepriteService');
 
 remoteMain.initialize();
 let mainWindow: BrowserWindow | null = null;
@@ -1886,6 +1888,125 @@ ipcMain.handle(
 ipcMain.handle('git:applyPatch', async (event, patchContent, options = {}) => {
   return gitService.applyPatch(patchContent, options);
 });
+
+// Image File Operations
+ipcMain.handle(
+  'git:readImageFile',
+  async (event, repoPath: string, filePath: string) => {
+    const fs = require('fs');
+
+    const fullPath = path.join(repoPath, filePath);
+
+    if (!fs.existsSync(fullPath)) {
+      return { success: false, error: `File not found: ${filePath}` };
+    }
+
+    try {
+      const imageBuffer = fs.readFileSync(fullPath);
+      const ext = path.extname(filePath).toLowerCase().slice(1);
+      let mimeType = `image/${ext}`;
+      if (ext === 'svg') {
+        mimeType = 'image/svg+xml';
+      } else if (ext === 'jpg') {
+        mimeType = 'image/jpeg';
+      }
+      const base64 = imageBuffer.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+
+      return { success: true, dataUrl };
+    } catch (error) {
+      console.error('Error reading image file:', error);
+      return { success: false, error: error.message };
+    }
+  },
+);
+
+ipcMain.handle(
+  'git:getImageFromGit',
+  async (event, repoPath: string, filePath: string, gitRef: string) => {
+    try {
+      // Use git show to get binary content directly
+      const { execSync } = require('child_process');
+      const gitCommand = `git show ${gitRef}:${filePath}`;
+      const imageBuffer = execSync(gitCommand, {
+        cwd: repoPath,
+        encoding: null, // Get raw buffer
+        maxBuffer: 50 * 1024 * 1024, // 50MB max
+      });
+
+      if (!imageBuffer || imageBuffer.length === 0) {
+        return { success: false, error: 'File not found in Git' };
+      }
+
+      const ext = path.extname(filePath).toLowerCase().slice(1);
+      let mimeType = `image/${ext}`;
+      if (ext === 'svg') {
+        mimeType = 'image/svg+xml';
+      } else if (ext === 'jpg') {
+        mimeType = 'image/jpeg';
+      }
+      const base64 = imageBuffer.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+
+      return { success: true, dataUrl };
+    } catch (error) {
+      console.error('Error getting image from Git:', error);
+      return { success: false, error: error.message };
+    }
+  },
+);
+
+// Aseprite File Operations
+ipcMain.handle(
+  'git:readAsepriteFile',
+  async (event, repoPath: string, filePath: string) => {
+    const fs = require('fs');
+
+    const fullPath = path.join(repoPath, filePath);
+
+    if (!fs.existsSync(fullPath)) {
+      return { success: false, error: `File not found: ${filePath}` };
+    }
+
+    try {
+      const buffer = fs.readFileSync(fullPath);
+      const result = await AsepriteService.parseAsepriteFile(buffer, filePath);
+      return result;
+    } catch (error) {
+      console.error('Error reading Aseprite file:', error);
+      return { success: false, error: error.message };
+    }
+  },
+);
+
+ipcMain.handle(
+  'git:getAsepriteFromGit',
+  async (event, repoPath: string, filePath: string, gitRef: string) => {
+    const { execSync } = require('child_process');
+    const fs = require('fs');
+
+    try {
+      // Use git show to get binary content directly
+      // This handles binary files better than getFileAtCommit
+      const gitCommand = `git show ${gitRef}:${filePath}`;
+      const buffer = execSync(gitCommand, {
+        cwd: repoPath,
+        encoding: null, // Get raw buffer
+        maxBuffer: 50 * 1024 * 1024, // 50MB max
+      });
+
+      if (!buffer || buffer.length === 0) {
+        return { success: false, error: 'File not found in Git' };
+      }
+
+      const result = await AsepriteService.parseAsepriteFile(buffer, filePath);
+      return result;
+    } catch (error) {
+      console.error('Error getting Aseprite from Git:', error);
+      return { success: false, error: error.message };
+    }
+  },
+);
 
 // ==================== DOCS MANAGEMENT ====================
 

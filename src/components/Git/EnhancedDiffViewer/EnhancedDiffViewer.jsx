@@ -52,8 +52,30 @@ import {
   prism,
 } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useGit } from '../../../contexts/GitContext';
-import { useHeartbeat } from '../../../hooks/useHeartbeat';
 import './EnhancedDiffViewer.scss';
+import {
+  isImageFile,
+  isAsepriteFile,
+  getLanguageFromFilename,
+  getLinePrefix,
+  formatHistoryDate,
+} from './utils';
+import {
+  useFileLoading,
+  useImageLoading,
+  useAsepriteLoading,
+  useFullFileLoading,
+  useFileHistory,
+  useKeyboardShortcuts,
+} from './hooks';
+import {
+  useStagingHandlers,
+  useLineSelectionHandlers,
+  useEditHandlers,
+  useInlineEditHandlers,
+} from './handlers';
+import ImageDiffRenderer from './renderers/ImageDiffRenderer';
+import AsepriteDiffRenderer from './renderers/AsepriteDiffRenderer';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -121,36 +143,21 @@ function EnhancedDiffViewer({
   const [originalImage, setOriginalImage] = useState(null);
   const [modifiedImage, setModifiedImage] = useState(null);
   const [loadingImages, setLoadingImages] = useState(false);
+  const [originalAseprite, setOriginalAseprite] = useState(null);
+  const [modifiedAseprite, setModifiedAseprite] = useState(null);
+  const [loadingAseprite, setLoadingAseprite] = useState(false);
   const editorRef = useRef(null);
   const fileSearchInputRef = useRef(null);
   const inlineEditInputRef = useRef(null);
 
-  // Utility functions
-  const isImageFile = (filename) => {
-    if (!filename) return false;
-    const extension = filename.split('.').pop()?.toLowerCase();
-    const imageExtensions = [
-      'jpg',
-      'jpeg',
-      'png',
-      'gif',
-      'webp',
-      'svg',
-      'bmp',
-      'ico',
-    ];
-    return imageExtensions.includes(extension);
-  };
-
-  const loadDiff = useCallback(
-    async (filename) => {
-      try {
-        await getDiff(filename, staged);
-      } catch (error) {
-        console.error('Failed to load diff:', error);
-      }
-    },
-    [getDiff, staged],
+  // Use custom hooks for file loading
+  const { loadDiff } = useFileLoading(
+    selectedFile,
+    currentRepository,
+    staged,
+    diffData,
+    getDiff,
+    readOnly,
   );
 
   const openFilePicker = useCallback(async () => {
@@ -217,107 +224,44 @@ function EnhancedDiffViewer({
     }
   }, [currentDiff, selectedFile, diffData]);
 
-  // Load images when an image file is selected
-  useEffect(() => {
-    const loadImages = async () => {
-      if (!selectedFile || !currentRepository || !isImageFile(selectedFile)) {
-        setOriginalImage(null);
-        setModifiedImage(null);
-        return;
-      }
-
-      setLoadingImages(true);
-      try {
-        // Load modified/current version
-        const currentResult = await ipcRenderer.invoke(
-          'git:readImageFile',
-          currentRepository,
-          selectedFile,
-        );
-        if (currentResult.success) {
-          setModifiedImage(currentResult.dataUrl);
-        } else {
-          setModifiedImage(null);
-        }
-
-        // Load original version from Git
-        // For staged files, compare with HEAD (what was there before staging)
-        // For unstaged files, also compare with HEAD (what's in the last commit)
-        const gitRef = 'HEAD';
-        const originalResult = await ipcRenderer.invoke(
-          'git:getImageFromGit',
-          currentRepository,
-          selectedFile,
-          gitRef,
-        );
-        if (originalResult.success) {
-          setOriginalImage(originalResult.dataUrl);
-        } else {
-          // File might be new (doesn't exist in Git)
-          setOriginalImage(null);
-        }
-      } catch (error) {
-        console.error('Failed to load images:', error);
-        setOriginalImage(null);
-        setModifiedImage(null);
-      } finally {
-        setLoadingImages(false);
-      }
-    };
-
-    loadImages();
-  }, [selectedFile, currentRepository, staged]);
-
-  // Auto-refresh diff every 3 seconds when viewing a file (disabled for read-only/historical diffs)
-  useHeartbeat(
-    `diff-viewer-refresh-${selectedFile || 'none'}`,
-    () => {
-      if (selectedFile && currentRepository && !diffData) {
-        loadDiff(selectedFile);
-      }
-    },
-    3000,
-    {
-      enabled: !!selectedFile && !!currentRepository && !diffData && !readOnly,
-      immediate: false,
-    },
+  // Use custom hooks for loading different file types
+  useImageLoading(
+    selectedFile,
+    currentRepository,
+    staged,
+    setOriginalImage,
+    setModifiedImage,
+    setLoadingImages,
   );
 
-  // Load full file content when viewFullFile mode is enabled
-  useEffect(() => {
-    const loadFullFile = async () => {
-      if (viewFullFile && selectedFile && currentRepository) {
-        try {
-          const result = await ipcRenderer.invoke(
-            'git:readFile',
-            currentRepository,
-            selectedFile,
-          );
-          if (result.success) {
-            setFullFileContent(result.content);
-          }
-        } catch (error) {
-          console.error('Failed to load full file:', error);
-          message.error('Failed to load file content');
-        }
-      }
-    };
-    loadFullFile();
-  }, [viewFullFile, selectedFile, currentRepository]);
+  useAsepriteLoading(
+    selectedFile,
+    currentRepository,
+    staged,
+    setOriginalAseprite,
+    setModifiedAseprite,
+    setLoadingAseprite,
+  );
 
-  // Keyboard shortcut for Ctrl+P file picker
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
-        e.preventDefault();
-        if (currentRepository && !readOnly) {
-          openFilePicker();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentRepository, readOnly, openFilePicker]);
+  useFullFileLoading(
+    viewFullFile,
+    selectedFile,
+    currentRepository,
+    setFullFileContent,
+  );
+
+  useFileHistory(
+    selectedFile,
+    currentRepository,
+    readOnly,
+    getFileHistory,
+    setFileHistory,
+    setLoadingHistory,
+    setSelectedHistoryCommit,
+    setHistoricalContent,
+  );
+
+  useKeyboardShortcuts(currentRepository, readOnly, openFilePicker);
 
   // Focus search input when file picker opens
   useEffect(() => {
@@ -325,30 +269,6 @@ function EnhancedDiffViewer({
       setTimeout(() => fileSearchInputRef.current?.focus(), 100);
     }
   }, [showFilePicker]);
-
-  // Load file history when file changes
-  useEffect(() => {
-    const loadHistory = async () => {
-      if (selectedFile && currentRepository && !readOnly) {
-        setLoadingHistory(true);
-        try {
-          const history = await getFileHistory(selectedFile);
-          setFileHistory(history || []);
-        } catch (error) {
-          console.error('Failed to load file history:', error);
-          setFileHistory([]);
-        } finally {
-          setLoadingHistory(false);
-        }
-      } else {
-        setFileHistory([]);
-      }
-    };
-    loadHistory();
-    // Reset historical view when file changes
-    setSelectedHistoryCommit(null);
-    setHistoricalContent(null);
-  }, [selectedFile, currentRepository, readOnly, getFileHistory]);
 
   // Load file content at selected historical commit
   const handleHistorySelect = useCallback(
@@ -372,15 +292,6 @@ function EnhancedDiffViewer({
     },
     [selectedFile, getFileAtCommit],
   );
-
-  const formatHistoryDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    })}`;
-  };
 
   const handleFilePickerSelect = async (filePath) => {
     setShowFilePicker(false);
@@ -410,59 +321,8 @@ function EnhancedDiffViewer({
     return allFiles.filter((f) => f.toLowerCase().includes(term)).slice(0, 50);
   }, [allFiles, fileSearchTerm]);
 
-  const getLanguageFromFilename = (filename) => {
-    if (!filename) return 'text';
-
-    const extension = filename.split('.').pop()?.toLowerCase();
-    const languageMap = {
-      js: 'javascript',
-      jsx: 'jsx',
-      ts: 'typescript',
-      tsx: 'tsx',
-      py: 'python',
-      java: 'java',
-      cpp: 'cpp',
-      c: 'c',
-      cs: 'csharp',
-      php: 'php',
-      rb: 'ruby',
-      go: 'go',
-      rs: 'rust',
-      html: 'markup',
-      xml: 'markup',
-      css: 'css',
-      scss: 'scss',
-      sass: 'sass',
-      less: 'less',
-      json: 'json',
-      yaml: 'yaml',
-      yml: 'yaml',
-      md: 'markdown',
-      sql: 'sql',
-      sh: 'bash',
-      bash: 'bash',
-      zsh: 'bash',
-      ps1: 'powershell',
-      dockerfile: 'dockerfile',
-      jl: 'julia',
-    };
-
-    return languageMap[extension] || 'text';
-  };
-
   const getFileIcon = () => {
     return <FileTextOutlined style={{ color: '#1890ff' }} />;
-  };
-
-  const getLinePrefix = (lineType) => {
-    switch (lineType) {
-      case 'added':
-        return '+';
-      case 'deleted':
-        return '-';
-      default:
-        return ' ';
-    }
   };
 
   const toggleHunkExpansion = useCallback((hunkIndex) => {
@@ -477,336 +337,78 @@ function EnhancedDiffViewer({
     });
   }, []);
 
-  // Toggle line selection for batch operations
-  const toggleLineSelection = useCallback((hunkIndex, lineIndex) => {
-    const key = `${hunkIndex}-${lineIndex}`;
-    setSelectedLines((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(key)) {
-        newSet.delete(key);
-      } else {
-        newSet.add(key);
-      }
-      return newSet;
-    });
-  }, []);
-
-  // Clear line selection
-  const clearLineSelection = useCallback(() => {
-    setSelectedLines(new Set());
-  }, []);
-
-  // Stage file handler
-  const handleStageFile = useCallback(async () => {
-    if (!selectedFile) return;
-    try {
-      await stageFiles([selectedFile]);
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to stage file:', error);
-    }
-  }, [selectedFile, stageFiles, loadDiff]);
-
-  // Unstage file handler
-  const handleUnstageFile = useCallback(async () => {
-    if (!selectedFile) return;
-    try {
-      await unstageFiles([selectedFile]);
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to unstage file:', error);
-    }
-  }, [selectedFile, unstageFiles, loadDiff]);
-
-  // Discard file handler
-  const handleDiscardFile = useCallback(async () => {
-    if (!selectedFile) return;
-    try {
-      await discardChanges([selectedFile]);
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to discard file:', error);
-    }
-  }, [selectedFile, discardChanges, loadDiff]);
-
-  // Stage hunk handler
-  const handleStageHunk = useCallback(
-    async (hunkIndex) => {
-      if (!selectedFile) return;
-      try {
-        await stageHunk(selectedFile, hunkIndex);
-        loadDiff(selectedFile);
-      } catch (error) {
-        console.error('Failed to stage hunk:', error);
-      }
-    },
-    [selectedFile, stageHunk, loadDiff],
+  // Use custom hooks for handlers
+  const {
+    handleStageFile,
+    handleUnstageFile,
+    handleDiscardFile,
+    handleStageHunk,
+    handleDiscardHunk,
+    handleStageLine,
+    handleDiscardLine,
+  } = useStagingHandlers(
+    selectedFile,
+    stageFiles,
+    unstageFiles,
+    discardChanges,
+    stageHunk,
+    discardHunk,
+    stageLines,
+    discardLines,
+    loadDiff,
   );
 
-  // Discard hunk handler
-  const handleDiscardHunk = useCallback(
-    async (hunkIndex) => {
-      if (!selectedFile) return;
-      try {
-        await discardHunk(selectedFile, hunkIndex);
-        loadDiff(selectedFile);
-      } catch (error) {
-        console.error('Failed to discard hunk:', error);
-      }
-    },
-    [selectedFile, discardHunk, loadDiff],
+  const {
+    toggleLineSelection,
+    clearLineSelection,
+    handleStageSelectedLines,
+    handleDiscardSelectedLines,
+  } = useLineSelectionHandlers(
+    setSelectedLines,
+    selectedLines,
+    stageLines,
+    discardLines,
+    selectedFile,
+    loadDiff,
   );
 
-  // Stage selected lines handler
-  const handleStageSelectedLines = useCallback(async () => {
-    if (!selectedFile || selectedLines.size === 0) return;
+  const { loadFileForEditing, handleSaveEdit, handleCancelEdit } =
+    useEditHandlers(
+      selectedFile,
+      currentRepository,
+      setEditedContent,
+      setOriginalFileContent,
+      setEditMode,
+      editedContent,
+      originalFileContent,
+      loadDiff,
+      setIsSaving,
+    );
 
-    // Group selected lines by hunk
-    const hunkGroups = {};
-    selectedLines.forEach((key) => {
-      const [hunkIndex, lineIndex] = key.split('-').map(Number);
-      if (!hunkGroups[hunkIndex]) {
-        hunkGroups[hunkIndex] = [];
-      }
-      hunkGroups[hunkIndex].push(lineIndex);
-    });
-
-    try {
-      // Stage lines for each hunk
-      await Promise.all(
-        Object.entries(hunkGroups).map(([hunkIndex, lineIndices]) =>
-          stageLines(selectedFile, parseInt(hunkIndex, 10), lineIndices),
-        ),
-      );
-      clearLineSelection();
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to stage lines:', error);
-    }
-  }, [selectedFile, selectedLines, stageLines, clearLineSelection, loadDiff]);
-
-  // Discard selected lines handler
-  const handleDiscardSelectedLines = useCallback(async () => {
-    if (!selectedFile || selectedLines.size === 0) return;
-
-    // Group selected lines by hunk
-    const hunkGroups = {};
-    selectedLines.forEach((key) => {
-      const [hunkIndex, lineIndex] = key.split('-').map(Number);
-      if (!hunkGroups[hunkIndex]) {
-        hunkGroups[hunkIndex] = [];
-      }
-      hunkGroups[hunkIndex].push(lineIndex);
-    });
-
-    try {
-      // Discard lines for each hunk
-      await Promise.all(
-        Object.entries(hunkGroups).map(([hunkIndex, lineIndices]) =>
-          discardLines(selectedFile, parseInt(hunkIndex, 10), lineIndices),
-        ),
-      );
-      clearLineSelection();
-      loadDiff(selectedFile);
-    } catch (error) {
-      console.error('Failed to discard lines:', error);
-    }
-  }, [selectedFile, selectedLines, discardLines, clearLineSelection, loadDiff]);
-
-  // Stage single line handler
-  const handleStageLine = useCallback(
-    async (hunkIndex, lineIndex) => {
-      if (!selectedFile) return;
-      try {
-        await stageLines(selectedFile, hunkIndex, [lineIndex]);
-        loadDiff(selectedFile);
-      } catch (error) {
-        console.error('Failed to stage line:', error);
-      }
-    },
-    [selectedFile, stageLines, loadDiff],
+  const {
+    handleInlineEditStart,
+    handleInlineEditChange,
+    handleInlineEditBlur,
+    handleSaveInlineEdits,
+    handleDiscardInlineEdits,
+  } = useInlineEditHandlers(
+    selectedFile,
+    currentRepository,
+    inlineEdits,
+    setInlineEdits,
+    setEditingLineKey,
+    setInlineEditMode,
+    selectedDiff,
+    readOnly,
+    staged,
+    inlineEditInputRef,
+    setIsSaving,
+    loadDiff,
   );
-
-  // Discard single line handler
-  const handleDiscardLine = useCallback(
-    async (hunkIndex, lineIndex) => {
-      if (!selectedFile) return;
-      try {
-        await discardLines(selectedFile, hunkIndex, [lineIndex]);
-        loadDiff(selectedFile);
-      } catch (error) {
-        console.error('Failed to discard line:', error);
-      }
-    },
-    [selectedFile, discardLines, loadDiff],
-  );
-
-  // Load file content for editing
-  const loadFileForEditing = useCallback(async () => {
-    if (!selectedFile || !currentRepository) return;
-    try {
-      const result = await ipcRenderer.invoke(
-        'git:readFile',
-        currentRepository,
-        selectedFile,
-      );
-      if (result.success) {
-        setEditedContent(result.content);
-        setOriginalFileContent(result.content);
-        setEditMode(true);
-      }
-    } catch (error) {
-      console.error('Failed to load file for editing:', error);
-      message.error('Failed to load file for editing');
-    }
-  }, [selectedFile, currentRepository]);
-
-  // Save edited content
-  const handleSaveEdit = useCallback(async () => {
-    if (!selectedFile || !currentRepository) return;
-    setIsSaving(true);
-    try {
-      const result = await ipcRenderer.invoke(
-        'git:writeFile',
-        currentRepository,
-        selectedFile,
-        editedContent,
-      );
-      if (result.success) {
-        message.success('File saved successfully');
-        setOriginalFileContent(editedContent);
-        loadDiff(selectedFile);
-      }
-    } catch (error) {
-      console.error('Failed to save file:', error);
-      message.error('Failed to save file');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedFile, currentRepository, editedContent, loadDiff]);
-
-  // Cancel edit mode
-  const handleCancelEdit = useCallback(() => {
-    setEditedContent(originalFileContent);
-    setEditMode(false);
-  }, [originalFileContent]);
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = editMode && editedContent !== originalFileContent;
-
-  // Inline editing functions
   const hasInlineEdits = Object.keys(inlineEdits).length > 0;
-
-  const handleInlineEditStart = useCallback(
-    (lineKey, currentContent) => {
-      if (readOnly || staged) return;
-      setEditingLineKey(lineKey);
-      if (!inlineEdits[lineKey]) {
-        setInlineEdits((prev) => ({ ...prev, [lineKey]: currentContent }));
-      }
-      setTimeout(() => inlineEditInputRef.current?.focus(), 50);
-    },
-    [readOnly, staged, inlineEdits],
-  );
-
-  const handleInlineEditChange = useCallback((lineKey, newContent) => {
-    setInlineEdits((prev) => ({ ...prev, [lineKey]: newContent }));
-  }, []);
-
-  const handleInlineEditBlur = useCallback(() => {
-    setEditingLineKey(null);
-  }, []);
-
-  const handleSaveInlineEdits = useCallback(async () => {
-    if (!selectedFile || !currentRepository || !hasInlineEdits) return;
-    setIsSaving(true);
-    try {
-      // Load the current file content
-      const result = await ipcRenderer.invoke(
-        'git:readFile',
-        currentRepository,
-        selectedFile,
-      );
-      if (!result.success) throw new Error('Failed to read file');
-
-      // Apply edits - we need to map line keys back to actual line numbers
-      // For simplicity, we'll rebuild the file based on the modified content
-      // The rightLines (modified side) represent the new file state
-
-      // Get the current file content and apply inline edits
-      const fileContent = result.content;
-      const fileLines = fileContent.split('\n');
-
-      // For each inline edit, we need to find which line number it corresponds to
-      // This is complex because the diff shows line numbers, not array indices
-      // We'll use a simpler approach: rebuild from the modified pane
-
-      // Actually, the easiest approach is to load the file, parse the hunks,
-      // and apply the edits based on the new line numbers
-      Object.entries(inlineEdits).forEach(([lineKey, newContent]) => {
-        const [hunkIdx, lineIdx] = lineKey.split('-').map(Number);
-        const hunk = selectedDiff?.hunks?.[hunkIdx];
-        if (!hunk) return;
-
-        // Find the line in the hunk
-        const line = hunk.lines[lineIdx];
-        if (!line) return;
-
-        // Calculate the actual line number in the new file
-        const headerMatch = hunk.header.match(/@@ -\d+,?\d* \+(\d+),?\d* @@/);
-        if (!headerMatch) return;
-
-        let newLineNum = parseInt(headerMatch[1], 10);
-        for (let i = 0; i < lineIdx; i += 1) {
-          const prevLine = hunk.lines[i];
-          if (prevLine.type === 'added' || prevLine.type === 'context') {
-            newLineNum += 1;
-          }
-        }
-
-        // Only apply if this is an added or context line (modifiable)
-        if (line.type === 'added' || line.type === 'context') {
-          const arrayIdx = newLineNum - 1;
-          if (arrayIdx >= 0 && arrayIdx < fileLines.length) {
-            fileLines[arrayIdx] = newContent;
-          }
-        }
-      });
-
-      const newContent = fileLines.join('\n');
-      const writeResult = await ipcRenderer.invoke(
-        'git:writeFile',
-        currentRepository,
-        selectedFile,
-        newContent,
-      );
-      if (writeResult.success) {
-        message.success('Changes saved');
-        setInlineEdits({});
-        setEditingLineKey(null);
-        setInlineEditMode(false);
-        loadDiff(selectedFile);
-      }
-    } catch (error) {
-      console.error('Failed to save inline edits:', error);
-      message.error('Failed to save changes');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [
-    selectedFile,
-    currentRepository,
-    hasInlineEdits,
-    inlineEdits,
-    selectedDiff,
-    loadDiff,
-  ]);
-
-  const handleDiscardInlineEdits = useCallback(() => {
-    setInlineEdits({});
-    setEditingLineKey(null);
-    setInlineEditMode(false);
-  }, []);
 
   const filteredHunks = useMemo(() => {
     if (!selectedDiff || !searchTerm) return selectedDiff?.hunks || [];
@@ -1356,135 +958,6 @@ function EnhancedDiffViewer({
               )}
             </div>
           </Col>
-        </Row>
-      </div>
-    );
-  };
-
-  const renderImageDiff = () => {
-    if (loadingImages) {
-      return (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <Spin size="large" />
-          <div style={{ marginTop: 16 }}>
-            <Text type="secondary">Loading images...</Text>
-          </div>
-        </div>
-      );
-    }
-
-    const isNewImage = !originalImage && modifiedImage;
-    const isDeletedImage = originalImage && !modifiedImage;
-    const isModifiedImage = originalImage && modifiedImage;
-
-    return (
-      <div className="image-diff-container" style={{ padding: '20px' }}>
-        <Row gutter={16}>
-          <Col span={isNewImage || isDeletedImage ? 24 : 12}>
-            <Card
-              size="small"
-              title={
-                <Space>
-                  <Text strong>Original</Text>
-                  {isDeletedImage && <Tag color="red">Deleted</Tag>}
-                  {isNewImage && <Tag color="blue">New File</Tag>}
-                </Space>
-              }
-            >
-              {originalImage ? (
-                <div style={{ textAlign: 'center' }}>
-                  <img
-                    src={originalImage}
-                    alt="Original"
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '500px',
-                      objectFit: 'contain',
-                      border: '1px solid #d9d9d9',
-                      borderRadius: '4px',
-                    }}
-                  />
-                </div>
-              ) : (
-                <Empty
-                  description={
-                    isNewImage ? 'New image file' : 'No original version'
-                  }
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              )}
-            </Card>
-          </Col>
-
-          {!isNewImage && !isDeletedImage && (
-            <Col span={12}>
-              <Card
-                size="small"
-                title={
-                  <Space>
-                    <Text strong>Modified</Text>
-                    {isModifiedImage && <Tag color="green">Changed</Tag>}
-                  </Space>
-                }
-              >
-                {modifiedImage ? (
-                  <div style={{ textAlign: 'center' }}>
-                    <img
-                      src={modifiedImage}
-                      alt="Modified"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '500px',
-                        objectFit: 'contain',
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '4px',
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <Empty
-                    description="No modified version"
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  />
-                )}
-              </Card>
-            </Col>
-          )}
-
-          {isNewImage && (
-            <Col span={12}>
-              <Card
-                size="small"
-                title={
-                  <Space>
-                    <Text strong>New Image</Text>
-                    <Tag color="green">Added</Tag>
-                  </Space>
-                }
-              >
-                {modifiedImage ? (
-                  <div style={{ textAlign: 'center' }}>
-                    <img
-                      src={modifiedImage}
-                      alt="New"
-                      style={{
-                        maxWidth: '100%',
-                        maxHeight: '500px',
-                        objectFit: 'contain',
-                        border: '1px solid #d9d9d9',
-                        borderRadius: '4px',
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <Empty
-                    description="Loading..."
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  />
-                )}
-              </Card>
-            </Col>
-          )}
         </Row>
       </div>
     );
@@ -2078,13 +1551,32 @@ function EnhancedDiffViewer({
                 </div>
               )}
 
+              {/* Aseprite diff view */}
+              {!editMode &&
+                !selectedHistoryCommit &&
+                !viewFullFile &&
+                isAsepriteFile(selectedFile) && (
+                  <div className="diff-content-wrapper">
+                    <AsepriteDiffRenderer
+                      loadingAseprite={loadingAseprite}
+                      originalAseprite={originalAseprite}
+                      modifiedAseprite={modifiedAseprite}
+                    />
+                  </div>
+                )}
+
               {/* Image diff view */}
               {!editMode &&
                 !selectedHistoryCommit &&
                 !viewFullFile &&
+                !isAsepriteFile(selectedFile) &&
                 isImageFile(selectedFile) && (
                   <div className="diff-content-wrapper">
-                    {renderImageDiff()}
+                    <ImageDiffRenderer
+                      loadingImages={loadingImages}
+                      originalImage={originalImage}
+                      modifiedImage={modifiedImage}
+                    />
                   </div>
                 )}
 
@@ -2092,6 +1584,7 @@ function EnhancedDiffViewer({
               {!editMode &&
                 !selectedHistoryCommit &&
                 !viewFullFile &&
+                !isAsepriteFile(selectedFile) &&
                 !isImageFile(selectedFile) && (
                   <div className="diff-content-wrapper">
                     {viewMode === 'side-by-side'
