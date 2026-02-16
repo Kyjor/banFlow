@@ -41,15 +41,6 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 class ProjectSettings extends Component {
-  static formatTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
-  };
-
   constructor(props) {
     super(props);
     const location = window.location.href;
@@ -129,6 +120,16 @@ class ProjectSettings extends Component {
       },
     );
   }
+
+  // eslint-disable-next-line class-methods-use-this
+  formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
 
   loadProjectData = () => {
     const { nodes, parents, tags } = this.state;

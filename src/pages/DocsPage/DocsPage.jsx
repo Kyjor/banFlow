@@ -164,14 +164,6 @@ MarkdownLinkHandler.defaultProps = {
 };
 
 class DocsPage extends Component {
-  static countWords = (text) => {
-    if (!text) return 0;
-    return text
-      .trim()
-      .split(/\s+/)
-      .filter((word) => word.length > 0).length;
-  };
-
   constructor(props) {
     super(props);
 
@@ -314,6 +306,15 @@ class DocsPage extends Component {
   componentWillUnmount() {
     ipcRenderer.removeAllListeners('UpdateProjectPageState');
   }
+
+  // eslint-disable-next-line class-methods-use-this
+  countWords = (text) => {
+    if (!text) return 0;
+    return text
+      .trim()
+      .split(/\s+/)
+      .filter((word) => word.length > 0).length;
+  };
 
   handleStateUpdate = (e, newState) => {
     this.setState(newState);
@@ -804,7 +805,7 @@ class DocsPage extends Component {
     const cursorMatch = value.match(/@([\w\s]*?)$/);
     if (cursorMatch) {
       const query = cursorMatch[1].trim();
-      const suggestions = this.getMentionSuggestions(query);
+      const suggestions = this.getMentionSuggestions(query) || [];
       this.setState({
         docContent: value,
         isDirty: true,
@@ -864,6 +865,9 @@ class DocsPage extends Component {
   };
 
   buildTreeData = (items, parentKey = '') => {
+    if (!items || !Array.isArray(items)) {
+      return [];
+    }
     return items.map((item, index) => {
       const key = parentKey ? `${parentKey}-${index}` : `${index}`;
 
@@ -961,7 +965,7 @@ class DocsPage extends Component {
       );
     }
 
-    const treeData = this.buildTreeData(docs);
+    const treeData = this.buildTreeData(docs || []);
     const filteredTreeData = searchText
       ? treeData.filter((item) => {
           const searchLower = searchText.toLowerCase();
@@ -1227,82 +1231,87 @@ class DocsPage extends Component {
                             <Divider style={{ margin: '8px 0' }} />
                             <div>
                               <Text strong>References</Text>
-                              {docMetadata.references.nodes.length > 0 && (
-                                <div style={{ marginTop: '8px' }}>
-                                  <Text
-                                    type="secondary"
-                                    style={{ fontSize: '12px' }}
-                                  >
-                                    Nodes:
-                                  </Text>
-                                  <div style={{ marginTop: '4px' }}>
-                                    {docMetadata.references.nodes.map(
-                                      (node) => (
-                                        <Tag
-                                          key={node.id}
-                                          color="blue"
-                                          style={{
-                                            marginBottom: '4px',
-                                            cursor: 'pointer',
-                                          }}
-                                        >
-                                          @{node.title}
-                                        </Tag>
-                                      ),
-                                    )}
+                              {docMetadata.references.nodes &&
+                                docMetadata.references.nodes.length > 0 && (
+                                  <div style={{ marginTop: '8px' }}>
+                                    <Text
+                                      type="secondary"
+                                      style={{ fontSize: '12px' }}
+                                    >
+                                      Nodes:
+                                    </Text>
+                                    <div style={{ marginTop: '4px' }}>
+                                      {docMetadata.references.nodes.map(
+                                        (node) => (
+                                          <Tag
+                                            key={node.id}
+                                            color="blue"
+                                            style={{
+                                              marginBottom: '4px',
+                                              cursor: 'pointer',
+                                            }}
+                                          >
+                                            @{node.title}
+                                          </Tag>
+                                        ),
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              {docMetadata.references.parents.length > 0 && (
-                                <div style={{ marginTop: '8px' }}>
-                                  <Text
-                                    type="secondary"
-                                    style={{ fontSize: '12px' }}
-                                  >
-                                    Parents:
-                                  </Text>
-                                  <div style={{ marginTop: '4px' }}>
-                                    {docMetadata.references.parents.map(
-                                      (parent) => (
-                                        <Tag
-                                          key={parent.id}
-                                          color="green"
-                                          style={{
-                                            marginBottom: '4px',
-                                            cursor: 'pointer',
-                                          }}
-                                        >
-                                          @{parent.title}
-                                        </Tag>
-                                      ),
-                                    )}
+                                )}
+                              {docMetadata.references.parents &&
+                                docMetadata.references.parents.length > 0 && (
+                                  <div style={{ marginTop: '8px' }}>
+                                    <Text
+                                      type="secondary"
+                                      style={{ fontSize: '12px' }}
+                                    >
+                                      Parents:
+                                    </Text>
+                                    <div style={{ marginTop: '4px' }}>
+                                      {docMetadata.references.parents.map(
+                                        (parent) => (
+                                          <Tag
+                                            key={parent.id}
+                                            color="green"
+                                            style={{
+                                              marginBottom: '4px',
+                                              cursor: 'pointer',
+                                            }}
+                                          >
+                                            @{parent.title}
+                                          </Tag>
+                                        ),
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              {docMetadata.references.docs.length > 0 && (
-                                <div style={{ marginTop: '8px' }}>
-                                  <Text
-                                    type="secondary"
-                                    style={{ fontSize: '12px' }}
-                                  >
-                                    Docs:
-                                  </Text>
-                                  <div style={{ marginTop: '4px' }}>
-                                    {docMetadata.references.docs.map((doc) => (
-                                      <Tag
-                                        key={doc}
-                                        color="purple"
-                                        style={{
-                                          marginBottom: '4px',
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        [[{doc}]]
-                                      </Tag>
-                                    ))}
+                                )}
+                              {docMetadata.references.docs &&
+                                docMetadata.references.docs.length > 0 && (
+                                  <div style={{ marginTop: '8px' }}>
+                                    <Text
+                                      type="secondary"
+                                      style={{ fontSize: '12px' }}
+                                    >
+                                      Docs:
+                                    </Text>
+                                    <div style={{ marginTop: '4px' }}>
+                                      {docMetadata.references.docs.map(
+                                        (doc) => (
+                                          <Tag
+                                            key={doc}
+                                            color="purple"
+                                            style={{
+                                              marginBottom: '4px',
+                                              cursor: 'pointer',
+                                            }}
+                                          >
+                                            [[{doc}]]
+                                          </Tag>
+                                        ),
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
                             </div>
                           </>
                         )}
@@ -1744,7 +1753,7 @@ class DocsPage extends Component {
           ]}
           width={800}
         >
-          {images.length === 0 ? (
+          {!images || images.length === 0 ? (
             <div
               style={{ textAlign: 'center', padding: '40px', color: '#999' }}
             >

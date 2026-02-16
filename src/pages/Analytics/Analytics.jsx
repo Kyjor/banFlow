@@ -1592,7 +1592,7 @@ class Analytics extends Component {
                             color: '#722ed1',
                           }}
                         >
-                          {this.formatDurationWithDays(
+                          {Analytics.formatDurationWithDays(
                             completionStats.avgTimeToCompletion,
                           )}
                         </div>
