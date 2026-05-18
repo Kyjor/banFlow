@@ -1,0 +1,1711 @@
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
+import PropTypes from 'prop-types';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../utils/tauri';
+import { message } from 'antd';
+import HeartbeatService from '../services/HeartbeatService';
+
+// Git Context State Structure
+const initialState = {
+  // Repository Management
+  repositories: [],
+  currentRepository: null,
+  repositoryStatus: null,
+
+  // Git Operations State
+  isLoading: false,
+  operationInProgress: false,
+  operationHistory: [],
+
+  // Branch Management
+  branches: [],
+  currentBranch: null,
+
+  // File Status
+  stagedFiles: [],
+  modifiedFiles: [],
+  untrackedFiles: [],
+  deletedFiles: [],
+  conflictedFiles: [],
+
+  // Stash Management
+  stashList: [],
+
+  // Commit History
+  commitHistory: [],
+
+  // GitHub Integration
+  isGitHubAuthenticated: false,
+  githubUser: null,
+  githubRepositories: [],
+
+  // Diff and Comparison
+  currentDiff: null,
+
+  // Error Handling
+  lastError: null,
+  errorHistory: [],
+};
+
+// Action Types for Git Operations
+const GitActionTypes = {
+  // Loading States
+  SET_LOADING: 'SET_LOADING',
+  SET_OPERATION_IN_PROGRESS: 'SET_OPERATION_IN_PROGRESS',
+
+  // Repository Management
+  SET_REPOSITORIES: 'SET_REPOSITORIES',
+  SET_CURRENT_REPOSITORY: 'SET_CURRENT_REPOSITORY',
+  ADD_REPOSITORY: 'ADD_REPOSITORY',
+  UPDATE_REPOSITORY_STATUS: 'UPDATE_REPOSITORY_STATUS',
+
+  // Branch Operations
+  SET_BRANCHES: 'SET_BRANCHES',
+  SET_CURRENT_BRANCH: 'SET_CURRENT_BRANCH',
+
+  // File Operations
+  UPDATE_FILE_STATUS: 'UPDATE_FILE_STATUS',
+
+  // Stash Operations
+  SET_STASH_LIST: 'SET_STASH_LIST',
+
+  // Commit History
+  SET_COMMIT_HISTORY: 'SET_COMMIT_HISTORY',
+
+  // GitHub Integration
+  SET_GITHUB_AUTH: 'SET_GITHUB_AUTH',
+  SET_GITHUB_REPOSITORIES: 'SET_GITHUB_REPOSITORIES',
+
+  // Diff Operations
+  SET_CURRENT_DIFF: 'SET_CURRENT_DIFF',
+
+  // Operation History
+  ADD_OPERATION: 'ADD_OPERATION',
+  SET_OPERATION_HISTORY: 'SET_OPERATION_HISTORY',
+
+  // Error Handling
+  SET_ERROR: 'SET_ERROR',
+  CLEAR_ERROR: 'CLEAR_ERROR',
+};
+
+// Git Reducer for State Management
+function gitReducer(state, action) {
+  switch (action.type) {
+    case GitActionTypes.SET_LOADING:
+      return { ...state, isLoading: action.payload };
+
+    case GitActionTypes.SET_OPERATION_IN_PROGRESS:
+      return { ...state, operationInProgress: action.payload };
+
+    case GitActionTypes.SET_REPOSITORIES:
+      return { ...state, repositories: action.payload };
+
+    case GitActionTypes.ADD_REPOSITORY:
+      return {
+        ...state,
+        repositories: [...state.repositories, action.payload],
+      };
+
+    case GitActionTypes.SET_CURRENT_REPOSITORY:
+      return { ...state, currentRepository: action.payload };
+
+    case GitActionTypes.UPDATE_REPOSITORY_STATUS:
+      return {
+        ...state,
+        repositoryStatus: action.payload,
+        stagedFiles: action.payload?.staged || [],
+        modifiedFiles: action.payload?.modified || [],
+        untrackedFiles: action.payload?.created || [],
+        deletedFiles: action.payload?.deleted || [],
+        conflictedFiles: action.payload?.conflicted || [],
+        currentBranch: action.payload?.currentBranch,
+        branches: action.payload?.branches || [],
+      };
+
+    case GitActionTypes.SET_BRANCHES:
+      return { ...state, branches: action.payload };
+
+    case GitActionTypes.SET_CURRENT_BRANCH:
+      return { ...state, currentBranch: action.payload };
+
+    case GitActionTypes.UPDATE_FILE_STATUS:
+      return {
+        ...state,
+        stagedFiles: action.payload.staged || state.stagedFiles,
+        modifiedFiles: action.payload.modified || state.modifiedFiles,
+        untrackedFiles: action.payload.created || state.untrackedFiles,
+        deletedFiles: action.payload.deleted || state.deletedFiles,
+        conflictedFiles: action.payload.conflicted || state.conflictedFiles,
+      };
+
+    case GitActionTypes.SET_STASH_LIST:
+      return { ...state, stashList: action.payload };
+
+    case GitActionTypes.SET_COMMIT_HISTORY:
+      return { ...state, commitHistory: action.payload };
+
+    case GitActionTypes.SET_GITHUB_AUTH:
+      return {
+        ...state,
+        isGitHubAuthenticated: action.payload.authenticated,
+        githubUser: action.payload.user,
+      };
+
+    case GitActionTypes.SET_GITHUB_REPOSITORIES:
+      return { ...state, githubRepositories: action.payload };
+
+    case GitActionTypes.SET_CURRENT_DIFF:
+      return { ...state, currentDiff: action.payload };
+
+    case GitActionTypes.ADD_OPERATION:
+      return {
+        ...state,
+        operationHistory: [
+          action.payload,
+          ...state.operationHistory.slice(0, 49),
+        ],
+      };
+
+    case GitActionTypes.SET_OPERATION_HISTORY:
+      return { ...state, operationHistory: action.payload };
+
+    case GitActionTypes.SET_ERROR:
+      return {
+        ...state,
+        lastError: action.payload,
+        errorHistory: [action.payload, ...state.errorHistory.slice(0, 9)],
+      };
+
+    case GitActionTypes.CLEAR_ERROR:
+      return { ...state, lastError: null };
+
+    default:
+      return state;
+  }
+}
+
+// Create Git Context
+const GitContext = createContext();
+
+// Git Context Provider Component
+export function GitProvider({ children }) {
+  const [state, dispatch] = useReducer(gitReducer, initialState);
+  const heartbeatIdRef = useRef(null);
+  const heartbeatService = HeartbeatService.getInstance();
+  const stateRef = useRef(state);
+  const refreshRepositoryStatusRef = useRef(null);
+
+  // Keep state ref in sync
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  // Configuration: Heartbeat interval in milliseconds (default: 5 seconds)
+  // Can be overridden via settings
+  const HEARTBEAT_INTERVAL_MS = parseInt(
+    localStorage.getItem('gitHeartbeatInterval') ||
+      '5000',
+    10,
+  );
+
+  // Error Handling Helper
+  const handleError = useCallback((error, operation) => {
+    console.error(`Git ${operation} error:`, error);
+    const errorInfo = {
+      message: error.message || 'Unknown error occurred',
+      operation,
+      timestamp: new Date().toISOString(),
+    };
+    dispatch({ type: GitActionTypes.SET_ERROR, payload: errorInfo });
+    message.error(`Git ${operation} failed: ${errorInfo.message}`);
+  }, []);
+
+  // Success Message Helper
+  const showSuccess = useCallback((operation, details = '') => {
+    const successMessage = details ? `${operation} ${details}` : operation;
+    message.success(successMessage);
+  }, []);
+
+  // Repository Management Functions
+  const addRepository = useCallback(
+    async (repoPath) => {
+      try {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+        // If no repoPath provided, open dialog first
+        let selectedPath = repoPath;
+        if (!selectedPath) {
+          const dialogPath = await tauriInvoke('git:selectRepository');
+          if (!dialogPath) {
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+            return null;
+          }
+          selectedPath = dialogPath;
+        }
+        const repoInfo = await tauriInvoke('git:addRepository', { repoPath: selectedPath });
+        dispatch({ type: GitActionTypes.ADD_REPOSITORY, payload: repoInfo });
+        showSuccess('Repository added', repoInfo.name);
+        return repoInfo;
+      } catch (error) {
+        handleError(error, 'add repository');
+        throw error;
+      } finally {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const switchRepository = useCallback(
+    async (repoPath) => {
+      try {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+        const status = await tauriInvoke(
+          'git:switchRepository',
+          { repoPath },
+        );
+        dispatch({
+          type: GitActionTypes.SET_CURRENT_REPOSITORY,
+          payload: repoPath,
+        });
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: status,
+        });
+        showSuccess('Switched repository');
+        return status;
+      } catch (error) {
+        handleError(error, 'switch repository');
+        throw error;
+      } finally {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const selectRepository = useCallback(async () => {
+    try {
+      const selectedPath = await tauriInvoke('git:selectRepository');
+      if (selectedPath) {
+        return await addRepository(selectedPath);
+      }
+      return null;
+    } catch (error) {
+      handleError(error, 'select repository');
+      throw error;
+    }
+  }, [addRepository, handleError]);
+
+  const refreshRepositoryStatus = useCallback(async () => {
+    try {
+      // Get current repository path from state
+      const currentRepoPath = state.currentRepository;
+      if (!currentRepoPath) {
+        console.warn('No current repository selected, cannot refresh status');
+        return;
+      }
+      const status = await tauriInvoke('git:getRepositoryStatus', { repoPath: currentRepoPath });
+      dispatch({
+        type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+        payload: status,
+      });
+      return status;
+    } catch (error) {
+      handleError(error, 'refresh status');
+      throw error;
+    }
+  }, [handleError, state]);
+
+  // Keep refreshRepositoryStatus ref in sync (after function is defined)
+  useEffect(() => {
+    refreshRepositoryStatusRef.current = refreshRepositoryStatus;
+  }, [refreshRepositoryStatus]);
+
+  // Core Git Operations
+  const createBranch = useCallback(
+    async (branchName, startPoint = null) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke(
+          'git:createBranch',
+          branchName,
+          startPoint,
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result,
+        });
+        showSuccess('Branch created', branchName);
+        return result;
+      } catch (error) {
+        handleError(error, 'create branch');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const switchBranch = useCallback(
+    async (branchName) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke('git:switchBranch', branchName);
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result,
+        });
+        showSuccess('Switched to branch', branchName);
+        return result;
+      } catch (error) {
+        handleError(error, 'switch branch');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const deleteBranch = useCallback(
+    async (branchName, force = false) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke(
+          'git:deleteBranch',
+          branchName,
+          force,
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result,
+        });
+        showSuccess('Branch deleted', branchName);
+        return result;
+      } catch (error) {
+        handleError(error, 'delete branch');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const getBranchesWithDates = useCallback(async (repoPath = null) => {
+    try {
+      const currentRepoPath = repoPath || state.currentRepository;
+      if (!currentRepoPath) {
+        // Silently return empty array if no repository is selected
+        return [];
+      }
+      const branches = await tauriInvoke('git:getBranchesWithDates', { repoPath: currentRepoPath });
+      return branches;
+    } catch (error) {
+      handleError(error, 'get branches with dates');
+      throw error;
+    }
+  }, [handleError, state.currentRepository]);
+
+  const stageFiles = useCallback(
+    async (files) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:stageFiles', {
+          repoPath: currentRepoPath,
+          files,
+        });
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result,
+        });
+        showSuccess('Files staged', `${files.length} file(s)`);
+        return result;
+      } catch (error) {
+        handleError(error, 'stage files');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess, state.currentRepository],
+  );
+
+  const unstageFiles = useCallback(
+    async (files) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:unstageFiles', {
+          repoPath: currentRepoPath,
+          files,
+        });
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result,
+        });
+        showSuccess('Files unstaged', `${files.length} file(s)`);
+        return result;
+      } catch (error) {
+        handleError(error, 'unstage files');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess, state.currentRepository],
+  );
+
+  const commit = useCallback(
+    async (commitMessage, description = '') => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke(
+          'git:commit',
+          {
+            repoPath: currentRepoPath,
+            message: commitMessage,
+            description,
+          },
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Committed changes', result.commit?.substring(0, 7));
+        return result;
+      } catch (error) {
+        handleError(error, 'commit');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess, state.currentRepository],
+  );
+
+  const fetch = useCallback(
+    async (remote = 'origin', prune = false) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:fetch', {
+          repoPath: currentRepoPath,
+          remote,
+          prune,
+        });
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Fetched', `from ${remote}`);
+        return result;
+      } catch (error) {
+        handleError(error, 'fetch');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess, state.currentRepository],
+  );
+
+  const pull = useCallback(
+    async (remote = 'origin', branch = null, strategy = 'merge') => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke(
+          'git:pull',
+          {
+            repoPath: currentRepoPath,
+            remote,
+            branch,
+            strategy,
+          },
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        let strategyLabel = '';
+        if (strategy === 'rebase') {
+          strategyLabel = '(rebased)';
+        } else if (strategy === 'ff-only') {
+          strategyLabel = '(fast-forward)';
+        }
+        showSuccess('Pulled changes', `from ${remote} ${strategyLabel}`.trim());
+        return result;
+      } catch (error) {
+        handleError(error, 'pull');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess, state.currentRepository],
+  );
+
+  const push = useCallback(
+    async (remote = 'origin', branch = null) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:push', {
+          repoPath: currentRepoPath,
+          remote,
+          branch,
+        });
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Pushed changes', `to ${remote}`);
+        return result;
+      } catch (error) {
+        handleError(error, 'push');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  // Stash Operations
+  const stashChanges = useCallback(
+    async (stashMessage = null) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke(
+          'git:stashChanges',
+          {
+            repoPath: currentRepoPath,
+            stashMessage,
+          },
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Changes stashed');
+        return result;
+      } catch (error) {
+        handleError(error, 'stash changes');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const stashFiles = useCallback(
+    async (files, stashMessage = null) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke(
+          'git:stashFiles',
+          {
+            repoPath: currentRepoPath,
+            files,
+            stashMessage,
+          },
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess(
+          `${files.length} file${files.length > 1 ? 's' : ''} stashed`,
+        );
+        return result;
+      } catch (error) {
+        handleError(error, 'stash selected files');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const getStashList = useCallback(async () => {
+    try {
+      const currentRepoPath = state.currentRepository;
+      if (!currentRepoPath) {
+        return [];
+      }
+      const stashList = await tauriInvoke('git:getStashList', { repoPath: currentRepoPath });
+      dispatch({ type: GitActionTypes.SET_STASH_LIST, payload: stashList });
+      return stashList;
+    } catch (error) {
+      handleError(error, 'get stash list');
+      throw error;
+    }
+  }, [handleError, state.currentRepository]);
+
+  const getStashFiles = useCallback(
+    async (stashIndex = 0) => {
+      try {
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          return { files: [], stat: '' };
+        }
+        return await tauriInvoke('git:getStashFiles', {
+          repoPath: currentRepoPath,
+          stashIndex,
+        });
+      } catch (error) {
+        handleError(error, 'get stash files');
+        return { files: [], stat: '' };
+      }
+    },
+    [handleError, state.currentRepository],
+  );
+
+  const getStashFileDiff = useCallback(
+    async (filename, stashIndex = 0) => {
+      try {
+        return await tauriInvoke(
+          'git:getStashFileDiff',
+          stashIndex,
+          filename,
+        );
+      } catch (error) {
+        handleError(error, 'get stash file diff');
+        return '';
+      }
+    },
+    [handleError],
+  );
+
+  const applyStash = useCallback(
+    async (stashIndex = 0) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:applyStash', {
+          repoPath: currentRepoPath,
+          stashIndex,
+        });
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Stash applied', `stash@{${stashIndex}}`);
+        return result;
+      } catch (error) {
+        handleError(error, 'apply stash');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const popStash = useCallback(
+    async (stashIndex = 0) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:popStash', {
+          repoPath: currentRepoPath,
+          stashIndex,
+        });
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Stash popped', `stash@{${stashIndex}}`);
+        return result;
+      } catch (error) {
+        handleError(error, 'pop stash');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const dropStash = useCallback(
+    async (stashIndex = 0) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:dropStash', {
+          repoPath: currentRepoPath,
+          stashIndex,
+        });
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Stash deleted', `stash@{${stashIndex}}`);
+        return result;
+      } catch (error) {
+        handleError(error, 'drop stash');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  // Diff and History Operations
+  const getDiff = useCallback(
+    async (file = null, staged = false) => {
+      try {
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const diff = await tauriInvoke('git:getDiff', {
+          repoPath: currentRepoPath,
+          file,
+          staged,
+        });
+        dispatch({ type: GitActionTypes.SET_CURRENT_DIFF, payload: diff });
+        return diff;
+      } catch (error) {
+        handleError(error, 'get diff');
+        throw error;
+      }
+    },
+    [handleError, state.currentRepository],
+  );
+
+  const getCommitHistory = useCallback(
+    async (options = {}) => {
+      try {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const history = await tauriInvoke(
+          'git:getCommitHistory',
+          {
+            repoPath: currentRepoPath,
+            maxCount: options.maxCount,
+            from: options.from,
+            to: options.to,
+          },
+        );
+        dispatch({ type: GitActionTypes.SET_COMMIT_HISTORY, payload: history });
+        return history;
+      } catch (error) {
+        handleError(error, 'get commit history');
+        throw error;
+      } finally {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+      }
+    },
+    [handleError, state.currentRepository],
+  );
+
+  const getCommitFiles = useCallback(
+    async (commitHash) => {
+      try {
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        return await tauriInvoke('git:getCommitFiles', {
+          repoPath: currentRepoPath,
+          commitHash,
+        });
+      } catch (error) {
+        handleError(error, 'get commit files');
+        throw error;
+      }
+    },
+    [handleError, state.currentRepository],
+  );
+
+  const getCommitDiff = useCallback(
+    async (commitHash, file = null) => {
+      try {
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        return await tauriInvoke('git:getCommitDiff', {
+          repoPath: currentRepoPath,
+          commitHash,
+          file,
+        });
+      } catch (error) {
+        handleError(error, 'get commit diff');
+        throw error;
+      }
+    },
+    [handleError, state.currentRepository],
+  );
+
+  const getFileHistory = useCallback(
+    async (filePath, maxCount = 50) => {
+      try {
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        return await tauriInvoke(
+          'git:getFileHistory',
+          {
+            repoPath: currentRepoPath,
+            filePath,
+            maxCount,
+          },
+        );
+      } catch (error) {
+        handleError(error, 'get file history');
+        throw error;
+      }
+    },
+    [handleError, state.currentRepository],
+  );
+
+  const getFileAtCommit = useCallback(
+    async (filePath, commitHash) => {
+      try {
+        return await tauriInvoke(
+          'git:getFileAtCommit',
+          filePath,
+          commitHash,
+        );
+      } catch (error) {
+        handleError(error, 'get file at commit');
+        throw error;
+      }
+    },
+    [handleError],
+  );
+
+  // Undo System
+  const undoLastOperation = useCallback(async () => {
+    try {
+      dispatch({
+        type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+        payload: true,
+      });
+      const result = await tauriInvoke('git:undoLastOperation');
+      dispatch({
+        type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+        payload: result,
+      });
+      showSuccess('Operation undone');
+      return result;
+    } catch (error) {
+      handleError(error, 'undo operation');
+      throw error;
+    } finally {
+      dispatch({
+        type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+        payload: false,
+      });
+    }
+  }, [handleError, showSuccess]);
+
+  // GitHub Integration
+  const authenticateGitHub = useCallback(
+    async (token) => {
+      try {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+        const result = await tauriInvoke(
+          'git:authenticateGitHub',
+          token,
+        );
+        dispatch({ type: GitActionTypes.SET_GITHUB_AUTH, payload: result });
+        showSuccess('GitHub authenticated', result.user?.login);
+        return result;
+      } catch (error) {
+        handleError(error, 'GitHub authentication');
+        throw error;
+      } finally {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const startOAuthFlow = useCallback(async () => {
+    try {
+      console.log('startOAuthFlow called, invoking IPC...');
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+      const { state: oauthState, authUrl } =
+        await tauriInvoke('git:startOAuthFlow');
+      console.log('IPC call returned, state:', oauthState, 'authUrl:', authUrl);
+
+      // Listen for OAuth callback
+      return new Promise(async (resolve, reject) => {
+        let unlisten = null;
+        
+        const handleCallback = async (
+          event,
+          { code, state: callbackState, error },
+        ) => {
+          if (unlisten) {
+            unlisten();
+            unlisten = null;
+          }
+
+          if (error) {
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+            reject(new Error(`OAuth error: ${error}`));
+            return;
+          }
+
+          if (callbackState !== oauthState) {
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+            reject(new Error('OAuth state mismatch'));
+            return;
+          }
+
+          try {
+            const result = await tauriInvoke(
+              'git:completeOAuthFlow',
+              code,
+              callbackState,
+            );
+            dispatch({ type: GitActionTypes.SET_GITHUB_AUTH, payload: result });
+            showSuccess('GitHub authenticated', result.user?.login);
+            resolve(result);
+          } catch (oauthError) {
+            reject(oauthError);
+          } finally {
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+          }
+        };
+
+        try {
+          unlisten = await tauriOn('github:oauth-callback', handleCallback);
+        } catch (err) {
+          dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+          reject(new Error(`Failed to set up OAuth listener: ${err.message}`));
+          return;
+        }
+
+        // Timeout after 5 minutes
+        setTimeout(
+          () => {
+            if (unlisten) {
+              unlisten();
+              unlisten = null;
+            }
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+            reject(new Error('OAuth flow timed out'));
+          },
+          5 * 60 * 1000,
+        );
+      });
+    } catch (error) {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+      handleError(error, 'start OAuth flow');
+      throw error;
+    }
+  }, [handleError, showSuccess]);
+
+  const loadGitHubRepositories = useCallback(async () => {
+    try {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+      const repos = await tauriInvoke('git:getGitHubRepositories');
+      dispatch({
+        type: GitActionTypes.SET_GITHUB_REPOSITORIES,
+        payload: repos,
+      });
+      return repos;
+    } catch (error) {
+      handleError(error, 'load GitHub repositories');
+      throw error;
+    } finally {
+      dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+    }
+  }, [handleError]);
+
+  const logoutGitHub = useCallback(async () => {
+    try {
+      dispatch({
+        type: GitActionTypes.SET_GITHUB_AUTH,
+        payload: { authenticated: false, user: null },
+      });
+      dispatch({ type: GitActionTypes.SET_GITHUB_REPOSITORIES, payload: [] });
+      showSuccess('GitHub logged out');
+    } catch (error) {
+      handleError(error, 'logout GitHub');
+      throw error;
+    }
+  }, [handleError, showSuccess]);
+
+  const loadGitHubRepoInfo = useCallback(async () => {
+    // This would load info about the current repo if it's a GitHub repo
+    // Implementation depends on your needs
+    // Placeholder - implement based on your needs
+    return null;
+  }, []);
+
+  const cloneRepository = useCallback(
+    async (repoUrl, targetPath) => {
+      try {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+        const result = await tauriInvoke(
+          'git:cloneRepository',
+          repoUrl,
+          targetPath,
+        );
+        dispatch({ type: GitActionTypes.ADD_REPOSITORY, payload: result });
+        showSuccess('Repository cloned', result.name);
+        return result;
+      } catch (error) {
+        handleError(error, 'clone repository');
+        throw error;
+      } finally {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const initRepository = useCallback(
+    async (targetPath) => {
+      try {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
+        const result = await tauriInvoke(
+          'git:initRepository',
+          targetPath,
+        );
+        dispatch({ type: GitActionTypes.ADD_REPOSITORY, payload: result });
+        showSuccess('Repository initialized', result.name);
+        return result;
+      } catch (error) {
+        handleError(error, 'initialize repository');
+        throw error;
+      } finally {
+        dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const selectDirectory = useCallback(async () => {
+    try {
+      return await tauriInvoke('git:selectDirectory');
+    } catch (error) {
+      handleError(error, 'select directory');
+      return null;
+    }
+  }, [handleError]);
+
+  // Project-specific repository management
+  const getProjectRepositoryStats = useCallback(async () => {
+    try {
+      const stats = await tauriInvoke('git:getProjectRepositoryStats');
+      return stats;
+    } catch (error) {
+      handleError(error, 'get project repository stats');
+      return null;
+    }
+  }, [handleError]);
+
+  const cleanupProjectRepositories = useCallback(async () => {
+    try {
+      const removedPaths = await tauriInvoke(
+        'git:cleanupProjectRepositories',
+      );
+      if (removedPaths.length > 0) {
+        showSuccess(
+          'Repositories cleaned up',
+          `Removed ${removedPaths.length} non-existent repositories`,
+        );
+      }
+      return removedPaths;
+    } catch (error) {
+      handleError(error, 'cleanup project repositories');
+      return [];
+    }
+  }, [handleError, showSuccess]);
+
+  const loadProjectRepositories = useCallback(async () => {
+    try {
+      // Get current project name from localStorage (set by ProjectService)
+      const projectName = localStorage.getItem('currentProjectName');
+      if (!projectName) {
+        console.warn('No current project name found, cannot load repositories');
+        return [];
+      }
+      const repos = await tauriInvoke('git:loadProjectRepositories', { projectName });
+      dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
+      return repos;
+    } catch (error) {
+      handleError(error, 'load project repositories');
+      return [];
+    }
+  }, [handleError]);
+
+  // Initialize repositories on mount
+  useEffect(() => {
+    const loadRepositories = async () => {
+      try {
+        const repos = await tauriInvoke('git:getRepositories');
+        dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
+
+        const currentRepo = await tauriInvoke(
+          'git:getCurrentRepository',
+        );
+        if (currentRepo) {
+          dispatch({
+            type: GitActionTypes.SET_CURRENT_REPOSITORY,
+            payload: currentRepo.path,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load repositories:', error);
+      }
+    };
+
+    loadRepositories();
+  }, []);
+
+  // Heartbeat: Periodically check for repository status changes
+  useEffect(() => {
+    // Clean up any existing heartbeat
+    if (heartbeatIdRef.current !== null) {
+      heartbeatService.unregister(heartbeatIdRef.current);
+      heartbeatIdRef.current = null;
+    }
+
+    // Only start heartbeat if we have a current repository
+    if (state.currentRepository) {
+      heartbeatIdRef.current = heartbeatService.register(
+        'git-repository-status',
+        async () => {
+          // Only refresh if not currently performing an operation
+          // Use refs to get current state and function to avoid stale closures
+          const currentState = stateRef.current;
+          const refreshFn = refreshRepositoryStatusRef.current;
+
+          if (
+            refreshFn &&
+            !currentState.operationInProgress &&
+            !currentState.isLoading &&
+            currentState.currentRepository
+          ) {
+            try {
+              await refreshFn();
+            } catch (error) {
+              // Silently fail - we don't want to spam errors for heartbeat failures
+              // The error will be logged by refreshRepositoryStatus
+              console.debug('Heartbeat refresh failed:', error);
+            }
+          }
+        },
+        HEARTBEAT_INTERVAL_MS,
+        { immediate: true }, // Run immediately, then every interval
+      );
+    }
+
+    // Cleanup on unmount or when repository changes
+    return () => {
+      if (heartbeatIdRef.current !== null) {
+        heartbeatService.unregister(heartbeatIdRef.current);
+        heartbeatIdRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.currentRepository]); // Only re-run when repository changes
+
+  // File Management Operations
+  const discardChanges = useCallback(
+    async (files) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke('git:discardChanges', files);
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Changes discarded', `${files.length} file(s)`);
+        return result;
+      } catch (error) {
+        handleError(error, 'discard changes');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const deleteUntrackedFiles = useCallback(
+    async (files) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke(
+          'git:deleteUntrackedFiles',
+          files,
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Files deleted', `${files.length} untracked file(s)`);
+        return result;
+      } catch (error) {
+        handleError(error, 'delete untracked files');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const cleanUntrackedFiles = useCallback(
+    async (dryRun = false) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke(
+          'git:cleanUntrackedFiles',
+          dryRun,
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess(
+          dryRun ? 'Dry run completed' : 'Files cleaned',
+          result.message,
+        );
+        return result;
+      } catch (error) {
+        handleError(error, 'clean untracked files');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  // Hunk/Line level staging operations
+  const stageHunk = useCallback(
+    async (filePath, hunkIndex) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke(
+          'git:stageHunk',
+          filePath,
+          hunkIndex,
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Hunk staged', result.message);
+        return result;
+      } catch (error) {
+        handleError(error, 'stage hunk');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const discardHunk = useCallback(
+    async (filePath, hunkIndex) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke(
+          'git:discardHunk',
+          filePath,
+          hunkIndex,
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Hunk discarded', result.message);
+        return result;
+      } catch (error) {
+        handleError(error, 'discard hunk');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const stageLines = useCallback(
+    async (filePath, hunkIndex, lineIndices) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke(
+          'git:stageLines',
+          filePath,
+          hunkIndex,
+          lineIndices,
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Lines staged', result.message);
+        return result;
+      } catch (error) {
+        handleError(error, 'stage lines');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  const discardLines = useCallback(
+    async (filePath, hunkIndex, lineIndices) => {
+      try {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: true,
+        });
+        const result = await tauriInvoke(
+          'git:discardLines',
+          filePath,
+          hunkIndex,
+          lineIndices,
+        );
+        dispatch({
+          type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+          payload: result.status,
+        });
+        showSuccess('Lines discarded', result.message);
+        return result;
+      } catch (error) {
+        handleError(error, 'discard lines');
+        throw error;
+      } finally {
+        dispatch({
+          type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
+          payload: false,
+        });
+      }
+    },
+    [handleError, showSuccess],
+  );
+
+  // Context Value
+  const contextValue = useMemo(
+    () => ({
+      // State
+      ...state,
+
+      // Repository Management
+      addRepository,
+      switchRepository,
+      selectRepository,
+      refreshRepositoryStatus,
+
+      // Core Git Operations
+      createBranch,
+      switchBranch,
+      deleteBranch,
+      getBranchesWithDates,
+      stageFiles,
+      unstageFiles,
+      commit,
+      fetch,
+      pull,
+      push,
+
+      // Stash Operations
+      stashChanges,
+      stashFiles,
+      getStashList,
+      getStashFiles,
+      getStashFileDiff,
+      applyStash,
+      popStash,
+      dropStash,
+
+      // Diff and History
+      getDiff,
+      getCommitHistory,
+      getCommitFiles,
+      getCommitDiff,
+      getFileHistory,
+      getFileAtCommit,
+
+      // Undo System
+      undoLastOperation,
+
+      // GitHub Integration
+      authenticateGitHub,
+      startOAuthFlow,
+      loadGitHubRepositories,
+      logoutGitHub,
+      loadGitHubRepoInfo,
+      cloneRepository,
+      initRepository,
+      selectDirectory,
+
+      // Project-specific Repository Management
+      getProjectRepositoryStats,
+      cleanupProjectRepositories,
+      loadProjectRepositories,
+
+      // File Management Operations
+      discardChanges,
+      deleteUntrackedFiles,
+      cleanUntrackedFiles,
+
+      // Hunk/Line Staging Operations
+      stageHunk,
+      discardHunk,
+      stageLines,
+      discardLines,
+
+      // Utility Functions
+      clearError: () => dispatch({ type: GitActionTypes.CLEAR_ERROR }),
+    }),
+    [
+      state,
+      addRepository,
+      switchRepository,
+      selectRepository,
+      refreshRepositoryStatus,
+      createBranch,
+      switchBranch,
+      deleteBranch,
+      getBranchesWithDates,
+      stageFiles,
+      unstageFiles,
+      commit,
+      fetch,
+      pull,
+      push,
+      stashChanges,
+      stashFiles,
+      getStashList,
+      getStashFiles,
+      getStashFileDiff,
+      applyStash,
+      popStash,
+      dropStash,
+      getDiff,
+      getCommitHistory,
+      getCommitFiles,
+      getCommitDiff,
+      getFileHistory,
+      getFileAtCommit,
+      undoLastOperation,
+      authenticateGitHub,
+      startOAuthFlow,
+      loadGitHubRepositories,
+      logoutGitHub,
+      loadGitHubRepoInfo,
+      cloneRepository,
+      initRepository,
+      selectDirectory,
+      getProjectRepositoryStats,
+      cleanupProjectRepositories,
+      loadProjectRepositories,
+      discardChanges,
+      deleteUntrackedFiles,
+      cleanUntrackedFiles,
+      stageHunk,
+      discardHunk,
+      stageLines,
+      discardLines,
+    ],
+  );
+
+  return (
+    <GitContext.Provider value={contextValue}>{children}</GitContext.Provider>
+  );
+}
+
+GitProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};
+
+// Custom Hook for using Git Context
+export function useGit() {
+  const context = useContext(GitContext);
+  if (!context) {
+    throw new Error('useGit must be used within a GitProvider');
+  }
+  return context;
+}
+
+export default GitContext;

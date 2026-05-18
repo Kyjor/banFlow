@@ -1,0 +1,141 @@
+name: Deploy to TestFlight
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: testflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build iOS & Upload to TestFlight
+    runs-on: macos-14   # Apple Silicon runner with Xcode 15+
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Set up Node
+      # -----------------------------------------------------------------------
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      # -----------------------------------------------------------------------
+      # 3. Set up Rust toolchain + iOS targets
+      # -----------------------------------------------------------------------
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Rust iOS targets
+        run: |
+          rustup target add aarch64-apple-ios
+          rustup target add aarch64-apple-ios-sim
+          rustup target add x86_64-apple-ios
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # -----------------------------------------------------------------------
+      # 4. Set up Ruby & Fastlane
+      # -----------------------------------------------------------------------
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      # -----------------------------------------------------------------------
+      # 5. Install Apple certificates & provisioning profiles
+      # -----------------------------------------------------------------------
+      - name: Install Apple Certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_DISTRIBUTION_CERT_P12 }}
+          p12-password: ${{ secrets.APPLE_DISTRIBUTION_CERT_PASSWORD }}
+          keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+
+      - name: Install Provisioning Profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode \
+            > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+      # -----------------------------------------------------------------------
+      # 6. Write environment variables for the build
+      # -----------------------------------------------------------------------
+      - name: Create .env
+        run: |
+          cat > .env << EOF
+          VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          EOF
+
+      # -----------------------------------------------------------------------
+      # 7. Auto-increment build number (CFBundleVersion = GitHub run number)
+      # -----------------------------------------------------------------------
+      - name: Set build number
+        run: |
+          BUILD_NUM=${{ github.run_number }}
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" \
+            src-tauri/gen/apple/runwithfriends_iOS/Info.plist || true
+          echo "BUILD_NUMBER=$BUILD_NUM" >> $GITHUB_ENV
+
+      # -----------------------------------------------------------------------
+      # 8. Build the Tauri iOS app
+      # -----------------------------------------------------------------------
+      - name: Build Tauri iOS (release)
+        run: |
+          npx tauri ios build --export-method app-store-connect
+        env:
+          APPLE_DEVELOPMENT_TEAM: ${{ secrets.APPLE_DEVELOPMENT_TEAM }}
+
+      # -----------------------------------------------------------------------
+      # 9. Upload to TestFlight via App Store Connect API
+      # -----------------------------------------------------------------------
+      - name: Place App Store Connect API key
+        env:
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$APP_STORE_CONNECT_API_KEY_CONTENT" \
+            > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+      - name: Upload to TestFlight
+        run: |
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "src-tauri/gen/apple/build/runwithfriends.ipa" \
+            --apiKey ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }} \
+            --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+
+      # -----------------------------------------------------------------------
+      # 10. Notify on success/failure
+      # -----------------------------------------------------------------------
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Build ${{ env.BUILD_NUMBER }} successfully uploaded to TestFlight."
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ TestFlight deployment failed. Check the logs above."
+

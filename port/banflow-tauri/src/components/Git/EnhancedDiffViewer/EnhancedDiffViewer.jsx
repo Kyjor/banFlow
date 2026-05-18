@@ -1,0 +1,1729 @@
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
+import PropTypes from 'prop-types';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
+import {
+  Card,
+  Select,
+  Button,
+  Space,
+  Typography,
+  Tag,
+  Empty,
+  Spin,
+  Tooltip,
+  Row,
+  Col,
+  Switch,
+  Slider,
+  Divider,
+  Badge,
+  Alert,
+  Input,
+  Modal,
+  List,
+  message,
+} from 'antd';
+import {
+  FileTextOutlined,
+  CopyOutlined,
+  EyeOutlined,
+  MinusOutlined,
+  PlusOutlined,
+  SettingOutlined,
+  SearchOutlined,
+  CaretRightOutlined,
+  CaretDownOutlined,
+  CheckOutlined,
+  CloseOutlined,
+  UndoOutlined,
+  EditOutlined,
+  FileSearchOutlined,
+  HistoryOutlined,
+} from '@ant-design/icons';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import {
+  tomorrow,
+  prism,
+} from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useGit } from '../../../contexts/GitContext';
+import './EnhancedDiffViewer.scss';
+import {
+  isImageFile,
+  isAsepriteFile,
+  getLanguageFromFilename,
+  getLinePrefix,
+  formatHistoryDate,
+} from './utils';
+import {
+  useFileLoading,
+  useImageLoading,
+  useAsepriteLoading,
+  useFullFileLoading,
+  useFileHistory,
+  useKeyboardShortcuts,
+} from './hooks';
+import {
+  useStagingHandlers,
+  useLineSelectionHandlers,
+  useEditHandlers,
+  useInlineEditHandlers,
+} from './handlers';
+import ImageDiffRenderer from './renderers/ImageDiffRenderer';
+import AsepriteDiffRenderer from './renderers/AsepriteDiffRenderer';
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+
+function EnhancedDiffViewer({
+  file = null,
+  staged = false,
+  compact = false,
+  showFileSelector = true,
+  theme = 'light',
+  showStagingControls = true,
+  diffData = null,
+  readOnly = false,
+}) {
+  const {
+    currentRepository,
+    currentDiff,
+    modifiedFiles,
+    stagedFiles,
+    deletedFiles,
+    getDiff,
+    isLoading,
+    operationInProgress,
+    stageFiles,
+    unstageFiles,
+    discardChanges,
+    stageHunk,
+    discardHunk,
+    stageLines,
+    discardLines,
+    getFileHistory,
+    getFileAtCommit,
+  } = useGit();
+
+  const [selectedFile, setSelectedFile] = useState(file);
+  const [viewMode, setViewMode] = useState('side-by-side');
+  const [showWhitespace, setShowWhitespace] = useState(false);
+  const [selectedDiff, setSelectedDiff] = useState(null);
+  const [contextLines, setContextLines] = useState(3);
+  const [expandedHunks, setExpandedHunks] = useState(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
+  const [wordWrap, setWordWrap] = useState(true);
+  const [showLineNumbers, setShowLineNumbers] = useState(true);
+  const [highlightChanges, setHighlightChanges] = useState(true);
+  const [selectedHunk, setSelectedHunk] = useState(null);
+  const [selectedLines, setSelectedLines] = useState(new Set());
+  const [editMode, setEditMode] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const [originalFileContent, setOriginalFileContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [viewFullFile, setViewFullFile] = useState(false);
+  const [fullFileContent, setFullFileContent] = useState('');
+  const [showFilePicker, setShowFilePicker] = useState(false);
+  const [allFiles, setAllFiles] = useState([]);
+  const [fileSearchTerm, setFileSearchTerm] = useState('');
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [inlineEditMode, setInlineEditMode] = useState(false);
+  const [inlineEdits, setInlineEdits] = useState({}); // { lineKey: newContent }
+  const [editingLineKey, setEditingLineKey] = useState(null);
+  const [fileHistory, setFileHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedHistoryCommit, setSelectedHistoryCommit] = useState(null);
+  const [historicalContent, setHistoricalContent] = useState(null);
+  const [originalImage, setOriginalImage] = useState(null);
+  const [modifiedImage, setModifiedImage] = useState(null);
+  const [loadingImages, setLoadingImages] = useState(false);
+  const [originalAseprite, setOriginalAseprite] = useState(null);
+  const [modifiedAseprite, setModifiedAseprite] = useState(null);
+  const [loadingAseprite, setLoadingAseprite] = useState(false);
+  const editorRef = useRef(null);
+  const fileSearchInputRef = useRef(null);
+  const inlineEditInputRef = useRef(null);
+
+  // Use custom hooks for file loading
+  const { loadDiff } = useFileLoading(
+    selectedFile,
+    currentRepository,
+    staged,
+    diffData,
+    getDiff,
+    readOnly,
+  );
+
+  const openFilePicker = useCallback(async () => {
+    if (!currentRepository) return;
+    setShowFilePicker(true);
+    setFileSearchTerm('');
+    setLoadingFiles(true);
+    try {
+      const files = await await tauriInvoke(
+        'git:listFiles',
+        currentRepository,
+      );
+      setAllFiles(files || []);
+    } catch (error) {
+      console.error('Failed to load files:', error);
+      message.error('Failed to load file list');
+    } finally {
+      setLoadingFiles(false);
+    }
+  }, [currentRepository]);
+
+  // Sync selectedFile with file prop when it changes
+  useEffect(() => {
+    setSelectedFile((currentSelectedFile) => {
+      if (file && file !== currentSelectedFile) {
+        setSelectedDiff(null); // Clear previous diff while loading new one
+        return file;
+      }
+      return currentSelectedFile;
+    });
+  }, [file]);
+
+  // Use provided diffData if available (for historical commits)
+  useEffect(() => {
+    if (diffData) {
+      // diffData is already parsed, find the file diff or use first one
+      if (Array.isArray(diffData) && diffData.length > 0) {
+        const fileDiff = file
+          ? diffData.find((d) => d.name === file)
+          : diffData[0];
+        setSelectedDiff(fileDiff || diffData[0] || null);
+      } else {
+        setSelectedDiff(null);
+      }
+    }
+  }, [diffData, file]);
+
+  useEffect(() => {
+    // Skip fetching if we have pre-loaded diffData
+    if (diffData) return;
+    if (selectedFile && currentRepository) {
+      loadDiff(selectedFile);
+    }
+  }, [selectedFile, staged, currentRepository, diffData, loadDiff]);
+
+  useEffect(() => {
+    // Skip if we have pre-loaded diffData
+    if (diffData) return;
+    if (currentDiff && currentDiff.length > 0 && selectedFile) {
+      const fileDiff = currentDiff.find((diff) => diff.name === selectedFile);
+      setSelectedDiff(fileDiff || null);
+    } else if (!currentDiff || currentDiff.length === 0) {
+      setSelectedDiff(null);
+    }
+  }, [currentDiff, selectedFile, diffData]);
+
+  // Use custom hooks for loading different file types
+  useImageLoading(
+    selectedFile,
+    currentRepository,
+    staged,
+    setOriginalImage,
+    setModifiedImage,
+    setLoadingImages,
+  );
+
+  useAsepriteLoading(
+    selectedFile,
+    currentRepository,
+    staged,
+    setOriginalAseprite,
+    setModifiedAseprite,
+    setLoadingAseprite,
+  );
+
+  useFullFileLoading(
+    viewFullFile,
+    selectedFile,
+    currentRepository,
+    setFullFileContent,
+  );
+
+  useFileHistory(
+    selectedFile,
+    currentRepository,
+    readOnly,
+    getFileHistory,
+    setFileHistory,
+    setLoadingHistory,
+    setSelectedHistoryCommit,
+    setHistoricalContent,
+  );
+
+  useKeyboardShortcuts(currentRepository, readOnly, openFilePicker);
+
+  // Focus search input when file picker opens
+  useEffect(() => {
+    if (showFilePicker && fileSearchInputRef.current) {
+      setTimeout(() => fileSearchInputRef.current?.focus(), 100);
+    }
+  }, [showFilePicker]);
+
+  // Load file content at selected historical commit
+  const handleHistorySelect = useCallback(
+    async (commitHash) => {
+      if (!commitHash) {
+        // "Current" selected - go back to normal diff view
+        setSelectedHistoryCommit(null);
+        setHistoricalContent(null);
+        return;
+      }
+
+      setSelectedHistoryCommit(commitHash);
+      try {
+        const content = await getFileAtCommit(selectedFile, commitHash);
+        setHistoricalContent(content);
+      } catch (error) {
+        console.error('Failed to load file at commit:', error);
+        message.error('Failed to load historical version');
+        setHistoricalContent(null);
+      }
+    },
+    [selectedFile, getFileAtCommit],
+  );
+
+  const handleFilePickerSelect = async (filePath) => {
+    setShowFilePicker(false);
+    setSelectedFile(filePath);
+    // Load file for editing
+    try {
+      const result = await await tauriInvoke(
+        'git:readFile',
+        currentRepository,
+        filePath,
+      );
+      if (result.success) {
+        setEditedContent(result.content);
+        setOriginalFileContent(result.content);
+        setEditMode(true);
+        setViewFullFile(false);
+      }
+    } catch (error) {
+      console.error('Failed to load file:', error);
+      message.error('Failed to load file');
+    }
+  };
+
+  const filteredPickerFiles = useMemo(() => {
+    if (!fileSearchTerm) return allFiles.slice(0, 50); // Show first 50 by default
+    const term = fileSearchTerm.toLowerCase();
+    return allFiles.filter((f) => f.toLowerCase().includes(term)).slice(0, 50);
+  }, [allFiles, fileSearchTerm]);
+
+  const getFileIcon = () => {
+    return <FileTextOutlined style={{ color: '#1890ff' }} />;
+  };
+
+  const toggleHunkExpansion = useCallback((hunkIndex) => {
+    setExpandedHunks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(hunkIndex)) {
+        newSet.delete(hunkIndex);
+      } else {
+        newSet.add(hunkIndex);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Use custom hooks for handlers
+  const {
+    handleStageFile,
+    handleUnstageFile,
+    handleDiscardFile,
+    handleStageHunk,
+    handleDiscardHunk,
+    handleStageLine,
+    handleDiscardLine,
+  } = useStagingHandlers(
+    selectedFile,
+    stageFiles,
+    unstageFiles,
+    discardChanges,
+    stageHunk,
+    discardHunk,
+    stageLines,
+    discardLines,
+    loadDiff,
+  );
+
+  const {
+    toggleLineSelection,
+    clearLineSelection,
+    handleStageSelectedLines,
+    handleDiscardSelectedLines,
+  } = useLineSelectionHandlers(
+    setSelectedLines,
+    selectedLines,
+    stageLines,
+    discardLines,
+    selectedFile,
+    loadDiff,
+  );
+
+  const { loadFileForEditing, handleSaveEdit, handleCancelEdit } =
+    useEditHandlers(
+      selectedFile,
+      currentRepository,
+      setEditedContent,
+      setOriginalFileContent,
+      setEditMode,
+      editedContent,
+      originalFileContent,
+      loadDiff,
+      setIsSaving,
+    );
+
+  const {
+    handleInlineEditStart,
+    handleInlineEditChange,
+    handleInlineEditBlur,
+    handleSaveInlineEdits,
+    handleDiscardInlineEdits,
+  } = useInlineEditHandlers(
+    selectedFile,
+    currentRepository,
+    inlineEdits,
+    setInlineEdits,
+    setEditingLineKey,
+    setInlineEditMode,
+    selectedDiff,
+    readOnly,
+    staged,
+    inlineEditInputRef,
+    setIsSaving,
+    loadDiff,
+  );
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = editMode && editedContent !== originalFileContent;
+  const hasInlineEdits = Object.keys(inlineEdits).length > 0;
+
+  const filteredHunks = useMemo(() => {
+    if (!selectedDiff || !searchTerm) return selectedDiff?.hunks || [];
+
+    return selectedDiff.hunks.filter((hunk) =>
+      hunk.lines.some((line) =>
+        line.content.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
+    );
+  }, [selectedDiff, searchTerm]);
+
+  const renderHunkHeader = (hunk, hunkIndex) => {
+    const isExpanded = expandedHunks.has(hunkIndex);
+    const addedLines = hunk.lines.filter(
+      (line) => line.type === 'added',
+    ).length;
+    const deletedLines = hunk.lines.filter(
+      (line) => line.type === 'deleted',
+    ).length;
+
+    return (
+      <div className="hunk-header">
+        <div
+          className="hunk-header-info"
+          onClick={() => toggleHunkExpansion(hunkIndex)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleHunkExpansion(hunkIndex);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          style={{ cursor: 'pointer', flex: 1 }}
+        >
+          <Space>
+            {isExpanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
+            <Text code style={{ fontSize: '12px' }}>
+              {hunk.header}
+            </Text>
+            {addedLines > 0 && (
+              <Tag color="green" size="small">
+                +{addedLines}
+              </Tag>
+            )}
+            {deletedLines > 0 && (
+              <Tag color="red" size="small">
+                -{deletedLines}
+              </Tag>
+            )}
+          </Space>
+        </div>
+        {showStagingControls && !staged && (
+          <div className="hunk-actions">
+            <Space size="small">
+              <Tooltip title="Stage this hunk">
+                <Button
+                  size="small"
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => handleStageHunk(hunkIndex)}
+                  loading={operationInProgress}
+                >
+                  Stage
+                </Button>
+              </Tooltip>
+              <Tooltip title="Discard this hunk">
+                <Button
+                  size="small"
+                  danger
+                  icon={<UndoOutlined />}
+                  onClick={() => handleDiscardHunk(hunkIndex)}
+                  loading={operationInProgress}
+                >
+                  Discard
+                </Button>
+              </Tooltip>
+            </Space>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderLineWithStaging = (
+    line,
+    lineIndex,
+    hunkIndex,
+    oldLineNum = null,
+    newLineNum = null,
+  ) => {
+    const lineKey = `${hunkIndex}-${lineIndex}`;
+    const isSelected = selectedHunk === lineKey;
+    const isLineSelected = selectedLines.has(lineKey);
+    const isChangedLine = line.type === 'added' || line.type === 'deleted';
+    const isEditable =
+      inlineEditMode && (line.type === 'added' || line.type === 'context');
+    const isEditing = editingLineKey === lineKey;
+    const lineContent = line.content.substring(1);
+    const editedValue = inlineEdits[lineKey] ?? lineContent;
+
+    return (
+      <div
+        key={lineIndex}
+        className={`diff-line diff-line-${line.type} ${isSelected ? 'selected' : ''} ${isLineSelected ? 'line-selected' : ''} ${isEditable ? 'editable' : ''} ${isEditing ? 'editing' : ''}`}
+        onClick={() => {
+          if (isEditable && !isEditing) {
+            handleInlineEditStart(lineKey, lineContent);
+          } else {
+            setSelectedHunk(lineKey);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (isEditable && !isEditing) {
+              handleInlineEditStart(lineKey, lineContent);
+            } else {
+              setSelectedHunk(lineKey);
+            }
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
+        {/* Checkbox for line selection */}
+        {showStagingControls && !staged && isChangedLine && !inlineEditMode && (
+          <div className="line-checkbox">
+            <input
+              type="checkbox"
+              checked={isLineSelected}
+              onChange={() => toggleLineSelection(hunkIndex, lineIndex)}
+              title="Select line for batch operations"
+            />
+          </div>
+        )}
+
+        <div className="line-content">
+          {showLineNumbers && (
+            <span className="line-number">
+              {oldLineNum !== null ? String(oldLineNum).padStart(4) : '    '}{' '}
+              {newLineNum !== null ? String(newLineNum).padStart(4) : '    '}
+            </span>
+          )}
+          <span className="line-prefix">{getLinePrefix(line.type)}</span>
+          {isEditing ? (
+            <input
+              ref={inlineEditInputRef}
+              type="text"
+              value={editedValue}
+              onChange={(e) => handleInlineEditChange(lineKey, e.target.value)}
+              onBlur={handleInlineEditBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') handleInlineEditBlur();
+                if (e.key === 'Enter') handleInlineEditBlur();
+              }}
+              style={{
+                flex: 1,
+                border: 'none',
+                background: 'rgba(24, 144, 255, 0.1)',
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                lineHeight: '20px',
+                padding: '0 8px',
+                outline: '2px solid #1890ff',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <SyntaxHighlighter
+              language={getLanguageFromFilename(selectedFile)}
+              style={theme === 'dark' ? tomorrow : prism}
+              customStyle={{
+                margin: 0,
+                padding: '0 8px',
+                background:
+                  inlineEdits[lineKey] !== undefined
+                    ? 'rgba(250, 173, 20, 0.15)'
+                    : 'transparent',
+                fontSize: '13px',
+                lineHeight: '20px',
+                whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
+                cursor: isEditable ? 'text' : 'default',
+              }}
+              PreTag="span"
+              wrapLines={wordWrap}
+            >
+              {(inlineEdits[lineKey] ?? lineContent) || ' '}
+            </SyntaxHighlighter>
+          )}
+        </div>
+
+        {/* Line-level staging controls */}
+        {showStagingControls && !staged && isChangedLine && !inlineEditMode && (
+          <div className="line-actions">
+            <Space size={2}>
+              <Tooltip title="Stage this line">
+                <Button
+                  size="small"
+                  type="text"
+                  icon={
+                    <PlusOutlined
+                      style={{ color: '#52c41a', fontSize: '12px' }}
+                    />
+                  }
+                  onClick={() => handleStageLine(hunkIndex, lineIndex)}
+                  disabled={operationInProgress}
+                />
+              </Tooltip>
+              <Tooltip title="Discard this line">
+                <Button
+                  size="small"
+                  type="text"
+                  icon={
+                    <CloseOutlined
+                      style={{ color: '#ff4d4f', fontSize: '12px' }}
+                    />
+                  }
+                  onClick={() => handleDiscardLine(hunkIndex, lineIndex)}
+                  disabled={operationInProgress}
+                />
+              </Tooltip>
+            </Space>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderUnifiedDiff = (diff) => {
+    if (!diff || !diff.hunks) return null;
+
+    // Calculate line numbers for unified view - track across all hunks
+    let oldLineNum = 1;
+    let newLineNum = 1;
+
+    return (
+      <div className="unified-diff">
+        {filteredHunks.map((hunk, hunkIndex) => {
+          // Parse hunk header to get starting line numbers
+          const headerMatch = hunk.header.match(
+            /@@ -(\d+),?\d* \+(\d+),?\d* @@/,
+          );
+          if (headerMatch) {
+            oldLineNum = parseInt(headerMatch[1], 10);
+            newLineNum = parseInt(headerMatch[2], 10);
+          }
+
+          // Store line numbers for this hunk
+          const hunkLineNumbers = hunk.lines.map((line) => {
+            let oldLine = null;
+            let newLine = null;
+
+            if (line.type === 'deleted') {
+              const currentOld = oldLineNum;
+              oldLineNum += 1;
+              oldLine = currentOld;
+            } else if (line.type === 'added') {
+              const currentNew = newLineNum;
+              newLineNum += 1;
+              newLine = currentNew;
+            } else if (line.type === 'context') {
+              const currentOld = oldLineNum;
+              oldLineNum += 1;
+              oldLine = currentOld;
+              const currentNew = newLineNum;
+              newLineNum += 1;
+              newLine = currentNew;
+            }
+
+            return { oldLine, newLine };
+          });
+
+          return (
+            <div key={hunk.header} className="diff-hunk">
+              {renderHunkHeader(hunk, hunkIndex)}
+              {expandedHunks.has(hunkIndex) && (
+                <div className="hunk-content">
+                  {hunk.lines.map((line, lineIndex) => {
+                    const lineNums = hunkLineNumbers[lineIndex];
+                    return renderLineWithStaging(
+                      line,
+                      lineIndex,
+                      hunkIndex,
+                      lineNums.oldLine,
+                      lineNums.newLine,
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderSideBySideDiff = (diff) => {
+    if (!diff || !diff.hunks) return null;
+
+    const leftLines = [];
+    const rightLines = [];
+    let leftLineNum = 1;
+    let rightLineNum = 1;
+
+    filteredHunks.forEach((hunk, hunkIndex) => {
+      const headerMatch = hunk.header.match(/@@ -(\d+),?\d* \+(\d+),?\d* @@/);
+      if (headerMatch) {
+        leftLineNum = parseInt(headerMatch[1], 10);
+        rightLineNum = parseInt(headerMatch[2], 10);
+      }
+
+      hunk.lines.forEach((line, lineIndex) => {
+        if (line.type === 'deleted') {
+          const currentLeft = leftLineNum;
+          leftLineNum += 1;
+          leftLines.push({
+            number: currentLeft,
+            content: line.content.substring(1),
+            type: 'deleted',
+            hunkIndex,
+            lineIndex,
+          });
+          rightLines.push({
+            number: null,
+            content: '',
+            type: 'empty',
+            hunkIndex,
+            lineIndex,
+          });
+        } else if (line.type === 'added') {
+          leftLines.push({
+            number: null,
+            content: '',
+            type: 'empty',
+            hunkIndex,
+            lineIndex,
+          });
+          const currentRight = rightLineNum;
+          rightLineNum += 1;
+          rightLines.push({
+            number: currentRight,
+            content: line.content.substring(1),
+            type: 'added',
+            hunkIndex,
+            lineIndex,
+          });
+        } else {
+          const currentLeft = leftLineNum;
+          leftLineNum += 1;
+          const currentRight = rightLineNum;
+          rightLineNum += 1;
+          leftLines.push({
+            number: currentLeft,
+            content: line.content.substring(1),
+            type: 'context',
+            hunkIndex,
+            lineIndex,
+          });
+          rightLines.push({
+            number: currentRight,
+            content: line.content.substring(1),
+            type: 'context',
+            hunkIndex,
+            lineIndex,
+          });
+        }
+      });
+    });
+
+    const renderSideBySideLine = (line, index, isRight = false) => {
+      const lineKey = `${line.hunkIndex}-${line.lineIndex}`;
+      const isLineSelected = selectedLines.has(lineKey);
+      const isChangedLine = line.type === 'added' || line.type === 'deleted';
+      const isEditable =
+        isRight &&
+        inlineEditMode &&
+        (line.type === 'added' || line.type === 'context');
+      const isEditing = editingLineKey === lineKey;
+      const editedValue = inlineEdits[lineKey] ?? line.content;
+
+      return (
+        <div
+          key={index}
+          className={`diff-line diff-line-${line.type} ${isLineSelected ? 'line-selected' : ''} ${isEditable ? 'editable' : ''} ${isEditing ? 'editing' : ''}`}
+          onClick={() => {
+            if (isEditable && !isEditing) {
+              handleInlineEditStart(lineKey, line.content);
+            } else {
+              setSelectedHunk(lineKey);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              if (isEditable && !isEditing) {
+                handleInlineEditStart(lineKey, line.content);
+              } else {
+                setSelectedHunk(lineKey);
+              }
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          {/* Checkbox for line selection (only on deleted lines in left pane or added lines in right pane) */}
+          {showStagingControls &&
+            !staged &&
+            isChangedLine &&
+            !inlineEditMode && (
+              <div className="line-checkbox">
+                <input
+                  type="checkbox"
+                  checked={isLineSelected}
+                  onChange={() =>
+                    toggleLineSelection(line.hunkIndex, line.lineIndex)
+                  }
+                  title="Select line"
+                />
+              </div>
+            )}
+
+          {showLineNumbers && (
+            <span className="line-number">{line.number || ''}</span>
+          )}
+          <div className="line-content">
+            {isEditing ? (
+              <input
+                ref={inlineEditInputRef}
+                type="text"
+                value={editedValue}
+                onChange={(e) =>
+                  handleInlineEditChange(lineKey, e.target.value)
+                }
+                onBlur={handleInlineEditBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    handleInlineEditBlur();
+                  }
+                  if (e.key === 'Enter') {
+                    handleInlineEditBlur();
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  border: 'none',
+                  background: 'rgba(24, 144, 255, 0.1)',
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  lineHeight: '20px',
+                  padding: '0 8px',
+                  outline: '2px solid #1890ff',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <SyntaxHighlighter
+                language={getLanguageFromFilename(selectedFile)}
+                style={theme === 'dark' ? tomorrow : prism}
+                customStyle={{
+                  margin: 0,
+                  padding: '0 8px',
+                  background:
+                    inlineEdits[lineKey] !== undefined
+                      ? 'rgba(250, 173, 20, 0.15)'
+                      : 'transparent',
+                  fontSize: '13px',
+                  lineHeight: '20px',
+                  whiteSpace: wordWrap ? 'pre-wrap' : 'pre',
+                  cursor: isEditable ? 'text' : 'default',
+                }}
+                PreTag="span"
+                wrapLines={wordWrap}
+              >
+                {(inlineEdits[lineKey] ?? line.content) || ' '}
+              </SyntaxHighlighter>
+            )}
+          </div>
+
+          {/* Line actions */}
+          {showStagingControls &&
+            !staged &&
+            isChangedLine &&
+            !inlineEditMode && (
+              <div className="line-actions">
+                <Space size={2}>
+                  <Tooltip title="Stage">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={
+                        <PlusOutlined
+                          style={{ color: '#52c41a', fontSize: '10px' }}
+                        />
+                      }
+                      onClick={() =>
+                        handleStageLine(line.hunkIndex, line.lineIndex)
+                      }
+                      disabled={operationInProgress}
+                    />
+                  </Tooltip>
+                  <Tooltip title="Discard">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={
+                        <CloseOutlined
+                          style={{ color: '#ff4d4f', fontSize: '10px' }}
+                        />
+                      }
+                      onClick={() =>
+                        handleDiscardLine(line.hunkIndex, line.lineIndex)
+                      }
+                      disabled={operationInProgress}
+                    />
+                  </Tooltip>
+                </Space>
+              </div>
+            )}
+        </div>
+      );
+    };
+
+    return (
+      <div className="side-by-side-diff">
+        <Row gutter={1}>
+          <Col span={12} className="diff-pane left-pane">
+            <div className="diff-pane-header">
+              <Text strong>Original</Text>
+              <Tag color="red">-{diff.deleted}</Tag>
+            </div>
+            <div className="diff-content">
+              {leftLines.map((line, index) =>
+                renderSideBySideLine(line, index, false),
+              )}
+            </div>
+          </Col>
+
+          <Col span={12} className="diff-pane right-pane">
+            <div className="diff-pane-header">
+              <Text strong>Modified</Text>
+              <Tag color="green">+{diff.added}</Tag>
+            </div>
+            <div className="diff-content">
+              {rightLines.map((line, index) =>
+                renderSideBySideLine(line, index, true),
+              )}
+            </div>
+          </Col>
+        </Row>
+      </div>
+    );
+  };
+
+  const availableFiles = staged
+    ? [...(stagedFiles || []), ...(deletedFiles || [])]
+    : [
+        ...(modifiedFiles || []),
+        ...(stagedFiles || []),
+        ...(deletedFiles || []),
+      ];
+
+  if (!currentRepository) {
+    return (
+      <Card>
+        <Empty
+          image={
+            <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+          }
+          description="No repository selected"
+        />
+      </Card>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="enhanced-diff-viewer-compact">
+        {selectedDiff ? (
+          <div className="compact-diff">{renderUnifiedDiff(selectedDiff)}</div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <Text type="secondary">Select a file to view diff</Text>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="enhanced-diff-viewer">
+      <Card
+        title={
+          <Space>
+            <FileTextOutlined />
+            <Title level={4} style={{ margin: 0 }}>
+              Diff Viewer
+            </Title>
+            {selectedFile && (
+              <Tag icon={getFileIcon(selectedFile)}>{selectedFile}</Tag>
+            )}
+            {selectedFile && fileHistory.length > 0 && !readOnly && (
+              <Select
+                size="small"
+                style={{ minWidth: 200 }}
+                placeholder="History"
+                value={selectedHistoryCommit}
+                onChange={handleHistorySelect}
+                loading={loadingHistory}
+                allowClear
+                dropdownMatchSelectWidth={false}
+              >
+                <Option value={null}>
+                  <Space>
+                    <HistoryOutlined />
+                    <Text>Current (Working)</Text>
+                  </Space>
+                </Option>
+                {fileHistory.map((commit) => (
+                  <Option key={commit.hash} value={commit.hash}>
+                    <Space
+                      direction="vertical"
+                      size={0}
+                      style={{ lineHeight: 1.2 }}
+                    >
+                      <Text ellipsis style={{ maxWidth: 300 }}>
+                        {commit.message}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        {commit.hash.substring(0, 7)} •{' '}
+                        {formatHistoryDate(commit.date)}
+                      </Text>
+                    </Space>
+                  </Option>
+                ))}
+              </Select>
+            )}
+            {selectedHistoryCommit && (
+              <Tag color="purple">
+                Viewing {selectedHistoryCommit.substring(0, 7)}
+              </Tag>
+            )}
+            {selectedDiff && (
+              <Badge
+                count={selectedDiff.hunks?.length || 0}
+                style={{ backgroundColor: '#52c41a' }}
+                title="Number of hunks"
+              />
+            )}
+          </Space>
+        }
+        extra={
+          <Space>
+            {showFileSelector && (
+              <Select
+                value={selectedFile}
+                onChange={setSelectedFile}
+                placeholder="Select file to compare"
+                style={{ minWidth: '200px' }}
+                loading={isLoading}
+                showSearch
+                filterOption={(input, option) =>
+                  option.children.toLowerCase().indexOf(input.toLowerCase()) >=
+                  0
+                }
+              >
+                {availableFiles.map((filePath) => (
+                  <Option key={filePath} value={filePath}>
+                    <Space>
+                      {getFileIcon(filePath)}
+                      <Text>{filePath}</Text>
+                    </Space>
+                  </Option>
+                ))}
+              </Select>
+            )}
+
+            <Select
+              value={viewMode}
+              onChange={setViewMode}
+              style={{ minWidth: '120px' }}
+            >
+              <Option value="side-by-side">Side by Side</Option>
+              <Option value="unified">Unified</Option>
+            </Select>
+
+            <Tooltip title="Search in diff">
+              <Button
+                icon={<SearchOutlined />}
+                onClick={() => setSearchTerm('')}
+                size="small"
+              />
+            </Tooltip>
+
+            <Tooltip title="View settings">
+              <Button
+                icon={<SettingOutlined />}
+                onClick={() => setShowSettings(!showSettings)}
+                type={showSettings ? 'primary' : 'default'}
+                size="small"
+              />
+            </Tooltip>
+
+            <Tooltip title="Toggle whitespace visibility">
+              <Button
+                icon={<EyeOutlined />}
+                onClick={() => setShowWhitespace(!showWhitespace)}
+                type={showWhitespace ? 'primary' : 'default'}
+                size="small"
+              />
+            </Tooltip>
+
+            <Tooltip title="Copy diff to clipboard">
+              <Button
+                icon={<CopyOutlined />}
+                onClick={() => {
+                  if (selectedDiff) {
+                    const diffText = selectedDiff.hunks
+                      .map(
+                        (hunk) =>
+                          `${hunk.header}\n${hunk.lines.map((line) => line.content).join('\n')}`,
+                      )
+                      .join('\n\n');
+                    navigator.clipboard.writeText(diffText);
+                  }
+                }}
+                size="small"
+              />
+            </Tooltip>
+
+            {/* View Full File toggle */}
+            {selectedFile && !editMode && !inlineEditMode && (
+              <Tooltip
+                title={viewFullFile ? 'Show diff view' : 'View full file'}
+              >
+                <Button
+                  icon={<EyeOutlined />}
+                  onClick={() => setViewFullFile(!viewFullFile)}
+                  type={viewFullFile ? 'primary' : 'default'}
+                  size="small"
+                />
+              </Tooltip>
+            )}
+
+            {/* Inline Edit toggle */}
+            {selectedFile &&
+              !staged &&
+              !readOnly &&
+              !editMode &&
+              !viewFullFile &&
+              selectedDiff && (
+                <Tooltip
+                  title={
+                    inlineEditMode ? 'Exit inline edit' : 'Edit in diff view'
+                  }
+                >
+                  <Button
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      if (inlineEditMode && hasInlineEdits) {
+                        handleDiscardInlineEdits();
+                      } else {
+                        setInlineEditMode(!inlineEditMode);
+                      }
+                    }}
+                    type={inlineEditMode ? 'primary' : 'default'}
+                    size="small"
+                  />
+                </Tooltip>
+              )}
+
+            {/* Full file Edit mode toggle */}
+            {selectedFile && !staged && !readOnly && !inlineEditMode && (
+              <Tooltip
+                title={editMode ? 'Exit edit mode' : 'Edit file directly'}
+              >
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => {
+                    if (editMode) {
+                      if (hasUnsavedChanges) {
+                        // Prompt to save
+                        handleCancelEdit();
+                      } else {
+                        setEditMode(false);
+                      }
+                    } else {
+                      loadFileForEditing();
+                    }
+                  }}
+                  type={editMode ? 'primary' : 'default'}
+                  size="small"
+                />
+              </Tooltip>
+            )}
+
+            {/* Quick Open File (Ctrl+P) */}
+            {!readOnly && (
+              <Tooltip title="Quick open file (Ctrl+P)">
+                <Button
+                  icon={<FileSearchOutlined />}
+                  onClick={openFilePicker}
+                  size="small"
+                />
+              </Tooltip>
+            )}
+          </Space>
+        }
+      >
+        {showSettings && (
+          <div className="diff-settings">
+            <Row gutter={16}>
+              <Col span={8}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Text strong>Context Lines</Text>
+                  <Slider
+                    min={0}
+                    max={10}
+                    value={contextLines}
+                    onChange={setContextLines}
+                    marks={{ 0: '0', 3: '3', 5: '5', 10: '10' }}
+                  />
+                </Space>
+              </Col>
+              <Col span={8}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Text strong>Display Options</Text>
+                  <Space direction="vertical">
+                    <Switch
+                      checked={wordWrap}
+                      onChange={setWordWrap}
+                      checkedChildren="Wrap"
+                      unCheckedChildren="No Wrap"
+                    />
+                    <Switch
+                      checked={showLineNumbers}
+                      onChange={setShowLineNumbers}
+                      checkedChildren="Line #"
+                      unCheckedChildren="No Line #"
+                    />
+                    <Switch
+                      checked={highlightChanges}
+                      onChange={setHighlightChanges}
+                      checkedChildren="Highlight"
+                      unCheckedChildren="No Highlight"
+                    />
+                  </Space>
+                </Space>
+              </Col>
+              <Col span={8}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Text strong>Search</Text>
+                  <Input
+                    placeholder="Search in diff..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    prefix={<SearchOutlined />}
+                    allowClear
+                  />
+                </Space>
+              </Col>
+            </Row>
+            <Divider />
+          </div>
+        )}
+
+        <Spin spinning={isLoading}>
+          {selectedDiff && (
+            <div className={`diff-container ${viewMode} ${theme}`}>
+              {/* File-level actions */}
+              {showStagingControls && (
+                <div className="file-actions">
+                  <Space>
+                    {!staged ? (
+                      <>
+                        <Button
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={handleStageFile}
+                          loading={operationInProgress}
+                        >
+                          Stage File
+                        </Button>
+                        <Button
+                          danger
+                          icon={<UndoOutlined />}
+                          onClick={handleDiscardFile}
+                          loading={operationInProgress}
+                        >
+                          Discard All Changes
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        icon={<MinusOutlined />}
+                        onClick={handleUnstageFile}
+                        loading={operationInProgress}
+                      >
+                        Unstage File
+                      </Button>
+                    )}
+                  </Space>
+                </div>
+              )}
+
+              {/* Selected lines action bar */}
+              {selectedLines.size > 0 && (
+                <div className="selected-lines-actions">
+                  <Alert
+                    type="info"
+                    message={
+                      <Space>
+                        <Text strong>
+                          {selectedLines.size} line(s) selected
+                        </Text>
+                        <Button
+                          size="small"
+                          type="primary"
+                          icon={<PlusOutlined />}
+                          onClick={handleStageSelectedLines}
+                          loading={operationInProgress}
+                        >
+                          Stage Selected
+                        </Button>
+                        <Button
+                          size="small"
+                          danger
+                          icon={<CloseOutlined />}
+                          onClick={handleDiscardSelectedLines}
+                          loading={operationInProgress}
+                        >
+                          Discard Selected
+                        </Button>
+                        <Button size="small" onClick={clearLineSelection}>
+                          Clear Selection
+                        </Button>
+                      </Space>
+                    }
+                  />
+                </div>
+              )}
+
+              <div className="diff-stats">
+                <Space>
+                  <Tag color="green">+{selectedDiff.added} additions</Tag>
+                  <Tag color="red">-{selectedDiff.deleted} deletions</Tag>
+                  <Text type="secondary">
+                    Language: {getLanguageFromFilename(selectedFile)}
+                  </Text>
+                  {searchTerm && (
+                    <Tag color="blue">
+                      {filteredHunks.length} of {selectedDiff.hunks.length}{' '}
+                      hunks match
+                    </Tag>
+                  )}
+                  {editMode && (
+                    <Tag color={hasUnsavedChanges ? 'orange' : 'blue'}>
+                      {hasUnsavedChanges ? 'Unsaved changes' : 'Edit Mode'}
+                    </Tag>
+                  )}
+                  {inlineEditMode && (
+                    <Tag color={hasInlineEdits ? 'orange' : 'cyan'}>
+                      {hasInlineEdits
+                        ? `${Object.keys(inlineEdits).length} edits`
+                        : 'Inline Edit Mode'}
+                    </Tag>
+                  )}
+                </Space>
+              </div>
+
+              {/* Inline edit action bar */}
+              {inlineEditMode && (
+                <div className="inline-edit-actions">
+                  <Alert
+                    type="info"
+                    showIcon
+                    message={
+                      <Space>
+                        <Text>
+                          {viewMode === 'side-by-side'
+                            ? 'Click on lines in the Modified pane to edit'
+                            : 'Click on added or context lines to edit'}
+                        </Text>
+                        {hasInlineEdits && (
+                          <>
+                            <Button
+                              size="small"
+                              type="primary"
+                              icon={<CheckOutlined />}
+                              onClick={handleSaveInlineEdits}
+                              loading={isSaving}
+                            >
+                              Save Changes
+                            </Button>
+                            <Button
+                              size="small"
+                              icon={<CloseOutlined />}
+                              onClick={handleDiscardInlineEdits}
+                            >
+                              Discard
+                            </Button>
+                          </>
+                        )}
+                        {!hasInlineEdits && (
+                          <Button
+                            size="small"
+                            onClick={() => setInlineEditMode(false)}
+                          >
+                            Exit Edit Mode
+                          </Button>
+                        )}
+                      </Space>
+                    }
+                  />
+                </div>
+              )}
+
+              {/* Edit mode panel */}
+              {editMode && (
+                <div className="edit-mode-container">
+                  <div className="edit-mode-toolbar">
+                    <Space>
+                      <Button
+                        type="primary"
+                        icon={<CheckOutlined />}
+                        onClick={handleSaveEdit}
+                        loading={isSaving}
+                        disabled={!hasUnsavedChanges}
+                      >
+                        Save Changes
+                      </Button>
+                      <Button
+                        icon={<CloseOutlined />}
+                        onClick={handleCancelEdit}
+                        disabled={isSaving}
+                      >
+                        {hasUnsavedChanges
+                          ? 'Discard & Exit'
+                          : 'Exit Edit Mode'}
+                      </Button>
+                      {hasUnsavedChanges && (
+                        <Button
+                          icon={<UndoOutlined />}
+                          onClick={() => setEditedContent(originalFileContent)}
+                        >
+                          Reset Changes
+                        </Button>
+                      )}
+                    </Space>
+                  </div>
+                  <div className="edit-mode-editor">
+                    <Input.TextArea
+                      ref={editorRef}
+                      value={editedContent}
+                      onChange={(e) => setEditedContent(e.target.value)}
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '13px',
+                        lineHeight: '1.5',
+                        minHeight: '400px',
+                        resize: 'vertical',
+                      }}
+                      autoSize={{ minRows: 20, maxRows: 40 }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Historical content view */}
+              {!editMode &&
+                selectedHistoryCommit &&
+                historicalContent !== null && (
+                  <div className="full-file-container">
+                    <div className="full-file-header">
+                      <Space>
+                        <Tag color="purple">Historical Version</Tag>
+                        <Tag>{selectedHistoryCommit.substring(0, 7)}</Tag>
+                        <Text type="secondary">
+                          {historicalContent.split('\n').length} lines
+                        </Text>
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setSelectedHistoryCommit(null);
+                            setHistoricalContent(null);
+                          }}
+                        >
+                          Back to Current
+                        </Button>
+                      </Space>
+                    </div>
+                    <div className="full-file-content">
+                      <SyntaxHighlighter
+                        language={getLanguageFromFilename(selectedFile)}
+                        style={theme === 'dark' ? tomorrow : prism}
+                        showLineNumbers={showLineNumbers}
+                        wrapLines={wordWrap}
+                        customStyle={{
+                          margin: 0,
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          maxHeight: '600px',
+                          overflow: 'auto',
+                        }}
+                      >
+                        {historicalContent}
+                      </SyntaxHighlighter>
+                    </div>
+                  </div>
+                )}
+
+              {/* Full file view */}
+              {!editMode && !selectedHistoryCommit && viewFullFile && (
+                <div className="full-file-container">
+                  <div className="full-file-header">
+                    <Space>
+                      <Tag color="blue">Full File View</Tag>
+                      <Text type="secondary">
+                        {fullFileContent.split('\n').length} lines
+                      </Text>
+                    </Space>
+                  </div>
+                  <div className="full-file-content">
+                    <SyntaxHighlighter
+                      language={getLanguageFromFilename(selectedFile)}
+                      style={theme === 'dark' ? tomorrow : prism}
+                      showLineNumbers={showLineNumbers}
+                      wrapLines={wordWrap}
+                      customStyle={{
+                        margin: 0,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        maxHeight: '600px',
+                        overflow: 'auto',
+                      }}
+                    >
+                      {fullFileContent || '// Loading...'}
+                    </SyntaxHighlighter>
+                  </div>
+                </div>
+              )}
+
+              {/* Aseprite diff view */}
+              {!editMode &&
+                !selectedHistoryCommit &&
+                !viewFullFile &&
+                isAsepriteFile(selectedFile) && (
+                  <div className="diff-content-wrapper">
+                    <AsepriteDiffRenderer
+                      loadingAseprite={loadingAseprite}
+                      originalAseprite={originalAseprite}
+                      modifiedAseprite={modifiedAseprite}
+                    />
+                  </div>
+                )}
+
+              {/* Image diff view */}
+              {!editMode &&
+                !selectedHistoryCommit &&
+                !viewFullFile &&
+                !isAsepriteFile(selectedFile) &&
+                isImageFile(selectedFile) && (
+                  <div className="diff-content-wrapper">
+                    <ImageDiffRenderer
+                      loadingImages={loadingImages}
+                      originalImage={originalImage}
+                      modifiedImage={modifiedImage}
+                    />
+                  </div>
+                )}
+
+              {/* Normal diff view */}
+              {!editMode &&
+                !selectedHistoryCommit &&
+                !viewFullFile &&
+                !isAsepriteFile(selectedFile) &&
+                !isImageFile(selectedFile) && (
+                  <div className="diff-content-wrapper">
+                    {viewMode === 'side-by-side'
+                      ? renderSideBySideDiff(selectedDiff)
+                      : renderUnifiedDiff(selectedDiff)}
+                  </div>
+                )}
+            </div>
+          )}
+
+          {!selectedDiff && availableFiles.length === 0 && (
+            <Empty
+              image={
+                <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+              }
+              description="No modified files to compare"
+            />
+          )}
+
+          {!selectedDiff && availableFiles.length > 0 && (
+            <Empty
+              image={
+                <FileTextOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+              }
+              description="Select a file to view differences"
+            />
+          )}
+        </Spin>
+      </Card>
+
+      {/* Quick Open File Modal (Ctrl+P) */}
+      <Modal
+        title={
+          <Space>
+            <FileSearchOutlined />
+            <span>Quick Open File</span>
+            <Tag>Ctrl+P</Tag>
+          </Space>
+        }
+        open={showFilePicker}
+        onCancel={() => setShowFilePicker(false)}
+        footer={null}
+        width={600}
+      >
+        <Input
+          ref={fileSearchInputRef}
+          placeholder="Type to search files..."
+          value={fileSearchTerm}
+          onChange={(e) => setFileSearchTerm(e.target.value)}
+          prefix={<SearchOutlined />}
+          allowClear
+          style={{ marginBottom: 12 }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && filteredPickerFiles.length > 0) {
+              handleFilePickerSelect(filteredPickerFiles[0]);
+            }
+            if (e.key === 'Escape') {
+              setShowFilePicker(false);
+            }
+          }}
+        />
+        <Spin spinning={loadingFiles}>
+          <List
+            size="small"
+            dataSource={filteredPickerFiles}
+            style={{ maxHeight: 400, overflow: 'auto' }}
+            renderItem={(filePath) => (
+              <List.Item
+                style={{ cursor: 'pointer', padding: '8px 12px' }}
+                onClick={() => handleFilePickerSelect(filePath)}
+                className="file-picker-item"
+              >
+                <Space>
+                  <FileTextOutlined />
+                  <Text ellipsis style={{ maxWidth: 500 }}>
+                    {filePath}
+                  </Text>
+                </Space>
+              </List.Item>
+            )}
+            locale={{
+              emptyText: fileSearchTerm
+                ? 'No files match your search'
+                : 'No files found',
+            }}
+          />
+          {allFiles.length > 50 && (
+            <Text
+              type="secondary"
+              style={{ display: 'block', textAlign: 'center', marginTop: 8 }}
+            >
+              Showing {Math.min(50, filteredPickerFiles.length)} of{' '}
+              {fileSearchTerm ? filteredPickerFiles.length : allFiles.length}{' '}
+              files
+            </Text>
+          )}
+        </Spin>
+      </Modal>
+    </div>
+  );
+}
+
+EnhancedDiffViewer.propTypes = {
+  file: PropTypes.string,
+  staged: PropTypes.bool,
+  compact: PropTypes.bool,
+  showFileSelector: PropTypes.bool,
+  theme: PropTypes.string,
+  showStagingControls: PropTypes.bool,
+  diffData: PropTypes.arrayOf(
+    PropTypes.shape({
+      name: PropTypes.string,
+      hunks: PropTypes.arrayOf(
+        PropTypes.shape({
+          header: PropTypes.string,
+          lines: PropTypes.arrayOf(
+            PropTypes.shape({
+              type: PropTypes.string,
+              content: PropTypes.string,
+            }),
+          ),
+        }),
+      ),
+      added: PropTypes.number,
+      deleted: PropTypes.number,
+    }),
+  ),
+  readOnly: PropTypes.bool,
+};
+
+EnhancedDiffViewer.defaultProps = {
+  file: null,
+  staged: false,
+  compact: false,
+  showFileSelector: true,
+  theme: 'light',
+  showStagingControls: true,
+  diffData: null,
+  readOnly: false,
+};
+
+export default EnhancedDiffViewer;

@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "exclude": [
+    "src/main/**/*",
+    "src/main/preload.ts",
+    "src/main/menu.ts",
+    "src/main/main.ts",
+    "src/main/util.ts",
+    "src/App.tsx",
+    "src/services/backupService.ts",
+    "src/services/settingsService.ts",
+    "src/services/syncService.ts",
+    "src/services/supabaseClient.ts",
+    "src/utils/dateUtils.ts",
+    "src/__tests__",
+    "src/hooks/useDailyTrainingReminder.ts",
+    "src/contexts",
+    "src/screens",
+    "src/components/navigation",
+    "src/components/ui"
+  ],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

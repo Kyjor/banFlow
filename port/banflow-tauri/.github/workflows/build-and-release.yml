@@ -1,0 +1,115 @@
+name: 'Build and Release'
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest' # for Arm based macs (M1 and above).
+            args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
+          - platform: 'macos-latest' # for Intel based macs.
+            args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+            target: ''
+          - platform: 'windows-latest'
+            args: ''
+            target: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          # Additional dependencies for AppImage creation
+          sudo apt-get install -y libgtk-3-dev libayatana-appindicator3-dev
+
+      - name: install frontend dependencies
+        run: npm ci
+
+      # Debug step to check what's happening
+      - name: debug info
+        run: |
+          echo "=== System Info ==="
+          echo "Platform: ${{ matrix.platform }}"
+          echo "Args: ${{ matrix.args }}"
+          echo "Target: ${{ matrix.target }}"
+          echo "=== Tauri Config ==="
+          cat src-tauri/tauri.conf.json
+          echo "=== Node/NPM versions ==="
+          node --version
+          npm --version
+
+      - name: build the app (PR - no release)
+        if: github.event_name == 'pull_request'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+
+      - name: build the app (main branch - with release)
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Home Base v__VERSION__'
+          releaseBody: 'See the assets to download this version and install.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      # Debug: check what files were actually created
+      - name: list build artifacts (debug)
+        if: always()
+        run: |
+          echo "=== Checking build output ==="
+          ls -la src-tauri/target/ 2>/dev/null || echo "No target directory found"
+          echo "=== Checking for bundle directory ==="
+          find src-tauri/target -name "bundle" -type d 2>/dev/null || echo "No bundle directories found"
+          echo "=== Checking for any bundle files ==="
+          find src-tauri/target -name "*.*" -path "*/bundle/*" 2>/dev/null || echo "No bundle files found"
+
+      # Debug: Upload artifacts for PRs to see what's being built
+      - name: upload artifacts (PR only)
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-build-${{ matrix.platform }}-${{ matrix.target || 'default' }}
+          path: |
+            src-tauri/target/release/bundle/
+            src-tauri/target/*/release/bundle/
+          if-no-files-found: warn 
