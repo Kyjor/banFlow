@@ -1148,19 +1148,23 @@ export function GitProvider({ children }) {
           // Only refresh if not currently performing an operation
           // Use refs to get current state and function to avoid stale closures
           const currentState = stateRef.current;
-          const refreshFn = refreshRepositoryStatusRef.current;
 
           if (
-            refreshFn &&
             !currentState.operationInProgress &&
             !currentState.isLoading &&
             currentState.currentRepository
           ) {
             try {
-              await refreshFn();
+              // Bypass refreshRepositoryStatus to avoid showing error toasts on poll failures
+              const status = await ipcRenderer.invoke(
+                'git:getRepositoryStatus',
+              );
+              dispatch({
+                type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+                payload: status,
+              });
             } catch (error) {
-              // Silently fail - we don't want to spam errors for heartbeat failures
-              // The error will be logged by refreshRepositoryStatus
+              // Silently fail - heartbeat polling errors should not spam the user with toasts
               console.debug('Heartbeat refresh failed:', error);
             }
           }

@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { PureComponent } from 'react';
 import {
   Tabs,
   Card,
@@ -38,7 +38,7 @@ const { TextArea } = Input;
 
 // Backup Manager Component
 
-class AppSettings extends Component {
+class AppSettings extends PureComponent {
   constructor(props) {
     super(props);
     this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
@@ -152,7 +152,7 @@ class AppSettings extends Component {
     if (key === 'gameModeEnabled') {
       gameService.setEnabled(value);
       ipcRenderer.invoke('game:saveState', {
-        ...gameService.getInventory(),
+        inventory: gameService.getInventory(),
         stats: gameService.getStats(),
         isEnabled: value,
       });
