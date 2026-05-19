@@ -1,5 +1,5 @@
 // Tauri IPC replacement utilities
-import { invoke } from '@tauri-apps/api/core';
+import { invoke, isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-shell';
 
@@ -170,7 +170,7 @@ export const tauriOn = async (
 
 /** Open a URL in the system browser (Electron used setWindowOpenHandler for window.open). */
 export async function openExternalUrl(url: string): Promise<void> {
-  if (typeof window !== 'undefined' && window.__TAURI__) {
+  if (isTauri()) {
     await open(url);
     return;
   }

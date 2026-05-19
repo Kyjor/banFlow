@@ -35,3 +35,4 @@ release/win-unpacked/resources/app.asar
 release/win-unpacked/resources/app/destfolder/app.asar
 
 banFlowProjects
+port/banflow-tauri/dist/
