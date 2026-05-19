@@ -23,6 +23,7 @@ class GameLibraryPage extends Component {
     super(props);
 
     this.currentProject = localStorage.getItem('currentProject');
+    this.projectName = this.currentProject;
 
     this.state = {
       lokiLoaded: false,
@@ -36,10 +37,14 @@ class GameLibraryPage extends Component {
   }
 
   async componentDidMount() {
-    const newState = await tauriSendSync(
-      'api:initializeProjectState',
-      { projectName: this.projectName },
-    );
+    const projectName = this.projectName || this.currentProject;
+    if (!projectName) {
+      return;
+    }
+
+    const newState = await tauriSendSync('api:initializeProjectState', {
+      projectName,
+    });
 
     this.setState((prevState) => ({
       ...prevState,

@@ -209,21 +209,9 @@ export default class LokiService {
   saveDB = async () => {
     console.log('[LokiService] saveDB() called');
     if (this.isTauri) {
-      // In Tauri: Save through Tauri command
-      try {
-        console.log('[LokiService] Serializing database');
-        const dbExport = this.db.serialize();
-        console.log('[LokiService] Serialized database length:', dbExport.length);
-        console.log('[LokiService] Saving via Tauri command');
-        await tauriInvoke('loki:saveDatabase', {
-          projectName: this.projectName,
-          dbContent: dbExport,
-        });
-        console.log('[LokiService] Database saved via Tauri.');
-      } catch (error) {
-        console.error('[LokiService] Failed to save database via Tauri:', error);
-        console.error('[LokiService] Save error stack:', error.stack);
-      }
+      // Persistence is handled by Rust Tauri commands (api:createNode, etc.).
+      // Writing from stale in-memory Loki state was corrupting project JSON files.
+      return;
     } else {
       // Electron: Use LokiJS's built-in save
       this.db.saveDatabase((err) => {

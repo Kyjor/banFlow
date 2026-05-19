@@ -5,7 +5,7 @@ use crate::models::Iteration;
 use crate::database::{load_project_database, save_project_database, get_collection_data, update_collection_data};
 
 // Helper function to get iterations from typed database
-fn get_iterations(db: &crate::models::ProjectDatabase) -> Vec<Iteration> {
+fn get_iterations(db: &serde_json::Value) -> Vec<Iteration> {
     let iterations_data = get_collection_data(db, "iterations");
     iterations_data.iter()
         .filter_map(|v| serde_json::from_value::<Iteration>(v.clone()).ok())

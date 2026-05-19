@@ -1,4 +1,7 @@
-use banflow_tauri_lib::database::{load_project_database, save_project_database, get_collection_data, update_collection_data};
+use banflow_tauri_lib::database::{
+    empty_project_db, load_project_database, load_project_database_typed,
+    save_project_database, save_project_database_typed, get_collection_data, update_collection_data,
+};
 use banflow_tauri_lib::models::{Node, Parent, ProjectDatabase};
 use std::fs;
 use tempfile::TempDir;
@@ -11,14 +14,14 @@ fn test_database_load_save_typed() {
     let project_path = temp_dir.path().join("test_project.json");
     
     // Create initial database
-    let initial_db = ProjectDatabase::default();
+    let initial_db = empty_project_db();
     save_project_database(&project_path, &initial_db).expect("Failed to save initial database");
     println!("✓ Created initial database");
     
     // Load it back
     let loaded_db = load_project_database(&project_path).expect("Failed to load database");
-    assert_eq!(loaded_db.database_version, 1.5);
-    assert_eq!(loaded_db.engine_version, 1.5);
+    assert_eq!(loaded_db["databaseVersion"], 1.5);
+    assert_eq!(loaded_db["engineVersion"], 1.5);
     println!("✓ Loaded database successfully");
     
     // Verify JSON format
@@ -111,7 +114,7 @@ fn test_collection_operations() {
     let project_path = temp_dir.path().join("test_project.json");
     
     // Create database with a collection
-    let mut db = ProjectDatabase::default();
+    let mut db = empty_project_db();
     update_collection_data(&mut db, "nodes", vec![
         serde_json::json!({"id": "node-1", "title": "Test"}),
         serde_json::json!({"id": "node-2", "title": "Test 2"}),
@@ -234,7 +237,8 @@ fn test_electron_compatibility() {
     println!("✓ Electron format parsed into typed struct");
     
     // Extract nodes and verify
-    let nodes_data = get_collection_data(&db, "nodes");
+    let db_value = serde_json::to_value(&db).expect("Failed to convert to JSON value");
+    let nodes_data = get_collection_data(&db_value, "nodes");
     assert_eq!(nodes_data.len(), 1);
     assert_eq!(nodes_data[0]["id"], "node-1");
     assert_eq!(nodes_data[0]["title"], "Test Node");
@@ -265,7 +269,7 @@ fn test_full_workflow() {
     let project_path = temp_dir.path().join("workflow_test.json");
     
     // 1. Create empty database
-    let mut db = ProjectDatabase::default();
+    let mut db = empty_project_db();
     save_project_database(&project_path, &db).expect("Failed to save");
     println!("✓ Step 1: Created empty database");
     

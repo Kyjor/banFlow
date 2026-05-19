@@ -64,7 +64,7 @@ fn get_iso8601_time() -> String {
 }
 
 // Helper function to get nodes from typed database
-fn get_nodes(db: &crate::models::ProjectDatabase) -> Vec<Node> {
+fn get_nodes(db: &serde_json::Value) -> Vec<Node> {
     let nodes_data = get_collection_data(db, "nodes");
     nodes_data.iter()
         .filter_map(|v| serde_json::from_value::<Node>(v.clone()).ok())
@@ -72,7 +72,7 @@ fn get_nodes(db: &crate::models::ProjectDatabase) -> Vec<Node> {
 }
 
 // Helper function to get parents from typed database
-fn get_parents(db: &crate::models::ProjectDatabase) -> Vec<Parent> {
+fn get_parents(db: &serde_json::Value) -> Vec<Parent> {
     let parents_data = get_collection_data(db, "parents");
     parents_data.iter()
         .filter_map(|v| serde_json::from_value::<Parent>(v.clone()).ok())

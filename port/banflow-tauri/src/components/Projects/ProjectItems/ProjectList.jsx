@@ -59,12 +59,16 @@ const getTimeAgo = (timestamp) => {
   return dateFormat(date, 'mmm d, yyyy');
 };
 
-function ProjectList(props) {
-  const { items, selectedProject } = props;
+function ProjectList({
+  items,
+  selectedProject = '',
+  deleteProject,
+  renameProject,
+  openProjectDetails,
+}) {
   const [listItemsWithoutFileExtension, setListItems] = useState([]);
 
   const onChange = (lastStr, currentStr) => {
-    const { renameProject } = props;
     if (currentStr && currentStr.trim() && currentStr !== lastStr) {
       renameProject(lastStr, currentStr.trim());
     }
@@ -130,8 +134,6 @@ function ProjectList(props) {
 
     setListItems(Array.from(uniqueItemsMap.values()));
   }, [items]);
-
-  const { deleteProject, openProjectDetails } = props;
 
   if (listItemsWithoutFileExtension.length === 0) {
     return (
@@ -291,10 +293,6 @@ ProjectList.propTypes = {
   renameProject: PropTypes.func.isRequired,
   openProjectDetails: PropTypes.func.isRequired,
   selectedProject: PropTypes.string,
-};
-
-ProjectList.defaultProps = {
-  selectedProject: '',
 };
 
 export default ProjectList;

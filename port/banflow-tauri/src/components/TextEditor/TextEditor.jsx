@@ -7,6 +7,7 @@ import '@uiw/react-md-editor/markdown-editor.css';
 class TextEditor extends Component {
   constructor(props) {
     super(props);
+    this.projectName = localStorage.getItem('currentProject');
 
     this.state = {
       boards: [],
@@ -17,10 +18,13 @@ class TextEditor extends Component {
   }
 
   async componentDidMount() {
-    const newState = await tauriSendSync(
-      'api:initializeProjectState',
-      { projectName: this.projectName },
-    );
+    if (!this.projectName) {
+      return;
+    }
+
+    const newState = await tauriSendSync('api:initializeProjectState', {
+      projectName: this.projectName,
+    });
 
     this.setState(newState);
   }

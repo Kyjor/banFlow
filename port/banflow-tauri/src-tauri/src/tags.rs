@@ -5,7 +5,7 @@ use crate::models::Tag;
 use crate::database::{load_project_database, save_project_database, get_collection_data, update_collection_data};
 
 // Helper function to get tags from typed database
-fn get_tags(db: &crate::models::ProjectDatabase) -> Vec<Tag> {
+fn get_tags(db: &serde_json::Value) -> Vec<Tag> {
     let tags_data = get_collection_data(db, "tags");
     tags_data.iter()
         .filter_map(|v| serde_json::from_value::<Tag>(v.clone()).ok())

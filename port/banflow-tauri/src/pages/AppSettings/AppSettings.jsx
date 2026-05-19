@@ -26,7 +26,12 @@ import {
   ReloadOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons';
-import { tauriInvoke, tauriSendSync, tauriSend } from '../../utils/tauri';
+import {
+  tauriInvoke,
+  tauriSendSync,
+  tauriSend,
+  openExternalUrl,
+} from '../../utils/tauri';
 import BackupManager from './BackupManager';
 import Layout from '../../layouts/App';
 import APIKeyInput from '../../components/APIKeyInput/APIKeyInput';
@@ -42,6 +47,7 @@ class AppSettings extends Component {
   constructor(props) {
     super(props);
     this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
+    localStorage.setItem('trelloKey', this.trelloKey);
     this.authLink = `https://trello.com/1/authorize?expiration=30days&scope=read,write&response_type=token&key=${this.trelloKey}`;
 
     // Load app settings from localStorage
@@ -310,8 +316,16 @@ class AppSettings extends Component {
     message.info('Settings reset to defaults');
   };
 
-  handleAuthApp = () => {
-    window.open(this.authLink, '_blank');
+  handleAuthApp = async () => {
+    try {
+      await openExternalUrl(this.authLink);
+      message.info(
+        'Authorize in your browser, then paste the token below and click Save.',
+      );
+    } catch (error) {
+      console.error('Failed to open Trello authorization URL:', error);
+      message.error('Could not open Trello authorization page');
+    }
   };
 
   handleGradientChange = (index, color) => {

@@ -559,13 +559,12 @@ class ProjectPage extends Component {
 
     const newState = {
       ...this.state,
-      parents: await ParentController.getParents(),
-      parentOrder: await ParentController.getParentOrder(),
+      parents: await this.loadParentsFromBackend(),
+      parentOrder: await this.loadParentOrderFromBackend(),
     };
 
-    await tauriInvoke('api:setProjectState', {
-      newState: newState,
-    });
+    await tauriInvoke('api:setProjectState', newState);
+    this.setState(newState);
 
     message.success('Deleted parent');
   };
@@ -827,168 +826,168 @@ class ProjectPage extends Component {
     return filterRules.every((rule) => this.evaluateRule(node, rule));
   };
 
-  syncProject = (trello) => {
-    const { parents } = this.state;
+  loadParentsFromBackend = async () => {
+    const parents = await tauriInvoke('api:getParents', {
+      projectName: this.projectName,
+    });
+    return parents || {};
+  };
 
-    fetch(
-      `https://api.trello.com/1/boards/${trello.id}/lists?key=${this.trelloKey}&token=${this.trelloToken}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
+  loadParentOrderFromBackend = async () => {
+    const parentOrder = await tauriInvoke('api:getParentOrder', {
+      projectName: this.projectName,
+    });
+    return parentOrder || [];
+  };
+
+  syncProject = async (trello) => {
+    try {
+      message.loading({ content: 'Syncing with Trello...', key: 'trello-sync' });
+
+      const listsResponse = await fetch(
+        `https://api.trello.com/1/boards/${trello.id}/lists?key=${this.trelloKey}&token=${this.trelloToken}`,
+        {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
         },
-      },
-    )
-      .then((response) => {
-        console.log(`Response: ${response.status} ${response.statusText}`);
-        return response.text();
-      })
-      .then((text) => {
-        console.log(JSON.parse(text));
-        const lists = JSON.parse(text);
-        lists.forEach((list) => {
-          // check if parent exists
+      );
+      if (!listsResponse.ok) {
+        throw new Error(`Failed to load Trello lists (${listsResponse.status})`);
+      }
+      const lists = await listsResponse.json();
+
+      let parents = await this.loadParentsFromBackend();
+      await Promise.all(
+        lists.map(async (list) => {
           const parentExists = Object.values(parents).find(
             (parent) => parent?.trello?.id === list.id,
           );
           if (!parentExists) {
-            ParentController.createParent(list.name, list);
-          } else {
-            console.log('Parent already exists');
+            await ParentController.createParent(list.name, list);
           }
-        });
-        return undefined;
-      })
-      .then(() => {
-        // refresh page
-        fetch(
-          `https://api.trello.com/1/boards/${trello.id}/cards?key=${this.trelloKey}&token=${this.trelloToken}`,
-          {
-            method: 'GET',
-          },
-        )
-          .then((response) => {
-            console.log(`Response: ${response.status} ${response.statusText}`);
-            return response.text();
-          })
-          .then((text) => {
-            console.log(JSON.parse(text));
-            const cards = JSON.parse(text);
-            const { nodes } = this.state;
-            cards.forEach((card) => {
-              // check if node exists
-              const nodeExists = Object.values(nodes).find(
-                (node) => node?.trello?.id === card.id,
-              );
-              const nodeParent = Object.values(
-                ParentController.getParents(),
-              ).find((parent) => parent?.trello?.id === card.idList);
+        }),
+      );
+      parents = await this.loadParentsFromBackend();
 
-              const nodeParentId = nodeParent.id;
-              if (!nodeExists) {
-                console.log('node doesnt exist');
-                NodeController.createNode(
-                  'child',
-                  card.name,
-                  nodeParentId,
-                  0,
-                  card,
-                );
-              } else {
-                console.log('Node already exists');
-                // Check if node needs to be moved to a different parent/column
-                const currentParent =
-                  ParentController.getParents()[nodeExists.parent];
-                const newParentId = card.idList;
+      const cardsResponse = await fetch(
+        `https://api.trello.com/1/boards/${trello.id}/cards?key=${this.trelloKey}&token=${this.trelloToken}`,
+        { method: 'GET' },
+      );
+      if (!cardsResponse.ok) {
+        throw new Error(`Failed to load Trello cards (${cardsResponse.status})`);
+      }
+      const cards = await cardsResponse.json();
 
-                if (
-                  currentParent.trello &&
-                  currentParent.trello.id !== newParentId
-                ) {
-                  console.log('Node needs to be moved to different column');
-                  const newParent = Object.values(
-                    ParentController.getParents(),
-                  ).find((parent) => parent.trello.id === newParentId);
+      let nodes = (await NodeController.getNodes()) || {};
 
-                  const startNodeIds = Array.from(currentParent.nodeIds);
-                  // remove node from current parent
-                  startNodeIds.splice(startNodeIds.indexOf(nodeExists.id), 1);
-                  const newStart = {
-                    ...currentParent,
-                    nodeIds: startNodeIds,
-                  };
+      for (const card of cards) {
+        const nodeExists = Object.values(nodes).find(
+          (node) => node?.trello?.id === card.id,
+        );
+        const nodeParent = Object.values(parents).find(
+          (parent) => parent?.trello?.id === card.idList,
+        );
 
-                  const finishNodeIds = Array.from(newParent.nodeIds);
-                  // add node to new parent
-                  finishNodeIds.push(nodeExists.id);
-                  const newFinish = {
-                    ...newParent,
-                    nodeIds: finishNodeIds,
-                  };
-                  ParentController.updateNodesInParents(
-                    newStart,
-                    newFinish,
-                    nodeExists.id,
-                  );
-                }
+        if (!nodeParent?.id) {
+          console.warn(
+            `No column for Trello list ${card.idList}, skipping card: ${card.name}`,
+          );
+          continue;
+        }
 
-                // Also update node properties if they've changed
-                if (card.name !== nodeExists.title) {
-                  NodeController.updateNodeProperty(
-                    'title',
-                    nodeExists.id,
-                    card.name,
-                    false,
-                  );
-                }
+        if (!nodeExists) {
+          await NodeController.createNode(
+            'child',
+            card.name,
+            nodeParent.id,
+            '',
+            card,
+          );
+          nodes = (await NodeController.getNodes()) || {};
+          continue;
+        }
 
-                // Parse description and BanFlow fields
-                const { cleanDescription, banflowFields } =
-                  this.parseBanflowDescription(card.desc);
-                if (cleanDescription !== nodeExists.description) {
-                  NodeController.updateNodeProperty(
-                    'description',
-                    nodeExists.id,
-                    cleanDescription,
-                    false,
-                  );
-                }
+        const allParents = parents;
+        const currentParent = allParents[nodeExists.parent];
+        const newParentId = card.idList;
 
-                // Update BanFlow fields if they exist
-                if (banflowFields.timeSpent !== undefined) {
-                  NodeController.updateNodeProperty(
-                    'timeSpent',
-                    nodeExists.id,
-                    banflowFields.timeSpent,
-                    false,
-                  );
-                }
+        if (
+          currentParent?.trello &&
+          currentParent.trello.id !== newParentId
+        ) {
+          const newParent = Object.values(allParents).find(
+            (parent) => parent?.trello?.id === newParentId,
+          );
+          if (newParent) {
+            const startNodeIds = Array.from(currentParent.nodeIds || []);
+            startNodeIds.splice(startNodeIds.indexOf(nodeExists.id), 1);
+            const finishNodeIds = Array.from(newParent.nodeIds || []);
+            finishNodeIds.push(nodeExists.id);
+            await ParentController.updateNodesInParents(
+              { ...currentParent, nodeIds: startNodeIds },
+              { ...newParent, nodeIds: finishNodeIds },
+              nodeExists.id,
+            );
+            parents = await this.loadParentsFromBackend();
+          }
+        }
 
-                // Update trello data
-                NodeController.updateNodeProperty(
-                  'trello',
-                  nodeExists.id,
-                  card,
-                  false,
-                );
-              }
-            });
-            return undefined;
-          })
-          .then(() => {
-            window.location.reload();
-            return undefined;
-          })
-          .catch((err) => {
-            console.error(err);
-            return undefined;
-          });
-        return undefined;
-      })
-      .catch((err) => {
-        console.error(err);
-        return undefined;
-      });
+        if (card.name !== nodeExists.title) {
+          await NodeController.updateNodeProperty(
+            'title',
+            nodeExists.id,
+            card.name,
+            false,
+          );
+        }
+
+        const { cleanDescription, banflowFields } =
+          ProjectPage.parseBanflowDescription(card.desc);
+        if (cleanDescription !== nodeExists.description) {
+          await NodeController.updateNodeProperty(
+            'description',
+            nodeExists.id,
+            cleanDescription,
+            false,
+          );
+        }
+
+        if (banflowFields.timeSpent !== undefined) {
+          await NodeController.updateNodeProperty(
+            'timeSpent',
+            nodeExists.id,
+            banflowFields.timeSpent,
+            false,
+          );
+        }
+
+        await NodeController.updateNodeProperty(
+          'trello',
+          nodeExists.id,
+          card,
+          false,
+        );
+      }
+
+      const [updatedNodes, updatedParents, parentOrder] = await Promise.all([
+        NodeController.getNodes(),
+        this.loadParentsFromBackend(),
+        this.loadParentOrderFromBackend(),
+      ]);
+
+      const newState = {
+        ...this.state,
+        nodes: updatedNodes,
+        parents: updatedParents,
+        parentOrder,
+      };
+      await tauriInvoke('api:setProjectState', newState);
+      this.setState(newState);
+      message.success({ content: 'Trello sync complete', key: 'trello-sync' });
+    } catch (err) {
+      console.error(err);
+      message.error({ content: 'Trello sync failed', key: 'trello-sync' });
+    }
   };
 
   render() {

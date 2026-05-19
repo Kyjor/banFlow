@@ -32,7 +32,13 @@ import {
   PictureOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
-import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
+import {
+  tauriInvoke,
+  tauriSendSync,
+  tauriSend,
+  tauriOn,
+  openExternalUrl,
+} from '../../utils/tauri';
 import Layout from '../../layouts/App';
 import ProjectController from '../../api/project/ProjectController';
 
@@ -221,11 +227,10 @@ class ProjectSettings extends Component {
     };
 
     try {
-      await tauriInvoke(
-        'api:updateProjectSettings',
-        this.projectName,
-        updatedSettings,
-      );
+      await tauriInvoke('api:updateProjectSettings', {
+        projectName: this.projectName,
+        settings: updatedSettings,
+      });
       this.setState({ projectSettings: updatedSettings, saving: false });
       message.success('All settings saved successfully!');
     } catch (error) {
@@ -337,8 +342,16 @@ class ProjectSettings extends Component {
     message.success(`Synced with board: ${board.name}`);
   };
 
-  handleAuthApp = () => {
-    window.open(this.authLink, '_blank');
+  handleAuthApp = async () => {
+    try {
+      await openExternalUrl(this.authLink);
+      message.info(
+        'Authorize in your browser, then paste the token in App Settings and click Save.',
+      );
+    } catch (error) {
+      console.error('Failed to open Trello authorization URL:', error);
+      message.error('Could not open Trello authorization page');
+    }
   };
 
   render() {

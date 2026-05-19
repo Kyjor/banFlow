@@ -27,7 +27,6 @@ import { PlusOutlined } from '@ant-design/icons';
 import dateFormat from 'dateformat';
 import moment from 'moment';
 import { tauriOn } from '../../utils/tauri';
-import TabPane from 'antd/lib/tabs/TabPane';
 import Layout from '../../layouts/App';
 // Components
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
@@ -234,10 +233,39 @@ class Dashboard extends Component {
     try {
       const projects = await getAllProjectNames();
       this.setState({ availableProjects: projects });
+      return projects;
     } catch (error) {
       console.error('Error loading available projects:', error);
       message.error('Failed to load available projects');
+      return [];
     }
+  };
+
+  handleProjectsChanged = async () => {
+    const { selectedProjects, availableProjects: previousAvailable } =
+      this.state;
+    const allProjects = await this.loadAvailableProjects();
+    if (allProjects.length === 0) {
+      return;
+    }
+
+    const hadAllSelected =
+      previousAvailable.length > 0 &&
+      selectedProjects.length === previousAvailable.length;
+    const nextSelected = hadAllSelected
+      ? allProjects
+      : [
+          ...new Set([
+            ...selectedProjects.filter((p) => allProjects.includes(p)),
+            ...allProjects.filter((p) => !selectedProjects.includes(p)),
+          ]),
+        ];
+
+    this.setState({ selectedProjects: nextSelected }, () => {
+      if (nextSelected.length > 0) {
+        this.loadProjectsData(nextSelected);
+      }
+    });
   };
 
   // eslint-disable-next-line react/no-unused-class-component-methods
@@ -514,6 +542,131 @@ class Dashboard extends Component {
       }
     }
 
+    const dashboardTabItems = [
+      {
+        key: 'aggregate',
+        label: 'All Projects',
+        children: (
+          <AggregateView
+            projectsData={projectsData}
+            selectedProjects={selectedProjects}
+            onProjectClick={this.handleProjectClick}
+            isLoading={isLoadingProjects}
+            dayCellRender={this.dayCellRender}
+            dateCellRender={this.dateCellRender}
+          />
+        ),
+      },
+      {
+        key: 'single',
+        label: 'Single Project',
+        children: selectedProject ? (
+          <>
+            <PageHeader
+              ghost={false}
+              title={
+                <Link to={`/projectPage/${selectedProject}`}>
+                  {selectedProject}
+                </Link>
+              }
+              extra={[
+                <Button
+                  key="open-project"
+                  type="primary"
+                  style={{ minWidth: 140 }}
+                >
+                  <Link
+                    to={`/projectPage/${selectedProject}`}
+                    style={{ color: '#fff' }}
+                  >
+                    Open Project
+                  </Link>
+                </Button>,
+              ]}
+            >
+              {singleProjectStats && (
+                <StatisticsCards stats={singleProjectStats} />
+              )}
+            </PageHeader>
+            {isLokiLoaded ? (
+              <div style={{ marginTop: '24px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '16px',
+                    marginTop: '24px',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '50%',
+                      paddingRight: '8px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        borderRadius: '12px',
+                        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
+                        padding: '20px',
+                        border: '1px solid rgba(0, 0, 0, 0.06)',
+                        height: '400px',
+                        overflow: 'auto',
+                      }}
+                    >
+                      <Calendar
+                        value={moment(selectedDate)}
+                        onSelect={(date) => {
+                          this.setState({ selectedDate: date });
+                        }}
+                        dateCellRender={this.dateCellRender}
+                        fullscreen={false}
+                        validRange={[
+                          moment(selectedDate).startOf('month'),
+                          moment(selectedDate).endOf('month'),
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      width: '50%',
+                      paddingLeft: '8px',
+                    }}
+                  >
+                    <DayByDayCalendar
+                      dayCellRender={this.dayCellRender}
+                      currentDate={selectedDate}
+                      onDateChange={(date) => {
+                        this.setState({ selectedDate: date });
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Spin size="large" />
+                <div style={{ marginTop: '16px', color: '#666' }}>
+                  Loading project data...
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '40px',
+              color: '#999',
+            }}
+          >
+            Select a project to view details
+          </div>
+        ),
+      },
+    ];
+
     return (
       <Layout>
         <div className="home">
@@ -522,6 +675,7 @@ class Dashboard extends Component {
               <ProjectListContainer
                 openProjectDetails={this.updateSelectedProject}
                 selectedProject={selectedProject}
+                onProjectsChanged={this.handleProjectsChanged}
               />
             </div>
             <div className="dashboard-content">
@@ -555,128 +709,8 @@ class Dashboard extends Component {
                 activeKey={viewMode}
                 onChange={this.handleViewModeChange}
                 defaultActiveKey="aggregate"
-              >
-                <TabPane tab="All Projects" key="aggregate">
-                  <AggregateView
-                    projectsData={projectsData}
-                    selectedProjects={selectedProjects}
-                    onProjectClick={this.handleProjectClick}
-                    isLoading={isLoadingProjects}
-                    dayCellRender={this.dayCellRender}
-                    dateCellRender={this.dateCellRender}
-                  />
-                </TabPane>
-                <TabPane tab="Single Project" key="single">
-                  {selectedProject ? (
-                    <>
-                      <PageHeader
-                        ghost={false}
-                        title={
-                          <Link to={`/projectPage/${selectedProject}`}>
-                            {selectedProject}
-                          </Link>
-                        }
-                        extra={[
-                          <Button
-                            key="open-project"
-                            type="primary"
-                            style={{ minWidth: 140 }}
-                          >
-                            <Link
-                              to={`/projectPage/${selectedProject}`}
-                              style={{ color: '#fff' }}
-                            >
-                              Open Project
-                            </Link>
-                          </Button>,
-                        ]}
-                      >
-                        {singleProjectStats && (
-                          <StatisticsCards stats={singleProjectStats} />
-                        )}
-                      </PageHeader>
-                      {isLokiLoaded ? (
-                        <div style={{ marginTop: '24px' }}>
-                          {/* Bottom section with two calendars */}
-                          <div
-                            style={{
-                              display: 'flex',
-                              gap: '16px',
-                              marginTop: '24px',
-                            }}
-                          >
-                            {/* Left: Full Calendar */}
-                            <div
-                              style={{
-                                width: '50%',
-                                paddingRight: '8px',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  background: 'rgba(255, 255, 255, 0.95)',
-                                  borderRadius: '12px',
-                                  boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
-                                  padding: '20px',
-                                  border: '1px solid rgba(0, 0, 0, 0.06)',
-                                  height: '400px',
-                                  overflow: 'auto',
-                                }}
-                              >
-                                <Calendar
-                                  value={moment(selectedDate)}
-                                  onSelect={(date) => {
-                                    this.setState({ selectedDate: date });
-                                  }}
-                                  dateCellRender={this.dateCellRender}
-                                  fullscreen={false}
-                                  validRange={[
-                                    moment(selectedDate).startOf('month'),
-                                    moment(selectedDate).endOf('month'),
-                                  ]}
-                                />
-                              </div>
-                            </div>
-                            {/* Right: Day by Day Calendar */}
-                            <div
-                              style={{
-                                width: '50%',
-                                paddingLeft: '8px',
-                              }}
-                            >
-                              <DayByDayCalendar
-                                dayCellRender={this.dayCellRender}
-                                currentDate={selectedDate}
-                                onDateChange={(date) => {
-                                  this.setState({ selectedDate: date });
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ textAlign: 'center', padding: '40px' }}>
-                          <Spin size="large" />
-                          <div style={{ marginTop: '16px', color: '#666' }}>
-                            Loading project data...
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div
-                      style={{
-                        textAlign: 'center',
-                        padding: '40px',
-                        color: '#999',
-                      }}
-                    >
-                      Select a project to view details
-                    </div>
-                  )}
-                </TabPane>
-              </Tabs>
-
+                items={dashboardTabItems}
+              />
               {/* Quick Add Modal */}
               <Modal
                 title="Quick Add Todo"

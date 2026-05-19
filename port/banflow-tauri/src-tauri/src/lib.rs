@@ -139,6 +139,7 @@ async fn api_initialize_project_state(
     let tags_data = get_collection_data(&db, "tags");
     let node_types_data = get_collection_data(&db, "nodeTypes");
     let node_states_data = get_collection_data(&db, "nodeStates");
+    let project_settings = crate::database::get_project_settings(&db);
     
     // Convert to objects keyed by ID (frontend expects this format)
     let mut nodes_obj = serde_json::Map::new();
@@ -181,7 +182,7 @@ async fn api_initialize_project_state(
         iterations: Some(serde_json::Value::Object(iterations_obj.clone())),
         loki_loaded: Some(true),
         project_name: Some(project_name.clone()),
-        project_settings: None, // TODO: Load from tags or separate collection
+        project_settings: project_settings.clone(),
     };
     
     // Update central state (like Electron's individualProjectStateValue)
@@ -1757,17 +1758,98 @@ async fn utils_close_timer_window() -> Result<(), String> {
     Ok(())
 }
 
+fn resolve_project_path(
+    app_handle: &tauri::AppHandle,
+    project_name: &str,
+) -> Result<std::path::PathBuf, String> {
+    if project_name.contains('/')
+        || project_name.contains('\\')
+        || project_name.contains(':')
+    {
+        Ok(std::path::PathBuf::from(project_name))
+    } else {
+        Ok(get_project_dir(app_handle)?.join(format!("{}.json", project_name)))
+    }
+}
+
+async fn persist_project_settings(
+    app_handle: &tauri::AppHandle,
+    project_name: &str,
+    settings: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    use crate::database::{load_project_database, save_project_database, upsert_project_settings};
+
+    let project_path = resolve_project_path(app_handle, project_name)?;
+    let mut db = load_project_database(&project_path)?;
+    let saved = upsert_project_settings(&mut db, settings);
+    save_project_database(&project_path, &db)?;
+
+    let app_state = app_handle.state::<tauri::async_runtime::Mutex<AppState>>();
+    let mut state = app_state.lock().await;
+    if let Some(project_state) = state.project_states.get_mut(project_name) {
+        project_state.project_settings = Some(saved.clone());
+    }
+    if state.current_project.as_deref() == Some(project_name) {
+        state.current_project = Some(project_name.to_string());
+    }
+
+    Ok(saved)
+}
+
 #[tauri::command]
-async fn api_get_project_settings() -> Result<Option<serde_json::Value>, String> {
-    // Placeholder - will be implemented based on actual project settings structure
-    Ok(None)
+async fn api_get_project_settings(
+    app_handle: tauri::AppHandle,
+) -> Result<Option<serde_json::Value>, String> {
+    use crate::database::{get_project_settings, load_project_database};
+
+    let app_state = app_handle.state::<tauri::async_runtime::Mutex<AppState>>();
+    let state = app_state.lock().await;
+    let project_name = state
+        .current_project
+        .clone()
+        .ok_or_else(|| "No project is currently open".to_string())?;
+
+    if let Some(settings) = state
+        .project_states
+        .get(&project_name)
+        .and_then(|s| s.project_settings.clone())
+    {
+        return Ok(Some(settings));
+    }
+
+    let project_path = resolve_project_path(&app_handle, &project_name)?;
+    let db = load_project_database(&project_path)?;
+    Ok(get_project_settings(&db))
+}
+
+#[tauri::command]
+async fn api_update_project_settings(
+    project_name: String,
+    settings: serde_json::Value,
+    app_handle: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    persist_project_settings(&app_handle, &project_name, settings).await
 }
 
 #[tauri::command]
 async fn api_set_trello_board(
-    _trello_board: serde_json::Value,
+    trello_board: serde_json::Value,
+    app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    // Placeholder - Trello integration
+    let app_state = app_handle.state::<tauri::async_runtime::Mutex<AppState>>();
+    let project_name = app_state
+        .lock()
+        .await
+        .current_project
+        .clone()
+        .ok_or_else(|| "No project is currently open".to_string())?;
+
+    persist_project_settings(
+        &app_handle,
+        &project_name,
+        serde_json::json!({ "trello": trello_board }),
+    )
+    .await?;
     Ok(())
 }
 
@@ -2131,14 +2213,12 @@ async fn loki_save_database(
     
     let project_path = project_dir.join(format!("{}.json", project_name));
     
-    // Validate JSON before writing
-    serde_json::from_str::<serde_json::Value>(&db_content)
+    use crate::database::save_project_database;
+
+    let db_value: serde_json::Value = serde_json::from_str(&db_content)
         .map_err(|e| format!("Invalid database JSON: {}", e))?;
-    
-    fs::write(&project_path, db_content)
-        .map_err(|e| format!("Failed to write database file: {}", e))?;
-    
-    Ok(())
+
+    save_project_database(&project_path, &db_value)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -2156,6 +2236,7 @@ pub fn run() {
             api_set_project_state,
             utils_close_timer_window,
             api_get_project_settings,
+            api_update_project_settings,
             api_set_trello_board,
             game_get_state,
             game_save_state,

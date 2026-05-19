@@ -5,7 +5,7 @@ use crate::models::{NodeType, NodeState};
 use crate::database::{load_project_database, save_project_database, get_collection_data, update_collection_data};
 
 // Helper function to get node types from typed database
-fn get_node_types(db: &crate::models::ProjectDatabase) -> Vec<NodeType> {
+fn get_node_types(db: &serde_json::Value) -> Vec<NodeType> {
     let node_types_data = get_collection_data(db, "nodeTypes");
     node_types_data.iter()
         .filter_map(|v| serde_json::from_value::<NodeType>(v.clone()).ok())
@@ -13,7 +13,7 @@ fn get_node_types(db: &crate::models::ProjectDatabase) -> Vec<NodeType> {
 }
 
 // Helper function to get node states from typed database
-fn get_node_states(db: &crate::models::ProjectDatabase) -> Vec<NodeState> {
+fn get_node_states(db: &serde_json::Value) -> Vec<NodeState> {
     let node_states_data = get_collection_data(db, "nodeStates");
     node_states_data.iter()
         .filter_map(|v| serde_json::from_value::<NodeState>(v.clone()).ok())

@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import { formatTimeHuman } from '../../utils/statisticsCalculations';
 import './ProjectComparison.scss';
 
-function ProjectComparison({ projects, onProjectClick }) {
+function ProjectComparison({ projects = [], onProjectClick = null }) {
   if (!projects || projects.length === 0) {
     return (
       <Card title="Project Comparison" className="project-comparison-card">
@@ -134,11 +134,6 @@ ProjectComparison.propTypes = {
     }),
   ),
   onProjectClick: PropTypes.func,
-};
-
-ProjectComparison.defaultProps = {
-  projects: [],
-  onProjectClick: null,
 };
 
 export default ProjectComparison;

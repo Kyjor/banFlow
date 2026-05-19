@@ -76,7 +76,11 @@ const ParentController = {
   },
 
   async deleteParent(parentId) {
-    await tauriSendSync('api:deleteParent', parentId);
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      throw new Error('No project name found. Please open a project first.');
+    }
+    await tauriInvoke('api:deleteParent', { projectName, parentId });
   },
 
   async updateParentProperty(propertyToUpdate, parentId, newValue) {
@@ -90,7 +94,11 @@ const ParentController = {
   },
 
   async updateParentOrder(parentOrder) {
-    await tauriSendSync('api:updateParentOrder', parentOrder);
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      throw new Error('No project name found. Please open a project first.');
+    }
+    await tauriInvoke('api:updateParentOrder', { projectName, parentOrder });
   },
 
   async updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {

@@ -21,8 +21,7 @@ import GameNotification from '../components/GameNotification/GameNotification';
 
 const { Content, Sider } = Layout;
 
-// eslint-disable-next-line consistent-return
-function loadSidebarComponents(pathname) {
+function loadSidebarItems(pathname) {
   const currentProject = localStorage.getItem('currentProject');
   if (
     !currentProject ||
@@ -32,55 +31,65 @@ function loadSidebarComponents(pathname) {
     pathname === '/' ||
     pathname === '/settings'
   ) {
-    return (
-      <>
-        <Menu.Item icon={<GitlabOutlined />}>
-          <Link to="/git" />
-          Git
-        </Menu.Item>
-        <Menu.Item icon={<SettingOutlined />}>
-          <Link to="/settings" />
-          Settings
-        </Menu.Item>
-      </>
-    );
+    return [
+      {
+        key: 'git',
+        icon: <GitlabOutlined />,
+        label: <Link to="/git">Git</Link>,
+      },
+      {
+        key: 'settings',
+        icon: <SettingOutlined />,
+        label: <Link to="/settings">Settings</Link>,
+      },
+    ];
   }
-  return (
-    <>
-      <Menu.Item title="Kanban" key="2">
-        <Link to={`/projectPage/${currentProject}`} />
-        Kanban
-      </Menu.Item>
-      <Menu.Item icon={<TableOutlined />}>
-        <Link to={`/sheets/${currentProject}`} />
-        Table
-      </Menu.Item>
-      <Menu.Item icon={<BarChartOutlined />}>
-        <Link to="/analytics" />
-        Analytics
-      </Menu.Item>
-      <Menu.Item icon={<FileOutlined />}>
-        <Link to={`/docs/${currentProject}`} />
-        Docs
-      </Menu.Item>
-      <Menu.Item icon={<ExpandOutlined />}>
-        <Link to={`/charts/${currentProject}`} />
-        Charts
-      </Menu.Item>
-      <Menu.Item icon={<GitlabOutlined />}>
-        <Link to={`/git/${currentProject}`} />
-        Git
-      </Menu.Item>
-      <Menu.Item icon={<SettingOutlined />}>
-        <Link to={`/projectSettings/${currentProject}`} />
-        Settings
-      </Menu.Item>
-      <Menu.Item icon={<PlayCircleOutlined />}>
-        <Link to={`/game/${currentProject}`} />
-        Game
-      </Menu.Item>
-    </>
-  );
+  return [
+    {
+      key: 'kanban',
+      title: 'Kanban',
+      label: (
+        <Link to={`/projectPage/${currentProject}`}>Kanban</Link>
+      ),
+    },
+    {
+      key: 'table',
+      icon: <TableOutlined />,
+      label: <Link to={`/sheets/${currentProject}`}>Table</Link>,
+    },
+    {
+      key: 'analytics',
+      icon: <BarChartOutlined />,
+      label: <Link to="/analytics">Analytics</Link>,
+    },
+    {
+      key: 'docs',
+      icon: <FileOutlined />,
+      label: <Link to={`/docs/${currentProject}`}>Docs</Link>,
+    },
+    {
+      key: 'charts',
+      icon: <ExpandOutlined />,
+      label: <Link to={`/charts/${currentProject}`}>Charts</Link>,
+    },
+    {
+      key: 'project-git',
+      icon: <GitlabOutlined />,
+      label: <Link to={`/git/${currentProject}`}>Git</Link>,
+    },
+    {
+      key: 'project-settings',
+      icon: <SettingOutlined />,
+      label: (
+        <Link to={`/projectSettings/${currentProject}`}>Settings</Link>
+      ),
+    },
+    {
+      key: 'game',
+      icon: <PlayCircleOutlined />,
+      label: <Link to={`/game/${currentProject}`}>Game</Link>,
+    },
+  ];
 }
 
 function App(props) {
@@ -98,7 +107,7 @@ function App(props) {
     }
   }, [location.pathname]);
 
-  const sidebarComponents = loadSidebarComponents(location.pathname);
+  const sidebarItems = loadSidebarItems(location.pathname);
 
   // Get theme settings from localStorage
   const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
@@ -122,19 +131,22 @@ function App(props) {
       }}
     >
       <Header style={{ background: headerColor }}>
-        <Menu theme="dark" defaultSelectedKeys={['1']} mode="horizontal">
-          <Menu.Item
-            icon={<DesktopOutlined />}
-            title="Dashboard"
-            key="1"
-            onClick={() => {
-              tauriSend('utils:closeTimerWindow');
-            }}
-          >
-            <Link to="/dashboard" />
-            Dashboard
-          </Menu.Item>
-        </Menu>
+        <Menu
+          theme="dark"
+          defaultSelectedKeys={['dashboard']}
+          mode="horizontal"
+          items={[
+            {
+              key: 'dashboard',
+              icon: <DesktopOutlined />,
+              title: 'Dashboard',
+              label: <Link to="/dashboard">Dashboard</Link>,
+              onClick: () => {
+                tauriSend('utils:closeTimerWindow');
+              },
+            },
+          ]}
+        />
       </Header>
       <Layout className="site-layout">
         <Sider
@@ -144,9 +156,11 @@ function App(props) {
           style={{ background: sidebarColor }}
         >
           <div className="logo" />
-          <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
-            {sidebarComponents}
-          </Menu>
+          <Menu
+            theme="dark"
+            mode="inline"
+            items={sidebarItems}
+          />
         </Sider>
         <Content
           className="h-screen bg-gradient-to-t from-blue-700 to-gray-200 items-center justify-center"

@@ -67,14 +67,20 @@ class ProjectListContainer extends Component {
     this.setState({ items });
   };
 
-  renameProject = (oldName, newName) => {
-    ProjectController.renameProject(oldName, newName);
-    this.getProjects();
+  renameProject = async (oldName, newName) => {
+    const ok = await ProjectController.renameProject(oldName, newName);
+    if (ok) {
+      await this.getProjects();
+      this.props.onProjectsChanged?.();
+    }
   };
 
-  deleteProject = (name) => {
-    ProjectController.deleteProject(name);
-    this.getProjects();
+  deleteProject = async (name) => {
+    const ok = await ProjectController.deleteProject(name);
+    if (ok) {
+      await this.getProjects();
+      this.props.onProjectsChanged?.();
+    }
   };
 
   handleSearch = (e) => {
@@ -95,19 +101,29 @@ class ProjectListContainer extends Component {
     }
 
     this.setState({ isCreating: true });
-    const created = ProjectController.createProject(newProjectName.trim());
-
-    if (created) {
-      message.success(
-        `Project "${newProjectName.trim()}" created successfully!`,
+    try {
+      const created = await ProjectController.createProject(
+        newProjectName.trim(),
       );
-      this.setState({ newProjectName: '' });
-      this.getProjects();
-    } else {
-      message.error('Failed to create project. Please check the project name.');
-    }
 
-    this.setState({ isCreating: false });
+      if (created) {
+        message.success(
+          `Project "${newProjectName.trim()}" created successfully!`,
+        );
+        this.setState({ newProjectName: '' });
+        await this.getProjects();
+        this.props.onProjectsChanged?.();
+      } else {
+        message.error(
+          'Failed to create project. Please check the project name.',
+        );
+      }
+    } catch (error) {
+      console.error('Error creating project:', error);
+      message.error('Failed to create project');
+    } finally {
+      this.setState({ isCreating: false });
+    }
   };
 
   handleNewProjectNameChange = (e) => {
@@ -293,6 +309,7 @@ class ProjectListContainer extends Component {
 ProjectListContainer.propTypes = {
   openProjectDetails: PropTypes.func.isRequired,
   selectedProject: PropTypes.string,
+  onProjectsChanged: PropTypes.func,
 };
 
 ProjectListContainer.defaultProps = {

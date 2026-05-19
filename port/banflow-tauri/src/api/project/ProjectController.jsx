@@ -151,7 +151,7 @@ const ProjectController = {
    * @permission {Modification}
    */
   async setTrelloBoard(trelloBoard) {
-    return await tauriSendSync('api:setTrelloBoard', trelloBoard);
+    return await tauriSendSync('api:setTrelloBoard', { trelloBoard });
   },
 
   /**
