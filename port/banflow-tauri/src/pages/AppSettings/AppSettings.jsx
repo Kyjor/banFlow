@@ -733,7 +733,11 @@ class AppSettings extends Component {
                     <Divider />
                     <div>
                       <Text strong>Trello API Token</Text>
-                      <APIKeyInput />
+                      <APIKeyInput
+                        onSaved={(trelloToken) =>
+                          this.setState({ trelloToken })
+                        }
+                      />
                     </div>
                     <Button onClick={this.handleAuthApp} type="primary">
                       Authorize Trello

@@ -3,7 +3,7 @@ import type { FullBackup, TrainingPlan, PlanDay, Run, Goal, ActivePlan, PlanExpo
 import { loadSettings } from './settingsService';
 import { formatDuration, calcPaceSeconds, formatPace } from '../utils/paceUtils';
 
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.2.1';
 
 // ---------------------------------------------------------------------------
 // Full JSON Backup

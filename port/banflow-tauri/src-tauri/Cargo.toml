@@ -1,6 +1,6 @@
 [package]
 name = "banflow-tauri"
-version = "0.1.0"
+version = "0.2.1"
 description = "banFlow - Kanban and Time Tracking Made Easy"
 authors = ["you"]
 edition = "2021"
