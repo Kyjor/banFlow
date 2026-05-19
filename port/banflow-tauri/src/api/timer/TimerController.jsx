@@ -1,4 +1,5 @@
 import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
+import { normalizeTimerPreferences } from '../../stores/shared';
 
 /**
  * @class TimerController
@@ -11,7 +12,8 @@ const TimerController = {
       console.error('[TimerController] No project name found');
       return null;
     }
-    return await tauriInvoke('api:getTimerPreferences', { projectName });
+    const prefs = await tauriInvoke('api:getTimerPreferences', { projectName });
+    return normalizeTimerPreferences(prefs);
   },
 
   async updateTimerPreferenceProperty(propertyToUpdate, newValue) {
@@ -28,16 +30,21 @@ const TimerController = {
   },
 
   async saveTimerPreferences(prefs) {
+    const normalized = normalizeTimerPreferences(prefs);
     const entries = [
-      ['time', prefs.time],
-      ['shortBreak', prefs.shortBreak],
-      ['longBreak', prefs.longBreak],
-      ['autoCycle', prefs.autoCycle],
+      ['time', normalized.time],
+      ['shortBreak', normalized.shortBreak],
+      ['longBreak', normalized.longBreak],
+      ['autoCycle', normalized.autoCycle],
     ];
+    let latest = normalized;
     for (const [property, value] of entries) {
-      await this.updateTimerPreferenceProperty(property, value);
+      const updated = await this.updateTimerPreferenceProperty(property, value);
+      if (updated) {
+        latest = normalizeTimerPreferences(updated);
+      }
     }
-    return prefs;
+    return latest;
   },
 };
 

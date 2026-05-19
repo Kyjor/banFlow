@@ -1745,7 +1745,15 @@ async fn msg_from_renderer(
     let _ = timer_window.emit("DefaultNode", &node);
     let _ = timer_window.emit("RetrieveProjectName", &project_name);
     let _ = timer_window.emit("RetrieveProjectState", &state_init);
-    if let Some(prefs) = timer_prefs {
+    // Always load prefs from the project DB (renderer-passed prefs can be stale)
+    if let Ok(prefs) = crate::timer::api_get_timer_preferences(
+        project_name.clone(),
+        app_handle.clone(),
+    )
+    .await
+    {
+        let _ = timer_window.emit("RetrieveTimerPrefs", &prefs);
+    } else if let Some(prefs) = timer_prefs {
         let _ = timer_window.emit("RetrieveTimerPrefs", &prefs);
     }
     
@@ -1768,6 +1776,38 @@ async fn msg_from_renderer(
 // Tag commands moved to tags.rs module
 
 // Node types and node states commands moved to metadata.rs module
+
+/// Desktop notification via notify-send on Linux (reliable on Fedora/GNOME).
+#[tauri::command]
+fn utils_show_notification(title: String, body: String) -> Result<(), String> {
+    #[cfg(target_os = "linux")]
+    {
+        use std::process::Command;
+        let output = Command::new("notify-send")
+            .arg(&title)
+            .arg(&body)
+            .arg("--app-name=banFlow")
+            .arg("--urgency=normal")
+            .output()
+            .map_err(|e| {
+                format!(
+                    "Could not run notify-send (install libnotify): {}",
+                    e
+                )
+            })?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("notify-send failed: {}", stderr.trim()));
+        }
+        return Ok(());
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (title, body);
+        return Err("utils_show_notification is only implemented on Linux".to_string());
+    }
+}
 
 #[tauri::command]
 async fn utils_close_timer_window() -> Result<(), String> {
@@ -2245,6 +2285,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(tauri::async_runtime::Mutex::new(AppState::default()))
         .invoke_handler(tauri::generate_handler![
             ping,
@@ -2252,6 +2293,7 @@ pub fn run() {
             api_initialize_project_state,
             api_get_project_state,
             api_set_project_state,
+            utils_show_notification,
             utils_close_timer_window,
             api_get_project_settings,
             api_update_project_settings,

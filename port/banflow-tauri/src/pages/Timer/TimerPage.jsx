@@ -4,7 +4,12 @@ import AntTreeSelect from '../../components/TreeSelect/AntTreeSelect';
 import Timer from '../../components/Timer/timer';
 import ISO8601ServiceInstance from '../../services/ISO8601Service';
 import NodeController from '../../api/nodes/NodeController';
+import timerController from '../../api/timer/TimerController';
 import eventSystem, { EVENTS } from '../../services/EventSystem';
+import {
+  defaultTimerPreferences,
+  normalizeTimerPreferences,
+} from '../../stores/shared';
 
 const titleBarStyle = {
   WebkitAppRegion: 'drag',
@@ -22,12 +27,27 @@ class TimerPage extends Component {
   async componentDidMount() {
     const self = this;
     const unlisten1 = await tauriOn('UpdateProjectPageState', function (e, newState) {
-      self.setState(newState);
+      if (!newState || typeof newState !== 'object') {
+        return;
+      }
+      self.setState((prevState) => {
+        // Periodic saves emit full nodes; applying them re-renders and stutters the tick
+        if (prevState.isTimerRunning && newState.nodes) {
+          const { nodes, ...rest } = newState;
+          return { ...prevState, ...rest };
+        }
+
+        const merged = { ...prevState, ...newState };
+        if (newState.nodes) {
+          merged.nodes = { ...prevState.nodes, ...newState.nodes };
+        }
+        return merged;
+      });
     });
     this.unlistenUpdateProjectPageState = unlisten1;
 
     const unlisten2 = await tauriOn('SaveBeforeClose', function () {
-      self.saveCurrentSelectedNodeTime();
+      self.saveCurrentSelectedNodeTime(undefined, true);
     });
     this.unlistenSaveBeforeClose = unlisten2;
 
@@ -52,6 +72,7 @@ class TimerPage extends Component {
         ...prevState,
         projectName,
       }));
+      self.loadTimerPreferences();
     });
     this.unlistenRetrieveProjectName = unlisten4;
 
@@ -64,17 +85,26 @@ class TimerPage extends Component {
     });
     this.unlistenRetrieveProjectState = unlisten5;
 
-    const unlisten6 = await tauriOn('RetrieveTimerPrefs', function (e, timerPrefs) {
-      console.log('[TimerPage] Received RetrieveTimerPrefs:', timerPrefs);
-      self.setState((prevState) => ({
-        ...prevState,
-        timerPreferences: timerPrefs,
-      }));
+    const unlisten6 = await tauriOn('RetrieveTimerPrefs', function () {
+      self.loadTimerPreferences();
     });
     this.unlistenRetrieveTimerPrefs = unlisten6;
 
     await tauriInvoke('api:getProjectState');
+    this.loadTimerPreferences();
   }
+
+  loadTimerPreferences = async () => {
+    try {
+      const prefs = await timerController.getTimerPreferences();
+      this.setState({
+        timerPreferences: normalizeTimerPreferences(prefs),
+      });
+    } catch (error) {
+      console.error('[TimerPage] Failed to load timer preferences:', error);
+      this.setState({ timerPreferences: { ...defaultTimerPreferences } });
+    }
+  };
 
   componentWillUnmount() {
     if (this.unlistenUpdateProjectPageState) {
@@ -104,15 +134,15 @@ class TimerPage extends Component {
       return;
     }
 
-    const updatedNode = nodes[currentNodeSelectedInTimer];
-    updatedNode.timeSpent = seconds;
-    
-    // Update local state immediately for UI responsiveness
-    // Don't update backend here - that happens every 10 seconds via saveTime()
-    // to avoid file corruption from concurrent writes
     this.setState((prevState) => ({
       ...prevState,
-      nodes: { ...prevState.nodes, [currentNodeSelectedInTimer]: updatedNode },
+      nodes: {
+        ...prevState.nodes,
+        [currentNodeSelectedInTimer]: {
+          ...prevState.nodes[currentNodeSelectedInTimer],
+          timeSpent: seconds,
+        },
+      },
     }));
   };
 
@@ -151,7 +181,7 @@ class TimerPage extends Component {
       currentNodeSelectedInTimer,
       nodeHistory,
     );
-    this.saveCurrentSelectedNodeTime();
+    await this.saveCurrentSelectedNodeTime(_seconds, true);
 
     // Fire session completed event for game system
     const node = nodes[currentNodeSelectedInTimer];
@@ -238,21 +268,32 @@ class TimerPage extends Component {
     }
   };
 
-  saveCurrentSelectedNodeTime = async () => {
+  /** Fire-and-forget persist; does not block the timer tick. */
+  queueSaveCurrentSelectedNodeTime = (timeSpent, syncToTrello = true) => {
+    void this.saveCurrentSelectedNodeTime(timeSpent, syncToTrello).catch((error) => {
+      console.error('[TimerPage] Background save failed:', error);
+    });
+  };
+
+  saveCurrentSelectedNodeTime = async (timeSpentOverride, syncToTrello = true) => {
     const { currentNodeSelectedInTimer, nodes, projectName } = this.state;
 
     // save current node time to backend
     if (currentNodeSelectedInTimer && nodes && nodes[currentNodeSelectedInTimer]) {
+      const timeSpent =
+        timeSpentOverride ?? nodes[currentNodeSelectedInTimer].timeSpent ?? 0;
       try {
         console.log('[TimerPage] Saving node time:', {
           nodeId: currentNodeSelectedInTimer,
-          timeSpent: nodes[currentNodeSelectedInTimer].timeSpent,
+          timeSpent,
           projectName,
+          syncToTrello,
         });
         await NodeController.updateNodeProperty(
           'timeSpent',
           currentNodeSelectedInTimer,
-          nodes[currentNodeSelectedInTimer].timeSpent,
+          timeSpent,
+          syncToTrello,
         );
       } catch (error) {
         console.error('[TimerPage] Error saving node time:', error);
@@ -338,7 +379,7 @@ class TimerPage extends Component {
             />
             <Timer
               endSession={this.endSession}
-              saveTime={this.saveCurrentSelectedNodeTime}
+              saveTime={this.queueSaveCurrentSelectedNodeTime}
               selectedNode={
                 currentNodeSelectedInTimer && nodes && nodes[currentNodeSelectedInTimer]
                   ? nodes[currentNodeSelectedInTimer]
@@ -354,6 +395,22 @@ class TimerPage extends Component {
               startSession={this.startSession}
               timerPreferences={timerPreferences}
               updateSeconds={this.updateSeconds}
+              updateTimerPreferenceProperty={(property, value) => {
+                this.setState((prevState) => ({
+                  timerPreferences: normalizeTimerPreferences({
+                    ...(prevState.timerPreferences || defaultTimerPreferences),
+                    [property]: value,
+                  }),
+                }));
+                void timerController
+                  .updateTimerPreferenceProperty(property, value)
+                  .catch((error) => {
+                    console.error(
+                      '[TimerPage] Failed to update timer preference:',
+                      error,
+                    );
+                  });
+              }}
             />
           </>
         ) : (

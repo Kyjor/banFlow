@@ -10,6 +10,7 @@ const commandMap: Record<string, string> = {
   'api:getProjectState': 'api_get_project_state',
   'api:setProjectState': 'api_set_project_state',
   'utils:closeTimerWindow': 'utils_close_timer_window',
+  'utils:showNotification': 'utils_show_notification',
   'api:getProjectSettings': 'api_get_project_settings',
   'api:updateProjectSettings': 'api_update_project_settings',
   'api:setTrelloBoard': 'api_set_trello_board',

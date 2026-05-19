@@ -1,31 +1,56 @@
 /* eslint-disable react-hooks/exhaustive-deps,react/destructuring-assignment,no-nested-ternary */
-import React, { useEffect, useReducer } from 'react';
+import React, { useEffect, useReducer, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTimer } from 'react-use-precision-timer';
-import { Button, Tooltip } from 'antd';
+import { Button, Tag, Tooltip } from 'antd';
 import {
   CaretRightOutlined,
   PauseOutlined,
   StepForwardOutlined,
 } from '@ant-design/icons';
+import {
+  defaultTimerPreferences,
+  normalizeTimerPreferences,
+} from '../../stores/shared';
+import { sendDesktopNotification } from '../../utils/desktopNotification';
+
 const SESSION_END_NOTIFICATION_TITLE = 'Round Over';
 const BREAK_END_NOTIFICATION_TITLE = 'Break Over';
 const SESSION_END_NOTIFICATION_BODY =
   'Your round of work is over. Time to take a break.';
 const BREAK_END_NOTIFICATION_BODY =
   'Your break is over. Time to get back to work.';
-const CLICK_MESSAGE = 'Notification clicked';
 
 function showRoundOverNotification() {
-  new Notification(SESSION_END_NOTIFICATION_TITLE, {
-    body: SESSION_END_NOTIFICATION_BODY,
-  }).onclick = () => console.log(CLICK_MESSAGE);
+  void sendDesktopNotification(
+    SESSION_END_NOTIFICATION_TITLE,
+    SESSION_END_NOTIFICATION_BODY,
+  );
 }
 
 function showBreakOverNotification() {
-  new Notification(BREAK_END_NOTIFICATION_TITLE, {
-    body: BREAK_END_NOTIFICATION_BODY,
-  }).onclick = () => console.log(CLICK_MESSAGE);
+  void sendDesktopNotification(
+    BREAK_END_NOTIFICATION_TITLE,
+    BREAK_END_NOTIFICATION_BODY,
+  );
+}
+
+function showBreakStartingNotification(breakMinutes) {
+  void sendDesktopNotification(
+    'Break time',
+    `Take a ${breakMinutes} minute break.`,
+  );
+}
+
+function showWorkStartingNotification(round, workMinutes) {
+  void sendDesktopNotification(
+    'Focus time',
+    `Starting round ${round} — ${workMinutes} minutes of work.`,
+  );
+}
+
+function formatDuration(totalSeconds) {
+  return new Date((totalSeconds ?? 0) * 1000).toISOString().substr(11, 8);
 }
 
 // The callback will be called every 1000 milliseconds.
@@ -46,105 +71,115 @@ function Timer(props) {
     betweenRoundSeconds: 5,
   });
 
+  const eventRef = useRef(event);
+  eventRef.current = event;
+
+  const propsRef = useRef(props);
+  propsRef.current = props;
+
+  const lastSavedBucketRef = useRef(-1);
+
+  const selectedNodeId = props.selectedNode?.id ?? null;
+
   function cycleTomatoTimer() {
-    if (!event.isActive) {
+    const ev = eventRef.current;
+    if (!ev.isActive) {
       return;
     }
-    updateEvent({ tomatoSeconds: event.timerPreferences.time * 60 });
+    const prefs = getTimerPrefs();
+    updateEvent({ tomatoSeconds: (Number(prefs.time) || defaultTimerPreferences.time) * 60 });
 
     // In between timer and break
-    if (!event.isBetweenRounds && event.isTomatoTimerActive) {
+    if (!ev.isBetweenRounds && ev.isTomatoTimerActive) {
       showRoundOverNotification();
-      // setIsActive(false);
       updateEvent({ isBetweenRounds: true, betweenRoundSeconds: 5 });
 
-      if (event.timerPreferences.autoCycle) {
+      if (prefs.autoCycle) {
         // TODO: set between rounds time
       }
     }
     // Moving to break
-    else if (event.isBetweenRounds && event.isTomatoTimerActive) {
-      // setIsActive(false);
+    else if (ev.isBetweenRounds && ev.isTomatoTimerActive) {
+      const breakMinutes =
+        ev.tomatoTimerRound < 4 ? prefs.shortBreak : prefs.longBreak;
+      showBreakStartingNotification(breakMinutes);
       updateEvent({
         isBetweenRounds: false,
         isTomatoTimerActive: false,
         isOnBreak: true,
+        breakSeconds: breakMinutes * 60,
       });
-
-      if (event.tomatoTimerRound < 4) {
-        updateEvent({ breakSeconds: event.timerPreferences.shortBreak * 60 });
-      } else if (event.tomatoTimerRound === 4) {
-        updateEvent({ breakSeconds: event.timerPreferences.longBreak * 60 });
-      }
     }
     // Between break and new tomato timer
-    else if (!event.isBetweenRounds && event.isOnBreak) {
+    else if (!ev.isBetweenRounds && ev.isOnBreak) {
       showBreakOverNotification();
-      // setIsActive(false);
       updateEvent({ isBetweenRounds: true, betweenRoundSeconds: 5 });
 
-      if (event.timerPreferences.autoCycle) {
+      if (prefs.autoCycle) {
         // TODO: set between rounds time
       }
     }
     // Move to new tomato round
-    else if (event.isBetweenRounds && event.isOnBreak) {
+    else if (ev.isBetweenRounds && ev.isOnBreak) {
+      const nextRound =
+        ev.tomatoTimerRound < 4 ? ev.tomatoTimerRound + 1 : 1;
+      const workMinutes = Number(prefs.time) || defaultTimerPreferences.time;
+      showWorkStartingNotification(nextRound, workMinutes);
       updateEvent({
         isBetweenRounds: false,
         isOnBreak: false,
         isTomatoTimerActive: true,
+        tomatoTimerRound: nextRound,
+        tomatoSeconds: workMinutes * 60,
       });
-
-      if (event.tomatoTimerRound < 4) {
-        updateEvent({ tomatoTimerRound: event.tomatoTimerRound + 1 });
-      } else if (event.tomatoTimerRound === 4) {
-        updateEvent({ tomatoTimerRound: 1 });
-      }
-      // setIsActive(true);
     }
   }
 
   const timer = useTimer({
     delay: 1000,
     callback: () => {
-      const { saveTime, seconds, selectedNode, updateSeconds } = props;
-      
-      // Only run if timer is actually active (not paused)
-      if (!event.isActive) {
-        return;
-      }
-      
-      // Save to backend every 10 seconds (not every second to avoid file corruption)
-      if (seconds % 10 === 0 && seconds !== 0) {
-        if (selectedNode) {
-          saveTime();
-        }
-      }
-      if (event.betweenRoundSeconds <= 0 && event.isBetweenRounds) {
+      const { saveTime, seconds, selectedNode, updateSeconds } = propsRef.current;
+      const ev = eventRef.current;
+
+      if (ev.betweenRoundSeconds <= 0 && ev.isBetweenRounds) {
         cycleTomatoTimer();
         return;
       }
       if (
-        (event.tomatoSeconds <= 0 && event.isTomatoTimerActive) ||
-        (event.breakSeconds <= 0 && event.isOnBreak && !event.isBetweenRounds)
+        (ev.tomatoSeconds <= 0 && ev.isTomatoTimerActive) ||
+        (ev.breakSeconds <= 0 && ev.isOnBreak && !ev.isBetweenRounds)
       ) {
         cycleTomatoTimer();
         return;
       }
 
-      if (event.isTomatoTimerActive && !event.isBetweenRounds) {
-        updateEvent({ tomatoSeconds: event.tomatoSeconds - 1 });
+      const isTomatoWorkPhase =
+        ev.isTomatoTimerActive && !ev.isOnBreak && !ev.isBetweenRounds;
+
+      const tickTaskTime = () => {
+        const nextSeconds = propsRef.current.seconds + 1;
+        updateSeconds(nextSeconds);
+        if (selectedNode && nextSeconds > 0 && nextSeconds % 10 === 0) {
+          const bucket = nextSeconds / 10;
+          if (bucket !== lastSavedBucketRef.current) {
+            lastSavedBucketRef.current = bucket;
+            queueMicrotask(() => saveTime(nextSeconds));
+          }
+        }
+      };
+
+      if (isTomatoWorkPhase) {
+        updateEvent({ tomatoSeconds: ev.tomatoSeconds - 1 });
+        tickTaskTime();
       }
-      if (event.isOnBreak && !event.isBetweenRounds) {
-        updateEvent({ breakSeconds: event.breakSeconds - 1 });
+      if (ev.isOnBreak && !ev.isBetweenRounds) {
+        updateEvent({ breakSeconds: ev.breakSeconds - 1 });
       }
-      if (event.isBetweenRounds && event.timerPreferences && event.timerPreferences.autoCycle) {
-        updateEvent({ betweenRoundSeconds: event.betweenRoundSeconds - 1 });
+      if (ev.isBetweenRounds && ev.timerPreferences?.autoCycle) {
+        updateEvent({ betweenRoundSeconds: ev.betweenRoundSeconds - 1 });
       }
-      if (!event.isOnBreak && !event.isBetweenRounds && !event.isTomatoTimerActive) {
-        // Only increment if not using tomato timer
-        // Update local state immediately, backend sync happens every 10 seconds via saveTime
-        updateSeconds(seconds + 1);
+      if (!ev.isOnBreak && !ev.isBetweenRounds && !ev.isTomatoTimerActive) {
+        tickTaskTime();
       }
     },
   });
@@ -153,30 +188,31 @@ function Timer(props) {
     const { endSession, seconds, selectedNode, startSession } = props;
     if (timer.isRunning()) {
       timer.stop();
-      updateEvent({ isActive: false });
       if (selectedNode) {
         try {
           endSession(seconds);
         } catch (error) {
           console.error('[Timer] Error ending session:', error);
-          // Continue even if endSession fails
         }
       }
     } else {
-      // Set isActive first so callback knows to run
-      updateEvent({ isActive: true });
       if (selectedNode) {
         try {
           await startSession(seconds);
         } catch (error) {
           console.error('[Timer] Error starting session:', error);
-          // Don't stop timer if session start failed - allow timer to run anyway
-          // The error is logged but timer continues
         }
       }
       timer.start();
     }
+    updateEvent({ isActive: !eventRef.current.isActive });
   };
+
+  function getTimerPrefs() {
+    return normalizeTimerPreferences(
+      propsRef.current.timerPreferences || eventRef.current.timerPreferences,
+    );
+  }
 
   function toggleTomatoTimer() {
     if (
@@ -190,24 +226,46 @@ function Timer(props) {
       });
       return;
     }
+    const prefs = getTimerPrefs();
+    const workMinutes = Number(prefs.time) || defaultTimerPreferences.time;
     updateEvent({
       isTomatoTimerActive: true,
+      isOnBreak: false,
+      isBetweenRounds: false,
       tomatoTimerRound: 1,
-      tomatoSeconds: event.timerPreferences.time * 60,
+      tomatoSeconds: workMinutes * 60,
     });
   }
 
   useEffect(() => {
+    lastSavedBucketRef.current = -1;
     timer.stop();
     updateEvent({ isActive: false });
-  }, [props.selectedNode]);
+  }, [selectedNodeId]);
   useEffect(() => {
-    updateEvent({ timerPreferences: props.timerPreferences });
+    updateEvent({
+      timerPreferences: normalizeTimerPreferences(props.timerPreferences),
+    });
   }, [props.timerPreferences]);
 
-  function handleTomatoTimerButtonClick() {
-    // eslint-disable-next-line no-unused-expressions
-    !event.isActive ? (toggle(), toggleTomatoTimer()) : toggleTomatoTimer();
+  async function handleTomatoTimerButtonClick() {
+    if (!event.isActive) {
+      await toggle();
+      toggleTomatoTimer();
+    } else {
+      toggleTomatoTimer();
+    }
+  }
+
+  function handleAutoCycleChange(checked) {
+    const prefs = getTimerPrefs();
+    updateEvent({
+      timerPreferences: { ...prefs, autoCycle: checked },
+    });
+    const { updateTimerPreferenceProperty } = propsRef.current;
+    if (updateTimerPreferenceProperty) {
+      updateTimerPreferenceProperty('autoCycle', checked);
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-shadow
@@ -227,8 +285,7 @@ function Timer(props) {
       secondsLeft = event.betweenRoundSeconds;
     }
 
-    const timeLeft = new Date(secondsLeft * 1000).toISOString().substr(11, 8);
-    return timeLeft;
+    return formatDuration(secondsLeft);
   }
 
   function handlePlayButtonClick() {
@@ -249,40 +306,47 @@ function Timer(props) {
     (event.isOnBreak || event.isBetweenRounds || event.isTomatoTimerActive) &&
     event.isActive;
 
+  const showTomatoPanel = isTomatoRunning;
+
+  let displaySeconds = seconds ?? 0;
+  if (showTomatoPanel) {
+    if (event.isTomatoTimerActive && !event.isOnBreak && !event.isBetweenRounds) {
+      displaySeconds = event.tomatoSeconds;
+    } else if (event.isOnBreak && !event.isBetweenRounds) {
+      displaySeconds = event.breakSeconds;
+    } else if (event.isBetweenRounds) {
+      displaySeconds = event.betweenRoundSeconds;
+    }
+  }
 
   return (
     <>
-      {(event.isOnBreak ||
-        event.isBetweenRounds ||
-        event.isTomatoTimerActive) &&
-        event.isActive && (
+      {showTomatoPanel && (
           <div
-            className="time"
+            className="time tomato-status"
             style={{
               fontSize: '12px',
-              textAlign: 'right',
+              textAlign: 'center',
               width: '100%',
               display: 'flex',
               flexDirection: 'row',
               justifyContent: 'space-around',
+              padding: '4px 0',
+              marginBottom: '4px',
             }}
           >
             <div>Round: {event.tomatoTimerRound}</div>
             <div>
-              {event.isActive && !event.isOnBreak && !event.isBetweenRounds ? (
+              {event.isTomatoTimerActive && !event.isOnBreak && !event.isBetweenRounds ? (
                 <div>Tomato Time Active</div>
               ) : event.isOnBreak && !event.isBetweenRounds ? (
                 <div>On Break</div>
-              ) : event.isActive ? (
-                <div>Between Rounds</div>
               ) : (
-                <div>Inactive</div>
+                <div>Between Rounds</div>
               )}
             </div>
-            <div>
-              Time Left:
-              {getTimeLeft(event)}
-            </div>
+            <div>Time left: {getTimeLeft(event)}</div>
+            <div>Total: {formatDuration(seconds)}</div>
           </div>
         )}
       <div
@@ -292,17 +356,10 @@ function Timer(props) {
           textAlign: 'center',
           width: '100%',
           overflow: 'hidden',
-          marginTop: `${
-            (event.isOnBreak ||
-              event.isBetweenRounds ||
-              event.isTomatoTimerActive) &&
-            event.isActive
-              ? `-25px`
-              : `-15px`
-          }`,
+          marginTop: showTomatoPanel ? '0' : '-15px',
         }}
       >
-        {new Date((seconds ?? 0) * 1000).toISOString().substr(11, 8)}
+        {formatDuration(displaySeconds)}
       </div>
       <div
         className="row"
@@ -329,18 +386,41 @@ function Timer(props) {
             <CaretRightOutlined />
           )}
         </Button>
-        <Tooltip title={tomatoTooltip}>
-          <Button
-            className="button button-primary"
-            onClick={handleTomatoTimerButtonClick}
-            style={{
-              backgroundColor: isTomatoRunning ? '#d4a574' : '#ec8e8e',
-              color: 'black',
-            }}
-          >
-            {isTomatoRunning ? 'Stop Tomato' : 'Tomato Timer'}
-          </Button>
-        </Tooltip>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <Tooltip title={tomatoTooltip}>
+            <Button
+              className="button button-primary"
+              onClick={handleTomatoTimerButtonClick}
+              style={{
+                backgroundColor: isTomatoRunning ? '#d4a574' : '#ec8e8e',
+                color: 'black',
+              }}
+            >
+              {isTomatoRunning ? 'Stop Tomato' : 'Tomato Timer'}
+            </Button>
+          </Tooltip>
+          {isTomatoRunning && (
+            <Tag.CheckableTag
+              checked={Boolean(getTimerPrefs().autoCycle)}
+              onChange={handleAutoCycleChange}
+              style={{
+                margin: 0,
+                padding: '2px 8px',
+                fontSize: 12,
+                lineHeight: '20px',
+                borderRadius: 12,
+              }}
+            >
+              Auto cycle
+            </Tag.CheckableTag>
+          )}
+        </div>
       </div>
     </>
   );
@@ -350,7 +430,7 @@ export default Timer;
 
 Timer.propTypes = {
   endSession: PropTypes.func.isRequired,
-  saveTime: PropTypes.func.isRequired,
+  saveTime: PropTypes.func.isRequired, // (seconds: number) => void
   seconds: PropTypes.number.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   selectedNode: PropTypes.object, // Allow null/undefined
@@ -358,4 +438,5 @@ Timer.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   timerPreferences: PropTypes.object,
   updateSeconds: PropTypes.func.isRequired,
+  updateTimerPreferenceProperty: PropTypes.func,
 };

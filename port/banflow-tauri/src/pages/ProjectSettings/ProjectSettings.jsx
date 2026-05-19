@@ -43,7 +43,10 @@ import {
 import Layout from '../../layouts/App';
 import ProjectController from '../../api/project/ProjectController';
 import timerController from '../../api/timer/TimerController';
-import { defaultTimerPreferences } from '../../stores/shared';
+import {
+  defaultTimerPreferences,
+  normalizeTimerPreferences,
+} from '../../stores/shared';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -150,11 +153,12 @@ class ProjectSettings extends Component {
     try {
       const prefs = await timerController.getTimerPreferences();
       if (prefs) {
+        const normalized = normalizeTimerPreferences(prefs);
         this.setState({
-          timerWorkMinutes: prefs.time ?? defaultTimerPreferences.time,
-          timerShortBreak: prefs.shortBreak ?? defaultTimerPreferences.shortBreak,
-          timerLongBreak: prefs.longBreak ?? defaultTimerPreferences.longBreak,
-          timerAutoCycle: prefs.autoCycle ?? defaultTimerPreferences.autoCycle,
+          timerWorkMinutes: normalized.time,
+          timerShortBreak: normalized.shortBreak,
+          timerLongBreak: normalized.longBreak,
+          timerAutoCycle: normalized.autoCycle,
         });
       }
     } catch (error) {
@@ -786,7 +790,7 @@ class ProjectSettings extends Component {
         key: 'tomato-timer',
         label: (
           <span>
-            <ClockCircleOutlined /> Tomato Timer
+            <ClockCircleOutlined /> Timer
           </span>
         ),
         children: (

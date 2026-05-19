@@ -26,6 +26,7 @@ import NodeModal from '../../components/NodeModal/NodeModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
+import timerController from '../../api/timer/TimerController';
 import IterationController from '../../api/iterations/IterationController';
 import IterationModal from '../../components/IterationModal/IterationModal';
 import ParentModal from '../../components/ParentModal/ParentModal';
@@ -574,7 +575,8 @@ class ProjectPage extends Component {
   };
 
   handleOk = async () => {
-    const { modalNodeId, nodes, timerPreferences } = this.state;
+    const { modalNodeId, nodes } = this.state;
+    const timerPreferences = await timerController.getTimerPreferences();
 
     await tauriInvoke('msg_from_renderer', {
       node: nodes[modalNodeId],
