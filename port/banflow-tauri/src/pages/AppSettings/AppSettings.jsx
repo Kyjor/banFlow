@@ -41,6 +41,9 @@ const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
+const IS_LINUX =
+  typeof navigator !== 'undefined' && /Linux/i.test(navigator.userAgent);
+
 // Backup Manager Component
 
 class AppSettings extends Component {
@@ -90,6 +93,10 @@ class AppSettings extends Component {
       // Game
       gameModeEnabled: appSettings.gameModeEnabled || false,
 
+      // Linux launch (X11 for timer always-on-top on Wayland)
+      preferX11: false,
+      x11RestartNeeded: false,
+
       // UI State
       activeTab: 'appearance',
       saving: false,
@@ -121,6 +128,17 @@ class AppSettings extends Component {
 
     // Apply theme on mount
     this.applyTheme();
+
+    if (IS_LINUX) {
+      try {
+        const prefs = await tauriInvoke('utils:getLaunchPrefs');
+        this.setState({
+          preferX11: Boolean(prefs?.preferX11),
+        });
+      } catch (error) {
+        console.error('Failed to load launch preferences:', error);
+      }
+    }
   }
 
   saveSetting = async (key, value) => {
@@ -291,7 +309,35 @@ class AppSettings extends Component {
     }, 500);
   };
 
-  handleReset = () => {
+  handlePreferX11Change = async (checked) => {
+    try {
+      await tauriInvoke('utils:saveLaunchPrefs', { preferX11: checked });
+      this.setState({ preferX11: checked, x11RestartNeeded: true });
+      message.info('Restart banFlow to apply the display backend change.');
+    } catch (error) {
+      console.error('Failed to save launch preferences:', error);
+      message.error('Failed to save display preference');
+    }
+  };
+
+  handleRestartApp = async () => {
+    try {
+      await tauriInvoke('utils:restartApp');
+    } catch (error) {
+      console.error('Failed to restart application:', error);
+      message.error('Failed to restart application');
+    }
+  };
+
+  handleReset = async () => {
+    if (IS_LINUX) {
+      try {
+        await tauriInvoke('utils:saveLaunchPrefs', { preferX11: false });
+      } catch (error) {
+        console.error('Failed to reset launch preferences:', error);
+      }
+    }
+
     this.setState({
       theme: 'light',
       primaryColor: '#1890ff',
@@ -312,8 +358,14 @@ class AppSettings extends Component {
       debugMode: false,
       devTools: false,
       gameModeEnabled: false,
+      preferX11: false,
+      x11RestartNeeded: IS_LINUX,
     });
-    message.info('Settings reset to defaults');
+    message.info(
+      IS_LINUX
+        ? 'Settings reset to defaults. Restart banFlow to apply display changes.'
+        : 'Settings reset to defaults',
+    );
   };
 
   handleAuthApp = async () => {
@@ -359,6 +411,8 @@ class AppSettings extends Component {
       debugMode,
       devTools,
       gameModeEnabled,
+      preferX11,
+      x11RestartNeeded,
       activeTab,
       saving,
     } = this.state;
@@ -1036,6 +1090,51 @@ class AppSettings extends Component {
         ),
         children: (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            {IS_LINUX && (
+              <Card title="Linux Display" size="small">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div>
+                      <Text strong>Use X11 display backend</Text>
+                      <Paragraph
+                        type="secondary"
+                        style={{ margin: 0, fontSize: 12 }}
+                      >
+                        Improves timer always-on-top on Wayland (Fedora/GNOME).
+                        Requires a restart.
+                      </Paragraph>
+                    </div>
+                    <Switch
+                      checked={preferX11}
+                      onChange={this.handlePreferX11Change}
+                    />
+                  </div>
+                  {x11RestartNeeded && (
+                    <Alert
+                      message="Restart required"
+                      description="Quit and reopen banFlow, or restart now to apply the display backend."
+                      type="info"
+                      showIcon
+                      action={
+                        <Button
+                          size="small"
+                          icon={<ReloadOutlined />}
+                          onClick={this.handleRestartApp}
+                        >
+                          Restart now
+                        </Button>
+                      }
+                    />
+                  )}
+                </Space>
+              </Card>
+            )}
             <Card title="Developer Options" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div

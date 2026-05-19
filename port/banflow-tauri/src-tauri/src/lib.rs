@@ -27,6 +27,9 @@ mod iterations;
 // Module for timer-related commands
 mod timer;
 
+// Linux launch preferences (X11 backend for always-on-top timer, etc.)
+mod launch_prefs;
+
 // Module for metadata-related commands
 mod metadata;
 
@@ -1699,8 +1702,10 @@ async fn msg_from_renderer(
     let timer_window = app_handle.get_webview_window("timer")
         .ok_or("Timer window not found. Make sure it's defined in tauri.conf.json")?;
     
-    // Show and focus the window
+    // Show and focus the window (re-apply always-on-top; config alone can be lost after hide/show)
+    let _ = timer_window.set_always_on_top(true);
     let _ = timer_window.show();
+    let _ = timer_window.set_always_on_top(true);
     let _ = timer_window.set_focus();
     
     // Wait for window to be ready
@@ -2281,6 +2286,8 @@ async fn loki_save_database(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    launch_prefs::apply_launch_prefs();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
@@ -2295,6 +2302,9 @@ pub fn run() {
             api_set_project_state,
             utils_show_notification,
             utils_close_timer_window,
+            launch_prefs::utils_get_launch_prefs,
+            launch_prefs::utils_save_launch_prefs,
+            launch_prefs::utils_restart_app,
             api_get_project_settings,
             api_update_project_settings,
             api_set_trello_board,
@@ -2382,8 +2392,10 @@ pub fn run() {
             git_select_repository,
             git_load_project_repositories,
         ])
-        .setup(|_app| {
-            // Setup code here
+        .setup(|app| {
+            if let Some(timer_window) = app.get_webview_window("timer") {
+                let _ = timer_window.set_always_on_top(true);
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

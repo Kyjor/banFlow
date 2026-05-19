@@ -11,6 +11,9 @@ const commandMap: Record<string, string> = {
   'api:setProjectState': 'api_set_project_state',
   'utils:closeTimerWindow': 'utils_close_timer_window',
   'utils:showNotification': 'utils_show_notification',
+  'utils:getLaunchPrefs': 'utils_get_launch_prefs',
+  'utils:saveLaunchPrefs': 'utils_save_launch_prefs',
+  'utils:restartApp': 'utils_restart_app',
   'api:getProjectSettings': 'api_get_project_settings',
   'api:updateProjectSettings': 'api_update_project_settings',
   'api:setTrelloBoard': 'api_set_trello_board',
@@ -61,8 +64,6 @@ const singleArgCommands: Record<string, string> = {
   'backup:stopSchedule': 'projectName',
   'backup:delete': 'path',
   'project:deleteProject': 'projectName',
-  'git:switchBranch': 'branchName',
-  'git:discardChanges': 'files',
 };
 
 function mapCommand(command: string): string {

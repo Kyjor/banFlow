@@ -336,17 +336,24 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await tauriInvoke(
-          'git:createBranch',
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        await tauriInvoke('git:createBranch', {
+          repoPath: currentRepoPath,
           branchName,
           startPoint,
-        );
+        });
+        const status = await tauriInvoke('git:getRepositoryStatus', {
+          repoPath: currentRepoPath,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
-          payload: result,
+          payload: status,
         });
         showSuccess('Branch created', branchName);
-        return result;
+        return status;
       } catch (error) {
         handleError(error, 'create branch');
         throw error;
@@ -357,7 +364,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const switchBranch = useCallback(
@@ -367,13 +374,23 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await tauriInvoke('git:switchBranch', branchName);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        await tauriInvoke('git:switchBranch', {
+          repoPath: currentRepoPath,
+          branchName,
+        });
+        const status = await tauriInvoke('git:getRepositoryStatus', {
+          repoPath: currentRepoPath,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
-          payload: result,
+          payload: status,
         });
         showSuccess('Switched to branch', branchName);
-        return result;
+        return status;
       } catch (error) {
         handleError(error, 'switch branch');
         throw error;
@@ -384,7 +401,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const deleteBranch = useCallback(
@@ -394,17 +411,24 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await tauriInvoke(
-          'git:deleteBranch',
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        await tauriInvoke('git:deleteBranch', {
+          repoPath: currentRepoPath,
           branchName,
           force,
-        );
+        });
+        const status = await tauriInvoke('git:getRepositoryStatus', {
+          repoPath: currentRepoPath,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
-          payload: result,
+          payload: status,
         });
         showSuccess('Branch deleted', branchName);
-        return result;
+        return status;
       } catch (error) {
         handleError(error, 'delete branch');
         throw error;
@@ -415,7 +439,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const getBranchesWithDates = useCallback(async (repoPath = null) => {
