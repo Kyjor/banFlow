@@ -219,3 +219,104 @@ pub async fn diagrams_create_folder(
 
     Ok(json!({ "success": true, "path": folder_path }))
 }
+
+fn remove_dir_recursive(path: &Path) -> Result<(), String> {
+    if path.is_dir() {
+        for entry in fs::read_dir(path).map_err(|e| format!("Failed to read dir: {}", e))? {
+            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+            remove_dir_recursive(&entry.path())?;
+        }
+        fs::remove_dir(path).map_err(|e| format!("Failed to remove dir: {}", e))?;
+    } else {
+        fs::remove_file(path).map_err(|e| format!("Failed to remove file: {}", e))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn diagrams_delete_folder(
+    folder_path: String,
+    project_name: Option<String>,
+    is_global: bool,
+    app_handle: AppHandle,
+) -> Result<Value, String> {
+    let diagrams_path = resolve_diagrams_path(&app_handle, project_name, is_global)?;
+    let full_path = diagrams_path.join(&folder_path);
+
+    if !full_path.exists() {
+        return Err(format!("Folder not found: {}", folder_path));
+    }
+
+    remove_dir_recursive(&full_path)?;
+    Ok(json!({ "success": true }))
+}
+
+#[tauri::command]
+pub async fn diagrams_rename(
+    old_path: String,
+    new_path: String,
+    project_name: Option<String>,
+    is_global: bool,
+    app_handle: AppHandle,
+) -> Result<Value, String> {
+    let diagrams_path = resolve_diagrams_path(&app_handle, project_name, is_global)?;
+    let from = diagram_full_path(&diagrams_path, &old_path);
+    let to = diagram_full_path(&diagrams_path, &new_path);
+
+    if !from.exists() {
+        return Err(format!("Diagram not found: {}", old_path));
+    }
+    if to.exists() {
+        return Err(format!("Target already exists: {}", new_path));
+    }
+    if let Some(parent) = to.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create target dir: {}", e))?;
+    }
+    fs::rename(&from, &to).map_err(|e| format!("Failed to rename diagram: {}", e))?;
+    Ok(json!({ "success": true, "path": new_path }))
+}
+
+#[tauri::command]
+pub async fn diagrams_duplicate(
+    diagram_path: String,
+    project_name: Option<String>,
+    is_global: bool,
+    app_handle: AppHandle,
+) -> Result<Value, String> {
+    let diagrams_path = resolve_diagrams_path(&app_handle, project_name, is_global)?;
+    let from = diagram_full_path(&diagrams_path, &diagram_path);
+
+    if !from.exists() {
+        return Err(format!("Diagram not found: {}", diagram_path));
+    }
+
+    let stem = from
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("diagram");
+    let parent_rel = Path::new(&diagram_path).parent();
+    let new_name = format!("{}-copy.json", stem);
+    let new_rel = parent_rel
+        .map(|p| p.join(&new_name))
+        .unwrap_or_else(|| PathBuf::from(&new_name));
+    let new_rel_str = new_rel.to_string_lossy().to_string();
+    let to = diagram_full_path(&diagrams_path, &new_rel_str);
+
+    let mut counter = 2;
+    let mut final_path = to.clone();
+    let mut final_rel = new_rel_str.clone();
+    while final_path.exists() {
+        let alt = format!("{}-copy-{}.json", stem, counter);
+        final_rel = parent_rel
+            .map(|p| p.join(&alt))
+            .unwrap_or_else(|| PathBuf::from(&alt))
+            .to_string_lossy()
+            .to_string();
+        final_path = diagram_full_path(&diagrams_path, &final_rel);
+        counter += 1;
+    }
+
+    fs::copy(&from, &final_path).map_err(|e| format!("Failed to duplicate diagram: {}", e))?;
+    Ok(json!({ "success": true, "path": final_rel }))
+}

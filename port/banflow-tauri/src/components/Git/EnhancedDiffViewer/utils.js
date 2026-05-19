@@ -71,11 +71,14 @@ export const getLinePrefix = (lineType) => {
   }
 };
 
-export const formatHistoryDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  })}`;
-};
+import { formatGitDate } from '../../../utils/gitDate';
+
+export const formatHistoryDate = (dateString) =>
+  formatGitDate(
+    dateString,
+    (date) =>
+      `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`,
+  );

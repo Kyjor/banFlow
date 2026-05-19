@@ -426,7 +426,10 @@ export function GitProvider({ children }) {
         return [];
       }
       const branches = await tauriInvoke('git:getBranchesWithDates', { repoPath: currentRepoPath });
-      return branches;
+      return (branches || []).map((branch) => ({
+        ...branch,
+        lastCommitDate: branch.lastCommitDate || branch.date || null,
+      }));
     } catch (error) {
       handleError(error, 'get branches with dates');
       throw error;

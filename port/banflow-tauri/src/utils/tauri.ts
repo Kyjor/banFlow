@@ -50,6 +50,9 @@ const multiArgCommands: Record<string, string[]> = {
   'diagrams:save': ['diagramPath', 'content', 'projectName', 'isGlobal'],
   'diagrams:delete': ['diagramPath', 'projectName', 'isGlobal'],
   'diagrams:createFolder': ['folderPath', 'projectName', 'isGlobal'],
+  'diagrams:deleteFolder': ['folderPath', 'projectName', 'isGlobal'],
+  'diagrams:rename': ['oldPath', 'newPath', 'projectName', 'isGlobal'],
+  'diagrams:duplicate': ['diagramPath', 'projectName', 'isGlobal'],
 };
 
 /** Single primitive/string arg -> Tauri parameter name */

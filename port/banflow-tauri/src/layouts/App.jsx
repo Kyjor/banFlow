@@ -1,4 +1,5 @@
 import {
+  AppstoreOutlined,
   BarChartOutlined,
   DesktopOutlined,
   ExpandOutlined,
@@ -47,10 +48,8 @@ function loadSidebarItems(pathname) {
   return [
     {
       key: 'kanban',
-      title: 'Kanban',
-      label: (
-        <Link to={`/projectPage/${currentProject}`}>Kanban</Link>
-      ),
+      icon: <AppstoreOutlined />,
+      label: <Link to={`/projectPage/${currentProject}`}>Kanban</Link>,
     },
     {
       key: 'table',

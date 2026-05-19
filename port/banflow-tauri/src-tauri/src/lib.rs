@@ -854,6 +854,10 @@ async fn git_delete_branch(
     Ok(())
 }
 
+/// Unit separator / record separator for safe git --format parsing.
+const GIT_FIELD_SEP: char = '\u{001f}';
+const GIT_RECORD_SEP: char = '\u{001e}';
+
 #[tauri::command]
 async fn git_get_branches_with_dates(repo_path: String) -> Result<Vec<serde_json::Value>, String> {
     let output = git_command(&repo_path, &["for-each-ref", "--format=%(refname:short)|%(committerdate:iso8601)", "refs/heads/"]).await?;
@@ -862,9 +866,11 @@ async fn git_get_branches_with_dates(repo_path: String) -> Result<Vec<serde_json
     for line in output.lines() {
         let parts: Vec<&str> = line.split('|').collect();
         if parts.len() == 2 {
+            let date = parts[1].trim().to_string();
             let mut branch_obj = serde_json::Map::new();
             branch_obj.insert("name".to_string(), serde_json::Value::String(parts[0].trim().to_string()));
-            branch_obj.insert("date".to_string(), serde_json::Value::String(parts[1].trim().to_string()));
+            branch_obj.insert("lastCommitDate".to_string(), serde_json::Value::String(date.clone()));
+            branch_obj.insert("date".to_string(), serde_json::Value::String(date));
             branches.push(serde_json::Value::Object(branch_obj));
         }
     }
@@ -892,7 +898,8 @@ async fn git_get_commit_history(
         args.push("50");
     }
     
-    args.push("--format=%H|%ai|%s|%b|%an|%ae");
+    // %aI = strict ISO-8601; field/record separators avoid broken parsing on | or newlines in messages
+    args.push("--format=%H%x1f%aI%x1f%s%x1f%an%x1f%ae%x1e");
     
     if let (Some(from_ref), Some(to_ref)) = (from, to) {
         range_str = format!("{}..{}", from_ref, to_ref);
@@ -902,16 +909,20 @@ async fn git_get_commit_history(
     let output = git_command(&repo_path, &args).await?;
     let mut commits = Vec::new();
     
-    for line in output.lines() {
-        let parts: Vec<&str> = line.splitn(6, '|').collect();
-        if parts.len() >= 6 {
+    for record in output.split(GIT_RECORD_SEP) {
+        let record = record.trim();
+        if record.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = record.split(GIT_FIELD_SEP).collect();
+        if parts.len() >= 5 {
             let mut commit_obj = serde_json::Map::new();
             commit_obj.insert("hash".to_string(), serde_json::Value::String(parts[0].trim().to_string()));
             commit_obj.insert("date".to_string(), serde_json::Value::String(parts[1].trim().to_string()));
             commit_obj.insert("message".to_string(), serde_json::Value::String(parts[2].trim().to_string()));
-            commit_obj.insert("body".to_string(), serde_json::Value::String(parts[3].trim().to_string()));
-            commit_obj.insert("author_name".to_string(), serde_json::Value::String(parts[4].trim().to_string()));
-            commit_obj.insert("author_email".to_string(), serde_json::Value::String(parts[5].trim().to_string()));
+            commit_obj.insert("body".to_string(), serde_json::Value::String(String::new()));
+            commit_obj.insert("author_name".to_string(), serde_json::Value::String(parts[3].trim().to_string()));
+            commit_obj.insert("author_email".to_string(), serde_json::Value::String(parts[4].trim().to_string()));
             commits.push(serde_json::Value::Object(commit_obj));
         }
     }
@@ -1160,7 +1171,7 @@ async fn git_get_file_history(
         "log",
         "--follow",
         &max_count_str,
-        "--format=%H|%ai|%s|%an",
+        "--format=%H%x1f%aI%x1f%s%x1f%an%x1e",
         "--",
         &file_path,
     ];
@@ -1171,29 +1182,22 @@ async fn git_get_file_history(
         return Ok(Vec::new());
     }
     
-    let commits: Vec<serde_json::Value> = output
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .map(|line| {
-            let parts: Vec<&str> = line.split('|').collect();
-            if parts.len() >= 4 {
-                let mut commit_obj = serde_json::Map::new();
-                commit_obj.insert("hash".to_string(), serde_json::Value::String(parts[0].trim().to_string()));
-                commit_obj.insert("date".to_string(), serde_json::Value::String(parts[1].trim().to_string()));
-                commit_obj.insert("message".to_string(), serde_json::Value::String(parts[2].trim().to_string()));
-                commit_obj.insert("author".to_string(), serde_json::Value::String(parts[3].trim().to_string()));
-                serde_json::Value::Object(commit_obj)
-            } else {
-                // Fallback for malformed lines
-                let mut commit_obj = serde_json::Map::new();
-                commit_obj.insert("hash".to_string(), serde_json::Value::String("".to_string()));
-                commit_obj.insert("date".to_string(), serde_json::Value::String("".to_string()));
-                commit_obj.insert("message".to_string(), serde_json::Value::String(line.to_string()));
-                commit_obj.insert("author".to_string(), serde_json::Value::String("".to_string()));
-                serde_json::Value::Object(commit_obj)
-            }
-        })
-        .collect();
+    let mut commits = Vec::new();
+    for record in output.split(GIT_RECORD_SEP) {
+        let record = record.trim();
+        if record.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = record.split(GIT_FIELD_SEP).collect();
+        if parts.len() >= 4 {
+            let mut commit_obj = serde_json::Map::new();
+            commit_obj.insert("hash".to_string(), serde_json::Value::String(parts[0].trim().to_string()));
+            commit_obj.insert("date".to_string(), serde_json::Value::String(parts[1].trim().to_string()));
+            commit_obj.insert("message".to_string(), serde_json::Value::String(parts[2].trim().to_string()));
+            commit_obj.insert("author".to_string(), serde_json::Value::String(parts[3].trim().to_string()));
+            commits.push(serde_json::Value::Object(commit_obj));
+        }
+    }
     
     Ok(commits)
 }
@@ -1496,24 +1500,29 @@ async fn git_stash_files(
 
 #[tauri::command]
 async fn git_get_stash_list(repo_path: String) -> Result<Vec<serde_json::Value>, String> {
-    let output = git_command(&repo_path, &["stash", "list", "--format=%gd|%gs|%ai|%an|%ae"]).await?;
+    let output = git_command(&repo_path, &["stash", "list", "--format=%gd%x1f%gs%x1f%aI%x1f%an%x1f%ae%x1e"]).await?;
     let mut stashes = Vec::new();
     
-    for (index, line) in output.lines().enumerate() {
-        let parts: Vec<&str> = line.splitn(5, '|').collect();
+    for (index, record) in output.split(GIT_RECORD_SEP).enumerate() {
+        let record = record.trim();
+        if record.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = record.split(GIT_FIELD_SEP).collect();
         if parts.len() >= 3 {
             let mut stash_obj = serde_json::Map::new();
             stash_obj.insert("index".to_string(), serde_json::Value::Number(
                 serde_json::Number::from(index)
             ));
+            stash_obj.insert("ref".to_string(), serde_json::Value::String(
+                parts[0].trim().to_string()
+            ));
             stash_obj.insert("message".to_string(), serde_json::Value::String(
                 parts[1].trim().to_string()
             ));
-            if parts.len() >= 3 {
-                stash_obj.insert("date".to_string(), serde_json::Value::String(
-                    parts[2].trim().to_string()
-                ));
-            }
+            stash_obj.insert("date".to_string(), serde_json::Value::String(
+                parts[2].trim().to_string()
+            ));
             if parts.len() >= 4 {
                 stash_obj.insert("author_name".to_string(), serde_json::Value::String(
                     parts[3].trim().to_string()
@@ -2295,6 +2304,9 @@ pub fn run() {
             diagrams::diagrams_save,
             diagrams::diagrams_delete,
             diagrams::diagrams_create_folder,
+            diagrams::diagrams_delete_folder,
+            diagrams::diagrams_rename,
+            diagrams::diagrams_duplicate,
             msg_from_renderer,
             git_get_repositories,
             git_add_repository,

@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import PropTypes from 'prop-types';
 import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
+import { parseGitDate, formatGitDate } from '../../../utils/gitDate';
 import {
   Layout,
   Button,
@@ -438,8 +439,8 @@ function GitClient() {
   const hasConflicts = conflictedFiles && conflictedFiles.length > 0;
 
   const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
+    const date = parseGitDate(dateString);
+    if (!date) return '';
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -1004,7 +1005,7 @@ function GitClient() {
                 <Space>
                   <span>{branch.name}</span>
                   <Text type="secondary" style={{ fontSize: 11 }}>
-                    {formatDate(branch.lastCommitDate)}
+                    {formatDate(branch.lastCommitDate || branch.date)}
                   </Text>
                 </Space>
               </Option>
@@ -1508,7 +1509,9 @@ function GitClient() {
               </div>
               <div className="detail-row">
                 <Text type="secondary">Date</Text>
-                <Text>{new Date(selectedCommit.date).toLocaleString()}</Text>
+                <Text>
+                  {formatGitDate(selectedCommit.date, (d) => d.toLocaleString())}
+                </Text>
               </div>
               <div className="detail-row message">
                 <Text>{selectedCommit.message}</Text>
@@ -1929,7 +1932,7 @@ function GitClient() {
               <List.Item.Meta
                 avatar={<BranchesOutlined />}
                 title={branch.name}
-                description={formatDate(branch.lastCommitDate)}
+                description={formatDate(branch.lastCommitDate || branch.date)}
               />
             </List.Item>
           )}
@@ -2357,7 +2360,7 @@ function GitClient() {
                     <Text strong>{stash.message || `stash@{${index}}`}</Text>
                     <Space size="small">
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        {stash.date}
+                        {formatDate(stash.date)}
                       </Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         by {stash.author_name}

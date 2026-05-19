@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/icons": "^4.8.3",
     "@atlaskit/pragmatic-drag-and-drop-react-beautiful-dnd-migration": "^1.2.2",
+    "@dagrejs/dagre": "^3.0.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2",
     "@tauri-apps/plugin-shell": "^2",
@@ -19,6 +20,7 @@
     "antd": "^4.24.16",
     "axios": "^1.13.6",
     "dateformat": "^5.0.3",
+    "html-to-image": "^1.11.13",
     "kaplay": "^3001.0.0-beta.3",
     "lokijs": "^1.5.12",
     "moment": "^2.30.1",
