@@ -21,9 +21,9 @@ const { TextArea } = Input;
 
 function SessionManager({
   node,
-  parents,
+  parents = {},
   updateNodeProperty,
-  onSessionsChange,
+  onSessionsChange = null,
 }) {
   const [editingField, setEditingField] = useState(null); // Format: "rowIndex-fieldName"
   const [pageSize, setPageSize] = useState(5);
@@ -1042,11 +1042,6 @@ SessionManager.propTypes = {
   parents: PropTypes.object,
   updateNodeProperty: PropTypes.func.isRequired,
   onSessionsChange: PropTypes.func,
-};
-
-SessionManager.defaultProps = {
-  parents: {},
-  onSessionsChange: null,
 };
 
 export default SessionManager;

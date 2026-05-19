@@ -1608,7 +1608,7 @@ class DocsPage extends Component {
         {/* Template Selection Modal */}
         <Modal
           title="Choose Template"
-          visible={templateModalVisible && !createDocModalVisible}
+          open={templateModalVisible && !createDocModalVisible}
           onOk={() =>
             this.setState({
               templateModalVisible: false,
@@ -1656,7 +1656,7 @@ class DocsPage extends Component {
         {/* Create Document Modal */}
         <Modal
           title={`Create New Document${selectedTemplate ? ` - ${this.templates[selectedTemplate]?.name || ''}` : ''}`}
-          visible={createDocModalVisible}
+          open={createDocModalVisible}
           onOk={() => this.createDoc()}
           onCancel={() =>
             this.setState({
@@ -1707,7 +1707,7 @@ class DocsPage extends Component {
         {/* Create Folder Modal */}
         <Modal
           title="Create New Folder"
-          visible={createFolderModalVisible}
+          open={createFolderModalVisible}
           onOk={this.createFolder}
           onCancel={() =>
             this.setState({
@@ -1730,7 +1730,7 @@ class DocsPage extends Component {
         {/* Image Gallery Modal */}
         <Modal
           title="Image Gallery"
-          visible={imageGalleryVisible}
+          open={imageGalleryVisible}
           onCancel={() => this.setState({ imageGalleryVisible: false })}
           footer={[
             <Button

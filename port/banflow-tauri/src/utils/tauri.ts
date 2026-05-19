@@ -36,6 +36,20 @@ const commandMap: Record<string, string> = {
 /** Electron IPC arg order -> Tauri camelCase parameter names */
 const multiArgCommands: Record<string, string[]> = {
   'api:updateProjectSettings': ['projectName', 'settings'],
+  'docs:list': ['projectName', 'isGlobal'],
+  'docs:read': ['docPath', 'projectName', 'isGlobal'],
+  'docs:save': ['docPath', 'content', 'projectName', 'isGlobal'],
+  'docs:delete': ['docPath', 'projectName', 'isGlobal'],
+  'docs:createFolder': ['folderPath', 'projectName', 'isGlobal'],
+  'docs:listImages': ['projectName', 'isGlobal'],
+  'docs:getImage': ['imagePath', 'projectName', 'isGlobal'],
+  'docs:saveImage': ['imageName', 'imageData', 'projectName', 'isGlobal'],
+  'docs:deleteImage': ['imagePath', 'projectName', 'isGlobal'],
+  'diagrams:list': ['projectName', 'isGlobal'],
+  'diagrams:read': ['diagramPath', 'projectName', 'isGlobal'],
+  'diagrams:save': ['diagramPath', 'content', 'projectName', 'isGlobal'],
+  'diagrams:delete': ['diagramPath', 'projectName', 'isGlobal'],
+  'diagrams:createFolder': ['folderPath', 'projectName', 'isGlobal'],
 };
 
 /** Single primitive/string arg -> Tauri parameter name */

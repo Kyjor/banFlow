@@ -30,6 +30,12 @@ mod timer;
 // Module for metadata-related commands
 mod metadata;
 
+// Project docs and images
+pub mod docs;
+
+// Project diagrams (flow charts)
+pub mod diagrams;
+
 // Project state structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProjectState {
@@ -2275,6 +2281,20 @@ pub fn run() {
             metadata::api_save_metadata_value,
             timer::api_get_timer_preferences,
             timer::api_update_timer_preference_property,
+            docs::docs_list,
+            docs::docs_read,
+            docs::docs_save,
+            docs::docs_delete,
+            docs::docs_create_folder,
+            docs::docs_list_images,
+            docs::docs_get_image,
+            docs::docs_save_image,
+            docs::docs_delete_image,
+            diagrams::diagrams_list,
+            diagrams::diagrams_read,
+            diagrams::diagrams_save,
+            diagrams::diagrams_delete,
+            diagrams::diagrams_create_folder,
             msg_from_renderer,
             git_get_repositories,
             git_add_repository,

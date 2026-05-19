@@ -28,7 +28,6 @@ import SessionManager from './SessionManager';
 import TagController from '../../api/tag/TagController';
 import './NodeModal.css';
 
-const { TabPane } = Tabs;
 const { Option } = Select;
 
 function NodeModal({
@@ -38,12 +37,16 @@ function NodeModal({
   iterations,
   node,
   parents,
-  syncTrelloCard,
+  syncTrelloCard = null,
   updateNodeProperty,
   visible,
 }) {
   const handleEstimatedDateChange = useCallback(
     (date, dateString) => {
+      if (!date || !dateString) {
+        updateNodeProperty('estimatedDate', node.id, '', true);
+        return;
+      }
       const dateToSave = `${dateString.split(' ')[0]}T${
         dateString.split(' ')[1]
       }:00`;
@@ -183,7 +186,7 @@ function NodeModal({
           />
         </div>
       }
-      visible={visible}
+      open={visible}
       onOk={handleOk}
       onCancel={handleCancel}
       footer={[
@@ -208,16 +211,19 @@ function NodeModal({
       bodyStyle={{ borderRadius: '20px', maxHeight: '80vh', overflowY: 'auto' }}
       width={900}
     >
-      <Tabs defaultActiveKey="1">
-        <TabPane
-          tab={
-            <span>
-              <InfoCircleOutlined />
-              Details
-            </span>
-          }
-          key="1"
-        >
+      <Tabs
+        defaultActiveKey="1"
+        items={[
+          {
+            key: '1',
+            label: (
+              <span>
+                <InfoCircleOutlined />
+                Details
+              </span>
+            ),
+            children: (
+              <>
           <div
             style={{
               marginBottom: '16px',
@@ -436,7 +442,10 @@ function NodeModal({
                   </Option>
                 ))}
             </Select>
-            {trelloKey && trelloToken && node.trello && (
+            {syncTrelloCard &&
+              trelloKey &&
+              trelloToken &&
+              node.trello && (
               <Button
                 style={{ marginLeft: `150px` }}
                 onClick={() => {
@@ -447,17 +456,19 @@ function NodeModal({
               </Button>
             )}
           </div>
-        </TabPane>
-        <TabPane
-          style={{ margin: '0 10px 0 0' }}
-          tab={
-            <span>
-              <ClockCircleOutlined />
-              Timing
-            </span>
-          }
-          key="3"
-        >
+              </>
+            ),
+          },
+          {
+            key: '3',
+            label: (
+              <span>
+                <ClockCircleOutlined />
+                Timing
+              </span>
+            ),
+            children: (
+              <>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div>Creation Date</div>
             <DatePicker
@@ -485,7 +496,7 @@ function NodeModal({
             <div>Due Date</div>
             <DatePicker
               allowClear
-              defaultValue={
+              value={
                 node.estimatedDate
                   ? moment(
                       `${dateFormat(node.estimatedDate, 'yyyy-mm-dd HH:MM')}`,
@@ -493,10 +504,6 @@ function NodeModal({
                     )
                   : null
               }
-              defaultOpenValue={moment(
-                `${dateFormat(node.estimatedDate, 'yyyy-mm-dd HH:MM')}`,
-                'YYYY-MM-DD HH:mm',
-              )}
               showTime
               size="default"
               onChange={handleEstimatedDateChange}
@@ -517,8 +524,11 @@ function NodeModal({
               }
             }}
           />
-        </TabPane>
-      </Tabs>
+              </>
+            ),
+          },
+        ]}
+      />
     </Modal>
   ) : null;
 }
@@ -535,7 +545,7 @@ NodeModal.propTypes = {
   node: PropTypes.object.isRequired,
   // eslint-disable-next-line react/forbid-prop-types
   parents: PropTypes.object.isRequired,
-  syncTrelloCard: PropTypes.func.isRequired,
+  syncTrelloCard: PropTypes.func,
   updateNodeProperty: PropTypes.func.isRequired,
   visible: PropTypes.bool.isRequired,
 };
