@@ -184,10 +184,12 @@ class AppSettings extends Component {
     if (backupEnabled && backupInterval && maxBackups) {
       // Get all projects and start/update backup schedules
       try {
-        const projects = (await tauriInvoke('api:getProjects')) || [];
+        const projects = (await tauriInvoke('project:getProjects')) || [];
         await Promise.all(
           projects.map(async (project) => {
-            const projectName = project.text || project.name || project;
+            const raw = project.text || project.name || project;
+            const projectName =
+              typeof raw === 'string' ? raw.replace(/\.json~?$/, '') : raw;
             if (projectName && !projectName.startsWith('_')) {
               await tauriInvoke('backup:stopSchedule', projectName);
               await tauriInvoke(
@@ -205,10 +207,12 @@ class AppSettings extends Component {
     } else {
       // Stop all backup schedules
       try {
-        const projects = (await tauriInvoke('api:getProjects')) || [];
+        const projects = (await tauriInvoke('project:getProjects')) || [];
         await Promise.all(
           projects.map(async (project) => {
-            const projectName = project.text || project.name || project;
+            const raw = project.text || project.name || project;
+            const projectName =
+              typeof raw === 'string' ? raw.replace(/\.json~?$/, '') : raw;
             if (projectName && !projectName.startsWith('_')) {
               await tauriInvoke('backup:stopSchedule', projectName);
             }
@@ -937,12 +941,16 @@ class AppSettings extends Component {
                         try {
                           // Get all projects and backup each
                           const projects =
-                            (await tauriInvoke('api:getProjects')) || [];
+                            (await tauriInvoke('project:getProjects')) || [];
 
                           const results = await Promise.all(
                             projects.map(async (project) => {
-                              const projectName =
+                              const raw =
                                 project.text || project.name || project;
+                              const projectName =
+                                typeof raw === 'string'
+                                  ? raw.replace(/\.json~?$/, '')
+                                  : raw;
                               if (projectName && !projectName.startsWith('_')) {
                                 try {
                                   const result = await tauriInvoke(

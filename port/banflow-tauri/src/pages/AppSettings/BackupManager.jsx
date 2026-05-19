@@ -50,11 +50,10 @@ class BackupManager extends Component {
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          const result = await tauriInvoke(
-            'backup:restore',
-            backup.path,
-            backup.projectName,
-          );
+          const result = await tauriInvoke('backup:restore', {
+            backupPath: backup.path,
+            projectName: backup.projectName,
+          });
           if (result.success) {
             message.success('Backup restored successfully');
             this.loadBackups();
@@ -70,7 +69,7 @@ class BackupManager extends Component {
 
   handleDelete = async (backup) => {
     try {
-      const result = await tauriInvoke('backup:delete', backup.path);
+      const result = await tauriInvoke('backup:delete', { backupPath: backup.path });
       if (result.success) {
         message.success('Backup deleted');
         this.loadBackups();

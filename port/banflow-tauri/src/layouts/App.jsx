@@ -129,7 +129,11 @@ function App(props) {
         minHeight: '100vh',
       }}
     >
-      <Header style={{ background: headerColor }}>
+      <Header
+        style={{
+          background: 'var(--layout-header-color, ' + headerColor + ')',
+        }}
+      >
         <Menu
           theme="dark"
           defaultSelectedKeys={['dashboard']}
@@ -152,7 +156,9 @@ function App(props) {
           collapsible
           collapsed={collapsed}
           onCollapse={(value) => setCollapsed(value)}
-          style={{ background: sidebarColor }}
+          style={{
+            background: 'var(--layout-sidebar-color, ' + sidebarColor + ')',
+          }}
         >
           <div className="logo" />
           <Menu

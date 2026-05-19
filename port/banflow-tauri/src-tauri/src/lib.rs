@@ -30,6 +30,8 @@ mod timer;
 // Linux launch preferences (X11 backend for always-on-top timer, etc.)
 mod launch_prefs;
 
+mod backup;
+
 // Module for metadata-related commands
 mod metadata;
 
@@ -2305,6 +2307,12 @@ pub fn run() {
             launch_prefs::utils_get_launch_prefs,
             launch_prefs::utils_save_launch_prefs,
             launch_prefs::utils_restart_app,
+            backup::backup_create,
+            backup::backup_list,
+            backup::backup_restore,
+            backup::backup_delete,
+            backup::backup_start_schedule,
+            backup::backup_stop_schedule,
             api_get_project_settings,
             api_update_project_settings,
             api_set_trello_board,

@@ -30,6 +30,7 @@ import timerController from '../../api/timer/TimerController';
 import IterationController from '../../api/iterations/IterationController';
 import IterationModal from '../../components/IterationModal/IterationModal';
 import ParentModal from '../../components/ParentModal/ParentModal';
+import { applyProjectTheme, clearProjectTheme } from '../../utils/projectTheme';
 
 const { RangePicker } = DatePicker;
 
@@ -232,6 +233,9 @@ class ProjectPage extends Component {
             hasParentOrder: !!newState.parentOrder,
             parentOrderLength: newState.parentOrder ? (Array.isArray(newState.parentOrder) ? newState.parentOrder.length : 0) : 0,
           });
+          if (updatedState.projectSettings) {
+            applyProjectTheme(updatedState.projectSettings);
+          }
           return newState;
         });
       });
@@ -286,6 +290,9 @@ class ProjectPage extends Component {
             hasParents: !!this.state.parents,
             parentsCount: this.state.parents ? Object.keys(this.state.parents).length : 0,
           });
+          if (this.state.projectSettings) {
+            applyProjectTheme(this.state.projectSettings);
+          }
           // Check URL parameters for node or parent to open
           this.checkUrlParameters();
         },
@@ -302,6 +309,7 @@ class ProjectPage extends Component {
     if (this.unlistenUpdateProjectPageState) {
       this.unlistenUpdateProjectPageState();
     }
+    clearProjectTheme();
     // todo: close timer window
   }
 
@@ -310,6 +318,9 @@ class ProjectPage extends Component {
     const { lokiLoaded } = this.state;
     if (!prevState.lokiLoaded && lokiLoaded) {
       this.checkUrlParameters();
+    }
+    if (prevState.projectSettings !== this.state.projectSettings) {
+      applyProjectTheme(this.state.projectSettings);
     }
   }
 

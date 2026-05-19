@@ -35,6 +35,12 @@ const commandMap: Record<string, string> = {
   'git:getRepositoryStatus': 'git_get_repository_status',
   'project:getProjects': 'project_get_projects',
   'project:createProject': 'project_create_project',
+  'backup:list': 'backup_list',
+  'backup:create': 'backup_create',
+  'backup:restore': 'backup_restore',
+  'backup:delete': 'backup_delete',
+  'backup:startSchedule': 'backup_start_schedule',
+  'backup:stopSchedule': 'backup_stop_schedule',
 };
 
 /** Electron IPC arg order -> Tauri camelCase parameter names */
@@ -57,12 +63,14 @@ const multiArgCommands: Record<string, string[]> = {
   'diagrams:deleteFolder': ['folderPath', 'projectName', 'isGlobal'],
   'diagrams:rename': ['oldPath', 'newPath', 'projectName', 'isGlobal'],
   'diagrams:duplicate': ['diagramPath', 'projectName', 'isGlobal'],
+  'backup:restore': ['backupPath', 'projectName'],
 };
 
 /** Single primitive/string arg -> Tauri parameter name */
 const singleArgCommands: Record<string, string> = {
   'backup:stopSchedule': 'projectName',
-  'backup:delete': 'path',
+  'backup:create': 'projectName',
+  'backup:delete': 'backupPath',
   'project:deleteProject': 'projectName',
 };
 

@@ -47,6 +47,8 @@ import {
   defaultTimerPreferences,
   normalizeTimerPreferences,
 } from '../../stores/shared';
+import { saveProjectImage } from '../../utils/imageUpload';
+import { applyProjectTheme, clearProjectTheme } from '../../utils/projectTheme';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -149,6 +151,15 @@ class ProjectSettings extends Component {
     );
   }
 
+  componentWillUnmount() {
+    clearProjectTheme();
+  }
+
+  applyThemeFromState = () => {
+    const { themeOverride, primaryColor, accentColor } = this.state;
+    applyProjectTheme({ themeOverride, primaryColor, accentColor });
+  };
+
   loadTimerPreferences = async () => {
     try {
       const prefs = await timerController.getTimerPreferences();
@@ -217,7 +228,9 @@ class ProjectSettings extends Component {
         syncInterval: projectSettings.syncInterval || 60,
         createdDate: projectSettings.createdDate || null,
         lastModified: projectSettings.lastModified || new Date().toISOString(),
-      });
+      },
+      this.applyThemeFromState,
+    );
     }
   };
 
@@ -284,62 +297,26 @@ class ProjectSettings extends Component {
 
   handleBannerUpload = async (file) => {
     try {
-      // Save image to project images folder
-      const imagePath = await tauriInvoke(
-        'docs:saveImage',
-        file,
-        this.projectName,
-        false,
-      );
-
-      // Get image as data URL for preview
-      const imageUrl = await tauriInvoke(
-        'docs:getImage',
-        imagePath,
-        this.projectName,
-        false,
-      );
-
-      this.setState({
-        bannerImageUrl: imageUrl,
-      });
-
+      const { imageUrl } = await saveProjectImage(file, this.projectName, false);
+      this.setState({ bannerImageUrl: imageUrl });
       message.success('Banner uploaded successfully');
     } catch (error) {
       console.error('Error uploading banner:', error);
       message.error('Failed to upload banner');
     }
-    return false; // Prevent default upload
+    return false;
   };
 
   handleLogoUpload = async (file) => {
     try {
-      // Save image to project images folder
-      const imagePath = await tauriInvoke(
-        'docs:saveImage',
-        file,
-        this.projectName,
-        false,
-      );
-
-      // Get image as data URL for preview
-      const imageUrl = await tauriInvoke(
-        'docs:getImage',
-        imagePath,
-        this.projectName,
-        false,
-      );
-
-      this.setState({
-        logoImageUrl: imageUrl,
-      });
-
+      const { imageUrl } = await saveProjectImage(file, this.projectName, false);
+      this.setState({ logoImageUrl: imageUrl });
       message.success('Logo uploaded successfully');
     } catch (error) {
       console.error('Error uploading logo:', error);
       message.error('Failed to upload logo');
     }
-    return false; // Prevent default upload
+    return false;
   };
 
   removeBanner = () => {
@@ -610,7 +587,9 @@ class ProjectSettings extends Component {
                   <Switch
                     checked={themeOverride}
                     onChange={(checked) =>
-                      this.setState({ themeOverride: checked })
+                      this.setState({ themeOverride: checked }, () =>
+                        this.applyThemeFromState(),
+                      )
                     }
                   />
                 </div>
@@ -624,7 +603,9 @@ class ProjectSettings extends Component {
                           <Select
                             value={primaryColor}
                             onChange={(value) =>
-                              this.setState({ primaryColor: value })
+                              this.setState({ primaryColor: value }, () =>
+                                this.applyThemeFromState(),
+                              )
                             }
                             style={{ width: '100%' }}
                           >
@@ -645,7 +626,9 @@ class ProjectSettings extends Component {
                           <Select
                             value={accentColor}
                             onChange={(value) =>
-                              this.setState({ accentColor: value })
+                              this.setState({ accentColor: value }, () =>
+                                this.applyThemeFromState(),
+                              )
                             }
                             style={{ width: '100%' }}
                           >
