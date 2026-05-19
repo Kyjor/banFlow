@@ -56,7 +56,11 @@ pub fn save_project_database(project_path: &Path, db: &Value) -> Result<(), Stri
         .file_stem()
         .and_then(|s| s.to_str())
         .ok_or_else(|| format!("Invalid project file name: {:?}", project_path))?;
-    let temp_path = parent.join(format!("{}.json.tmp", stem));
+    let unique = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let temp_path = parent.join(format!("{}.{}.json.tmp", stem, unique));
 
     fs::write(&temp_path, &serialized)
         .map_err(|e| format!("Failed to write database temp file: {}", e))?;

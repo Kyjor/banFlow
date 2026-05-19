@@ -14,6 +14,7 @@ const commandMap: Record<string, string> = {
   'api:updateProjectSettings': 'api_update_project_settings',
   'api:setTrelloBoard': 'api_set_trello_board',
   'api:createParent': 'api_create_parent',
+  'api:syncTrelloBoard': 'api_sync_trello_board',
   'api:deleteParent': 'api_delete_parent',
   'api:updateParentOrder': 'api_update_parent_order',
   'api:getParents': 'api_get_parents',
@@ -70,6 +71,13 @@ function buildInvokePayload(
     if (isPlainObject(arg)) {
       if (command === 'api:setTrelloBoard' && !('trelloBoard' in arg)) {
         return { trelloBoard: arg };
+      }
+      if (
+        command === 'api:setProjectState' &&
+        !('newState' in arg) &&
+        !('new_state' in arg)
+      ) {
+        return { newState: arg };
       }
       return arg;
     }

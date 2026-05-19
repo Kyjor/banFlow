@@ -15,6 +15,9 @@ pub mod nodes;
 // Module for parent-related commands
 pub mod parents;
 
+// Batch Trello board sync (single database write)
+pub mod trello_sync;
+
 // Module for tag-related commands
 mod tags;
 
@@ -2257,6 +2260,7 @@ pub fn run() {
             parents::api_update_parent_property,
             parents::api_update_parent_order,
             parents::api_update_nodes_in_parents,
+            trello_sync::api_sync_trello_board,
             nodes::api_create_node,
             nodes::api_update_node_property,
             nodes::api_delete_node,
