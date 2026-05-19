@@ -44,7 +44,7 @@ function ParentInnerList({
   saveTime,
   selectedIteration,
   updateNodeTitle,
-  filterNode,
+  filterNode = () => {},
   ...rest
 }) {
   const isInCurrentIteration = (node) => {
@@ -105,32 +105,26 @@ ParentInnerList.propTypes = {
   filterNode: PropTypes.func,
 };
 
-ParentInnerList.defaultProps = {
-  filterNode: () => {},
-};
-
-function Parent(props) {
+function Parent({
+  createNewNode,
+  deleteNode,
+  deleteParent,
+  index,
+  isTimerRunning,
+  mustFocusNodeTitle,
+  mustFocusParentTitle,
+  nodes,
+  parent,
+  saveTime,
+  selectedIteration,
+  showModal,
+  showParentModal = () => {},
+  updateNodeTitle,
+  updateParentProperty,
+  filterNode = () => {},
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [isFirstEdit, setIsFirstEdit] = useState(false);
-
-  const {
-    createNewNode,
-    deleteNode,
-    deleteParent,
-    index,
-    isTimerRunning,
-    mustFocusNodeTitle,
-    mustFocusParentTitle,
-    nodes,
-    parent,
-    saveTime,
-    selectedIteration,
-    showModal,
-    showParentModal,
-    updateNodeTitle,
-    updateParentProperty,
-    filterNode,
-  } = props;
 
   useEffect(() => {
     if (mustFocusParentTitle) {
@@ -260,7 +254,3 @@ Parent.propTypes = {
   filterNode: PropTypes.func,
 };
 
-Parent.defaultProps = {
-  showParentModal: () => {},
-  filterNode: () => {},
-};

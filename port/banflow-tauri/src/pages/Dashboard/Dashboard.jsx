@@ -41,6 +41,7 @@ import StatisticsCards from './components/StatisticsCards/StatisticsCards';
 import AggregateView from './components/AggregateView/AggregateView';
 import {
   loadMultipleProjectsData,
+  loadProjectData,
   getAllProjectNames,
 } from './utils/projectDataLoader';
 import {
@@ -51,6 +52,40 @@ import {
 } from './utils/statisticsCalculations';
 
 const { Text } = Typography;
+
+function collectionToIdMap(items) {
+  if (!items) {
+    return {};
+  }
+  if (!Array.isArray(items)) {
+    return items;
+  }
+  return items.reduce((acc, item) => {
+    if (item?.id) {
+      acc[item.id] = item;
+    }
+    return acc;
+  }, {});
+}
+
+function normalizeParentOrder(parentOrder) {
+  if (!Array.isArray(parentOrder)) {
+    return [];
+  }
+  return parentOrder.map((entry) => {
+    if (typeof entry === 'string') {
+      return entry;
+    }
+    return entry?.parentId ?? entry?.parent_id ?? entry;
+  });
+}
+
+function metadataTitles(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.map((item) => item?.title ?? item?.name ?? item).filter(Boolean);
+}
 
 /**
  * Home
@@ -121,53 +156,51 @@ class Dashboard extends Component {
     }
   }
 
-  // eslint-disable-next-line react/no-unused-class-component-methods
-  lokiServiceLoadedCallback = async (projectName) => {
-    const nodeTypeList = await NodeController.getNodeTypes();
-    const nodeTypeArray = [];
-    const nodeStateList = await NodeController.getNodeStates();
-    const nodeStateArray = [];
-    const tagList = await TagController.getTags();
-    const tagArray = [];
-
-    if (Array.isArray(nodeTypeList)) {
-      nodeTypeList.forEach((thisNodeType) => {
-        nodeTypeArray.push(thisNodeType.title);
-      });
-    }
-    if (Array.isArray(nodeStateList)) {
-      nodeStateList.forEach((thisNodeState) => {
-        nodeStateArray.push(thisNodeState.title);
-      });
-    }
-    if (Array.isArray(tagList)) {
-      tagList.forEach((thisTag) => {
-        tagArray.push(thisTag.title);
-      });
-    }
-
-    // Normalize project name - remove .json extension if present
+  loadSingleProjectState = async (projectName) => {
     let normalizedProjectName = projectName ? projectName.trim() : '';
+    if (!normalizedProjectName) {
+      return;
+    }
     if (normalizedProjectName.endsWith('.json')) {
       normalizedProjectName = normalizedProjectName
         .slice(0, normalizedProjectName.lastIndexOf('.json'))
         .trim();
     }
 
-    const newState = {
-      ...this.state,
-      nodes: NodeController.getNodes(),
-      parents: ParentController.getParents(),
-      parentOrder: ParentController.getParentOrder(),
-      nodeTypes: nodeTypeArray,
-      nodeStates: nodeStateArray,
-      selectedProject: normalizedProjectName,
-      tags: tagArray,
-      timerPreferences: TimerController.getTimerPreferences(),
-      isLokiLoaded: true,
-    };
+    localStorage.setItem('currentProject', normalizedProjectName);
 
-    this.setState(newState);
+    try {
+      const data = await loadProjectData(normalizedProjectName);
+      const timerPreferences = await TimerController.getTimerPreferences();
+
+      this.setState((prevState) => ({
+        ...prevState,
+        selectedProject: normalizedProjectName,
+        nodes: collectionToIdMap(data.nodes),
+        parents: collectionToIdMap(data.parents),
+        parentOrder: normalizeParentOrder(data.parentOrder),
+        nodeTypes: metadataTitles(data.nodeTypes),
+        nodeStates: metadataTitles(data.nodeStates),
+        tags: metadataTitles(data.tags),
+        timerPreferences,
+        isLokiLoaded: true,
+      }));
+    } catch (error) {
+      console.error('[Dashboard] Failed to load single project:', error);
+      message.error('Failed to load project data');
+      this.setState((prevState) => ({
+        ...prevState,
+        selectedProject: normalizedProjectName,
+        isLokiLoaded: false,
+        nodes: null,
+        parents: null,
+      }));
+    }
+  };
+
+  // eslint-disable-next-line react/no-unused-class-component-methods
+  lokiServiceLoadedCallback = async (projectName) => {
+    await this.loadSingleProjectState(projectName);
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -217,7 +250,6 @@ class Dashboard extends Component {
   updateSelectedProject = (projectName) => {
     if (projectName) {
       const normalizedName = projectName.trim();
-      // Reset loading state when selecting a new project
       this.setState({
         selectedProject: normalizedName,
         viewMode: 'single',
@@ -225,7 +257,7 @@ class Dashboard extends Component {
         nodes: null,
         parents: null,
       });
-      ProjectController.openProject(normalizedName);
+      this.loadSingleProjectState(normalizedName);
     }
   };
 

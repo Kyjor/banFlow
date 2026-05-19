@@ -41,18 +41,15 @@ export default class LokiService {
       this.nodes = this.db.addCollection('nodes');
       mustSaveDatabase = true;
     } else if (this.nodes) {
-      this.nodes
-        .chain()
-        .find({ Id: { $ne: null } })
-        .update((node) => {
-          if (!node.checklist) {
-            node.checklist = {
-              title: `Checklist`,
-              checks: [],
-              timeSpent: 0,
-            };
-          }
-        });
+      this.nodes.data.forEach((node) => {
+        if (node && !node.checklist) {
+          node.checklist = {
+            title: `Checklist`,
+            checks: [],
+            timeSpent: 0,
+          };
+        }
+      });
     }
     this.nodeTypes = this.db.getCollection('nodeTypes');
     if (!this.nodeTypes) {

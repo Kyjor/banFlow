@@ -71,14 +71,31 @@ class EditableTextArea extends React.Component {
 export default EditableTextArea;
 
 EditableTextArea.propTypes = {
-  autoSize: PropTypes.bool.isRequired,
-  defaultValue: PropTypes.string.isRequired,
-  editing: PropTypes.bool.isRequired,
-  maxLength: PropTypes.number.isRequired,
-  onChange: PropTypes.func.isRequired,
-  onMouseDown: PropTypes.func.isRequired,
-  placeholder: PropTypes.string.isRequired,
+  autoSize: PropTypes.oneOfType([
+    PropTypes.bool,
+    PropTypes.shape({
+      minRows: PropTypes.number,
+      maxRows: PropTypes.number,
+    }),
+  ]),
+  defaultValue: PropTypes.string,
+  editing: PropTypes.bool,
+  maxLength: PropTypes.number,
+  onChange: PropTypes.func,
+  onMouseDown: PropTypes.func,
+  placeholder: PropTypes.string,
   // eslint-disable-next-line react/forbid-prop-types
-  style: PropTypes.object.isRequired,
+  style: PropTypes.object,
   updateText: PropTypes.func.isRequired,
+};
+
+EditableTextArea.defaultProps = {
+  autoSize: false,
+  defaultValue: '',
+  editing: false,
+  maxLength: undefined,
+  onChange: undefined,
+  onMouseDown: undefined,
+  placeholder: '',
+  style: {},
 };
