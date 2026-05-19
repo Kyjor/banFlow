@@ -26,6 +26,19 @@ const TimerController = {
       newValue,
     });
   },
+
+  async saveTimerPreferences(prefs) {
+    const entries = [
+      ['time', prefs.time],
+      ['shortBreak', prefs.shortBreak],
+      ['longBreak', prefs.longBreak],
+      ['autoCycle', prefs.autoCycle],
+    ];
+    for (const [property, value] of entries) {
+      await this.updateTimerPreferenceProperty(property, value);
+    }
+    return prefs;
+  },
 };
 
 export default TimerController;

@@ -2,14 +2,12 @@
 import React, { useEffect, useReducer } from 'react';
 import PropTypes from 'prop-types';
 import { useTimer } from 'react-use-precision-timer';
-import { Button, Checkbox, Popover } from 'antd';
+import { Button, Tooltip } from 'antd';
 import {
   CaretRightOutlined,
   PauseOutlined,
   StepForwardOutlined,
 } from '@ant-design/icons';
-import EditableTextArea from '../EditableTextArea/EditableTextArea';
-
 const SESSION_END_NOTIFICATION_TITLE = 'Round Over';
 const BREAK_END_NOTIFICATION_TITLE = 'Break Over';
 const SESSION_END_NOTIFICATION_BODY =
@@ -38,7 +36,6 @@ function Timer(props) {
 
   const [event, updateEvent] = useReducer(reducer, {
     isActive: false,
-    isHovered: false,
     isOnBreak: false,
     isTomatoTimerActive: false,
     isBetweenRounds: false,
@@ -200,10 +197,6 @@ function Timer(props) {
     });
   }
 
-  const handleHoverChange = (visible) => {
-    updateEvent({ isHovered: visible });
-  };
-
   useEffect(() => {
     timer.stop();
     updateEvent({ isActive: false });
@@ -246,128 +239,16 @@ function Timer(props) {
         ? cycleTomatoTimer()
         : toggle();
   }
-  const { seconds, updateTimerPreferenceProperty } = props;
+  const { seconds } = props;
 
-  const hoverContent = (
-    <div
-      style={{
-        display: `flex`,
-        flexDirection: `row`,
-      }}
-    >
-      <div
-        style={{
-          width: `60%`,
-        }}
-      >
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
-          <div style={{ width: '55%' }}>Time:</div>
-          {event.timerPreferences && (
-            <EditableTextArea
-              defaultValue={event.timerPreferences.time}
-              style={{ width: '30%', resize: 'none', height: '15px' }}
-              maxLength={3}
-              autoSize={{ maxRows: 1 }}
-              updateText={(value) => {
-                updateTimerPreferenceProperty(`time`, value);
-                updateEvent({
-                  timerPreferences: {
-                    ...event.timerPreferences,
-                    time: value,
-                  },
-                });
-              }}
-            />
-          )}
-        </div>
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
-          <div style={{ width: '55%' }}>Short Break:</div>
-          {event.timerPreferences && (
-            <EditableTextArea
-              defaultValue={event.timerPreferences.shortBreak}
-              style={{ width: '30%', resize: 'none', height: '10px' }}
-              // showCount={this.state.textSelected}
-              maxLength={3}
-              autoSize={{ maxRows: 1 }}
-              updateText={(value) => {
-                updateTimerPreferenceProperty(`shortBreak`, value);
-                updateEvent({
-                  timerPreferences: {
-                    ...event.timerPreferences,
-                    shortBreak: value,
-                  },
-                });
-              }}
-            />
-          )}
-        </div>
-        <div style={{ width: '100%', display: 'flex', flexDirection: 'row' }}>
-          <div style={{ width: '55%' }}>Long Break:</div>
-          {event.timerPreferences && (
-            <EditableTextArea
-              defaultValue={event.timerPreferences.longBreak}
-              style={{ width: '30%', resize: 'none', height: '15px' }}
-              // showCount={this.state.textSelected}
-              maxLength={3}
-              autoSize={{ maxRows: 1 }}
-              value={0}
-              updateText={(value) => {
-                updateTimerPreferenceProperty(`longBreak`, value);
-                updateEvent({
-                  timerPreferences: {
-                    ...event.timerPreferences,
-                    longBreak: value,
-                  },
-                });
-              }}
-            />
-          )}
-        </div>
-      </div>
-      <div
-        style={{
-          width: `40%`,
-        }}
-      >
-        <div>
-          <div>Auto Cycle:</div>
-          <div>
-            {event.timerPreferences && (
-              <Checkbox
-                defaultChecked={event.timerPreferences.autoCycle}
-                onChange={(e) => {
-                  updateTimerPreferenceProperty(`autoCycle`, e.target.checked);
-                  updateEvent({
-                    timerPreferences: {
-                      ...event.timerPreferences,
-                      autoCycle: e.target.checked,
-                    },
-                  });
-                }}
-              />
-            )}
-          </div>
-        </div>
-        <Button
-          onClick={() => {
-            handleTomatoTimerButtonClick();
-          }}
-          style={{
-            backgroundColor: '#ec8e8e',
-            color: 'black',
-            marginTop: '30px',
-          }}
-        >
-          {(event.isOnBreak ||
-            event.isBetweenRounds ||
-            event.isTomatoTimerActive) &&
-          event.isActive
-            ? `Stop`
-            : `Start`}
-        </Button>
-      </div>
-    </div>
-  );
+  const tomatoTooltip = event.timerPreferences
+    ? `Work: ${event.timerPreferences.time}m · Short break: ${event.timerPreferences.shortBreak}m · Long break: ${event.timerPreferences.longBreak}m${event.timerPreferences.autoCycle ? ' · Auto cycle on' : ''}`
+    : 'Configure durations in Project Settings → Tomato Timer';
+
+  const isTomatoRunning =
+    (event.isOnBreak || event.isBetweenRounds || event.isTomatoTimerActive) &&
+    event.isActive;
+
 
   return (
     <>
@@ -448,18 +329,18 @@ function Timer(props) {
             <CaretRightOutlined />
           )}
         </Button>
-        <Popover
-          style={{ width: '75px' }}
-          content={hoverContent}
-          title="Tomato Timer(Times in minutes)"
-          trigger="hover"
-          visible={event.isHovered}
-          onVisibleChange={handleHoverChange}
-        >
-          <Button className={`button button-primary `}>
-            Tomato Timer (Popup)
+        <Tooltip title={tomatoTooltip}>
+          <Button
+            className="button button-primary"
+            onClick={handleTomatoTimerButtonClick}
+            style={{
+              backgroundColor: isTomatoRunning ? '#d4a574' : '#ec8e8e',
+              color: 'black',
+            }}
+          >
+            {isTomatoRunning ? 'Stop Tomato' : 'Tomato Timer'}
           </Button>
-        </Popover>
+        </Tooltip>
       </div>
     </>
   );
@@ -477,5 +358,4 @@ Timer.propTypes = {
   // eslint-disable-next-line react/forbid-prop-types
   timerPreferences: PropTypes.object,
   updateSeconds: PropTypes.func.isRequired,
-  updateTimerPreferenceProperty: PropTypes.func.isRequired,
 };

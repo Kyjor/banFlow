@@ -134,6 +134,9 @@ const NodeService = {
       nodeData.description = description;
       if (typeof timeSpent === 'number') nodeData.timeSpent = timeSpent;
       nodeData.labels = trelloData.labels || [];
+      nodeData.tags = (trelloData.labels || [])
+        .map((l) => l.name)
+        .filter(Boolean);
       nodeData.dueDate = trelloData.due;
       nodeData.startDate = trelloData.start;
     } else if (trelloAuth && parent?.trello) {
@@ -157,6 +160,9 @@ const NodeService = {
           console.log('node data: ', nodeData);
           nodeData.trello = data;
           nodeData.labels = data.labels || [];
+          nodeData.tags = (data.labels || [])
+            .map((l) => l.name)
+            .filter(Boolean);
           nodeData.dueDate = data.due;
           nodeData.startDate = data.start;
 
@@ -287,7 +293,6 @@ const NodeService = {
         params.push(`start=${encodeURIComponent(newValue)}`);
       }
       if (propertyToUpdate === 'labels') {
-        // For labels, we need to make a separate API call
         const labelIds = newValue.map((label) => label.id).join(',');
         params.push(`idLabels=${labelIds}`);
       }
@@ -315,8 +320,11 @@ const NodeService = {
             .update((node) => {
               node.trello = data;
               // Update local data with Trello response
-              if (propertyToUpdate === 'labels') {
+              if (propertyToUpdate === 'labels' || propertyToUpdate === 'tags') {
                 node.labels = data.labels || [];
+                node.tags = (data.labels || [])
+                  .map((l) => l.name)
+                  .filter(Boolean);
               }
               if (propertyToUpdate === 'dueDate') {
                 node.dueDate = data.due;

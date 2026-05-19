@@ -1,4 +1,10 @@
 import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
+import {
+  getTrelloAuth,
+  syncNodePropertyToTrello,
+  syncNewNodeToTrello,
+  applyTrelloCardToLocalNode,
+} from '../../services/TrelloSyncService';
 
 /**
  * @class NodeController
@@ -119,7 +125,7 @@ const NodeController = {
     } : null;
 
     // Call Tauri backend command (like Electron's ipcMain.handle('api:createNode'))
-    const newNode = await tauriInvoke('api:createNode', {
+    let newNode = await tauriInvoke('api:createNode', {
       projectName,
       nodeType,
       nodeTitle,
@@ -128,7 +134,15 @@ const NodeController = {
       trelloData: trelloData || null,
       trelloAuth: trelloAuth || null,
     });
-    
+
+    if (trelloData) {
+      await applyTrelloCardToLocalNode(newNode.id, trelloData);
+      const nodes = await tauriInvoke('api:getNodes', { projectName });
+      newNode = nodes?.[newNode.id] || newNode;
+    } else {
+      newNode = await syncNewNodeToTrello(newNode, parentId, trelloData);
+    }
+
     console.log('[NodeController] Node created via backend:', newNode);
     return newNode;
   },
@@ -149,25 +163,26 @@ const NodeController = {
       console.error('[NodeController] No project name found in localStorage');
       throw new Error('No project name found. Please open a project first.');
     }
-    let trelloAuth = {
-      key: localStorage.getItem(`trelloKey`),
-      token: localStorage.getItem(`trelloToken`),
-    };
+    const trelloAuth = shouldSync ? getTrelloAuth() : null;
 
-    if (!shouldSync) {
-      trelloAuth = null;
+    const updatedNode = await tauriInvoke('api:updateNodeProperty', {
+      projectName,
+      propertyToUpdate,
+      nodeId,
+      newValue,
+      trelloAuth: null,
+    });
+
+    if (trelloAuth && propertyToUpdate !== 'trello') {
+      return syncNodePropertyToTrello(
+        updatedNode,
+        propertyToUpdate,
+        newValue,
+        trelloAuth,
+      );
     }
 
-    return await tauriInvoke(
-      'api:updateNodeProperty',
-      {
-        projectName,
-        propertyToUpdate,
-        nodeId,
-        newValue,
-        trelloAuth: trelloAuth || null,
-      },
-    );
+    return updatedNode;
   },
 };
 

@@ -31,6 +31,7 @@ import {
   ReloadOutlined,
   PictureOutlined,
   InfoCircleOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import {
   tauriInvoke,
@@ -41,6 +42,8 @@ import {
 } from '../../utils/tauri';
 import Layout from '../../layouts/App';
 import ProjectController from '../../api/project/ProjectController';
+import timerController from '../../api/timer/TimerController';
+import { defaultTimerPreferences } from '../../stores/shared';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -91,6 +94,12 @@ class ProjectSettings extends Component {
       autoArchiveCompleted: false,
       archiveAfterDays: 30,
 
+      // Tomato timer
+      timerWorkMinutes: defaultTimerPreferences.time,
+      timerShortBreak: defaultTimerPreferences.shortBreak,
+      timerLongBreak: defaultTimerPreferences.longBreak,
+      timerAutoCycle: defaultTimerPreferences.autoCycle,
+
       // Integrations
       trelloBoard: null,
       trelloSyncEnabled: false,
@@ -112,6 +121,8 @@ class ProjectSettings extends Component {
   }
 
   async componentDidMount() {
+    localStorage.setItem('currentProject', this.projectName);
+
     const newState = await tauriSendSync(
       'api:initializeProjectState',
       { projectName: this.projectName },
@@ -129,10 +140,27 @@ class ProjectSettings extends Component {
         if (lokiLoaded) {
           this.loadProjectData();
           this.loadProjectSettings();
+          this.loadTimerPreferences();
         }
       },
     );
   }
+
+  loadTimerPreferences = async () => {
+    try {
+      const prefs = await timerController.getTimerPreferences();
+      if (prefs) {
+        this.setState({
+          timerWorkMinutes: prefs.time ?? defaultTimerPreferences.time,
+          timerShortBreak: prefs.shortBreak ?? defaultTimerPreferences.shortBreak,
+          timerLongBreak: prefs.longBreak ?? defaultTimerPreferences.longBreak,
+          timerAutoCycle: prefs.autoCycle ?? defaultTimerPreferences.autoCycle,
+        });
+      }
+    } catch (error) {
+      console.error('[ProjectSettings] Failed to load timer preferences:', error);
+    }
+  };
 
   // eslint-disable-next-line class-methods-use-this
   formatTime = (seconds) => {
@@ -207,6 +235,10 @@ class ProjectSettings extends Component {
       trelloBoard,
       trelloSyncEnabled,
       syncInterval,
+      timerWorkMinutes,
+      timerShortBreak,
+      timerLongBreak,
+      timerAutoCycle,
     } = this.state;
     const updatedSettings = {
       ...projectSettings,
@@ -230,6 +262,12 @@ class ProjectSettings extends Component {
       await tauriInvoke('api:updateProjectSettings', {
         projectName: this.projectName,
         settings: updatedSettings,
+      });
+      await timerController.saveTimerPreferences({
+        time: timerWorkMinutes,
+        shortBreak: timerShortBreak,
+        longBreak: timerLongBreak,
+        autoCycle: timerAutoCycle,
       });
       this.setState({ projectSettings: updatedSettings, saving: false });
       message.success('All settings saved successfully!');
@@ -370,6 +408,10 @@ class ProjectSettings extends Component {
       defaultParent,
       autoArchiveCompleted,
       archiveAfterDays,
+      timerWorkMinutes,
+      timerShortBreak,
+      timerLongBreak,
+      timerAutoCycle,
       trelloBoard,
       trelloSyncEnabled,
       syncInterval,
@@ -741,6 +783,96 @@ class ProjectSettings extends Component {
         ),
       },
       {
+        key: 'tomato-timer',
+        label: (
+          <span>
+            <ClockCircleOutlined /> Tomato Timer
+          </span>
+        ),
+        children: (
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <Card title="Pomodoro Durations" size="small">
+              <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+                All values are in minutes. Use Save All to apply changes.
+              </Paragraph>
+              <Row gutter={[24, 16]}>
+                <Col xs={24} sm={12}>
+                  <Text strong>Work session</Text>
+                  <InputNumber
+                    value={timerWorkMinutes}
+                    onChange={(value) =>
+                      this.setState({ timerWorkMinutes: value })
+                    }
+                    min={1}
+                    max={120}
+                    style={{ width: '100%', marginTop: 8 }}
+                    addonAfter="min"
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Text strong>Short break</Text>
+                  <InputNumber
+                    value={timerShortBreak}
+                    onChange={(value) =>
+                      this.setState({ timerShortBreak: value })
+                    }
+                    min={1}
+                    max={60}
+                    style={{ width: '100%', marginTop: 8 }}
+                    addonAfter="min"
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Text strong>Long break</Text>
+                  <Paragraph
+                    type="secondary"
+                    style={{ margin: 0, fontSize: 12 }}
+                  >
+                    Used after the 4th work round
+                  </Paragraph>
+                  <InputNumber
+                    value={timerLongBreak}
+                    onChange={(value) =>
+                      this.setState({ timerLongBreak: value })
+                    }
+                    min={1}
+                    max={60}
+                    style={{ width: '100%', marginTop: 8 }}
+                    addonAfter="min"
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: 24,
+                    }}
+                  >
+                    <div>
+                      <Text strong>Auto cycle</Text>
+                      <Paragraph
+                        type="secondary"
+                        style={{ margin: 0, fontSize: 12 }}
+                      >
+                        Automatically advance between work and breaks
+                      </Paragraph>
+                    </div>
+                    <Switch
+                      checked={timerAutoCycle}
+                      onChange={(checked) =>
+                        this.setState({ timerAutoCycle: checked })
+                      }
+                    />
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+          </Space>
+        ),
+      },
+      {
         key: 'integrations',
         label: (
           <span>
@@ -932,7 +1064,10 @@ class ProjectSettings extends Component {
               <Space>
                 <Button
                   icon={<ReloadOutlined />}
-                  onClick={this.loadProjectSettings}
+                  onClick={() => {
+                    this.loadProjectSettings();
+                    this.loadTimerPreferences();
+                  }}
                 >
                   Reload
                 </Button>

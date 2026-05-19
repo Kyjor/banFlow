@@ -117,6 +117,29 @@ fn node_trello_id(node: &Node) -> Option<String> {
     node.trello.as_ref().and_then(trello_id)
 }
 
+fn apply_card_labels_to_node(node: &mut Node, card: &Value) {
+    let labels = card
+        .get("labels")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    node.labels = labels
+        .iter()
+        .cloned()
+        .collect::<Vec<Value>>();
+
+    node.tags = labels
+        .iter()
+        .filter_map(|label| {
+            label
+                .get("name")
+                .and_then(|v| v.as_str())
+                .map(str::to_string)
+        })
+        .collect();
+}
+
 fn parse_banflow_description(description: &str) -> (String, Option<i64>) {
     const SEPARATOR: &str = "---Banflow fields, do not edit this line or below it---";
 
@@ -317,6 +340,7 @@ pub async fn api_sync_trello_board(
                 nodes[existing_index].time_spent = time_spent;
             }
             nodes[existing_index].trello = Some(card.clone());
+            apply_card_labels_to_node(&mut nodes[existing_index], card);
             nodes[existing_index].last_updated = get_iso8601_time();
 
             let _ = node_id;
@@ -337,6 +361,7 @@ pub async fn api_sync_trello_board(
                 new_node.time_spent = time_spent;
             }
             new_node.trello = Some(card.clone());
+            apply_card_labels_to_node(&mut new_node, card);
 
             if let Some(parent) = parents.iter_mut().find(|p| p.id == target_parent) {
                 parent.node_ids.push(new_node.id.clone());

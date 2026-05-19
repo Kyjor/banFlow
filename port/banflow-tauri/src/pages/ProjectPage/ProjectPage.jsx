@@ -92,8 +92,12 @@ class ProjectPage extends Component {
       case 'labels':
         if (!value || value.length === 0) return true;
         return (
-          Array.isArray(node.labels) &&
-          node.labels.some((l) => value.includes(l))
+          (Array.isArray(node.tags) &&
+            node.tags.some((t) => value.includes(t))) ||
+          (Array.isArray(node.labels) &&
+            node.labels.some((l) =>
+              value.includes(typeof l === 'string' ? l : l.name),
+            ))
         );
       case 'dueDate': {
         if (!value || value.length === 0) return true;
@@ -609,22 +613,13 @@ class ProjectPage extends Component {
   };
 
   syncTrelloCard = async (node) => {
-    console.log('syncing trello card');
-    fetch(
-      `https://api.trello.com/1/cards/${node.trello.id}?key=${this.trelloKey}&token=${this.trelloToken}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      },
-    )
-      .then((response) => {
-        console.log(`Response: ${response.status} ${response.statusText}`);
-        return response.text();
-      })
-      .then(async (text) => {
-        const card = JSON.parse(text);
+    const { fetchTrelloCard } = await import('../../services/TrelloSyncService');
+    try {
+      const card = await fetchTrelloCard(node.trello.id, {
+        key: this.trelloKey,
+        token: this.trelloToken,
+      });
+      if (!card) return undefined;
         const local = new Date(node.lastUpdated);
         const remote = new Date(card.dateLastActivity);
 
@@ -714,11 +709,10 @@ class ProjectPage extends Component {
         }
         console.log('nothing to sync here...');
         return undefined;
-      })
-      .catch((err) => {
-        console.error(err);
-        return undefined;
-      });
+    } catch (err) {
+      console.error(err);
+      return undefined;
+    }
   };
 
   // eslint-disable-next-line class-methods-use-this

@@ -2,7 +2,6 @@ import React, { Component, useEffect } from 'react';
 import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 import AntTreeSelect from '../../components/TreeSelect/AntTreeSelect';
 import Timer from '../../components/Timer/timer';
-import timerController from '../../api/timer/TimerController';
 import ISO8601ServiceInstance from '../../services/ISO8601Service';
 import NodeController from '../../api/nodes/NodeController';
 import eventSystem, { EVENTS } from '../../services/EventSystem';
@@ -355,12 +354,6 @@ class TimerPage extends Component {
               startSession={this.startSession}
               timerPreferences={timerPreferences}
               updateSeconds={this.updateSeconds}
-              updateTimerPreferenceProperty={(propertyToUpdate, newValue) => {
-                timerController.updateTimerPreferenceProperty(
-                  propertyToUpdate,
-                  newValue,
-                );
-              }}
             />
           </>
         ) : (

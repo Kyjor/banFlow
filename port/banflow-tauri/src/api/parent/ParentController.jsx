@@ -1,4 +1,5 @@
 import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
+import { getTrelloAuth, syncCardListAfterMove } from '../../services/TrelloSyncService';
 
 /**
  * @class ParentController
@@ -13,9 +14,17 @@ const ParentController = {
    * @permission {Read}
    */
   async getParents() {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (projectName) {
+      try {
+        return (await tauriInvoke('api:getParents', { projectName })) || {};
+      } catch (error) {
+        console.warn('[ParentController] api:getParents failed, trying Loki:', error);
+      }
+    }
+
     const { getCurrentLokiService } = await import('../../stores/shared');
     const lokiService = getCurrentLokiService();
-    
     if (!lokiService) {
       console.error('[ParentController] No LokiService available');
       return {};
@@ -108,18 +117,20 @@ const ParentController = {
       return;
     }
     
-    const trelloAuth = {
-      key: localStorage.getItem(`trelloKey`),
-      token: localStorage.getItem(`trelloToken`),
-    };
-
-    return await tauriInvoke('api:updateNodesInParents', {
+    const result = await tauriInvoke('api:updateNodesInParents', {
       projectName,
       updatedOriginParent,
       updatedDestinationParent,
       nodeId,
-      trelloAuth: trelloAuth || null,
+      trelloAuth: null,
     });
+
+    const trelloAuth = getTrelloAuth();
+    if (trelloAuth) {
+      await syncCardListAfterMove(nodeId, updatedDestinationParent, trelloAuth);
+    }
+
+    return result;
   },
 };
 

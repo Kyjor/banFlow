@@ -103,7 +103,8 @@ function Node(props) {
   };
 
   const renderLabels = () => {
-    if (!node.labels || node.labels.length === 0) return null;
+    // Tags are Trello labels (canonical); skip duplicate label row when tags exist
+    if (node.tags?.length || !node.labels || node.labels.length === 0) return null;
 
     return (
       <div style={{ marginTop: '8px' }}>
