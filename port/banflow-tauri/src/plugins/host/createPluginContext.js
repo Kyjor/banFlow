@@ -1,3 +1,4 @@
+import { message as antdMessage } from 'antd';
 import { tauriInvoke } from '../../utils/tauri';
 import eventSystem from '../../services/EventSystem';
 import { createBreakSurfaceSession } from './KaplayBreakSurfaceAdapter';
@@ -58,6 +59,24 @@ export function createPluginContext(pluginId, uiRegistry) {
     ui: {
       registerTimerBreakView(component) {
         uiRegistry.registerTimerBreakView(component);
+      },
+    },
+    notifications: {
+      toast({ content, type = 'info', duration }) {
+        const opts = { content, ...(duration != null ? { duration } : {}) };
+        switch (type) {
+          case 'success':
+            antdMessage.success(opts);
+            break;
+          case 'warning':
+            antdMessage.warning(opts);
+            break;
+          case 'error':
+            antdMessage.error(opts);
+            break;
+          default:
+            antdMessage.info(opts);
+        }
       },
     },
     breakSurface: {
