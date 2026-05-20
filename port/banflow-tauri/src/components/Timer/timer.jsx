@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps,react/destructuring-assignment,no-nested-ternary */
-import React, { useEffect, useReducer, useRef } from 'react';
+import React, { useEffect, useReducer, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTimer } from 'react-use-precision-timer';
 import { Button, Tag, Tooltip } from 'antd';
@@ -13,6 +13,9 @@ import {
   normalizeTimerPreferences,
 } from '../../stores/shared';
 import { sendDesktopNotification } from '../../utils/desktopNotification';
+import eventSystem, { PLUGIN_EVENTS } from '../../services/EventSystem';
+import { setTimerPhase } from '../../plugins/host/TimerPhaseStore';
+import { registerTimerControls } from '../../plugins/host/timerBridge';
 
 const SESSION_END_NOTIFICATION_TITLE = 'Round Over';
 const BREAK_END_NOTIFICATION_TITLE = 'Break Over';
@@ -78,8 +81,70 @@ function Timer(props) {
   propsRef.current = props;
 
   const lastSavedBucketRef = useRef(-1);
+  const wasOnBreakRef = useRef(false);
+  const [breakPaused, setBreakPaused] = useState(false);
+  const breakPausedRef = useRef(breakPaused);
+  breakPausedRef.current = breakPaused;
 
   const selectedNodeId = props.selectedNode?.id ?? null;
+
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (!event.isOnBreak || event.isBetweenRounds) {
+      setBreakPaused(false);
+    }
+  }, [event.isOnBreak, event.isBetweenRounds]);
+
+  useEffect(() => {
+    const onBreak =
+      event.isActive && event.isOnBreak && !event.isBetweenRounds;
+    const secondsRemaining = onBreak ? event.breakSeconds : undefined;
+
+    if (onBreak) {
+      setTimerPhase({
+        phase: 'break',
+        secondsRemaining,
+        breakPaused: breakPausedRef.current,
+      });
+    } else if (event.isBetweenRounds) {
+      setTimerPhase({
+        phase: 'between',
+        secondsRemaining: event.betweenRoundSeconds,
+        breakPaused: false,
+      });
+    } else if (event.isTomatoTimerActive) {
+      setTimerPhase({
+        phase: 'work',
+        secondsRemaining: event.tomatoSeconds,
+        breakPaused: false,
+      });
+    } else {
+      setTimerPhase({
+        phase: 'work',
+        secondsRemaining: undefined,
+        breakPaused: false,
+      });
+    }
+
+    if (onBreak && !wasOnBreakRef.current) {
+      eventSystem.emit(PLUGIN_EVENTS.TIMER_BREAK_STARTED, {
+        secondsRemaining: event.breakSeconds,
+      });
+    } else if (!onBreak && wasOnBreakRef.current) {
+      eventSystem.emit(PLUGIN_EVENTS.TIMER_BREAK_ENDED, {});
+    }
+    wasOnBreakRef.current = onBreak;
+  }, [
+    event.isActive,
+    event.isOnBreak,
+    event.isBetweenRounds,
+    event.isTomatoTimerActive,
+    event.breakSeconds,
+    event.betweenRoundSeconds,
+    event.tomatoSeconds,
+    breakPaused,
+  ]);
 
   function cycleTomatoTimer() {
     const ev = eventRef.current;
@@ -135,6 +200,30 @@ function Timer(props) {
     }
   }
 
+  function skipBreakEarly() {
+    const ev = eventRef.current;
+    if (!ev.isOnBreak || ev.isBetweenRounds) {
+      return;
+    }
+    const prefs = getTimerPrefs();
+    const nextRound = ev.tomatoTimerRound < 4 ? ev.tomatoTimerRound + 1 : 1;
+    const workMinutes = Number(prefs.time) || defaultTimerPreferences.time;
+    showBreakOverNotification();
+    updateEvent({
+      isBetweenRounds: false,
+      isOnBreak: false,
+      isTomatoTimerActive: true,
+      isActive: true,
+      tomatoTimerRound: nextRound,
+      tomatoSeconds: workMinutes * 60,
+    });
+    setBreakPaused(false);
+    const t = timerRef.current;
+    if (t && !t.isRunning()) {
+      t.start();
+    }
+  }
+
   const timer = useTimer({
     delay: 1000,
     callback: () => {
@@ -172,7 +261,7 @@ function Timer(props) {
         updateEvent({ tomatoSeconds: ev.tomatoSeconds - 1 });
         tickTaskTime();
       }
-      if (ev.isOnBreak && !ev.isBetweenRounds) {
+      if (ev.isOnBreak && !ev.isBetweenRounds && !breakPausedRef.current) {
         updateEvent({ breakSeconds: ev.breakSeconds - 1 });
       }
       if (ev.isBetweenRounds && ev.timerPreferences?.autoCycle) {
@@ -183,6 +272,16 @@ function Timer(props) {
       }
     },
   });
+  timerRef.current = timer;
+
+  useEffect(() => {
+    registerTimerControls({
+      pauseBreak: () => setBreakPaused(true),
+      resumeBreak: () => setBreakPaused(false),
+      isBreakPaused: () => breakPausedRef.current,
+      skipBreak: skipBreakEarly,
+    });
+  }, []);
 
   const toggle = async () => {
     const { endSession, seconds, selectedNode, startSession } = props;

@@ -27,6 +27,8 @@ const commandMap: Record<string, string> = {
   'api:getTags': 'api_get_tags',
   'game:getState': 'game_get_state',
   'game:saveState': 'game_save_state',
+  plugin_storage_get: 'plugin_storage_get',
+  plugin_storage_set: 'plugin_storage_set',
   'loki:loadDatabase': 'loki_load_database',
   'loki:saveDatabase': 'loki_save_database',
   MSG_FROM_RENDERER: 'msg_from_renderer',

@@ -32,6 +32,8 @@ mod launch_prefs;
 
 mod backup;
 
+mod plugins;
+
 // Module for metadata-related commands
 mod metadata;
 
@@ -2318,6 +2320,8 @@ pub fn run() {
             api_set_trello_board,
             game_get_state,
             game_save_state,
+            plugins::plugin_storage_get,
+            plugins::plugin_storage_set,
             dashboard_get_all_project_names,
             dashboard_load_project_data,
             dashboard_load_multiple_projects_data,

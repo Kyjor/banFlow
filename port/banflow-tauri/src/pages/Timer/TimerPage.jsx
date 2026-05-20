@@ -5,7 +5,9 @@ import Timer from '../../components/Timer/timer';
 import ISO8601ServiceInstance from '../../services/ISO8601Service';
 import NodeController from '../../api/nodes/NodeController';
 import timerController from '../../api/timer/TimerController';
-import eventSystem, { EVENTS } from '../../services/EventSystem';
+import eventSystem, { EVENTS, PLUGIN_EVENTS, emitDual } from '../../services/EventSystem';
+import TimerPageBreakLayout from './TimerPageBreakLayout';
+import pluginHost from '../../plugins/host/PluginHost';
 import {
   defaultTimerPreferences,
   normalizeTimerPreferences,
@@ -92,6 +94,7 @@ class TimerPage extends Component {
 
     await tauriInvoke('api:getProjectState');
     this.loadTimerPreferences();
+    void pluginHost.init();
   }
 
   loadTimerPreferences = async () => {
@@ -185,11 +188,16 @@ class TimerPage extends Component {
 
     // Fire session completed event for game system
     const node = nodes[currentNodeSelectedInTimer];
-    eventSystem.emit(EVENTS.SESSION_COMPLETED, {
-      duration: sessionLength,
-      nodeId: currentNodeSelectedInTimer,
-      nodeTitle: node?.title || '',
-    });
+    const projectName = this.state.projectName;
+    emitDual(
+      PLUGIN_EVENTS.SESSION_COMPLETED,
+      {
+        duration: sessionLength,
+        nodeId: currentNodeSelectedInTimer,
+        projectName,
+      },
+      EVENTS.SESSION_COMPLETED,
+    );
 
     const newState = {
       ...this.state,
@@ -360,23 +368,47 @@ class TimerPage extends Component {
       lokiLoaded,
       timerPreferences,
     } = this.state;
+    const getTaskInfo = () => {
+      const { projectName: project } = this.state;
+      const node =
+        currentNodeSelectedInTimer && nodes
+          ? nodes[currentNodeSelectedInTimer]
+          : null;
+      if (!node) {
+        return null;
+      }
+      return {
+        title: node.title,
+        projectName: project,
+        timeSpentSeconds: node.timeSpent || 0,
+      };
+    };
+
+    const titleBar = <div style={titleBarStyle} />;
+
     return (
-      <div className="app" style={{ overflow: 'hidden' }}>
-        <div style={titleBarStyle} />
-        <div
-          style={{
-            margin: '10px',
-          }}
-        />
-        {lokiLoaded ? (
-          <>
-            {/* eslint-disable-next-line no-use-before-define */}
+      <div
+        className="app"
+        style={{
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+        }}
+      >
+        <TimerPageBreakLayout
+          getTaskInfo={getTaskInfo}
+          lokiLoaded={lokiLoaded}
+          titleBar={titleBar}
+          treeDisplay={
             <TreeDisplay
               nodes={this.buildTreeData()}
               updateSelectedNode={this.updateSelectedNode}
               currentNode={currentNodeSelectedInTimer}
               isTimerRunning={isTimerRunning}
             />
+          }
+          timer={
             <Timer
               endSession={this.endSession}
               saveTime={this.queueSaveCurrentSelectedNodeTime}
@@ -412,15 +444,7 @@ class TimerPage extends Component {
                   });
               }}
             />
-          </>
-        ) : (
-          <div>Loading...</div>
-        )}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-          }}
+          }
         />
       </div>
     );

@@ -13,7 +13,7 @@ import {
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import PropTypes from 'prop-types';
-import eventSystem, { EVENTS } from '../../services/EventSystem';
+import eventSystem, { EVENTS, PLUGIN_EVENTS, emitDual } from '../../services/EventSystem';
 import './SessionManager.scss';
 
 const { Option } = Select;
@@ -328,11 +328,15 @@ function SessionManager({
     updateNodeProperty('timeSpent', node.id, newTimeSpent, false);
 
     // Fire session completed event for game system
-    eventSystem.emit(EVENTS.SESSION_COMPLETED, {
-      duration: length,
-      nodeId: node.id,
-      nodeTitle: node?.title || '',
-    });
+    emitDual(
+      PLUGIN_EVENTS.SESSION_COMPLETED,
+      {
+        duration: length,
+        nodeId: node.id,
+        projectName: localStorage.getItem('currentProject') || undefined,
+      },
+      EVENTS.SESSION_COMPLETED,
+    );
 
     if (onSessionsChange) {
       onSessionsChange(updatedSessions, newTimeSpent);
