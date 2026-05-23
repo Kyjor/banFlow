@@ -72,12 +72,11 @@ class PluginHost {
       const plugin = mod.default ?? mod;
       if (plugin?.manifest && plugin.activate) {
         await this.activate(plugin);
+      } else {
+        console.info('[PluginHost] PomoRanch not available (optional sibling repo)');
       }
     } catch (err) {
-      console.warn(
-        '[PluginHost] PomoRanch not loaded — build sibling repo or check vite alias:',
-        err,
-      );
+      console.warn('[PluginHost] Failed to activate PomoRanch:', err);
     }
   }
 }
