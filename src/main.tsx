@@ -5,8 +5,15 @@ import 'antd/dist/antd.css';
 import './themes/App.global.scss';
 // @ts-ignore - ViewManager is a JSX file
 import ViewManager from './ViewManager';
+// @ts-ignore - HostAiButton is a JSX file
+import HostAiButton from './plugins/host/ui/HostAiButton';
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Root element not found');
 const root = createRoot(container);
-root.render(<ViewManager />);
+root.render(
+  <>
+    <ViewManager />
+    <HostAiButton />
+  </>,
+);

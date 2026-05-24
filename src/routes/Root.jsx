@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Outlet, Route, Routes } from 'react-router-dom';
+import { HashRouter, Outlet, Route, Routes, useParams } from 'react-router-dom';
 // Pages
 import Dashboard from '../pages/Dashboard/Dashboard';
 import ProjectPage from '../pages/ProjectPage/ProjectPage';
@@ -15,9 +15,20 @@ import Analytics from '../pages/Analytics/Analytics';
 // Context — only wrap Git UI so heartbeat/state updates do not re-render the whole app (e.g. App Settings).
 import { GitProvider } from '../contexts/GitContext';
 
+function decodeGitRouteProject(name) {
+  if (!name) return null;
+  try {
+    return decodeURIComponent(name.replace(/[@]/g, '/'));
+  } catch {
+    return name.replace(/[@]/g, '/');
+  }
+}
+
 function GitRoutesLayout() {
+  const { name } = useParams();
+  const scopeKey = decodeGitRouteProject(name) ?? '__global__';
   return (
-    <GitProvider>
+    <GitProvider key={scopeKey}>
       <Outlet />
     </GitProvider>
   );

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AppRoutes from './routes/Root';
 import TimerRoot from './routes/TimerRoot';
+import pluginHost from './plugins/host/PluginHost';
+import PluginChrome from './plugins/host/ui/PluginChrome';
 
 const App = AppRoutes;
 const Timer = TimerRoot;
@@ -14,6 +16,10 @@ const ViewManager = () => {
     }
     return 'app';
   });
+
+  useEffect(() => {
+    void pluginHost.init();
+  }, []);
 
   useEffect(() => {
     // Listen for URL changes to update the view
@@ -56,7 +62,12 @@ const ViewManager = () => {
   const view = Views[viewName];
   if (view == null) throw new Error(`View '${viewName}' is undefined`);
 
-  return view;
+  return (
+    <>
+      {view}
+      <PluginChrome />
+    </>
+  );
 };
 
 export default ViewManager;

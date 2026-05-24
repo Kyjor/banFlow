@@ -6,6 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import PropTypes from 'prop-types';
+import { isProjectGitRoute } from '../../../utils/currentProject';
 import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
 import { parseGitDate, formatGitDate } from '../../../utils/gitDate';
 import {
@@ -276,6 +277,7 @@ function GitClient() {
     loadGitHubRepoInfo,
     // Pull Requests
     loadPullRequests,
+    unlinkRepositoryFromProject,
   } = useGit();
 
   // UI State
@@ -346,10 +348,12 @@ function GitClient() {
     }
   }, []);
 
-  // Auto-open most recent repository on startup
+  const isProjectScopedGit = isProjectGitRoute();
+
+  // Auto-open most recent repository on startup (global git tab only)
   useEffect(() => {
     const autoOpenRecent = async () => {
-      if (hasTriedAutoOpen || currentRepository) return;
+      if (isProjectScopedGit || hasTriedAutoOpen || currentRepository) return;
       setHasTriedAutoOpen(true);
 
       try {
@@ -371,6 +375,7 @@ function GitClient() {
     currentRepository,
     switchRepository,
     refreshRepositoryStatus,
+    isProjectScopedGit,
   ]);
 
   // Save current repository to recent list
@@ -415,6 +420,14 @@ function GitClient() {
     };
     loadBranches();
   }, [currentRepository, currentBranch, getBranchesWithDates]);
+
+  const branchSelectOptions = useMemo(() => {
+    const list = branchesWithDates || [];
+    if (currentBranch && !list.some((b) => b.name === currentBranch)) {
+      return [{ name: currentBranch, lastCommitDate: null }, ...list];
+    }
+    return list;
+  }, [branchesWithDates, currentBranch]);
 
   // Unstaged files - show modified, untracked, conflicted, and deleted files
   const unstagedFiles = useMemo(() => {
@@ -908,7 +921,8 @@ function GitClient() {
                     refreshRepositoryStatus(),
                   ),
               })),
-              ...(recentRepositories.filter(
+              ...(!isProjectScopedGit &&
+              recentRepositories.filter(
                 (r) =>
                   !(repositories || []).some((repo) => repo.path === r.path),
               ).length > 0
@@ -941,6 +955,30 @@ function GitClient() {
                           }
                         },
                       })),
+                  ]
+                : []),
+              ...(isProjectScopedGit && (repositories || []).length > 0
+                ? [
+                    { type: 'divider' },
+                    {
+                      key: 'unlink',
+                      label: 'Unlink from project',
+                      icon: <DeleteOutlined />,
+                      danger: true,
+                      children: (repositories || []).map((repo) => ({
+                        key: `unlink-${repo.path}`,
+                        label: repo.name,
+                        danger: true,
+                        onClick: async () => {
+                          try {
+                            await unlinkRepositoryFromProject(repo.path);
+                            await refreshRepositoryStatus();
+                          } catch {
+                            // handled in context
+                          }
+                        },
+                      })),
+                    },
                   ]
                 : []),
               { type: 'divider' },
@@ -1000,7 +1038,7 @@ function GitClient() {
             suffixIcon={<BranchesOutlined />}
             dropdownMatchSelectWidth={false}
           >
-            {branchesWithDates.map((branch) => (
+            {branchSelectOptions.map((branch) => (
               <Option key={branch.name} value={branch.name}>
                 <Space>
                   <span>{branch.name}</span>

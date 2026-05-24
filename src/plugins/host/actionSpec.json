@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_workbench_context",
+        "description": "Current project, route, kanban summary, and git status",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_current_project",
+        "description": "Get the active project name",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "list_projects",
+        "description": "List all projects",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "nodes_list",
+        "description": "List all nodes in the current project",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "nodes_get",
+        "description": "Get a single node by id",
+        "parameters": {
+          "type": "object",
+          "properties": { "nodeId": { "type": "string" } },
+          "required": ["nodeId"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "parents_list",
+        "description": "List kanban columns — returns each column's id and title. Call before nodes_batch_create to pick parentId.",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "docs_list",
+        "description": "List documentation files",
+        "parameters": {
+          "type": "object",
+          "properties": { "isGlobal": { "type": "boolean" } }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "docs_read",
+        "description": "Read a document by path",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "isGlobal": { "type": "boolean" }
+          },
+          "required": ["path"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "diagrams_list",
+        "description": "List diagram files",
+        "parameters": {
+          "type": "object",
+          "properties": { "isGlobal": { "type": "boolean" } }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "diagrams_read",
+        "description": "Read a diagram by path",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "isGlobal": { "type": "boolean" }
+          },
+          "required": ["path"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "git_status",
+        "description": "Git status for the active project repository (repoPath optional; uses Git tab selection)",
+        "parameters": {
+          "type": "object",
+          "properties": { "repoPath": { "type": "string" } }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "git_diff",
+        "description": "Git diff for the active project repository (repoPath optional)",
+        "parameters": {
+          "type": "object",
+          "properties": { "repoPath": { "type": "string" } }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "git_commit_history",
+        "description": "Recent commits for the active project repository (repoPath optional)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "repoPath": { "type": "string" },
+            "limit": { "type": "number" }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "nodes_batch_create",
+        "description": "Create kanban tasks (preview approval). Call parents_list first, then infer parentId from column id/title — do not ask the user. User can change column in the modal. Include a full description for each node. Do not set node type.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "nodes": {
+              "type": "array",
+              "description": "Required array of node objects (do not put nodeTitle at the top level of arguments)",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "nodeTitle": { "type": "string", "description": "Short task title" },
+                  "description": {
+                    "type": "string",
+                    "description": "Detailed description: context, scope, and done criteria (required — do not leave empty)"
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "description": "Column id from parents_list, or column title if you do not have the id (host will resolve)"
+                  }
+                },
+                "required": ["nodeTitle", "description"]
+              }
+            }
+          },
+          "required": ["nodes"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "nodes_update",
+        "description": "Update node properties (preview required)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "updates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "nodeId": { "type": "string" },
+                  "property": { "type": "string" },
+                  "value": {}
+                },
+                "required": ["nodeId", "property", "value"]
+              }
+            }
+          },
+          "required": ["updates"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "docs_save",
+        "description": "Save document content (preview required)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string" },
+            "content": { "type": "string" },
+            "isGlobal": { "type": "boolean" }
+          },
+          "required": ["path", "content"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "parents_create",
+        "description": "Create kanban columns (preview required)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "parents": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": { "parentTitle": { "type": "string" } },
+                "required": ["parentTitle"]
+              }
+            }
+          },
+          "required": ["parents"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "git_suggest_commit_message",
+        "description": "Suggest commit message from diff (preview only)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "repoPath": { "type": "string" },
+            "message": { "type": "string" },
+            "body": { "type": "string" },
+            "files": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["repoPath", "message"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "git_stage_and_commit",
+        "description": "Stage files and commit (preview required)",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "repoPath": { "type": "string" },
+            "message": { "type": "string" },
+            "files": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["repoPath", "message"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "open_route",
+        "description": "Navigate to an in-app route hash path",
+        "parameters": {
+          "type": "object",
+          "properties": { "path": { "type": "string" } },
+          "required": ["path"]
+        }
+      }
+    }
+  ]
+}

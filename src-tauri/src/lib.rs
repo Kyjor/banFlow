@@ -34,6 +34,8 @@ mod backup;
 
 mod plugins;
 
+mod git_projects;
+
 // Module for metadata-related commands
 mod metadata;
 
@@ -481,14 +483,42 @@ async fn api_create_parent_old(
 }
 
 // Git commands using shell plugin
+fn resolve_git_executable() -> &'static str {
+    use std::path::Path;
+    for candidate in [
+        "/opt/homebrew/bin/git",
+        "/usr/local/bin/git",
+        "/usr/bin/git",
+    ] {
+        if Path::new(candidate).exists() {
+            return candidate;
+        }
+    }
+    "git"
+}
+
 // Helper function to execute git command and return stdout
 async fn git_command(repo_path: &str, args: &[&str]) -> Result<String, String> {
-    let output = tokio::process::Command::new("git")
+    use std::path::Path;
+    if !Path::new(repo_path).is_dir() {
+        return Err(format!(
+            "Repository path does not exist: \"{}\". Open Git in banFlow and select a valid repo.",
+            repo_path
+        ));
+    }
+    let git = resolve_git_executable();
+    let output = tokio::process::Command::new(git)
         .args(args)
         .current_dir(repo_path)
         .output()
         .await
-        .map_err(|e| format!("Git command failed: {}", e))?;
+        .map_err(|e| {
+            format!(
+                "Git command failed ({}): {}. If git is installed, add it to PATH or use Homebrew at /opt/homebrew/bin/git.",
+                git,
+                e
+            )
+        })?;
     
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -505,59 +535,6 @@ async fn git_get_repositories(
     // Return empty array for now - repositories are managed per-project
     // This could be enhanced to scan common git directories
     Ok(vec![])
-}
-
-#[tauri::command]
-async fn git_load_project_repositories(
-    project_name: String,
-    app_handle: tauri::AppHandle,
-) -> Result<Vec<serde_json::Value>, String> {
-    // Load gitRepositories collection from the project's LokiJS database
-    let project_dir = get_project_dir(&app_handle)?;
-    let project_path = project_dir.join(format!("{}.json", project_name));
-    
-    use std::fs;
-    if !project_path.exists() {
-        return Ok(vec![]);
-    }
-    
-    let contents = fs::read_to_string(&project_path)
-        .map_err(|e| format!("Failed to read project file: {}", e))?;
-    
-    if contents.trim().is_empty() {
-        return Ok(vec![]);
-    }
-    
-    let db_json: serde_json::Value = serde_json::from_str(&contents)
-        .map_err(|e| format!("Failed to parse project file: {}", e))?;
-    
-    // Get gitRepositories array from LokiJS collections structure
-    let git_repos_array = if let Some(collections) = db_json.get("collections").and_then(|c| c.as_array()) {
-        collections.iter()
-            .find_map(|c| {
-                if c.get("name").and_then(|n| n.as_str()) == Some("gitRepositories") {
-                    c.get("data").and_then(|d| d.as_array()).cloned()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or_default()
-    } else {
-        vec![]
-    };
-    
-    // Filter repositories by projectName
-    let project_repos: Vec<serde_json::Value> = git_repos_array
-        .into_iter()
-        .filter(|repo| {
-            repo.get("projectName")
-                .and_then(|pn| pn.as_str())
-                .map(|pn| pn == project_name)
-                .unwrap_or(false)
-        })
-        .collect();
-    
-    Ok(project_repos)
 }
 
 #[tauri::command]
@@ -819,7 +796,8 @@ async fn git_get_repository_status(repo_path: Option<String>) -> Result<serde_js
     status_obj.insert("created".to_string(), serde_json::Value::Array(untracked.clone()));
     status_obj.insert("untracked".to_string(), serde_json::Value::Array(untracked));
     status_obj.insert("conflicted".to_string(), serde_json::Value::Array(Vec::new()));
-    status_obj.insert("current".to_string(), serde_json::Value::String(current_branch));
+    status_obj.insert("current".to_string(), serde_json::Value::String(current_branch.clone()));
+    status_obj.insert("currentBranch".to_string(), serde_json::Value::String(current_branch));
     
     Ok(serde_json::Value::Object(status_obj))
 }
@@ -2322,6 +2300,8 @@ pub fn run() {
             game_save_state,
             plugins::plugin_storage_get,
             plugins::plugin_storage_set,
+            plugins::plugin_openrouter_chat,
+            plugins::plugin_audit_append,
             dashboard_get_all_project_names,
             dashboard_load_project_data,
             dashboard_load_multiple_projects_data,
@@ -2402,7 +2382,12 @@ pub fn run() {
             git_push,
             git_get_diff,
             git_select_repository,
-            git_load_project_repositories,
+            git_projects::git_load_project_repositories,
+            git_projects::git_link_repository_to_project,
+            git_projects::git_unlink_repository_from_project,
+            git_projects::git_set_active_project_repository,
+            git_projects::git_get_project_repository_stats,
+            git_projects::git_cleanup_project_repositories,
         ])
         .setup(|app| {
             if let Some(timer_window) = app.get_webview_window("timer") {

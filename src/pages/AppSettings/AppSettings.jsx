@@ -36,6 +36,7 @@ import BackupManager from './BackupManager';
 import Layout from '../../layouts/App';
 import APIKeyInput from '../../components/APIKeyInput/APIKeyInput';
 import gameService from '../../services/GameService';
+import PluginManagerPanel from '../../plugins/host/PluginManagerPanel';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -1214,6 +1215,11 @@ class AppSettings extends Component {
             </Card>
           </Space>
         ),
+      },
+      {
+        key: 'plugins',
+        label: 'Plugins',
+        children: <PluginManagerPanel />,
       },
     ];
 

@@ -11,6 +11,7 @@ import {
   Empty,
   Tooltip,
   Modal,
+  Popconfirm,
   Input,
   message,
   Tag,
@@ -28,6 +29,10 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
+import {
+  resolveCurrentProject,
+  isProjectGitRoute,
+} from '../../../utils/currentProject';
 import './RepositoryManager.scss';
 
 const { Title, Text, Paragraph } = Typography;
@@ -48,6 +53,7 @@ function RepositoryManager({ compact = false }) {
     clearError,
     getProjectRepositoryStats,
     cleanupProjectRepositories,
+    unlinkRepositoryFromProject,
   } = useGit();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -74,31 +80,36 @@ function RepositoryManager({ compact = false }) {
     loadProjectStats();
   }, [getProjectRepositoryStats]);
 
-  // Persist repositories to localStorage whenever the list changes
+  const isProjectScoped = isProjectGitRoute();
+
+  // Persist global repo list only on the global git tab (not per-project links)
   useEffect(() => {
+    if (isProjectScoped) return;
     try {
       const paths = (repositories || []).map((r) => r.path);
       localStorage.setItem('gitRepoPaths', JSON.stringify(paths));
     } catch (_) {
       // no-op
     }
-  }, [repositories]);
+  }, [repositories, isProjectScoped]);
 
-  // Persist last active repository path
+  // Persist last active path globally (global tab) or per project is handled in GitContext
   useEffect(() => {
-    if (currentRepository) {
-      try {
-        localStorage.setItem('gitLastActiveRepoPath', currentRepository);
-      } catch (_) {
-        // no-op
-      }
+    if (!currentRepository || isProjectScoped) return;
+    try {
+      localStorage.setItem('gitLastActiveRepoPath', currentRepository);
+    } catch (_) {
+      // no-op
     }
-  }, [currentRepository]);
+  }, [currentRepository, isProjectScoped]);
 
-  // Restore repositories from localStorage on first mount
+  // Restore global repos from localStorage only when not in a project context
   useEffect(() => {
     if (restoredFromStorage) return;
     setRestoredFromStorage(true);
+    if (isProjectScoped) {
+      return;
+    }
     try {
       const stored = JSON.parse(localStorage.getItem('gitRepoPaths') || '[]');
       const lastActive = localStorage.getItem('gitLastActiveRepoPath');
@@ -163,6 +174,14 @@ function RepositoryManager({ compact = false }) {
       await switchRepository(selectedRepoPath);
       setSelectedRepo(selectedRepoPath);
     } catch (error) {
+      // Error handled by context
+    }
+  };
+
+  const handleUnlinkRepository = async (repoPath) => {
+    try {
+      await unlinkRepositoryFromProject(repoPath);
+    } catch {
       // Error handled by context
     }
   };
@@ -474,7 +493,8 @@ function RepositoryManager({ compact = false }) {
             }}
           >
             <Title level={5} style={{ margin: 0 }}>
-              All Repositories ({repositories.length})
+              {isProjectScoped ? 'Project repositories' : 'All repositories'} (
+              {repositories.length})
             </Title>
           </div>
 
@@ -485,10 +505,15 @@ function RepositoryManager({ compact = false }) {
               }
               description={
                 <div>
-                  <Paragraph>No Git repositories added yet</Paragraph>
+                  <Paragraph>
+                    {isProjectScoped
+                      ? 'No repositories linked to this project yet'
+                      : 'No Git repositories added yet'}
+                  </Paragraph>
                   <Paragraph type="secondary">
-                    Add your first repository to start using Git integration
-                    features
+                    {isProjectScoped
+                      ? 'Add a repo here to associate it with this project only.'
+                      : 'Add your first repository to start using Git integration features'}
                   </Paragraph>
                 </div>
               }
@@ -539,6 +564,20 @@ function RepositoryManager({ compact = false }) {
                         }
                       />
                     </Tooltip>,
+                    isProjectScoped ? (
+                      <Popconfirm
+                        key="unlink"
+                        title="Unlink from this project?"
+                        description="The folder on disk is not deleted — only this project’s link is removed."
+                        onConfirm={() => handleUnlinkRepository(repo.path)}
+                        okText="Unlink"
+                        okButtonProps={{ danger: true }}
+                      >
+                        <Tooltip title="Unlink from project">
+                          <Button size="small" danger icon={<DeleteOutlined />} />
+                        </Tooltip>
+                      </Popconfirm>
+                    ) : null,
                   ]}
                 >
                   <List.Item.Meta

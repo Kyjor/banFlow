@@ -1,24 +1,46 @@
 import React, { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import Layout from '../../layouts/App';
 import { useGit } from '../../contexts/GitContext';
 import GitClient from '../../components/Git/GitClient/GitClient';
 import './GitPage.scss';
 
-function GitPage() {
-  const { loadProjectRepositories } = useGit();
+function decodeProjectName(raw) {
+  if (!raw) return null;
+  try {
+    return decodeURIComponent(raw.replace(/[@]/g, '/'));
+  } catch {
+    return raw.replace(/[@]/g, '/');
+  }
+}
 
-  // Load project repositories on page load
+function GitPage() {
+  const { name: routeProject } = useParams();
+  const { loadProjectRepositories, loadGlobalRepositories } = useGit();
+
+  useEffect(() => {
+    const projectName = decodeProjectName(routeProject);
+    if (projectName) {
+      localStorage.setItem('currentProject', projectName);
+    }
+  }, [routeProject]);
+
   useEffect(() => {
     const loadRepositories = async () => {
       try {
-        await loadProjectRepositories();
+        const projectName = decodeProjectName(routeProject);
+        if (projectName) {
+          await loadProjectRepositories(projectName);
+        } else {
+          await loadGlobalRepositories();
+        }
       } catch (error) {
-        console.error('Failed to load project repositories:', error);
+        console.error('Failed to load git repositories:', error);
       }
     };
 
     loadRepositories();
-  }, [loadProjectRepositories]);
+  }, [loadProjectRepositories, loadGlobalRepositories, routeProject]);
 
   return (
     <Layout>

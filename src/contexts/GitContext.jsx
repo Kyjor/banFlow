@@ -11,6 +11,15 @@ import PropTypes from 'prop-types';
 import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../utils/tauri';
 import { message } from 'antd';
 import HeartbeatService from '../services/HeartbeatService';
+import {
+  resolveCurrentProject,
+  isProjectGitRoute,
+  projectNameFromGitRoute,
+} from '../utils/currentProject';
+import {
+  getActiveProjectRepoPath,
+  setActiveProjectRepoPath,
+} from '../utils/gitProjectStorage';
 
 // Git Context State Structure
 const initialState = {
@@ -95,6 +104,30 @@ const GitActionTypes = {
   CLEAR_ERROR: 'CLEAR_ERROR',
 };
 
+/** Normalize status from getRepositoryStatus (`current`) or switchRepository (`currentBranch` + nested `status`). */
+function normalizeRepositoryStatusPayload(payload) {
+  if (!payload) return null;
+  const nested =
+    payload.status && typeof payload.status === 'object' ? payload.status : null;
+  const source = nested || payload;
+  const currentBranch =
+    payload.currentBranch ||
+    payload.current ||
+    source.currentBranch ||
+    source.current ||
+    null;
+  return {
+    repositoryStatus: payload,
+    stagedFiles: source.staged || [],
+    modifiedFiles: source.modified || [],
+    untrackedFiles: source.created || source.untracked || [],
+    deletedFiles: source.deleted || [],
+    conflictedFiles: source.conflicted || [],
+    currentBranch: currentBranch || null,
+    branches: payload.branches || source.branches || [],
+  };
+}
+
 // Git Reducer for State Management
 function gitReducer(state, action) {
   switch (action.type) {
@@ -116,18 +149,26 @@ function gitReducer(state, action) {
     case GitActionTypes.SET_CURRENT_REPOSITORY:
       return { ...state, currentRepository: action.payload };
 
-    case GitActionTypes.UPDATE_REPOSITORY_STATUS:
+    case GitActionTypes.UPDATE_REPOSITORY_STATUS: {
+      if (!action.payload) {
+        return {
+          ...state,
+          repositoryStatus: null,
+          stagedFiles: [],
+          modifiedFiles: [],
+          untrackedFiles: [],
+          deletedFiles: [],
+          conflictedFiles: [],
+          currentBranch: null,
+          branches: [],
+        };
+      }
+      const normalized = normalizeRepositoryStatusPayload(action.payload);
       return {
         ...state,
-        repositoryStatus: action.payload,
-        stagedFiles: action.payload?.staged || [],
-        modifiedFiles: action.payload?.modified || [],
-        untrackedFiles: action.payload?.created || [],
-        deletedFiles: action.payload?.deleted || [],
-        conflictedFiles: action.payload?.conflicted || [],
-        currentBranch: action.payload?.currentBranch,
-        branches: action.payload?.branches || [],
+        ...normalized,
       };
+    }
 
     case GitActionTypes.SET_BRANCHES:
       return { ...state, branches: action.payload };
@@ -249,7 +290,36 @@ export function GitProvider({ children }) {
           selectedPath = dialogPath;
         }
         const repoInfo = await tauriInvoke('git:addRepository', { repoPath: selectedPath });
-        dispatch({ type: GitActionTypes.ADD_REPOSITORY, payload: repoInfo });
+        const projectName = isProjectGitRoute()
+          ? projectNameFromGitRoute() || resolveCurrentProject()
+          : null;
+
+        if (projectName) {
+          await tauriInvoke('git:linkRepositoryToProject', {
+            projectName,
+            repoInfo: { ...repoInfo, isActive: true },
+          });
+          setActiveProjectRepoPath(projectName, repoInfo.path);
+          const repos = await tauriInvoke('git:loadProjectRepositories', { projectName });
+          dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
+          dispatch({
+            type: GitActionTypes.SET_CURRENT_REPOSITORY,
+            payload: repoInfo.path,
+          });
+        } else {
+          dispatch({ type: GitActionTypes.ADD_REPOSITORY, payload: repoInfo });
+          dispatch({
+            type: GitActionTypes.SET_CURRENT_REPOSITORY,
+            payload: repoInfo.path,
+          });
+        }
+
+        try {
+          localStorage.setItem('gitLastActiveRepoPath', repoInfo.path);
+        } catch {
+          /* ignore */
+        }
+
         showSuccess('Repository added', repoInfo.name);
         return repoInfo;
       } catch (error) {
@@ -266,10 +336,30 @@ export function GitProvider({ children }) {
     async (repoPath) => {
       try {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-        const status = await tauriInvoke(
-          'git:switchRepository',
-          { repoPath },
-        );
+        const status = await tauriInvoke('git:switchRepository', { repoPath });
+        const projectName = isProjectGitRoute()
+          ? projectNameFromGitRoute() || resolveCurrentProject()
+          : null;
+
+        if (projectName) {
+          const known = state.repositories.some((r) => r.path === repoPath);
+          if (!known) {
+            const repoInfo = await tauriInvoke('git:addRepository', { repoPath });
+            await tauriInvoke('git:linkRepositoryToProject', {
+              projectName,
+              repoInfo: { ...repoInfo, isActive: true },
+            });
+          } else {
+            await tauriInvoke('git:setActiveProjectRepository', {
+              projectName,
+              repoPath,
+            });
+          }
+          setActiveProjectRepoPath(projectName, repoPath);
+          const repos = await tauriInvoke('git:loadProjectRepositories', { projectName });
+          dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
+        }
+
         dispatch({
           type: GitActionTypes.SET_CURRENT_REPOSITORY,
           payload: repoPath,
@@ -278,6 +368,11 @@ export function GitProvider({ children }) {
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: status,
         });
+        try {
+          localStorage.setItem('gitLastActiveRepoPath', repoPath);
+        } catch {
+          /* ignore */
+        }
         showSuccess('Switched repository');
         return status;
       } catch (error) {
@@ -287,7 +382,7 @@ export function GitProvider({ children }) {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.repositories],
   );
 
   const selectRepository = useCallback(async () => {
@@ -1258,42 +1353,104 @@ export function GitProvider({ children }) {
   // Project-specific repository management
   const getProjectRepositoryStats = useCallback(async () => {
     try {
-      const stats = await tauriInvoke('git:getProjectRepositoryStats');
-      return stats;
+      const projectName = resolveCurrentProject();
+      if (!projectName) {
+        return { total: 0, active: 0, recentlyAccessed: 0, lastAdded: null };
+      }
+      return await tauriInvoke('git:getProjectRepositoryStats', { projectName });
     } catch (error) {
       handleError(error, 'get project repository stats');
       return null;
     }
   }, [handleError]);
 
-  const cleanupProjectRepositories = useCallback(async () => {
+  const loadGlobalRepositories = useCallback(async () => {
     try {
-      const removedPaths = await tauriInvoke(
-        'git:cleanupProjectRepositories',
-      );
-      if (removedPaths.length > 0) {
-        showSuccess(
-          'Repositories cleaned up',
-          `Removed ${removedPaths.length} non-existent repositories`,
-        );
+      let paths = [];
+      try {
+        paths = JSON.parse(localStorage.getItem('gitRepoPaths') || '[]');
+      } catch {
+        paths = [];
       }
-      return removedPaths;
+      const repos = paths
+        .filter((p) => typeof p === 'string' && p.trim())
+        .map((p) => ({ path: p, name: p.split('/').pop() || p }));
+
+      dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
+
+      const lastActive = localStorage.getItem('gitLastActiveRepoPath');
+      if (lastActive && repos.some((r) => r.path === lastActive)) {
+        dispatch({
+          type: GitActionTypes.SET_CURRENT_REPOSITORY,
+          payload: lastActive,
+        });
+        try {
+          const status = await tauriInvoke('git:getRepositoryStatus', {
+            repoPath: lastActive,
+          });
+          dispatch({
+            type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+            payload: status,
+          });
+        } catch {
+          /* optional */
+        }
+      } else {
+        dispatch({ type: GitActionTypes.SET_CURRENT_REPOSITORY, payload: null });
+        dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: null });
+      }
+
+      return repos;
     } catch (error) {
-      handleError(error, 'cleanup project repositories');
+      handleError(error, 'load global repositories');
       return [];
     }
-  }, [handleError, showSuccess]);
+  }, [handleError]);
 
-  const loadProjectRepositories = useCallback(async () => {
+  const loadProjectRepositories = useCallback(async (explicitProjectName) => {
     try {
-      // Get current project name from localStorage (set by ProjectService)
-      const projectName = localStorage.getItem('currentProjectName');
+      const projectName =
+        explicitProjectName ||
+        projectNameFromGitRoute() ||
+        resolveCurrentProject();
       if (!projectName) {
         console.warn('No current project name found, cannot load repositories');
         return [];
       }
       const repos = await tauriInvoke('git:loadProjectRepositories', { projectName });
       dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
+
+      if (!repos.length) {
+        dispatch({ type: GitActionTypes.SET_CURRENT_REPOSITORY, payload: null });
+        dispatch({ type: GitActionTypes.UPDATE_REPOSITORY_STATUS, payload: null });
+        setActiveProjectRepoPath(projectName, null);
+        return repos;
+      }
+
+      const activePath =
+        repos.find((r) => r.isActive)?.path ||
+        repos.find((r) => r.path === getActiveProjectRepoPath(projectName))?.path ||
+        repos[0]?.path;
+
+      if (activePath) {
+        dispatch({
+          type: GitActionTypes.SET_CURRENT_REPOSITORY,
+          payload: activePath,
+        });
+        setActiveProjectRepoPath(projectName, activePath);
+        try {
+          const status = await tauriInvoke('git:getRepositoryStatus', {
+            repoPath: activePath,
+          });
+          dispatch({
+            type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
+            payload: status,
+          });
+        } catch {
+          /* optional */
+        }
+      }
+
       return repos;
     } catch (error) {
       handleError(error, 'load project repositories');
@@ -1301,21 +1458,62 @@ export function GitProvider({ children }) {
     }
   }, [handleError]);
 
-  // Initialize repositories on mount
+  const cleanupProjectRepositories = useCallback(async () => {
+    try {
+      const projectName = resolveCurrentProject();
+      if (!projectName) return [];
+      const removedPaths = await tauriInvoke('git:cleanupProjectRepositories', {
+        projectName,
+      });
+      if (removedPaths.length > 0) {
+        showSuccess(
+          'Repositories cleaned up',
+          `Removed ${removedPaths.length} non-existent repositories`,
+        );
+        await loadProjectRepositories();
+      }
+      return removedPaths;
+    } catch (error) {
+      handleError(error, 'cleanup project repositories');
+      return [];
+    }
+  }, [handleError, showSuccess, loadProjectRepositories]);
+
+  const unlinkRepositoryFromProject = useCallback(
+    async (repoPath) => {
+      try {
+        const projectName = resolveCurrentProject();
+        if (!projectName) {
+          throw new Error('Open a project to unlink repositories');
+        }
+        const removed = await tauriInvoke('git:unlinkRepositoryFromProject', {
+          projectName,
+          repoPath,
+        });
+        if (removed) {
+          if (getActiveProjectRepoPath(projectName) === repoPath) {
+            setActiveProjectRepoPath(projectName, null);
+          }
+          await loadProjectRepositories();
+          showSuccess('Repository unlinked from project');
+        }
+        return removed;
+      } catch (error) {
+        handleError(error, 'unlink repository');
+        throw error;
+      }
+    },
+    [handleError, showSuccess, loadProjectRepositories],
+  );
+
+  // Initialize repositories on mount (scoped by git route)
   useEffect(() => {
     const loadRepositories = async () => {
       try {
-        const repos = await tauriInvoke('git:getRepositories');
-        dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
-
-        const currentRepo = await tauriInvoke(
-          'git:getCurrentRepository',
-        );
-        if (currentRepo) {
-          dispatch({
-            type: GitActionTypes.SET_CURRENT_REPOSITORY,
-            payload: currentRepo.path,
-          });
+        if (isProjectGitRoute()) {
+          await loadProjectRepositories(projectNameFromGitRoute());
+        } else {
+          await loadGlobalRepositories();
         }
       } catch (error) {
         console.error('Failed to load repositories:', error);
@@ -1323,7 +1521,7 @@ export function GitProvider({ children }) {
     };
 
     loadRepositories();
-  }, []);
+  }, [loadProjectRepositories, loadGlobalRepositories]);
 
   // Heartbeat: Periodically check for repository status changes
   useEffect(() => {
@@ -1650,6 +1848,8 @@ export function GitProvider({ children }) {
       getProjectRepositoryStats,
       cleanupProjectRepositories,
       loadProjectRepositories,
+      loadGlobalRepositories,
+      unlinkRepositoryFromProject,
 
       // File Management Operations
       discardChanges,
@@ -1707,6 +1907,8 @@ export function GitProvider({ children }) {
       getProjectRepositoryStats,
       cleanupProjectRepositories,
       loadProjectRepositories,
+      loadGlobalRepositories,
+      unlinkRepositoryFromProject,
       discardChanges,
       deleteUntrackedFiles,
       cleanUntrackedFiles,
