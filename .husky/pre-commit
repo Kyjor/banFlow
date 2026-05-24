@@ -1,13 +1,11 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-echo "Running pre-commit lint check..."
+echo "Running pre-commit typecheck..."
 
-# Run linting and fail only on errors (allow warnings)
-if ! npm run lint -- --max-warnings 9999; then
-  echo "❌ Linting failed with errors. Please fix the errors before committing."
-  echo "   Warnings are allowed, but errors must be resolved."
+if ! npm run lint; then
+  echo "❌ Typecheck failed. Please fix the errors before committing."
   exit 1
 fi
 
-echo "✅ Linting passed! Proceeding with commit..."
+echo "✅ Typecheck passed! Proceeding with commit..."
