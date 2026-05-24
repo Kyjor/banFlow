@@ -3,7 +3,7 @@
  * This service listens to events and manages game state
  */
 
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../utils/tauri';
 import eventSystem, { EVENTS } from './EventSystem';
 
 class GameService {
@@ -48,7 +48,7 @@ class GameService {
    */
   async loadGameState() {
     try {
-      const state = await ipcRenderer.invoke('game:getState');
+      const state = await tauriInvoke('game:getState');
       if (state) {
         this.inventory = state.inventory || this.inventory;
         this.stats = state.stats || this.stats;
@@ -64,7 +64,7 @@ class GameService {
    */
   async saveGameState() {
     try {
-      await ipcRenderer.invoke('game:saveState', {
+      await tauriInvoke('game:saveState', {
         inventory: this.inventory,
         stats: this.stats,
         isEnabled: this.isEnabled,

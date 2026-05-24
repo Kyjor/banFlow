@@ -1,7 +1,7 @@
 // Libs
 import React, { Component } from 'react';
 // Layouts
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 import {
   Button,
   Card,
@@ -26,9 +26,11 @@ import NodeModal from '../../components/NodeModal/NodeModal';
 import KanbanBoard from '../../components/KanbanBoard/KanbanBoard';
 import ParentController from '../../api/parent/ParentController';
 import NodeController from '../../api/nodes/NodeController';
+import timerController from '../../api/timer/TimerController';
 import IterationController from '../../api/iterations/IterationController';
 import IterationModal from '../../components/IterationModal/IterationModal';
 import ParentModal from '../../components/ParentModal/ParentModal';
+import { applyProjectTheme, clearProjectTheme } from '../../utils/projectTheme';
 
 const { RangePicker } = DatePicker;
 
@@ -92,8 +94,12 @@ class ProjectPage extends Component {
       case 'labels':
         if (!value || value.length === 0) return true;
         return (
-          Array.isArray(node.labels) &&
-          node.labels.some((l) => value.includes(l))
+          (Array.isArray(node.tags) &&
+            node.tags.some((t) => value.includes(t))) ||
+          (Array.isArray(node.labels) &&
+            node.labels.some((l) =>
+              value.includes(typeof l === 'string' ? l : l.name),
+            ))
         );
       case 'dueDate': {
         if (!value || value.length === 0) return true;
@@ -163,6 +169,13 @@ class ProjectPage extends Component {
     [this.projectName] = this.projectName.split('?');
     // if projectname contains @ symbols, replace them with slashes
     this.projectName = this.projectName.replace(/[@]/g, '/');
+    // Decode URL-encoded characters (e.g., %20 -> space)
+    try {
+      this.projectName = decodeURIComponent(this.projectName);
+    } catch (e) {
+      // If decoding fails, use the original name
+      console.warn('[ProjectPage] Failed to decode project name, using original:', this.projectName);
+    }
     localStorage.setItem('currentProject', this.projectName);
     this.trelloToken = localStorage.getItem('trelloToken');
     this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
@@ -173,7 +186,9 @@ class ProjectPage extends Component {
       currentEditIteration: null,
       isTimerRunning: false,
       iterations: {},
-      selectedIteration: 0,
+      selectedIteration: '',
+      mustFocusNodeTitle: false,
+      mustFocusParentTitle: false,
       parentModalVisible: false,
       modalParentId: null,
       filtersOpen: false,
@@ -183,27 +198,119 @@ class ProjectPage extends Component {
     };
   }
 
-  componentDidMount() {
-    const newState = ipcRenderer.sendSync(
-      'api:initializeProjectState',
-      this.projectName,
-    );
+  async componentDidMount() {
+    console.log('[ProjectPage] componentDidMount() called for project:', this.projectName);
+    try {
+      // Set up event listener FIRST, before initializing state
+      // This ensures we catch the UpdateProjectPageState event that's emitted during initialization
+      console.log('[ProjectPage] Setting up UpdateProjectPageState listener FIRST');
+      const self = this;
+      const unlisten = await tauriOn('UpdateProjectPageState', function (e, updatedState) {
+        console.log('[ProjectPage] UpdateProjectPageState event received:', {
+          hasNodes: !!updatedState.nodes,
+          nodesCount: updatedState.nodes ? Object.keys(updatedState.nodes).length : 0,
+          hasParents: !!updatedState.parents,
+          parentsCount: updatedState.parents ? Object.keys(updatedState.parents).length : 0,
+          hasParentOrder: !!updatedState.parentOrder,
+          parentOrderLength: updatedState.parentOrder ? (Array.isArray(updatedState.parentOrder) ? updatedState.parentOrder.length : 0) : 0,
+          lokiLoaded: updatedState.lokiLoaded,
+          fullState: updatedState,
+        });
+        // Merge with current state (like Electron pattern)
+        self.setState((prevState) => {
+          const newState = {
+            ...prevState,
+            ...updatedState,
+            // Preserve local UI state flags
+            mustFocusNodeTitle: prevState.mustFocusNodeTitle,
+            mustFocusParentTitle: prevState.mustFocusParentTitle,
+          };
+          console.log('[ProjectPage] State after merge from event:', {
+            hasNodes: !!newState.nodes,
+            nodesCount: newState.nodes ? Object.keys(newState.nodes).length : 0,
+            hasParents: !!newState.parents,
+            parentsCount: newState.parents ? Object.keys(newState.parents).length : 0,
+            hasParentOrder: !!newState.parentOrder,
+            parentOrderLength: newState.parentOrder ? (Array.isArray(newState.parentOrder) ? newState.parentOrder.length : 0) : 0,
+          });
+          if (updatedState.projectSettings) {
+            applyProjectTheme(updatedState.projectSettings);
+          }
+          return newState;
+        });
+      });
+      this.unlistenUpdateProjectPageState = unlisten;
+      
+      console.log('[ProjectPage] Calling api:initializeProjectState');
+      const newState = await tauriSendSync(
+        'api:initializeProjectState',
+        { projectName: this.projectName },
+      );
+      console.log('[ProjectPage] Received state from api:initializeProjectState:', {
+        hasNodes: !!newState.nodes,
+        nodesCount: newState.nodes ? Object.keys(newState.nodes).length : 0,
+        hasParents: !!newState.parents,
+        parentsCount: newState.parents ? Object.keys(newState.parents).length : 0,
+        hasParentOrder: !!newState.parentOrder,
+        parentOrderLength: newState.parentOrder ? (Array.isArray(newState.parentOrder) ? newState.parentOrder.length : 0) : 0,
+        lokiLoaded: newState.lokiLoaded,
+        loki_loaded: newState.loki_loaded, // Check snake_case too
+        projectName: newState.projectName,
+        project_name: newState.project_name, // Check snake_case too
+        allKeys: Object.keys(newState),
+        nodesKeys: newState.nodes ? Object.keys(newState.nodes).slice(0, 5) : [],
+        parentsKeys: newState.parents ? Object.keys(newState.parents).slice(0, 5) : [],
+      });
 
-    this.setState(
-      (prevState) => ({
-        ...prevState,
-        ...newState,
-      }),
-      () => {
-        // Check URL parameters for node or parent to open
-        this.checkUrlParameters();
-      },
-    );
+      // Ensure lokiLoaded is set (handle both camelCase and snake_case)
+      const lokiLoadedValue = newState.lokiLoaded ?? newState.loki_loaded ?? true;
+      const projectNameValue = newState.projectName ?? newState.project_name ?? this.projectName;
+      
+      this.setState(
+        (prevState) => {
+          const mergedState = {
+            ...prevState,
+            ...newState,
+            lokiLoaded: lokiLoadedValue,
+            projectName: projectNameValue,
+          };
+          console.log('[ProjectPage] Setting state with merged values:', {
+            hasNodes: !!mergedState.nodes,
+            nodesCount: mergedState.nodes ? Object.keys(mergedState.nodes).length : 0,
+            hasParents: !!mergedState.parents,
+            parentsCount: mergedState.parents ? Object.keys(mergedState.parents).length : 0,
+          });
+          return mergedState;
+        },
+        () => {
+          console.log('[ProjectPage] State updated after setState callback:', {
+            lokiLoaded: this.state.lokiLoaded,
+            hasNodes: !!this.state.nodes,
+            nodesCount: this.state.nodes ? Object.keys(this.state.nodes).length : 0,
+            hasParents: !!this.state.parents,
+            parentsCount: this.state.parents ? Object.keys(this.state.parents).length : 0,
+          });
+          if (this.state.projectSettings) {
+            applyProjectTheme(this.state.projectSettings);
+          }
+          // Check URL parameters for node or parent to open
+          this.checkUrlParameters();
+        },
+      );
 
-    const self = this;
-    ipcRenderer.on('UpdateProjectPageState', function (e, updatedState) {
-      self.setState(updatedState);
-    });
+      console.log('[ProjectPage] componentDidMount() complete');
+    } catch (error) {
+      console.error('[ProjectPage] Error in componentDidMount():', error);
+      console.error('[ProjectPage] Error stack:', error.stack);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.unlistenUpdateProjectPageState) {
+      this.unlistenUpdateProjectPageState();
+    }
+    clearProjectTheme();
+    // todo: close timer window
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -212,11 +319,9 @@ class ProjectPage extends Component {
     if (!prevState.lokiLoaded && lokiLoaded) {
       this.checkUrlParameters();
     }
-  }
-
-  componentWillUnmount() {
-    ipcRenderer.removeAllListeners('UpdateProjectPageState');
-    // todo: close timer window
+    if (prevState.projectSettings !== this.state.projectSettings) {
+      applyProjectTheme(this.state.projectSettings);
+    }
   }
 
   checkUrlParameters = () => {
@@ -252,18 +357,22 @@ class ProjectPage extends Component {
     }
   };
 
-  createNewParent = (parentTitle) => {
-    ParentController.createParent(parentTitle);
+  createNewParent = async (parentTitle) => {
+    console.log('[ProjectPage] Creating parent with title:', parentTitle);
+    try {
+      const parent = await ParentController.createParent(parentTitle);
+      console.log('[ProjectPage] Parent created via backend:', parent);
 
-    const newState = {
-      ...this.state,
-      parents: ParentController.getParents(),
-      parentOrder: ParentController.getParentOrder(),
-      mustFocusParentTitle: true,
-    };
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
-    });
+      // The backend will emit UpdateProjectPageState event with updated parents and parentOrder
+      // The event listener will automatically update the state, so we don't need to manually refresh
+      // Just update the mustFocusParentTitle flag
+      this.setState({
+        mustFocusParentTitle: true,
+      });
+    } catch (error) {
+      console.error('[ProjectPage] Error creating parent:', error);
+      console.error('[ProjectPage] Error stack:', error.stack);
+    }
   };
 
   createNewNode = async (parentId) => {
@@ -279,49 +388,44 @@ class ProjectPage extends Component {
       selectedIteration,
     );
 
-    console.log(node);
+    console.log('[ProjectPage] Node created via backend:', node);
 
-    const newState = {
-      ...this.state,
-      nodes: NodeController.getNodes(),
-      parents: ParentController.getParents(),
+    // The backend will emit UpdateProjectPageState event with updated nodes and parents
+    // The event listener will automatically update the state, so we don't need to manually refresh
+    // Just update the mustFocusNodeTitle flag
+    this.setState({
       mustFocusNodeTitle: true,
-    };
-
-    ipcRenderer.invoke('api:setProjectState', {
-      // eslint-disable-next-line guard-for-in,no-restricted-syntax
-      ...newState,
     });
   };
 
-  createIteration = (title) => {
-    IterationController.createIteration(title);
+  createIteration = async (title) => {
+    await IterationController.createIteration(title);
 
     const newState = {
       ...this.state,
-      iterations: IterationController.getIterations(),
+      iterations: await IterationController.getIterations(),
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
+    await tauriInvoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       ...newState,
     });
   };
 
-  editIteration = (iteration) => {
+  editIteration = async (iteration) => {
     // open modal to edit iteration
     const newState = {
       ...this.state,
       currentEditIteration: iteration,
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
+    await tauriInvoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       ...newState,
     });
   };
 
-  deleteIteration = (iterationId) => {
+  deleteIteration = async (iterationId) => {
     if (iterationId === 0) {
       message.error('Cannot delete backlog');
       return;
@@ -341,189 +445,194 @@ class ProjectPage extends Component {
       return;
     }
 
-    IterationController.deleteIteration(iterationId);
+    await IterationController.deleteIteration(iterationId);
 
     const newState = {
       ...this.state,
-      iterations: IterationController.getIterations(),
-      selectedIteration: 0,
+      iterations: await IterationController.getIterations(),
+      selectedIteration: '',
+      mustFocusNodeTitle: false,
+      mustFocusParentTitle: false,
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
+    await tauriInvoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       ...newState,
     });
   };
 
-  handleIterationCancel = () => {
+  handleIterationCancel = async () => {
     const newState = {
       ...this.state,
       currentEditIteration: null,
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
+    await tauriInvoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       ...newState,
     });
   };
 
-  setSelectedIteration = (iteration) => {
+  setSelectedIteration = async (iteration) => {
     // TODO: IterationController.selectIteration(iteration); // Save selected iteration to db
     const newState = {
       ...this.state,
-      selectedIteration: iteration,
+      selectedIteration: iteration || '',
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
+    await tauriInvoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       ...newState,
     });
   };
 
-  updateNodeTitle = (newTitle, nodeId) => {
-    this.updateNodeProperty(`title`, nodeId, newTitle);
+  updateNodeTitle = async (newTitle, nodeId) => {
+    await this.updateNodeProperty(`title`, nodeId, newTitle);
     const newState = {
       ...this.state,
-      nodes: NodeController.getNodes(),
+      nodes: await NodeController.getNodes(),
       mustFocusNodeTitle: false,
     };
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
+    await tauriInvoke('api:setProjectState', {
+      newState: newState,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
-  showModal = (node) => {
+  showModal = async (node) => {
+    console.log('[ProjectPage] showModal called for node:', node.id);
     const newState = {
       ...this.state,
       nodeModalVisible: true,
       modalNodeId: node.id,
     };
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
+    // Set local state immediately (like Electron) so modal shows right away
+    this.setState(newState);
+    // Also update backend state (for consistency)
+    await tauriInvoke('api:setProjectState', {
+      newState: newState,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
-  showParentModal = (parent) => {
+  showParentModal = async (parent) => {
+    console.log('[ProjectPage] showParentModal called for parent:', parent.id);
     const newState = {
       ...this.state,
       parentModalVisible: true,
       modalParentId: parent.id,
     };
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
+    // Set local state immediately (like Electron) so modal shows right away
+    this.setState(newState);
+    // Also update backend state (for consistency)
+    await tauriInvoke('api:setProjectState', {
+      newState: newState,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
-  handleParentModalCancel = () => {
+  handleParentModalCancel = async () => {
     const newState = {
       ...this.state,
       parentModalVisible: false,
       modalParentId: null,
     };
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
+    // Set local state immediately
+    this.setState(newState);
+    await tauriInvoke('api:setProjectState', {
+      newState: newState,
     });
   };
 
-  deleteNode = (nodeId, parentId) => {
+  deleteNode = async (nodeId, parentId) => {
     const { isTimerRunning } = this.state;
     if (isTimerRunning) {
       message.error('Stop timer before deleting');
       return;
     }
 
-    NodeController.deleteNode(nodeId, parentId);
+    await NodeController.deleteNode(nodeId, parentId);
 
     const newState = {
       ...this.state,
-      nodes: NodeController.getNodes(),
-      parents: ParentController.getParents(),
+      nodes: await NodeController.getNodes(),
+      parents: await ParentController.getParents(),
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
+    await tauriInvoke('api:setProjectState', {
       // eslint-disable-next-line guard-for-in,no-restricted-syntax
       ...newState,
     });
   };
 
-  deleteParent = (parent) => {
+  deleteParent = async (parent) => {
     if (parent.nodeIds.length > 0) {
       message.error('Empty parent before deleting');
       return;
     }
 
-    ParentController.deleteParent(parent.id);
+    await ParentController.deleteParent(parent.id);
 
     const newState = {
       ...this.state,
-      parents: ParentController.getParents(),
-      parentOrder: ParentController.getParentOrder(),
+      parents: await this.loadParentsFromBackend(),
+      parentOrder: await this.loadParentOrderFromBackend(),
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
-    });
+    await tauriInvoke('api:setProjectState', newState);
+    this.setState(newState);
 
     message.success('Deleted parent');
   };
 
-  handleOk = () => {
-    const { modalNodeId, nodes, timerPreferences } = this.state;
+  handleOk = async () => {
+    const { modalNodeId, nodes } = this.state;
+    const timerPreferences = await timerController.getTimerPreferences();
 
-    ipcRenderer.send(
-      'MSG_FROM_RENDERER',
-      nodes[modalNodeId],
-      this.projectName,
-      this.state,
-      timerPreferences,
-    );
+    await tauriInvoke('msg_from_renderer', {
+      node: nodes[modalNodeId],
+      projectName: this.projectName,
+      stateInit: this.state,
+      timerPrefs: timerPreferences,
+    });
     const newState = {
       ...this.state,
       nodeModalVisible: false,
       currentNodeSelectedInTimer: modalNodeId,
       modalNodeId: null,
     };
+    // Set local state immediately so modal closes right away
+    this.setState(newState);
     // TODO: don't persist this
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
+    await tauriInvoke('api:setProjectState', {
+      newState: newState,
     });
     return undefined;
   };
 
   // eslint-disable-next-line class-methods-use-this
-  handleCancel = () => {
+  handleCancel = async () => {
     const newState = {
       ...this.state,
       nodeModalVisible: false,
       modalNodeId: null,
     };
-
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
+    // Set local state immediately so modal closes right away
+    this.setState(newState);
+    await tauriInvoke('api:setProjectState', {
+      newState: newState,
     });
     return undefined;
   };
 
-  syncTrelloCard = (node) => {
-    console.log('syncing trello card');
-    fetch(
-      `https://api.trello.com/1/cards/${node.trello.id}?key=${this.trelloKey}&token=${this.trelloToken}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      },
-    )
-      .then((response) => {
-        console.log(`Response: ${response.status} ${response.statusText}`);
-        return response.text();
-      })
-      .then((text) => {
-        const card = JSON.parse(text);
+  syncTrelloCard = async (node) => {
+    const { fetchTrelloCard } = await import('../../services/TrelloSyncService');
+    try {
+      const card = await fetchTrelloCard(node.trello.id, {
+        key: this.trelloKey,
+        token: this.trelloToken,
+      });
+      if (!card) return undefined;
         const local = new Date(node.lastUpdated);
         const remote = new Date(card.dateLastActivity);
 
@@ -534,15 +643,15 @@ class ProjectPage extends Component {
 
         if (local > remote) {
           console.log('need to update remote');
-          NodeController.updateNodeProperty('title', node.id, node.title);
+          await NodeController.updateNodeProperty('title', node.id, node.title);
           return undefined;
         }
         if (!node.lastUpdated || remote.getTime() - local.getTime() >= 10000) {
           console.log('need to update local');
           console.log(card);
-          NodeController.updateNodeProperty('trello', node.id, card, false);
+          await NodeController.updateNodeProperty('trello', node.id, card, false);
           if (card.name !== node.title) {
-            NodeController.updateNodeProperty(
+            await NodeController.updateNodeProperty(
               'title',
               node.id,
               card.name,
@@ -554,7 +663,7 @@ class ProjectPage extends Component {
           const { cleanDescription, banflowFields } =
             ProjectPage.parseBanflowDescription(card.desc);
           if (cleanDescription !== node.description) {
-            NodeController.updateNodeProperty(
+            await NodeController.updateNodeProperty(
               'description',
               node.id,
               cleanDescription,
@@ -564,7 +673,7 @@ class ProjectPage extends Component {
 
           // Update BanFlow fields if they exist
           if (banflowFields.timeSpent !== undefined) {
-            NodeController.updateNodeProperty(
+            await NodeController.updateNodeProperty(
               'timeSpent',
               node.id,
               banflowFields.timeSpent,
@@ -572,12 +681,13 @@ class ProjectPage extends Component {
             );
           }
 
-          const currentParent = ParentController.getParents()[node.parent];
+          const currentParent = (await ParentController.getParents())[node.parent];
           const newParentId = card.idList;
           if (currentParent.trello && currentParent.trello.id !== newParentId) {
             console.log('need to update parent');
             // get parent where parent.trello.id === newParentId
-            const newParent = Object.values(ParentController.getParents()).find(
+            const allParents = await ParentController.getParents();
+            const newParent = Object.values(allParents).find(
               (parent) => parent.trello.id === newParentId,
             );
 
@@ -596,31 +706,30 @@ class ProjectPage extends Component {
               ...newParent,
               nodeIds: finishNodeIds,
             };
-            ParentController.updateNodesInParents(newStart, newFinish, node.id);
+            await ParentController.updateNodesInParents(newStart, newFinish, node.id);
           }
 
           const newState = {
             ...this.state,
             nodeModalVisible: false,
-            nodes: NodeController.getNodes(),
-            parents: ParentController.getParents(),
+            nodes: await NodeController.getNodes(),
+            parents: await ParentController.getParents(),
           };
-          ipcRenderer.invoke('api:setProjectState', {
+          await tauriInvoke('api:setProjectState', {
             ...newState,
           });
           return undefined;
         }
         console.log('nothing to sync here...');
         return undefined;
-      })
-      .catch((err) => {
-        console.error(err);
-        return undefined;
-      });
+    } catch (err) {
+      console.error(err);
+      return undefined;
+    }
   };
 
   // eslint-disable-next-line class-methods-use-this
-  updateNodeProperty = (
+  updateNodeProperty = async (
     propertyToUpdate,
     nodeId,
     newValue,
@@ -638,38 +747,32 @@ class ProjectPage extends Component {
       nodes: NodeController.getNodes(),
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
+    await tauriInvoke('api:setProjectState', {
+      newState: newState,
     });
   };
 
   // eslint-disable-next-line class-methods-use-this
-  updateParentProperty = (propertyToUpdate, parentId, newValue) => {
-    ParentController.updateParentProperty(propertyToUpdate, parentId, newValue);
+  updateParentProperty = async (propertyToUpdate, parentId, newValue) => {
+    await ParentController.updateParentProperty(propertyToUpdate, parentId, newValue);
 
-    const newState = {
-      ...this.state,
-      parents: ParentController.getParents(),
-    };
-
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
-    });
+    // The backend will emit UpdateProjectPageState event with updated parents
+    // The event listener will automatically update the state, so we don't need to manually refresh
   };
 
-  updateParents = (controllerFunction) => {
-    controllerFunction();
+  updateParents = async (controllerFunction) => {
+    await controllerFunction();
     const currentState = this.state;
 
     const newState = {
       ...currentState,
-      parents: ParentController.getParents(),
-      parentOrder: ParentController.getParentOrder(),
-      nodes: NodeController.getNodes(), // Also refresh nodes to reflect any property changes (e.g., completion status)
+      parents: await ParentController.getParents(),
+      parentOrder: await ParentController.getParentOrder(),
+      nodes: await NodeController.getNodes(), // Also refresh nodes to reflect any property changes (e.g., completion status)
     };
 
-    ipcRenderer.invoke('api:setProjectState', {
-      ...newState,
+    await tauriInvoke('api:setProjectState', {
+      newState: newState,
     });
   };
 
@@ -730,168 +833,75 @@ class ProjectPage extends Component {
     return filterRules.every((rule) => this.evaluateRule(node, rule));
   };
 
-  syncProject = (trello) => {
-    const { parents } = this.state;
+  loadParentsFromBackend = async () => {
+    const parents = await tauriInvoke('api:getParents', {
+      projectName: this.projectName,
+    });
+    return parents || {};
+  };
 
-    fetch(
-      `https://api.trello.com/1/boards/${trello.id}/lists?key=${this.trelloKey}&token=${this.trelloToken}`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      },
-    )
-      .then((response) => {
-        console.log(`Response: ${response.status} ${response.statusText}`);
-        return response.text();
-      })
-      .then((text) => {
-        console.log(JSON.parse(text));
-        const lists = JSON.parse(text);
-        lists.forEach((list) => {
-          // check if parent exists
-          const parentExists = Object.values(parents).find(
-            (parent) => parent?.trello?.id === list.id,
-          );
-          if (!parentExists) {
-            ParentController.createParent(list.name, list);
-          } else {
-            console.log('Parent already exists');
-          }
-        });
-        return undefined;
-      })
-      .then(() => {
-        // refresh page
-        fetch(
-          `https://api.trello.com/1/boards/${trello.id}/cards?key=${this.trelloKey}&token=${this.trelloToken}`,
-          {
-            method: 'GET',
-          },
-        )
-          .then((response) => {
-            console.log(`Response: ${response.status} ${response.statusText}`);
-            return response.text();
-          })
-          .then((text) => {
-            console.log(JSON.parse(text));
-            const cards = JSON.parse(text);
-            const { nodes } = this.state;
-            cards.forEach((card) => {
-              // check if node exists
-              const nodeExists = Object.values(nodes).find(
-                (node) => node?.trello?.id === card.id,
-              );
-              const nodeParent = Object.values(
-                ParentController.getParents(),
-              ).find((parent) => parent?.trello?.id === card.idList);
+  loadParentOrderFromBackend = async () => {
+    const parentOrder = await tauriInvoke('api:getParentOrder', {
+      projectName: this.projectName,
+    });
+    return parentOrder || [];
+  };
 
-              const nodeParentId = nodeParent.id;
-              if (!nodeExists) {
-                console.log('node doesnt exist');
-                NodeController.createNode(
-                  'child',
-                  card.name,
-                  nodeParentId,
-                  0,
-                  card,
-                );
-              } else {
-                console.log('Node already exists');
-                // Check if node needs to be moved to a different parent/column
-                const currentParent =
-                  ParentController.getParents()[nodeExists.parent];
-                const newParentId = card.idList;
-
-                if (
-                  currentParent.trello &&
-                  currentParent.trello.id !== newParentId
-                ) {
-                  console.log('Node needs to be moved to different column');
-                  const newParent = Object.values(
-                    ParentController.getParents(),
-                  ).find((parent) => parent.trello.id === newParentId);
-
-                  const startNodeIds = Array.from(currentParent.nodeIds);
-                  // remove node from current parent
-                  startNodeIds.splice(startNodeIds.indexOf(nodeExists.id), 1);
-                  const newStart = {
-                    ...currentParent,
-                    nodeIds: startNodeIds,
-                  };
-
-                  const finishNodeIds = Array.from(newParent.nodeIds);
-                  // add node to new parent
-                  finishNodeIds.push(nodeExists.id);
-                  const newFinish = {
-                    ...newParent,
-                    nodeIds: finishNodeIds,
-                  };
-                  ParentController.updateNodesInParents(
-                    newStart,
-                    newFinish,
-                    nodeExists.id,
-                  );
-                }
-
-                // Also update node properties if they've changed
-                if (card.name !== nodeExists.title) {
-                  NodeController.updateNodeProperty(
-                    'title',
-                    nodeExists.id,
-                    card.name,
-                    false,
-                  );
-                }
-
-                // Parse description and BanFlow fields
-                const { cleanDescription, banflowFields } =
-                  this.parseBanflowDescription(card.desc);
-                if (cleanDescription !== nodeExists.description) {
-                  NodeController.updateNodeProperty(
-                    'description',
-                    nodeExists.id,
-                    cleanDescription,
-                    false,
-                  );
-                }
-
-                // Update BanFlow fields if they exist
-                if (banflowFields.timeSpent !== undefined) {
-                  NodeController.updateNodeProperty(
-                    'timeSpent',
-                    nodeExists.id,
-                    banflowFields.timeSpent,
-                    false,
-                  );
-                }
-
-                // Update trello data
-                NodeController.updateNodeProperty(
-                  'trello',
-                  nodeExists.id,
-                  card,
-                  false,
-                );
-              }
-            });
-            return undefined;
-          })
-          .then(() => {
-            window.location.reload();
-            return undefined;
-          })
-          .catch((err) => {
-            console.error(err);
-            return undefined;
-          });
-        return undefined;
-      })
-      .catch((err) => {
-        console.error(err);
-        return undefined;
+  syncProject = async (trello) => {
+    try {
+      message.loading({
+        content: 'Loading Trello board...',
+        key: 'trello-sync',
       });
+
+      const trelloAuth = `key=${this.trelloKey}&token=${this.trelloToken}`;
+      const [listsResponse, cardsResponse] = await Promise.all([
+        fetch(
+          `https://api.trello.com/1/boards/${trello.id}/lists?${trelloAuth}`,
+          { method: 'GET', headers: { Accept: 'application/json' } },
+        ),
+        fetch(
+          `https://api.trello.com/1/boards/${trello.id}/cards?${trelloAuth}`,
+          { method: 'GET', headers: { Accept: 'application/json' } },
+        ),
+      ]);
+
+      if (!listsResponse.ok) {
+        throw new Error(`Failed to load Trello lists (${listsResponse.status})`);
+      }
+      if (!cardsResponse.ok) {
+        throw new Error(`Failed to load Trello cards (${cardsResponse.status})`);
+      }
+
+      const [lists, cards] = await Promise.all([
+        listsResponse.json(),
+        cardsResponse.json(),
+      ]);
+
+      message.loading({
+        content: `Applying sync (${lists.length} lists, ${cards.length} cards)...`,
+        key: 'trello-sync',
+      });
+
+      const syncResult = await tauriInvoke('api:syncTrelloBoard', {
+        projectName: this.projectName,
+        lists,
+        cards,
+      });
+
+      const newState = {
+        ...this.state,
+        nodes: syncResult?.nodes || {},
+        parents: syncResult?.parents || {},
+        parentOrder: syncResult?.parentOrder || [],
+      };
+      this.setState(newState);
+      await tauriInvoke('api:setProjectState', newState);
+      message.success({ content: 'Trello sync complete', key: 'trello-sync' });
+    } catch (err) {
+      console.error(err);
+      message.error({ content: 'Trello sync failed', key: 'trello-sync' });
+    }
   };
 
   render() {
@@ -1019,10 +1029,10 @@ class ProjectPage extends Component {
                     this.createIteration(newItem);
                   }
                 }}
-                value={selectedIteration}
+                value={String(selectedIteration || '')}
                 size="small"
               >
-                <Select.Option key={0} value={0}>
+                <Select.Option key="backlog" value="">
                   Backlog
                 </Select.Option>
                 {iterations &&
@@ -1032,7 +1042,7 @@ class ProjectPage extends Component {
                     </Select.Option>
                   ))}
               </Select>
-              {selectedIteration !== 0 && (
+              {selectedIteration && selectedIteration !== '' && (
                 <Button
                   size="small"
                   onClick={() => this.editIteration(selectedIteration)}
@@ -1423,7 +1433,7 @@ class ProjectPage extends Component {
           parentOrder={parentOrder}
           parents={parents}
           saveTime={this.updateNodeProperty}
-          selectedIteration={selectedIteration}
+          selectedIteration={String(selectedIteration || '')}
           state={this.state}
           showModal={this.showModal}
           updateNodeTitle={this.updateNodeTitle}

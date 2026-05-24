@@ -42,6 +42,7 @@ import {
   EditOutlined,
 } from '@ant-design/icons';
 import { useGit } from '../../../contexts/GitContext';
+import { formatGitDate } from '../../../utils/gitDate';
 import './GitOperations.scss';
 
 const { Title, Text, Paragraph } = Typography;
@@ -805,7 +806,9 @@ function GitOperations({ onViewDiff }) {
                           {stash.message || `stash@{${index}}`}
                         </Text>
                         <Space size="small">
-                          <Text type="secondary">{stash.date}</Text>
+                          <Text type="secondary">
+                            {formatGitDate(stash.date, (d) => d.toLocaleString())}
+                          </Text>
                           <Text type="secondary">by {stash.author_name}</Text>
                           {stashFiles[index] && (
                             <Text type="secondary">

@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
 import { message } from 'antd';
 import { useHeartbeat } from '../../../hooks/useHeartbeat';
 import { isImageFile, isAsepriteFile } from './utils';
@@ -65,7 +65,7 @@ export const useImageLoading = (
 
       setLoadingImages(true);
       try {
-        const currentResult = await ipcRenderer.invoke(
+        const currentResult = await await tauriInvoke(
           'git:readImageFile',
           currentRepository,
           selectedFile,
@@ -77,7 +77,7 @@ export const useImageLoading = (
         }
 
         const gitRef = 'HEAD';
-        const originalResult = await ipcRenderer.invoke(
+        const originalResult = await await tauriInvoke(
           'git:getImageFromGit',
           currentRepository,
           selectedFile,
@@ -130,7 +130,7 @@ export const useAsepriteLoading = (
 
       setLoadingAseprite(true);
       try {
-        const currentResult = await ipcRenderer.invoke(
+        const currentResult = await await tauriInvoke(
           'git:readAsepriteFile',
           currentRepository,
           selectedFile,
@@ -142,7 +142,7 @@ export const useAsepriteLoading = (
         }
 
         const gitRef = 'HEAD';
-        const originalResult = await ipcRenderer.invoke(
+        const originalResult = await await tauriInvoke(
           'git:getAsepriteFromGit',
           currentRepository,
           selectedFile,
@@ -183,7 +183,7 @@ export const useFullFileLoading = (
     const loadFullFile = async () => {
       if (viewFullFile && selectedFile && currentRepository) {
         try {
-          const result = await ipcRenderer.invoke(
+          const result = await await tauriInvoke(
             'git:readFile',
             currentRepository,
             selectedFile,

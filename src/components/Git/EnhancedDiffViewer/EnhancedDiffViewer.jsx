@@ -6,7 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
 import {
   Card,
   Select,
@@ -166,7 +166,7 @@ function EnhancedDiffViewer({
     setFileSearchTerm('');
     setLoadingFiles(true);
     try {
-      const files = await ipcRenderer.invoke(
+      const files = await await tauriInvoke(
         'git:listFiles',
         currentRepository,
       );
@@ -298,7 +298,7 @@ function EnhancedDiffViewer({
     setSelectedFile(filePath);
     // Load file for editing
     try {
-      const result = await ipcRenderer.invoke(
+      const result = await await tauriInvoke(
         'git:readFile',
         currentRepository,
         filePath,

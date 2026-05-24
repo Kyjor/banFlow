@@ -1,37 +1,39 @@
 /* eslint-disable react/no-unstable-nested-components */
-import { Button, Input, Space } from 'antd';
+import { Button, Input, Space, message } from 'antd';
 import React from 'react';
 
-function APIKeyInput() {
+function APIKeyInput({ onSaved }) {
   const [passwordVisible, setPasswordVisible] = React.useState(false);
-  const trelloToken = localStorage.getItem('trelloToken');
+  const [token, setToken] = React.useState(
+    () => localStorage.getItem('trelloToken') || '',
+  );
+
+  const handleSave = () => {
+    const trimmed = token.trim();
+    localStorage.setItem('trelloToken', trimmed);
+    setToken(trimmed);
+    onSaved?.(trimmed);
+    message.success('Trello token saved');
+  };
 
   return (
     <Space direction="vertical">
       <Space direction="horizontal">
         <Input.Password
           placeholder="input trello API key"
-          defaultValue={trelloToken}
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
           visibilityToggle={{
             visible: passwordVisible,
             onVisibleChange: setPasswordVisible,
           }}
-          id="trelloAPIKey"
+          onPressEnter={handleSave}
         />
         <Button
           style={{
             width: 80,
           }}
-          onClick={() => {
-            localStorage.setItem(
-              'trelloToken',
-              document.getElementById('trelloAPIKey').value,
-            );
-            console.log(
-              'value : ',
-              document.getElementById('trelloAPIKey').value,
-            );
-          }}
+          onClick={handleSave}
         >
           Save
         </Button>

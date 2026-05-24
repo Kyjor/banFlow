@@ -5,7 +5,7 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
 import PropTypes from 'prop-types';
 import {
   Card,
@@ -240,7 +240,7 @@ function MergeConflictResolver({
       }
 
       try {
-        const result = await ipcRenderer.invoke(
+        const result = await await tauriInvoke(
           'git:readFile',
           currentRepository,
           selectedFile,
@@ -451,7 +451,7 @@ function MergeConflictResolver({
     setIsSaving(true);
     try {
       const resolvedContent = buildResolvedContent(fileContent, conflicts);
-      const result = await ipcRenderer.invoke(
+      const result = await await tauriInvoke(
         'git:writeFile',
         currentRepository,
         selectedFile,

@@ -1,5 +1,5 @@
-const Aseprite = require('ase-parser');
-const sharp = require('sharp');
+import Aseprite from 'ase-parser';
+import sharp from 'sharp';
 
 class AsepriteService {
   /**

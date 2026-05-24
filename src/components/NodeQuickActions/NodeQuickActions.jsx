@@ -1,40 +1,31 @@
 import React from 'react';
-import { Button, Dropdown, Menu, Popconfirm } from 'antd';
+import { Button, Dropdown, Popconfirm } from 'antd';
 import PropTypes from 'prop-types';
 
-const { Item } = Menu;
-
-function Content(props) {
-  const { deleteNode, node } = props;
-  return (
-    <Menu>
-      <Item key="0">
-        <Popconfirm
-          title="Are you sure delete this node?"
-          onConfirm={() => deleteNode(node.id, node.parent)}
-          onCancel={() => {}}
-          okText="Yes"
-          cancelText="No"
-        >
-          <Button style={{ border: 'none', width: '100%' }}>Delete Node</Button>
-        </Popconfirm>
-      </Item>
-    </Menu>
-  );
-}
-
-Content.propTypes = {
-  deleteNode: PropTypes.func.isRequired,
-  // eslint-disable-next-line react/forbid-prop-types
-  node: PropTypes.object.isRequired,
-};
-
-export default function NodeQuickActions(props) {
-  const { button, deleteNode, node } = props;
+export default function NodeQuickActions({ button, deleteNode, node }) {
+  const menu = {
+    items: [
+      {
+        key: 'delete',
+        label: (
+          <Popconfirm
+            title="Are you sure delete this node?"
+            onConfirm={() => deleteNode(node.id, node.parent)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button type="text" block style={{ border: 'none', width: '100%' }}>
+              Delete Node
+            </Button>
+          </Popconfirm>
+        ),
+      },
+    ],
+  };
 
   return (
     <div>
-      <Dropdown overlay={<Content node={node} deleteNode={deleteNode} />}>
+      <Dropdown menu={menu} trigger={['click']}>
         {button}
       </Dropdown>
     </div>

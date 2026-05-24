@@ -31,7 +31,7 @@ import {
   SettingOutlined,
   HistoryOutlined,
 } from '@ant-design/icons';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
 import { useGit } from '../../../contexts/GitContext';
 import { useHeartbeat } from '../../../hooks/useHeartbeat';
 import './IntegratedEditor.scss';
@@ -108,7 +108,7 @@ function IntegratedEditor({
       }
 
       try {
-        const result = await ipcRenderer.invoke(
+        const result = await await tauriInvoke(
           'git:readFile',
           currentRepository,
           filename,
@@ -159,7 +159,7 @@ function IntegratedEditor({
     }
 
     try {
-      const result = await ipcRenderer.invoke(
+      const result = await await tauriInvoke(
         'git:writeFile',
         currentRepository,
         selectedFile,
@@ -222,7 +222,7 @@ function IntegratedEditor({
     }
 
     try {
-      const result = await ipcRenderer.invoke(
+      const result = await await tauriInvoke(
         'git:readFile',
         state.currentRepository,
         state.selectedFile,

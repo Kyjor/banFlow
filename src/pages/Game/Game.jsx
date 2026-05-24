@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 import {
   Card,
   Button,
@@ -23,6 +23,7 @@ class GameLibraryPage extends Component {
     super(props);
 
     this.currentProject = localStorage.getItem('currentProject');
+    this.projectName = this.currentProject;
 
     this.state = {
       lokiLoaded: false,
@@ -35,11 +36,15 @@ class GameLibraryPage extends Component {
     };
   }
 
-  componentDidMount() {
-    const newState = ipcRenderer.sendSync(
-      'api:initializeProjectState',
-      this.projectName,
-    );
+  async componentDidMount() {
+    const projectName = this.projectName || this.currentProject;
+    if (!projectName) {
+      return;
+    }
+
+    const newState = await tauriSendSync('api:initializeProjectState', {
+      projectName,
+    });
 
     this.setState((prevState) => ({
       ...prevState,

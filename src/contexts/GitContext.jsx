@@ -8,7 +8,7 @@ import React, {
   useMemo,
 } from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../utils/tauri';
 import { message } from 'antd';
 import HeartbeatService from '../services/HeartbeatService';
 
@@ -208,10 +208,9 @@ export function GitProvider({ children }) {
   }, [state]);
 
   // Configuration: Heartbeat interval in milliseconds (default: 5 seconds)
-  // Can be overridden via environment variable or settings
+  // Can be overridden via settings
   const HEARTBEAT_INTERVAL_MS = parseInt(
-    process.env.REACT_APP_GIT_HEARTBEAT_INTERVAL ||
-      localStorage.getItem('gitHeartbeatInterval') ||
+    localStorage.getItem('gitHeartbeatInterval') ||
       '5000',
     10,
   );
@@ -239,10 +238,17 @@ export function GitProvider({ children }) {
     async (repoPath) => {
       try {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-        const repoInfo = await ipcRenderer.invoke(
-          'git:addRepository',
-          repoPath,
-        );
+        // If no repoPath provided, open dialog first
+        let selectedPath = repoPath;
+        if (!selectedPath) {
+          const dialogPath = await tauriInvoke('git:selectRepository');
+          if (!dialogPath) {
+            dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+            return null;
+          }
+          selectedPath = dialogPath;
+        }
+        const repoInfo = await tauriInvoke('git:addRepository', { repoPath: selectedPath });
         dispatch({ type: GitActionTypes.ADD_REPOSITORY, payload: repoInfo });
         showSuccess('Repository added', repoInfo.name);
         return repoInfo;
@@ -260,9 +266,9 @@ export function GitProvider({ children }) {
     async (repoPath) => {
       try {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-        const status = await ipcRenderer.invoke(
+        const status = await tauriInvoke(
           'git:switchRepository',
-          repoPath,
+          { repoPath },
         );
         dispatch({
           type: GitActionTypes.SET_CURRENT_REPOSITORY,
@@ -286,7 +292,7 @@ export function GitProvider({ children }) {
 
   const selectRepository = useCallback(async () => {
     try {
-      const selectedPath = await ipcRenderer.invoke('git:selectRepository');
+      const selectedPath = await tauriInvoke('git:selectRepository');
       if (selectedPath) {
         return await addRepository(selectedPath);
       }
@@ -299,7 +305,13 @@ export function GitProvider({ children }) {
 
   const refreshRepositoryStatus = useCallback(async () => {
     try {
-      const status = await ipcRenderer.invoke('git:getRepositoryStatus');
+      // Get current repository path from state
+      const currentRepoPath = state.currentRepository;
+      if (!currentRepoPath) {
+        console.warn('No current repository selected, cannot refresh status');
+        return;
+      }
+      const status = await tauriInvoke('git:getRepositoryStatus', { repoPath: currentRepoPath });
       dispatch({
         type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
         payload: status,
@@ -309,7 +321,7 @@ export function GitProvider({ children }) {
       handleError(error, 'refresh status');
       throw error;
     }
-  }, [handleError]);
+  }, [handleError, state]);
 
   // Keep refreshRepositoryStatus ref in sync (after function is defined)
   useEffect(() => {
@@ -324,17 +336,24 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
-          'git:createBranch',
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        await tauriInvoke('git:createBranch', {
+          repoPath: currentRepoPath,
           branchName,
           startPoint,
-        );
+        });
+        const status = await tauriInvoke('git:getRepositoryStatus', {
+          repoPath: currentRepoPath,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
-          payload: result,
+          payload: status,
         });
         showSuccess('Branch created', branchName);
-        return result;
+        return status;
       } catch (error) {
         handleError(error, 'create branch');
         throw error;
@@ -345,7 +364,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const switchBranch = useCallback(
@@ -355,13 +374,23 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:switchBranch', branchName);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        await tauriInvoke('git:switchBranch', {
+          repoPath: currentRepoPath,
+          branchName,
+        });
+        const status = await tauriInvoke('git:getRepositoryStatus', {
+          repoPath: currentRepoPath,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
-          payload: result,
+          payload: status,
         });
         showSuccess('Switched to branch', branchName);
-        return result;
+        return status;
       } catch (error) {
         handleError(error, 'switch branch');
         throw error;
@@ -372,7 +401,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const deleteBranch = useCallback(
@@ -382,17 +411,24 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
-          'git:deleteBranch',
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        await tauriInvoke('git:deleteBranch', {
+          repoPath: currentRepoPath,
           branchName,
           force,
-        );
+        });
+        const status = await tauriInvoke('git:getRepositoryStatus', {
+          repoPath: currentRepoPath,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
-          payload: result,
+          payload: status,
         });
         showSuccess('Branch deleted', branchName);
-        return result;
+        return status;
       } catch (error) {
         handleError(error, 'delete branch');
         throw error;
@@ -403,18 +439,26 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
-  const getBranchesWithDates = useCallback(async () => {
+  const getBranchesWithDates = useCallback(async (repoPath = null) => {
     try {
-      const branches = await ipcRenderer.invoke('git:getBranchesWithDates');
-      return branches;
+      const currentRepoPath = repoPath || state.currentRepository;
+      if (!currentRepoPath) {
+        // Silently return empty array if no repository is selected
+        return [];
+      }
+      const branches = await tauriInvoke('git:getBranchesWithDates', { repoPath: currentRepoPath });
+      return (branches || []).map((branch) => ({
+        ...branch,
+        lastCommitDate: branch.lastCommitDate || branch.date || null,
+      }));
     } catch (error) {
       handleError(error, 'get branches with dates');
       throw error;
     }
-  }, [handleError]);
+  }, [handleError, state.currentRepository]);
 
   const stageFiles = useCallback(
     async (files) => {
@@ -423,7 +467,14 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:stageFiles', files);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:stageFiles', {
+          repoPath: currentRepoPath,
+          files,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result,
@@ -440,7 +491,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const unstageFiles = useCallback(
@@ -450,7 +501,14 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:unstageFiles', files);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:unstageFiles', {
+          repoPath: currentRepoPath,
+          files,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result,
@@ -467,7 +525,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const commit = useCallback(
@@ -477,10 +535,17 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke(
           'git:commit',
-          commitMessage,
-          description,
+          {
+            repoPath: currentRepoPath,
+            message: commitMessage,
+            description,
+          },
         );
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
@@ -498,7 +563,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const fetch = useCallback(
@@ -508,7 +573,15 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:fetch', remote, prune);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:fetch', {
+          repoPath: currentRepoPath,
+          remote,
+          prune,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result.status,
@@ -525,7 +598,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const pull = useCallback(
@@ -535,11 +608,18 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke(
           'git:pull',
-          remote,
-          branch,
-          strategy,
+          {
+            repoPath: currentRepoPath,
+            remote,
+            branch,
+            strategy,
+          },
         );
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
@@ -563,7 +643,7 @@ export function GitProvider({ children }) {
         });
       }
     },
-    [handleError, showSuccess],
+    [handleError, showSuccess, state.currentRepository],
   );
 
   const push = useCallback(
@@ -573,7 +653,15 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:push', remote, branch);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:push', {
+          repoPath: currentRepoPath,
+          remote,
+          branch,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result.status,
@@ -601,9 +689,16 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke(
           'git:stashChanges',
-          stashMessage,
+          {
+            repoPath: currentRepoPath,
+            stashMessage,
+          },
         );
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
@@ -631,10 +726,17 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke(
           'git:stashFiles',
-          files,
-          stashMessage,
+          {
+            repoPath: currentRepoPath,
+            files,
+            stashMessage,
+          },
         );
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
@@ -659,31 +761,42 @@ export function GitProvider({ children }) {
 
   const getStashList = useCallback(async () => {
     try {
-      const stashList = await ipcRenderer.invoke('git:getStashList');
+      const currentRepoPath = state.currentRepository;
+      if (!currentRepoPath) {
+        return [];
+      }
+      const stashList = await tauriInvoke('git:getStashList', { repoPath: currentRepoPath });
       dispatch({ type: GitActionTypes.SET_STASH_LIST, payload: stashList });
       return stashList;
     } catch (error) {
       handleError(error, 'get stash list');
       throw error;
     }
-  }, [handleError]);
+  }, [handleError, state.currentRepository]);
 
   const getStashFiles = useCallback(
     async (stashIndex = 0) => {
       try {
-        return await ipcRenderer.invoke('git:getStashFiles', stashIndex);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          return { files: [], stat: '' };
+        }
+        return await tauriInvoke('git:getStashFiles', {
+          repoPath: currentRepoPath,
+          stashIndex,
+        });
       } catch (error) {
         handleError(error, 'get stash files');
         return { files: [], stat: '' };
       }
     },
-    [handleError],
+    [handleError, state.currentRepository],
   );
 
   const getStashFileDiff = useCallback(
     async (filename, stashIndex = 0) => {
       try {
-        return await ipcRenderer.invoke(
+        return await tauriInvoke(
           'git:getStashFileDiff',
           stashIndex,
           filename,
@@ -703,7 +816,14 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:applyStash', stashIndex);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:applyStash', {
+          repoPath: currentRepoPath,
+          stashIndex,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result.status,
@@ -730,7 +850,14 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:popStash', stashIndex);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:popStash', {
+          repoPath: currentRepoPath,
+          stashIndex,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result.status,
@@ -757,7 +884,14 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:dropStash', stashIndex);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const result = await tauriInvoke('git:dropStash', {
+          repoPath: currentRepoPath,
+          stashIndex,
+        });
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result.status,
@@ -781,7 +915,15 @@ export function GitProvider({ children }) {
   const getDiff = useCallback(
     async (file = null, staged = false) => {
       try {
-        const diff = await ipcRenderer.invoke('git:getDiff', file, staged);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const diff = await tauriInvoke('git:getDiff', {
+          repoPath: currentRepoPath,
+          file,
+          staged,
+        });
         dispatch({ type: GitActionTypes.SET_CURRENT_DIFF, payload: diff });
         return diff;
       } catch (error) {
@@ -789,16 +931,25 @@ export function GitProvider({ children }) {
         throw error;
       }
     },
-    [handleError],
+    [handleError, state.currentRepository],
   );
 
   const getCommitHistory = useCallback(
     async (options = {}) => {
       try {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-        const history = await ipcRenderer.invoke(
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        const history = await tauriInvoke(
           'git:getCommitHistory',
-          options,
+          {
+            repoPath: currentRepoPath,
+            maxCount: options.maxCount,
+            from: options.from,
+            to: options.to,
+          },
         );
         dispatch({ type: GitActionTypes.SET_COMMIT_HISTORY, payload: history });
         return history;
@@ -809,53 +960,75 @@ export function GitProvider({ children }) {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
       }
     },
-    [handleError],
+    [handleError, state.currentRepository],
   );
 
   const getCommitFiles = useCallback(
     async (commitHash) => {
       try {
-        return await ipcRenderer.invoke('git:getCommitFiles', commitHash);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        return await tauriInvoke('git:getCommitFiles', {
+          repoPath: currentRepoPath,
+          commitHash,
+        });
       } catch (error) {
         handleError(error, 'get commit files');
         throw error;
       }
     },
-    [handleError],
+    [handleError, state.currentRepository],
   );
 
   const getCommitDiff = useCallback(
     async (commitHash, file = null) => {
       try {
-        return await ipcRenderer.invoke('git:getCommitDiff', commitHash, file);
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        return await tauriInvoke('git:getCommitDiff', {
+          repoPath: currentRepoPath,
+          commitHash,
+          file,
+        });
       } catch (error) {
         handleError(error, 'get commit diff');
         throw error;
       }
     },
-    [handleError],
+    [handleError, state.currentRepository],
   );
 
   const getFileHistory = useCallback(
     async (filePath, maxCount = 50) => {
       try {
-        return await ipcRenderer.invoke(
+        const currentRepoPath = state.currentRepository;
+        if (!currentRepoPath) {
+          throw new Error('No repository selected');
+        }
+        return await tauriInvoke(
           'git:getFileHistory',
-          filePath,
-          maxCount,
+          {
+            repoPath: currentRepoPath,
+            filePath,
+            maxCount,
+          },
         );
       } catch (error) {
         handleError(error, 'get file history');
         throw error;
       }
     },
-    [handleError],
+    [handleError, state.currentRepository],
   );
 
   const getFileAtCommit = useCallback(
     async (filePath, commitHash) => {
       try {
-        return await ipcRenderer.invoke(
+        return await tauriInvoke(
           'git:getFileAtCommit',
           filePath,
           commitHash,
@@ -875,7 +1048,7 @@ export function GitProvider({ children }) {
         type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
         payload: true,
       });
-      const result = await ipcRenderer.invoke('git:undoLastOperation');
+      const result = await tauriInvoke('git:undoLastOperation');
       dispatch({
         type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
         payload: result,
@@ -898,7 +1071,7 @@ export function GitProvider({ children }) {
     async (token) => {
       try {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:authenticateGitHub',
           token,
         );
@@ -920,16 +1093,21 @@ export function GitProvider({ children }) {
       console.log('startOAuthFlow called, invoking IPC...');
       dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
       const { state: oauthState, authUrl } =
-        await ipcRenderer.invoke('git:startOAuthFlow');
+        await tauriInvoke('git:startOAuthFlow');
       console.log('IPC call returned, state:', oauthState, 'authUrl:', authUrl);
 
       // Listen for OAuth callback
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
+        let unlisten = null;
+        
         const handleCallback = async (
           event,
           { code, state: callbackState, error },
         ) => {
-          ipcRenderer.removeListener('github:oauth-callback', handleCallback);
+          if (unlisten) {
+            unlisten();
+            unlisten = null;
+          }
 
           if (error) {
             dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
@@ -944,7 +1122,7 @@ export function GitProvider({ children }) {
           }
 
           try {
-            const result = await ipcRenderer.invoke(
+            const result = await tauriInvoke(
               'git:completeOAuthFlow',
               code,
               callbackState,
@@ -959,12 +1137,21 @@ export function GitProvider({ children }) {
           }
         };
 
-        ipcRenderer.on('github:oauth-callback', handleCallback);
+        try {
+          unlisten = await tauriOn('github:oauth-callback', handleCallback);
+        } catch (err) {
+          dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
+          reject(new Error(`Failed to set up OAuth listener: ${err.message}`));
+          return;
+        }
 
         // Timeout after 5 minutes
         setTimeout(
           () => {
-            ipcRenderer.removeListener('github:oauth-callback', handleCallback);
+            if (unlisten) {
+              unlisten();
+              unlisten = null;
+            }
             dispatch({ type: GitActionTypes.SET_LOADING, payload: false });
             reject(new Error('OAuth flow timed out'));
           },
@@ -981,7 +1168,7 @@ export function GitProvider({ children }) {
   const loadGitHubRepositories = useCallback(async () => {
     try {
       dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-      const repos = await ipcRenderer.invoke('git:getGitHubRepositories');
+      const repos = await tauriInvoke('git:getGitHubRepositories');
       dispatch({
         type: GitActionTypes.SET_GITHUB_REPOSITORIES,
         payload: repos,
@@ -1020,7 +1207,7 @@ export function GitProvider({ children }) {
     async (repoUrl, targetPath) => {
       try {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:cloneRepository',
           repoUrl,
           targetPath,
@@ -1042,7 +1229,7 @@ export function GitProvider({ children }) {
     async (targetPath) => {
       try {
         dispatch({ type: GitActionTypes.SET_LOADING, payload: true });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:initRepository',
           targetPath,
         );
@@ -1061,7 +1248,7 @@ export function GitProvider({ children }) {
 
   const selectDirectory = useCallback(async () => {
     try {
-      return await ipcRenderer.invoke('git:selectDirectory');
+      return await tauriInvoke('git:selectDirectory');
     } catch (error) {
       handleError(error, 'select directory');
       return null;
@@ -1071,7 +1258,7 @@ export function GitProvider({ children }) {
   // Project-specific repository management
   const getProjectRepositoryStats = useCallback(async () => {
     try {
-      const stats = await ipcRenderer.invoke('git:getProjectRepositoryStats');
+      const stats = await tauriInvoke('git:getProjectRepositoryStats');
       return stats;
     } catch (error) {
       handleError(error, 'get project repository stats');
@@ -1081,7 +1268,7 @@ export function GitProvider({ children }) {
 
   const cleanupProjectRepositories = useCallback(async () => {
     try {
-      const removedPaths = await ipcRenderer.invoke(
+      const removedPaths = await tauriInvoke(
         'git:cleanupProjectRepositories',
       );
       if (removedPaths.length > 0) {
@@ -1099,7 +1286,13 @@ export function GitProvider({ children }) {
 
   const loadProjectRepositories = useCallback(async () => {
     try {
-      const repos = await ipcRenderer.invoke('git:loadProjectRepositories');
+      // Get current project name from localStorage (set by ProjectService)
+      const projectName = localStorage.getItem('currentProjectName');
+      if (!projectName) {
+        console.warn('No current project name found, cannot load repositories');
+        return [];
+      }
+      const repos = await tauriInvoke('git:loadProjectRepositories', { projectName });
       dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
       return repos;
     } catch (error) {
@@ -1112,10 +1305,10 @@ export function GitProvider({ children }) {
   useEffect(() => {
     const loadRepositories = async () => {
       try {
-        const repos = await ipcRenderer.invoke('git:getRepositories');
+        const repos = await tauriInvoke('git:getRepositories');
         dispatch({ type: GitActionTypes.SET_REPOSITORIES, payload: repos });
 
-        const currentRepo = await ipcRenderer.invoke(
+        const currentRepo = await tauriInvoke(
           'git:getCurrentRepository',
         );
         if (currentRepo) {
@@ -1148,23 +1341,19 @@ export function GitProvider({ children }) {
           // Only refresh if not currently performing an operation
           // Use refs to get current state and function to avoid stale closures
           const currentState = stateRef.current;
+          const refreshFn = refreshRepositoryStatusRef.current;
 
           if (
+            refreshFn &&
             !currentState.operationInProgress &&
             !currentState.isLoading &&
             currentState.currentRepository
           ) {
             try {
-              // Bypass refreshRepositoryStatus to avoid showing error toasts on poll failures
-              const status = await ipcRenderer.invoke(
-                'git:getRepositoryStatus',
-              );
-              dispatch({
-                type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
-                payload: status,
-              });
+              await refreshFn();
             } catch (error) {
-              // Silently fail - heartbeat polling errors should not spam the user with toasts
+              // Silently fail - we don't want to spam errors for heartbeat failures
+              // The error will be logged by refreshRepositoryStatus
               console.debug('Heartbeat refresh failed:', error);
             }
           }
@@ -1192,7 +1381,7 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke('git:discardChanges', files);
+        const result = await tauriInvoke('git:discardChanges', files);
         dispatch({
           type: GitActionTypes.UPDATE_REPOSITORY_STATUS,
           payload: result.status,
@@ -1219,7 +1408,7 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:deleteUntrackedFiles',
           files,
         );
@@ -1249,7 +1438,7 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:cleanUntrackedFiles',
           dryRun,
         );
@@ -1283,7 +1472,7 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:stageHunk',
           filePath,
           hunkIndex,
@@ -1314,7 +1503,7 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:discardHunk',
           filePath,
           hunkIndex,
@@ -1345,7 +1534,7 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:stageLines',
           filePath,
           hunkIndex,
@@ -1377,7 +1566,7 @@ export function GitProvider({ children }) {
           type: GitActionTypes.SET_OPERATION_IN_PROGRESS,
           payload: true,
         });
-        const result = await ipcRenderer.invoke(
+        const result = await tauriInvoke(
           'git:discardLines',
           filePath,
           hunkIndex,

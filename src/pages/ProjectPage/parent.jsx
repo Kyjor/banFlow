@@ -44,15 +44,22 @@ function ParentInnerList({
   saveTime,
   selectedIteration,
   updateNodeTitle,
-  filterNode,
+  filterNode = () => {},
   ...rest
 }) {
   const isInCurrentIteration = (node) => {
-    if (
+    // Treat empty string or 0 as "backlog" (no specific iteration selected)
+    const isBacklogSelected =
       selectedIteration === 0 ||
-      (node.iterationId && node.iterationId === selectedIteration) ||
-      ((!node.iterationId || node.iterationId === ``) &&
-        selectedIteration === 0)
+      selectedIteration === '0' ||
+      selectedIteration === '';
+
+    const iterationId = node.iterationId ?? '';
+
+    if (
+      isBacklogSelected ||
+      (iterationId && String(iterationId) === String(selectedIteration)) ||
+      ((!iterationId || iterationId === '') && isBacklogSelected)
     ) {
       return true;
     }
@@ -98,32 +105,26 @@ ParentInnerList.propTypes = {
   filterNode: PropTypes.func,
 };
 
-ParentInnerList.defaultProps = {
-  filterNode: () => {},
-};
-
-function Parent(props) {
+function Parent({
+  createNewNode,
+  deleteNode,
+  deleteParent,
+  index,
+  isTimerRunning,
+  mustFocusNodeTitle,
+  mustFocusParentTitle,
+  nodes,
+  parent,
+  saveTime,
+  selectedIteration,
+  showModal,
+  showParentModal = () => {},
+  updateNodeTitle,
+  updateParentProperty,
+  filterNode = () => {},
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [isFirstEdit, setIsFirstEdit] = useState(false);
-
-  const {
-    createNewNode,
-    deleteNode,
-    deleteParent,
-    index,
-    isTimerRunning,
-    mustFocusNodeTitle,
-    mustFocusParentTitle,
-    nodes,
-    parent,
-    saveTime,
-    selectedIteration,
-    showModal,
-    showParentModal,
-    updateNodeTitle,
-    updateParentProperty,
-    filterNode,
-  } = props;
 
   useEffect(() => {
     if (mustFocusParentTitle) {
@@ -253,7 +254,3 @@ Parent.propTypes = {
   filterNode: PropTypes.func,
 };
 
-Parent.defaultProps = {
-  showParentModal: () => {},
-  filterNode: () => {},
-};

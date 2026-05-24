@@ -1,122 +1,78 @@
-name: Build and Release
+name: Build
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [main, master]
   pull_request:
-    branches:
-      - main
-      - master
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            platform: mac
-            arch: x64
-          - os: macos-latest
-            platform: mac
-            arch: arm64
-          - os: windows-latest
-            platform: win
-            arch: x64
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            label: macos-aarch64
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            label: macos-x86_64
+          - platform: ubuntu-22.04
+            args: ''
+            label: linux-x64
+          - platform: windows-latest
+            args: ''
+            label: windows-x64
 
+    runs-on: ${{ matrix.platform }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: lts/*
+          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run linting
-        run: npm run lint
-
-      - name: Run tests
-        run: npm test
-        continue-on-error: true
-
-      - name: Build application
-        run: npm run build
-
-      - name: Package application
-        run: npm run package
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_IDENTITY_AUTO_DISCOVERY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASS: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
         with:
-          name: ${{ matrix.platform }}-${{ matrix.arch }}-build
-          path: |
-            release/build/
-          retention-days: 30
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
         with:
-          node-version: '18'
-          cache: 'npm'
+          workspaces: src-tauri
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Move artifacts to release directory
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
-          mkdir -p release/build
-          cp -r artifacts/*/* release/build/ || true
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Create GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            release/build/*.dmg
-            release/build/*.zip
-            release/build/*.exe
-            release/build/*.AppImage
-            release/build/*.deb
-            release/build/*.rpm
-            release/build/*.snap
-            release/build/*.blockmap
-            release/build/*.yml
-          generate_release_notes: true
-          draft: false
-          prerelease: false
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: banflow-${{ matrix.label }}
+          path: |
+            src-tauri/target/release/bundle/**/*
+            src-tauri/target/*/release/bundle/**/*
+          if-no-files-found: error

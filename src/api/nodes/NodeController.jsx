@@ -1,35 +1,81 @@
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
+import {
+  getTrelloAuth,
+  syncNodePropertyToTrello,
+  syncNewNodeToTrello,
+  applyTrelloCardToLocalNode,
+} from '../../services/TrelloSyncService';
 
 /**
  * @class NodeController
- * @desc Interacts with the ipcRenderer to perform CRUD operations on nodes. This is the interface between the UI and the database.
+ * @desc Interacts with Tauri commands to perform CRUD operations on nodes. This is the interface between the UI and the database.
  */
 const NodeController = {
   /**
    * @function getNodes
    * @desc gets all nodes
    * @route Nodes
-   * @returns {array} node - all nodes
+   * @returns {object} nodes - all nodes keyed by id
    * @permission {Read}
    */
-  getNodes() {
-    return ipcRenderer.sendSync('api:getNodes');
+  async getNodes() {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      console.error('[NodeController] No project name found in localStorage');
+      return {};
+    }
+
+    // Load nodes from Rust backend (api_get_nodes) so UI reflects persisted state
+    const nodes = await tauriSendSync('api:getNodes', { projectName });
+    return nodes || {};
   },
 
-  getNode(nodeId) {
-    return ipcRenderer.sendSync('api:getNode', nodeId);
+  async getNode(nodeId) {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      console.error('[NodeController] No project name found in localStorage');
+      throw new Error('No project name found. Please open a project first.');
+    }
+
+    return await tauriSendSync('api:getNode', { projectName, nodeId });
   },
 
-  getNodesWithQuery(query) {
-    return ipcRenderer.sendSync('api:getNodesWithQuery', query);
+  async getNodesWithQuery(query) {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      console.error('[NodeController] No project name found in localStorage');
+      return {};
+    }
+
+    return await tauriSendSync('api:getNodesWithQuery', { projectName, query });
   },
 
-  getNodeTypes() {
-    return ipcRenderer.sendSync('api:getNodeTypes');
+  async getNodeTypes() {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      return [];
+    }
+    try {
+      const result = await tauriSendSync('api:getNodeTypes', { projectName });
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error('[NodeController] Error getting node types:', error);
+      return [];
+    }
   },
 
-  getNodeStates() {
-    return ipcRenderer.sendSync('api:getNodeStates');
+  async getNodeStates() {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      return [];
+    }
+    try {
+      const result = await tauriSendSync('api:getNodeStates', { projectName });
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error('[NodeController] Error getting node states:', error);
+      return [];
+    }
   },
 
   /**
@@ -51,45 +97,92 @@ const NodeController = {
     iterationId = ``,
     trelloData = null,
   ) {
-    const trelloAuth = {
+    console.log('[NodeController] createNode called:', { nodeType, nodeTitle, parentId, iterationId });
+    
+    // Get project name from localStorage (stored as 'currentProject' in ProjectPage)
+    // Also try to get from URL if localStorage is empty (fallback)
+    let projectName = localStorage.getItem('currentProject');
+    if (!projectName) {
+      // Fallback: try to extract from URL like ProjectPage does
+      const location = window.location.href;
+      const urlProjectName = location.split('/').pop()?.split('?')[0];
+      if (urlProjectName) {
+        try {
+          projectName = decodeURIComponent(urlProjectName.replace(/[@]/g, '/'));
+        } catch (e) {
+          console.warn('[NodeController] Failed to decode project name from URL');
+        }
+      }
+    }
+    if (!projectName) {
+      throw new Error('No project name found. Please open a project first.');
+    }
+
+    // Get Trello auth if needed
+    const trelloAuth = trelloData ? {
       key: localStorage.getItem(`trelloKey`),
       token: localStorage.getItem(`trelloToken`),
-    };
+    } : null;
 
-    const test = await ipcRenderer.invoke(
-      'api:createNode',
+    // Call Tauri backend command (like Electron's ipcMain.handle('api:createNode'))
+    let newNode = await tauriInvoke('api:createNode', {
+      projectName,
       nodeType,
       nodeTitle,
       parentId,
-      iterationId,
-      trelloData,
-      trelloAuth,
-    );
-    console.log(test);
-    return test;
-  },
+      iterationId: iterationId || null,
+      trelloData: trelloData || null,
+      trelloAuth: trelloAuth || null,
+    });
 
-  deleteNode(nodeId, parentId) {
-    ipcRenderer.sendSync('api:deleteNode', nodeId, parentId);
-  },
-
-  updateNodeProperty(propertyToUpdate, nodeId, newValue, shouldSync = true) {
-    let trelloAuth = {
-      key: localStorage.getItem(`trelloKey`),
-      token: localStorage.getItem(`trelloToken`),
-    };
-
-    if (!shouldSync) {
-      trelloAuth = null;
+    if (trelloData) {
+      await applyTrelloCardToLocalNode(newNode.id, trelloData);
+      const nodes = await tauriInvoke('api:getNodes', { projectName });
+      newNode = nodes?.[newNode.id] || newNode;
+    } else {
+      newNode = await syncNewNodeToTrello(newNode, parentId, trelloData);
     }
 
-    return ipcRenderer.sendSync(
-      'api:updateNodeProperty',
+    console.log('[NodeController] Node created via backend:', newNode);
+    return newNode;
+  },
+
+  async deleteNode(nodeId, parentId) {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      console.error('[NodeController] No project name found in localStorage');
+      throw new Error('No project name found. Please open a project first.');
+    }
+
+    await tauriSendSync('api:deleteNode', { projectName, nodeId, parentId });
+  },
+
+  async updateNodeProperty(propertyToUpdate, nodeId, newValue, shouldSync = true) {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      console.error('[NodeController] No project name found in localStorage');
+      throw new Error('No project name found. Please open a project first.');
+    }
+    const trelloAuth = shouldSync ? getTrelloAuth() : null;
+
+    const updatedNode = await tauriInvoke('api:updateNodeProperty', {
+      projectName,
       propertyToUpdate,
       nodeId,
       newValue,
-      trelloAuth,
-    );
+      trelloAuth: null,
+    });
+
+    if (trelloAuth && propertyToUpdate !== 'trello') {
+      return syncNodePropertyToTrello(
+        updatedNode,
+        propertyToUpdate,
+        newValue,
+        trelloAuth,
+      );
+    }
+
+    return updatedNode;
   },
 };
 

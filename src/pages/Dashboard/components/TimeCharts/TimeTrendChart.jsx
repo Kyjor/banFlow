@@ -35,9 +35,9 @@ function formatTimeForChart(seconds, maxValue) {
 }
 
 function TimeTrendChart({
-  data,
+  data = [],
   title = 'Time Trend',
-  onPeriodChange,
+  onPeriodChange = null,
   selectedPeriod = 'week',
 }) {
   const [period, setPeriod] = React.useState(selectedPeriod);
@@ -181,13 +181,6 @@ TimeTrendChart.propTypes = {
   title: PropTypes.string,
   onPeriodChange: PropTypes.func,
   selectedPeriod: PropTypes.string,
-};
-
-TimeTrendChart.defaultProps = {
-  data: [],
-  title: 'Time Trend',
-  selectedPeriod: 'week',
-  onPeriodChange: null,
 };
 
 export default TimeTrendChart;

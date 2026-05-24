@@ -15,7 +15,7 @@ function formatTime(seconds) {
 }
 
 function TimeDistributionChart({
-  data,
+  data = {},
   title = 'Time Distribution by Status',
 }) {
   if (!data || Object.keys(data).length === 0) {
@@ -82,11 +82,6 @@ function TimeDistributionChart({
 TimeDistributionChart.propTypes = {
   data: PropTypes.shape({}),
   title: PropTypes.string,
-};
-
-TimeDistributionChart.defaultProps = {
-  data: {},
-  title: 'Time Distribution by Status',
 };
 
 export default TimeDistributionChart;

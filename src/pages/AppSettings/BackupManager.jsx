@@ -5,7 +5,7 @@ import {
   DeleteOutlined,
   HistoryOutlined,
 } from '@ant-design/icons';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 
 class BackupManager extends Component {
   static formatFileSize = (bytes) => {
@@ -31,7 +31,7 @@ class BackupManager extends Component {
   loadBackups = async () => {
     this.setState({ loading: true });
     try {
-      const backups = await ipcRenderer.invoke('backup:list');
+      const backups = await tauriInvoke('backup:list');
       this.setState({ backups: backups || [] });
     } catch (error) {
       console.error('Error loading backups:', error);
@@ -50,11 +50,10 @@ class BackupManager extends Component {
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          const result = await ipcRenderer.invoke(
-            'backup:restore',
-            backup.path,
-            backup.projectName,
-          );
+          const result = await tauriInvoke('backup:restore', {
+            backupPath: backup.path,
+            projectName: backup.projectName,
+          });
           if (result.success) {
             message.success('Backup restored successfully');
             this.loadBackups();
@@ -70,7 +69,7 @@ class BackupManager extends Component {
 
   handleDelete = async (backup) => {
     try {
-      const result = await ipcRenderer.invoke('backup:delete', backup.path);
+      const result = await tauriInvoke('backup:delete', { backupPath: backup.path });
       if (result.success) {
         message.success('Backup deleted');
         this.loadBackups();

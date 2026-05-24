@@ -1,17 +1,17 @@
 /**
- * Utility to load project data from JSON files via IPC
+ * Utility to load project data from JSON files via Tauri
  */
 
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync } from '../../../utils/tauri';
 
 /**
  * Load a single project's data from its JSON file via IPC
  */
 export const loadProjectData = async (projectName) => {
   try {
-    const projectData = await ipcRenderer.invoke(
+    const projectData = await tauriInvoke(
       'dashboard:loadProjectData',
-      projectName,
+      { projectName },
     );
     return projectData;
   } catch (error) {
@@ -33,9 +33,9 @@ export const loadMultipleProjectsData = async (projectNames) => {
   }
 
   try {
-    const results = await ipcRenderer.invoke(
+    const results = await tauriInvoke(
       'dashboard:loadMultipleProjectsData',
-      projectNames,
+      { projectNames },
     );
     return results.filter((result) => result !== null);
   } catch (error) {
@@ -47,9 +47,9 @@ export const loadMultipleProjectsData = async (projectNames) => {
 /**
  * Get all available project names via IPC
  */
-export const getAllProjectNames = () => {
+export const getAllProjectNames = async () => {
   try {
-    return ipcRenderer.sendSync('dashboard:getAllProjectNames');
+    return await tauriInvoke('dashboard:getAllProjectNames');
   } catch (error) {
     console.error('Error getting project names:', error);
     return [];

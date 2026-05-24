@@ -1,8 +1,9 @@
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
+import { getTrelloAuth, syncCardListAfterMove } from '../../services/TrelloSyncService';
 
 /**
  * @class ParentController
- * @desc Interacts with the ipcRenderer to perform CRUD operations on nodes. This is the interface between the UI and the database.
+ * @desc Tauri invoke layer for parents/nodes (UI ↔ backend).
  */
 const ParentController = {
   /**
@@ -12,8 +13,25 @@ const ParentController = {
    * @returns {array} parent - all parents
    * @permission {Read}
    */
-  getParents() {
-    return ipcRenderer.sendSync('api:getParents');
+  async getParents() {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (projectName) {
+      try {
+        return (await tauriInvoke('api:getParents', { projectName })) || {};
+      } catch (error) {
+        console.warn('[ParentController] api:getParents failed, trying Loki:', error);
+      }
+    }
+
+    const { getCurrentLokiService } = await import('../../stores/shared');
+    const lokiService = getCurrentLokiService();
+    if (!lokiService) {
+      console.error('[ParentController] No LokiService available');
+      return {};
+    }
+
+    const { default: ParentService } = await import('../../services/ParentService');
+    return ParentService.getParents(lokiService);
   },
 
   /**
@@ -23,8 +41,17 @@ const ParentController = {
    * @returns {array} string - the order of parents represented by id
    * @permission {Read}
    */
-  getParentOrder() {
-    return ipcRenderer.sendSync('api:getParentOrder');
+  async getParentOrder() {
+    const { getCurrentLokiService } = await import('../../stores/shared');
+    const lokiService = getCurrentLokiService();
+    
+    if (!lokiService) {
+      console.error('[ParentController] No LokiService available');
+      return [];
+    }
+
+    const { default: ParentService } = await import('../../services/ParentService');
+    return ParentService.getParentOrder(lokiService);
   },
 
   /**
@@ -37,50 +64,73 @@ const ParentController = {
    * @returns {object} parent - the newly created parent
    * @permission {Modification}
    */
-  createParent(parentTitle, trelloData) {
+  async createParent(parentTitle, trelloData) {
+    console.log('[ParentController] createParent called:', { parentTitle, trelloData: !!trelloData });
     const trelloAuth = {
       key: localStorage.getItem(`trelloKey`),
       token: localStorage.getItem(`trelloToken`),
     };
 
-    return ipcRenderer.sendSync(
-      'api:createParent',
+    // Tauri invoke (sync-style via invoke)
+    const projectName = localStorage.getItem('currentProject') || '';
+    const result = await tauriSendSync('api:createParent', {
+      projectName,
       parentTitle,
-      trelloData,
-      trelloAuth,
-    );
+      trelloData: trelloData || null,
+      trelloAuth: trelloAuth || null,
+    });
+    
+    console.log('[ParentController] createParent result:', result);
+    return result;
   },
 
-  deleteParent(parentId) {
-    ipcRenderer.sendSync('api:deleteParent', parentId);
+  async deleteParent(parentId) {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      throw new Error('No project name found. Please open a project first.');
+    }
+    await tauriInvoke('api:deleteParent', { projectName, parentId });
   },
 
-  updateParentProperty(propertyToUpdate, parentId, newValue) {
-    return ipcRenderer.sendSync(
-      'api:updateParentProperty',
+  async updateParentProperty(propertyToUpdate, parentId, newValue) {
+    const projectName = localStorage.getItem('currentProject') || '';
+    return await tauriInvoke('api:updateParentProperty', {
+      projectName,
       propertyToUpdate,
       parentId,
       newValue,
-    );
+    });
   },
 
-  updateParentOrder(parentOrder) {
-    ipcRenderer.sendSync('api:updateParentOrder', parentOrder);
+  async updateParentOrder(parentOrder) {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      throw new Error('No project name found. Please open a project first.');
+    }
+    await tauriInvoke('api:updateParentOrder', { projectName, parentOrder });
   },
 
-  updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {
-    const trelloAuth = {
-      key: localStorage.getItem(`trelloKey`),
-      token: localStorage.getItem(`trelloToken`),
-    };
-
-    ipcRenderer.sendSync(
-      'api:updateNodesInParents',
+  async updateNodesInParents(updatedOriginParent, updatedDestinationParent, nodeId) {
+    const projectName = localStorage.getItem('currentProject') || '';
+    if (!projectName) {
+      console.error('[ParentController] No project name found');
+      return;
+    }
+    
+    const result = await tauriInvoke('api:updateNodesInParents', {
+      projectName,
       updatedOriginParent,
       updatedDestinationParent,
       nodeId,
-      trelloAuth,
-    );
+      trelloAuth: null,
+    });
+
+    const trelloAuth = getTrelloAuth();
+    if (trelloAuth) {
+      await syncCardListAfterMove(nodeId, updatedDestinationParent, trelloAuth);
+    }
+
+    return result;
   },
 };
 

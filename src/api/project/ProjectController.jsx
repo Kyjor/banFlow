@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { tauriSendSync } from '../../utils/tauri';
 import projectService from '../../services/ProjectService';
 
 /**
@@ -13,8 +13,8 @@ const ProjectController = {
    * @returns {array} project - all projects
    * @permission {Read}
    */
-  getProjects() {
-    return projectService.getProjects();
+  async getProjects() {
+    return await projectService.getProjects();
   },
 
   /**
@@ -25,11 +25,11 @@ const ProjectController = {
    * @returns {object} project - the newly created project
    * @permission {Modification}
    */
-  createProject(projectName) {
+  async createProject(projectName) {
     if (!projectName || typeof projectName !== 'string') {
       throw new Error('Project name is required and must be a string');
     }
-    return projectService.createProject(projectName);
+    return await projectService.createProject(projectName);
   },
 
   /**
@@ -40,11 +40,11 @@ const ProjectController = {
    * @returns {*} the result of setting the current project name
    * @permission {Modification}
    */
-  setCurrentProjectName(projectName) {
+  async setCurrentProjectName(projectName) {
     if (!projectName || typeof projectName !== 'string') {
       throw new Error('Project name is required and must be a string');
     }
-    return projectService.setCurrentProjectName(projectName);
+    return await projectService.setCurrentProjectName(projectName);
   },
 
   /**
@@ -55,11 +55,21 @@ const ProjectController = {
    * @returns {*} the result of opening the project
    * @permission {Read}
    */
-  openProject(projectName) {
+  async openProject(projectName) {
+    console.log('[ProjectController] openProject() called with:', projectName);
     if (!projectName || typeof projectName !== 'string') {
+      console.error('[ProjectController] Invalid project name:', projectName);
       throw new Error('Project name is required and must be a string');
     }
-    return projectService.openProject(projectName);
+    try {
+      const result = await projectService.openProject(projectName);
+      console.log('[ProjectController] openProject() completed, result:', result);
+      return result;
+    } catch (error) {
+      console.error('[ProjectController] Error in openProject():', error);
+      console.error('[ProjectController] Error stack:', error.stack);
+      throw error;
+    }
   },
 
   /**
@@ -71,7 +81,7 @@ const ProjectController = {
    * @returns {boolean} true if rename was successful, false otherwise
    * @permission {Modification}
    */
-  renameProject(oldName, newName) {
+  async renameProject(oldName, newName) {
     if (!oldName || typeof oldName !== 'string') {
       throw new Error('Old project name is required and must be a string');
     }
@@ -79,7 +89,7 @@ const ProjectController = {
       throw new Error('New project name is required and must be a string');
     }
     try {
-      projectService.renameProject(oldName, newName);
+      await projectService.renameProject(oldName, newName);
       return true;
     } catch (error) {
       console.error('Failed to rename project:', error);
@@ -95,12 +105,12 @@ const ProjectController = {
    * @returns {boolean} true if deletion was successful, false otherwise
    * @permission {Modification}
    */
-  deleteProject(projectName) {
+  async deleteProject(projectName) {
     if (!projectName || typeof projectName !== 'string') {
       throw new Error('Project name is required and must be a string');
     }
     try {
-      projectService.deleteProject(projectName);
+      await projectService.deleteProject(projectName);
       return true;
     } catch (error) {
       console.error('Failed to delete project:', error);
@@ -140,8 +150,8 @@ const ProjectController = {
    * @returns {*} the result of setting the Trello board
    * @permission {Modification}
    */
-  setTrelloBoard(trelloBoard) {
-    return ipcRenderer.sendSync('api:setTrelloBoard', trelloBoard);
+  async setTrelloBoard(trelloBoard) {
+    return await tauriSendSync('api:setTrelloBoard', { trelloBoard });
   },
 
   /**
@@ -151,8 +161,8 @@ const ProjectController = {
    * @returns {*} the current project settings
    * @permission {Read}
    */
-  getProjectSettings() {
-    return ipcRenderer.sendSync('api:getProjectSettings');
+  async getProjectSettings() {
+    return await tauriSendSync('api:getProjectSettings');
   },
 };
 

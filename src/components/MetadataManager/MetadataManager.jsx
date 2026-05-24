@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 import {
   Modal,
   Tabs,
@@ -96,7 +96,7 @@ class MetadataManager extends Component {
   loadImages = async () => {
     try {
       const { projectName, isGlobal } = this.state;
-      const images = await ipcRenderer.invoke(
+      const images = await tauriInvoke(
         'docs:listImages',
         projectName,
         isGlobal,
@@ -111,7 +111,7 @@ class MetadataManager extends Component {
     // TODO: Load tags from metadata store
     // For now, get from project tags
     try {
-      const tags = ipcRenderer.sendSync('api:getTags') || [];
+      const tags = await tauriSendSync('api:getTags') || [];
       this.setState({ tags });
     } catch (error) {
       console.error('Error loading tags:', error);
@@ -130,7 +130,7 @@ class MetadataManager extends Component {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target.result;
-        await ipcRenderer.invoke(
+        await tauriInvoke(
           'docs:saveImage',
           file.name,
           base64,
@@ -153,7 +153,7 @@ class MetadataManager extends Component {
   handleImageDelete = async (imagePath) => {
     try {
       const { projectName, isGlobal } = this.state;
-      await ipcRenderer.invoke(
+      await tauriInvoke(
         'docs:deleteImage',
         imagePath,
         projectName,
@@ -246,11 +246,12 @@ class MetadataManager extends Component {
               }}
               onError={(e) => {
                 const { projectName } = this.state;
-                ipcRenderer
-                  .invoke('docs:getImage', record.path, projectName, isGlobal)
+                tauriInvoke('docs:getImage', { imagePath: record.path, projectName, isGlobal })
                   .then((dataUrl) => {
                     e.target.src = dataUrl;
-                    return undefined;
+                  })
+                  .catch((error) => {
+                    console.error('Failed to load image:', error);
                   })
                   .catch(() => {
                     e.target.style.display = 'none';

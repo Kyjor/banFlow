@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 import { Typography } from 'antd';
 
 const { Text } = Typography;
@@ -23,7 +23,7 @@ class ImageThumbnail extends Component {
   loadImage = async () => {
     try {
       const { image, projectName, isGlobal } = this.props;
-      const dataUrl = await ipcRenderer.invoke(
+      const dataUrl = await tauriInvoke(
         'docs:getImage',
         image.path,
         projectName,

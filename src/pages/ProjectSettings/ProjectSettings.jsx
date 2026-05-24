@@ -31,10 +31,24 @@ import {
   ReloadOutlined,
   PictureOutlined,
   InfoCircleOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
-import { ipcRenderer } from 'electron';
+import {
+  tauriInvoke,
+  tauriSendSync,
+  tauriSend,
+  tauriOn,
+  openExternalUrl,
+} from '../../utils/tauri';
 import Layout from '../../layouts/App';
 import ProjectController from '../../api/project/ProjectController';
+import timerController from '../../api/timer/TimerController';
+import {
+  defaultTimerPreferences,
+  normalizeTimerPreferences,
+} from '../../stores/shared';
+import { saveProjectImage } from '../../utils/imageUpload';
+import { applyProjectTheme, clearProjectTheme } from '../../utils/projectTheme';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -47,6 +61,13 @@ class ProjectSettings extends Component {
     this.projectName = location.split('/').pop();
     [this.projectName] = this.projectName.split('?');
     this.projectName = this.projectName.replace(/[@]/g, '/');
+    // Decode URL-encoded characters (e.g., %20 -> space)
+    try {
+      this.projectName = decodeURIComponent(this.projectName);
+    } catch (e) {
+      // If decoding fails, use the original name
+      console.warn('[ProjectSettings] Failed to decode project name, using original:', this.projectName);
+    }
 
     this.currentProject = this.projectName;
     this.trelloToken = localStorage.getItem('trelloToken');
@@ -78,6 +99,12 @@ class ProjectSettings extends Component {
       autoArchiveCompleted: false,
       archiveAfterDays: 30,
 
+      // Tomato timer
+      timerWorkMinutes: defaultTimerPreferences.time,
+      timerShortBreak: defaultTimerPreferences.shortBreak,
+      timerLongBreak: defaultTimerPreferences.longBreak,
+      timerAutoCycle: defaultTimerPreferences.autoCycle,
+
       // Integrations
       trelloBoard: null,
       trelloSyncEnabled: false,
@@ -98,10 +125,12 @@ class ProjectSettings extends Component {
     };
   }
 
-  componentDidMount() {
-    const newState = ipcRenderer.sendSync(
+  async componentDidMount() {
+    localStorage.setItem('currentProject', this.projectName);
+
+    const newState = await tauriSendSync(
       'api:initializeProjectState',
-      this.projectName,
+      { projectName: this.projectName },
     );
 
     this.setState(
@@ -116,10 +145,37 @@ class ProjectSettings extends Component {
         if (lokiLoaded) {
           this.loadProjectData();
           this.loadProjectSettings();
+          this.loadTimerPreferences();
         }
       },
     );
   }
+
+  componentWillUnmount() {
+    clearProjectTheme();
+  }
+
+  applyThemeFromState = () => {
+    const { themeOverride, primaryColor, accentColor } = this.state;
+    applyProjectTheme({ themeOverride, primaryColor, accentColor });
+  };
+
+  loadTimerPreferences = async () => {
+    try {
+      const prefs = await timerController.getTimerPreferences();
+      if (prefs) {
+        const normalized = normalizeTimerPreferences(prefs);
+        this.setState({
+          timerWorkMinutes: normalized.time,
+          timerShortBreak: normalized.shortBreak,
+          timerLongBreak: normalized.longBreak,
+          timerAutoCycle: normalized.autoCycle,
+        });
+      }
+    } catch (error) {
+      console.error('[ProjectSettings] Failed to load timer preferences:', error);
+    }
+  };
 
   // eslint-disable-next-line class-methods-use-this
   formatTime = (seconds) => {
@@ -172,7 +228,9 @@ class ProjectSettings extends Component {
         syncInterval: projectSettings.syncInterval || 60,
         createdDate: projectSettings.createdDate || null,
         lastModified: projectSettings.lastModified || new Date().toISOString(),
-      });
+      },
+      this.applyThemeFromState,
+    );
     }
   };
 
@@ -194,6 +252,10 @@ class ProjectSettings extends Component {
       trelloBoard,
       trelloSyncEnabled,
       syncInterval,
+      timerWorkMinutes,
+      timerShortBreak,
+      timerLongBreak,
+      timerAutoCycle,
     } = this.state;
     const updatedSettings = {
       ...projectSettings,
@@ -214,11 +276,16 @@ class ProjectSettings extends Component {
     };
 
     try {
-      await ipcRenderer.invoke(
-        'api:updateProjectSettings',
-        this.projectName,
-        updatedSettings,
-      );
+      await tauriInvoke('api:updateProjectSettings', {
+        projectName: this.projectName,
+        settings: updatedSettings,
+      });
+      await timerController.saveTimerPreferences({
+        time: timerWorkMinutes,
+        shortBreak: timerShortBreak,
+        longBreak: timerLongBreak,
+        autoCycle: timerAutoCycle,
+      });
       this.setState({ projectSettings: updatedSettings, saving: false });
       message.success('All settings saved successfully!');
     } catch (error) {
@@ -230,62 +297,26 @@ class ProjectSettings extends Component {
 
   handleBannerUpload = async (file) => {
     try {
-      // Save image to project images folder
-      const imagePath = await ipcRenderer.invoke(
-        'docs:saveImage',
-        file,
-        this.projectName,
-        false,
-      );
-
-      // Get image as data URL for preview
-      const imageUrl = await ipcRenderer.invoke(
-        'docs:getImage',
-        imagePath,
-        this.projectName,
-        false,
-      );
-
-      this.setState({
-        bannerImageUrl: imageUrl,
-      });
-
+      const { imageUrl } = await saveProjectImage(file, this.projectName, false);
+      this.setState({ bannerImageUrl: imageUrl });
       message.success('Banner uploaded successfully');
     } catch (error) {
       console.error('Error uploading banner:', error);
       message.error('Failed to upload banner');
     }
-    return false; // Prevent default upload
+    return false;
   };
 
   handleLogoUpload = async (file) => {
     try {
-      // Save image to project images folder
-      const imagePath = await ipcRenderer.invoke(
-        'docs:saveImage',
-        file,
-        this.projectName,
-        false,
-      );
-
-      // Get image as data URL for preview
-      const imageUrl = await ipcRenderer.invoke(
-        'docs:getImage',
-        imagePath,
-        this.projectName,
-        false,
-      );
-
-      this.setState({
-        logoImageUrl: imageUrl,
-      });
-
+      const { imageUrl } = await saveProjectImage(file, this.projectName, false);
+      this.setState({ logoImageUrl: imageUrl });
       message.success('Logo uploaded successfully');
     } catch (error) {
       console.error('Error uploading logo:', error);
       message.error('Failed to upload logo');
     }
-    return false; // Prevent default upload
+    return false;
   };
 
   removeBanner = () => {
@@ -330,8 +361,16 @@ class ProjectSettings extends Component {
     message.success(`Synced with board: ${board.name}`);
   };
 
-  handleAuthApp = () => {
-    window.open(this.authLink, '_blank');
+  handleAuthApp = async () => {
+    try {
+      await openExternalUrl(this.authLink);
+      message.info(
+        'Authorize in your browser, then paste the token in App Settings and click Save.',
+      );
+    } catch (error) {
+      console.error('Failed to open Trello authorization URL:', error);
+      message.error('Could not open Trello authorization page');
+    }
   };
 
   render() {
@@ -350,6 +389,10 @@ class ProjectSettings extends Component {
       defaultParent,
       autoArchiveCompleted,
       archiveAfterDays,
+      timerWorkMinutes,
+      timerShortBreak,
+      timerLongBreak,
+      timerAutoCycle,
       trelloBoard,
       trelloSyncEnabled,
       syncInterval,
@@ -544,7 +587,9 @@ class ProjectSettings extends Component {
                   <Switch
                     checked={themeOverride}
                     onChange={(checked) =>
-                      this.setState({ themeOverride: checked })
+                      this.setState({ themeOverride: checked }, () =>
+                        this.applyThemeFromState(),
+                      )
                     }
                   />
                 </div>
@@ -558,7 +603,9 @@ class ProjectSettings extends Component {
                           <Select
                             value={primaryColor}
                             onChange={(value) =>
-                              this.setState({ primaryColor: value })
+                              this.setState({ primaryColor: value }, () =>
+                                this.applyThemeFromState(),
+                              )
                             }
                             style={{ width: '100%' }}
                           >
@@ -579,7 +626,9 @@ class ProjectSettings extends Component {
                           <Select
                             value={accentColor}
                             onChange={(value) =>
-                              this.setState({ accentColor: value })
+                              this.setState({ accentColor: value }, () =>
+                                this.applyThemeFromState(),
+                              )
                             }
                             style={{ width: '100%' }}
                           >
@@ -716,6 +765,96 @@ class ProjectSettings extends Component {
                   </div>
                 )}
               </Space>
+            </Card>
+          </Space>
+        ),
+      },
+      {
+        key: 'tomato-timer',
+        label: (
+          <span>
+            <ClockCircleOutlined /> Timer
+          </span>
+        ),
+        children: (
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <Card title="Pomodoro Durations" size="small">
+              <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+                All values are in minutes. Use Save All to apply changes.
+              </Paragraph>
+              <Row gutter={[24, 16]}>
+                <Col xs={24} sm={12}>
+                  <Text strong>Work session</Text>
+                  <InputNumber
+                    value={timerWorkMinutes}
+                    onChange={(value) =>
+                      this.setState({ timerWorkMinutes: value })
+                    }
+                    min={1}
+                    max={120}
+                    style={{ width: '100%', marginTop: 8 }}
+                    addonAfter="min"
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Text strong>Short break</Text>
+                  <InputNumber
+                    value={timerShortBreak}
+                    onChange={(value) =>
+                      this.setState({ timerShortBreak: value })
+                    }
+                    min={1}
+                    max={60}
+                    style={{ width: '100%', marginTop: 8 }}
+                    addonAfter="min"
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <Text strong>Long break</Text>
+                  <Paragraph
+                    type="secondary"
+                    style={{ margin: 0, fontSize: 12 }}
+                  >
+                    Used after the 4th work round
+                  </Paragraph>
+                  <InputNumber
+                    value={timerLongBreak}
+                    onChange={(value) =>
+                      this.setState({ timerLongBreak: value })
+                    }
+                    min={1}
+                    max={60}
+                    style={{ width: '100%', marginTop: 8 }}
+                    addonAfter="min"
+                  />
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: 24,
+                    }}
+                  >
+                    <div>
+                      <Text strong>Auto cycle</Text>
+                      <Paragraph
+                        type="secondary"
+                        style={{ margin: 0, fontSize: 12 }}
+                      >
+                        Automatically advance between work and breaks
+                      </Paragraph>
+                    </div>
+                    <Switch
+                      checked={timerAutoCycle}
+                      onChange={(checked) =>
+                        this.setState({ timerAutoCycle: checked })
+                      }
+                    />
+                  </div>
+                </Col>
+              </Row>
             </Card>
           </Space>
         ),
@@ -912,7 +1051,10 @@ class ProjectSettings extends Component {
               <Space>
                 <Button
                   icon={<ReloadOutlined />}
-                  onClick={this.loadProjectSettings}
+                  onClick={() => {
+                    this.loadProjectSettings();
+                    this.loadTimerPreferences();
+                  }}
                 >
                   Reload
                 </Button>

@@ -73,7 +73,7 @@ const eventSystem = new EventSystem();
 export default eventSystem;
 export { EventSystem };
 
-// Event names constants
+// Event names constants (legacy GameService)
 export const EVENTS = {
   SESSION_COMPLETED: 'session:completed',
   SESSION_STARTED: 'session:started',
@@ -82,3 +82,33 @@ export const EVENTS = {
   TIME_SPENT: 'time:spent',
   TASK_COMPLETED: 'task:completed',
 };
+
+/** Typed plugin event names (banflow-plugin-api). */
+export const PLUGIN_EVENTS = {
+  NODE_COMPLETED: 'node.completed',
+  NODE_CREATED: 'node.created',
+  NODE_TIME_LOGGED: 'node.time_logged',
+  SESSION_COMPLETED: 'session.completed',
+  SESSION_STARTED: 'session.started',
+  TIMER_BREAK_STARTED: 'timer.break.started',
+  TIMER_BREAK_ENDED: 'timer.break.ended',
+  GIT_COMMIT: 'git.commit',
+  GIT_PUSH: 'git.push',
+  DOCS_SAVED: 'docs.saved',
+  DOCS_WORDS_ADDED: 'docs.words_added',
+  PARENT_CLEARED: 'parent.cleared',
+  DIAGRAM_SAVED: 'diagram.saved',
+};
+
+/**
+ * Emit plugin + legacy event for gradual migration off GameService.
+ * @param {string} pluginEvent
+ * @param {Object} payload
+ * @param {string} [legacyEvent]
+ */
+export function emitDual(pluginEvent, payload, legacyEvent) {
+  eventSystem.emit(pluginEvent, payload);
+  if (legacyEvent) {
+    eventSystem.emit(legacyEvent, payload);
+  }
+}

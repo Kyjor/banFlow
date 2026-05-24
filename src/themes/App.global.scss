@@ -1,2 +1,3 @@
 // Variables
-@import '~antd/dist/antd.css';
+// Antd CSS is imported via createLink in ChartPage.jsx
+// If needed elsewhere, import it directly in the component

@@ -11,9 +11,9 @@ import './AggregateView.scss';
 function AggregateView({
   projectsData,
   selectedProjects,
-  isLoading,
-  dayCellRender,
-  dateCellRender,
+  isLoading = false,
+  dayCellRender = null,
+  dateCellRender = null,
 }) {
   const [dateRange] = useState(null);
   const [selectedTag] = useState(null);
@@ -207,8 +207,14 @@ AggregateView.propTypes = {
           tags: PropTypes.arrayOf(
             PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
           ),
-          iterationId: PropTypes.string,
-          iteration: PropTypes.string,
+          iterationId: PropTypes.oneOfType([
+            PropTypes.string,
+            PropTypes.number,
+          ]),
+          iteration: PropTypes.oneOfType([
+            PropTypes.string,
+            PropTypes.number,
+          ]),
         }),
       ),
       parents: PropTypes.arrayOf(
@@ -219,7 +225,7 @@ AggregateView.propTypes = {
       ),
       iterations: PropTypes.arrayOf(
         PropTypes.shape({
-          id: PropTypes.string,
+          id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
           title: PropTypes.string,
         }),
       ),
@@ -232,12 +238,6 @@ AggregateView.propTypes = {
   isLoading: PropTypes.bool,
   dayCellRender: PropTypes.func,
   dateCellRender: PropTypes.func,
-};
-
-AggregateView.defaultProps = {
-  isLoading: false,
-  dayCellRender: null,
-  dateCellRender: null,
 };
 
 export default AggregateView;

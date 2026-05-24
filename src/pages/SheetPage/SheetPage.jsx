@@ -33,7 +33,7 @@ import {
   BarChartOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 import moment from 'moment';
 import Layout from '../../layouts/App';
 import NodeModal from '../../components/NodeModal/NodeModal';
@@ -52,6 +52,13 @@ class SheetPage extends Component {
     this.projectName = location.split('/').pop();
     // Remove query parameters (everything after ?)
     [this.projectName] = this.projectName.split('?');
+    // Decode URL-encoded characters (e.g., %20 -> space)
+    try {
+      this.projectName = decodeURIComponent(this.projectName);
+    } catch (e) {
+      // If decoding fails, use the original name
+      console.warn('[SheetPage] Failed to decode project name, using original:', this.projectName);
+    }
     this.projectName = this.projectName.replace(/[@]/g, '/');
     localStorage.setItem('currentProject', this.projectName);
     this.currentProject = this.projectName;
@@ -128,10 +135,10 @@ class SheetPage extends Component {
     };
   }
 
-  componentDidMount() {
-    const newState = ipcRenderer.sendSync(
+  async componentDidMount() {
+    const newState = await tauriSendSync(
       'api:initializeProjectState',
-      this.projectName,
+      { projectName: this.projectName },
     );
 
     this.setState((prevState) => ({
@@ -140,11 +147,14 @@ class SheetPage extends Component {
     }));
 
     // Listen for updates
-    ipcRenderer.on('UpdateProjectPageState', this.handleStateUpdate);
+    const unlisten = await tauriOn('UpdateProjectPageState', this.handleStateUpdate);
+    this.unlistenUpdateProjectPageState = unlisten;
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners('UpdateProjectPageState');
+    if (this.unlistenUpdateProjectPageState) {
+      this.unlistenUpdateProjectPageState();
+    }
   }
 
   handleStateUpdate = (event, newState) => {
@@ -682,15 +692,15 @@ class SheetPage extends Component {
     });
   };
 
-  closeNodeModal = () => {
+  closeNodeModal = async () => {
     this.setState({
       nodeModalVisible: false,
       modalNodeId: null,
     });
     // Refresh data
-    const newState = ipcRenderer.sendSync(
+    const newState = await tauriSendSync(
       'api:initializeProjectState',
-      this.projectName,
+      { projectName: this.projectName },
     );
     this.setState(newState);
   };
@@ -699,11 +709,11 @@ class SheetPage extends Component {
     this.closeNodeModal();
   };
 
-  updateNodeProperty = (property, nodeId, value, shouldSync = true) => {
-    NodeController.updateNodeProperty(property, nodeId, value, shouldSync);
-    const newState = ipcRenderer.sendSync(
+  updateNodeProperty = async (property, nodeId, value, shouldSync = true) => {
+    await NodeController.updateNodeProperty(property, nodeId, value, shouldSync);
+    const newState = await tauriSendSync(
       'api:initializeProjectState',
-      this.projectName,
+      { projectName: this.projectName },
     );
     this.setState(newState);
   };
@@ -998,8 +1008,8 @@ class SheetPage extends Component {
               </Select>
               <Button
                 icon={<ReloadOutlined />}
-                onClick={() => {
-                  const newState = ipcRenderer.sendSync(
+                onClick={async () => {
+                  const newState = await tauriSendSync(
                     'api:initializeProjectState',
                     this.projectName,
                   );

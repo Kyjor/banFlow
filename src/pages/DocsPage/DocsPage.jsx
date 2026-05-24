@@ -1,7 +1,7 @@
 // Libs
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 import {
   Layout,
   Card,
@@ -172,6 +172,13 @@ class DocsPage extends Component {
     // Remove query parameters (everything after ?)
     [this.projectName] = this.projectName.split('?');
     this.projectName = this.projectName.replace(/[@]/g, '/');
+    // Decode URL-encoded characters (e.g., %20 -> space)
+    try {
+      this.projectName = decodeURIComponent(this.projectName);
+    } catch (e) {
+      // If decoding fails, use the original name
+      console.warn('[DocsPage] Failed to decode project name, using original:', this.projectName);
+    }
     localStorage.setItem('currentProject', this.projectName);
 
     this.state = {
@@ -278,10 +285,10 @@ class DocsPage extends Component {
     };
   }
 
-  componentDidMount() {
-    const newState = ipcRenderer.sendSync(
+  async componentDidMount() {
+    const newState = await tauriSendSync(
       'api:initializeProjectState',
-      this.projectName,
+      { projectName: this.projectName },
     );
 
     this.setState(
@@ -300,11 +307,14 @@ class DocsPage extends Component {
       },
     );
 
-    ipcRenderer.on('UpdateProjectPageState', this.handleStateUpdate);
+    const unlisten = await tauriOn('UpdateProjectPageState', this.handleStateUpdate);
+    this.unlistenUpdateProjectPageState = unlisten;
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners('UpdateProjectPageState');
+    if (this.unlistenUpdateProjectPageState) {
+      this.unlistenUpdateProjectPageState();
+    }
   }
 
   // eslint-disable-next-line class-methods-use-this
@@ -323,7 +333,7 @@ class DocsPage extends Component {
   loadDocs = async () => {
     try {
       const { isGlobal } = this.state;
-      const docs = await ipcRenderer.invoke(
+      const docs = await tauriInvoke(
         'docs:list',
         this.projectName,
         isGlobal,
@@ -338,7 +348,7 @@ class DocsPage extends Component {
   loadDoc = async (docPath) => {
     try {
       const { isGlobal } = this.state;
-      const doc = await ipcRenderer.invoke(
+      const doc = await tauriInvoke(
         'docs:read',
         docPath,
         this.projectName,
@@ -368,7 +378,7 @@ class DocsPage extends Component {
   loadImages = async () => {
     try {
       const { isGlobal } = this.state;
-      const images = await ipcRenderer.invoke(
+      const images = await tauriInvoke(
         'docs:listImages',
         this.projectName,
         isGlobal,
@@ -511,7 +521,7 @@ class DocsPage extends Component {
   getBacklinks = async (docPath) => {
     try {
       const { isGlobal } = this.state;
-      const allDocs = await ipcRenderer.invoke(
+      const allDocs = await tauriInvoke(
         'docs:list',
         this.projectName,
         isGlobal,
@@ -540,7 +550,7 @@ class DocsPage extends Component {
         .map(async (doc) => {
           try {
             const { isGlobal: isGlobalState } = this.state;
-            const docData = await ipcRenderer.invoke(
+            const docData = await tauriInvoke(
               'docs:read',
               doc.path,
               this.projectName,
@@ -626,7 +636,7 @@ class DocsPage extends Component {
         const imageName = file.name;
         const { isGlobal } = this.state;
 
-        await ipcRenderer.invoke(
+        await tauriInvoke(
           'docs:saveImage',
           imageName,
           base64,
@@ -665,7 +675,7 @@ class DocsPage extends Component {
     if (!currentDoc) return;
 
     try {
-      await ipcRenderer.invoke(
+      await tauriInvoke(
         'docs:save',
         currentDoc,
         docContent,
@@ -698,7 +708,7 @@ class DocsPage extends Component {
           : `# ${newDocName}\n\n`;
 
       const { isGlobal: isGlobalState } = this.state;
-      await ipcRenderer.invoke(
+      await tauriInvoke(
         'docs:save',
         docPath,
         initialContent,
@@ -735,7 +745,7 @@ class DocsPage extends Component {
 
     try {
       const { isGlobal: isGlobalState } = this.state;
-      await ipcRenderer.invoke(
+      await tauriInvoke(
         'docs:createFolder',
         newFolderName,
         this.projectName,
@@ -759,7 +769,7 @@ class DocsPage extends Component {
     try {
       const { isGlobal } = this.state;
       if (item.type === 'file') {
-        await ipcRenderer.invoke(
+        await tauriInvoke(
           'docs:delete',
           item.path,
           this.projectName,
@@ -1598,7 +1608,7 @@ class DocsPage extends Component {
         {/* Template Selection Modal */}
         <Modal
           title="Choose Template"
-          visible={templateModalVisible && !createDocModalVisible}
+          open={templateModalVisible && !createDocModalVisible}
           onOk={() =>
             this.setState({
               templateModalVisible: false,
@@ -1646,7 +1656,7 @@ class DocsPage extends Component {
         {/* Create Document Modal */}
         <Modal
           title={`Create New Document${selectedTemplate ? ` - ${this.templates[selectedTemplate]?.name || ''}` : ''}`}
-          visible={createDocModalVisible}
+          open={createDocModalVisible}
           onOk={() => this.createDoc()}
           onCancel={() =>
             this.setState({
@@ -1697,7 +1707,7 @@ class DocsPage extends Component {
         {/* Create Folder Modal */}
         <Modal
           title="Create New Folder"
-          visible={createFolderModalVisible}
+          open={createFolderModalVisible}
           onOk={this.createFolder}
           onCancel={() =>
             this.setState({
@@ -1720,7 +1730,7 @@ class DocsPage extends Component {
         {/* Image Gallery Modal */}
         <Modal
           title="Image Gallery"
-          visible={imageGalleryVisible}
+          open={imageGalleryVisible}
           onCancel={() => this.setState({ imageGalleryVisible: false })}
           footer={[
             <Button
@@ -1804,7 +1814,7 @@ class DocsPage extends Component {
                               try {
                                 const { isGlobal: currentIsGlobal } =
                                   this.state;
-                                await ipcRenderer.invoke(
+                                await tauriInvoke(
                                   'docs:deleteImage',
                                   image.path,
                                   this.projectName,

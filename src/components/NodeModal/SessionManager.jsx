@@ -13,7 +13,7 @@ import {
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import moment from 'moment';
 import PropTypes from 'prop-types';
-import eventSystem, { EVENTS } from '../../services/EventSystem';
+import eventSystem, { EVENTS, PLUGIN_EVENTS, emitDual } from '../../services/EventSystem';
 import './SessionManager.scss';
 
 const { Option } = Select;
@@ -21,9 +21,9 @@ const { TextArea } = Input;
 
 function SessionManager({
   node,
-  parents,
+  parents = {},
   updateNodeProperty,
-  onSessionsChange,
+  onSessionsChange = null,
 }) {
   const [editingField, setEditingField] = useState(null); // Format: "rowIndex-fieldName"
   const [pageSize, setPageSize] = useState(5);
@@ -328,11 +328,15 @@ function SessionManager({
     updateNodeProperty('timeSpent', node.id, newTimeSpent, false);
 
     // Fire session completed event for game system
-    eventSystem.emit(EVENTS.SESSION_COMPLETED, {
-      duration: length,
-      nodeId: node.id,
-      nodeTitle: node?.title || '',
-    });
+    emitDual(
+      PLUGIN_EVENTS.SESSION_COMPLETED,
+      {
+        duration: length,
+        nodeId: node.id,
+        projectName: localStorage.getItem('currentProject') || undefined,
+      },
+      EVENTS.SESSION_COMPLETED,
+    );
 
     if (onSessionsChange) {
       onSessionsChange(updatedSessions, newTimeSpent);
@@ -1042,11 +1046,6 @@ SessionManager.propTypes = {
   parents: PropTypes.object,
   updateNodeProperty: PropTypes.func.isRequired,
   onSessionsChange: PropTypes.func,
-};
-
-SessionManager.defaultProps = {
-  parents: {},
-  onSessionsChange: null,
 };
 
 export default SessionManager;

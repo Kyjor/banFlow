@@ -47,7 +47,7 @@ class GameNotification extends Component {
   componentDidMount() {
     // Listen for game reward events
     this.unsubscribe = eventSystem.on('game:reward', (data) => {
-      GameNotification.showRewardNotification(data);
+      this.showRewardNotification(data);
     });
   }
 

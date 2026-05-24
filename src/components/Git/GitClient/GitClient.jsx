@@ -6,7 +6,8 @@ import React, {
   useRef,
 } from 'react';
 import PropTypes from 'prop-types';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
+import { parseGitDate, formatGitDate } from '../../../utils/gitDate';
 import {
   Layout,
   Button,
@@ -403,7 +404,7 @@ function GitClient() {
       if (currentRepository) {
         try {
           setLoadingBranches(true);
-          const branchesData = await getBranchesWithDates();
+          const branchesData = await getBranchesWithDates(currentRepository);
           setBranchesWithDates(branchesData || []);
         } catch (error) {
           console.error('Failed to load branches:', error);
@@ -438,8 +439,8 @@ function GitClient() {
   const hasConflicts = conflictedFiles && conflictedFiles.length > 0;
 
   const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
+    const date = parseGitDate(dateString);
+    if (!date) return '';
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -654,9 +655,9 @@ function GitClient() {
     setFileSearchTerm('');
     setLoadingFiles(true);
     try {
-      const files = await ipcRenderer.invoke(
+      const files = await tauriInvoke(
         'git:listFiles',
-        currentRepository,
+        { repoPath: currentRepository },
       );
       setAllFiles(files || []);
     } catch (error) {
@@ -674,7 +675,7 @@ function GitClient() {
       setSelectedFile(null); // Clear regular file selection
       setSelectedFileStaged(false);
       try {
-        const result = await ipcRenderer.invoke(
+        const result = await await tauriInvoke(
           'git:readFile',
           currentRepository,
           filePath,
@@ -696,7 +697,7 @@ function GitClient() {
     if (!editingFile || !currentRepository) return;
     setIsSaving(true);
     try {
-      const result = await ipcRenderer.invoke(
+      const result = await await tauriInvoke(
         'git:writeFile',
         currentRepository,
         editingFile,
@@ -781,7 +782,7 @@ function GitClient() {
       if (isImageFile(selectedFile)) {
         setLoadingUntrackedFile(true);
         try {
-          const result = await ipcRenderer.invoke(
+          const result = await await tauriInvoke(
             'git:readImageFile',
             currentRepository,
             selectedFile,
@@ -800,7 +801,7 @@ function GitClient() {
       } else if (isAsepriteFile(selectedFile)) {
         setLoadingUntrackedFile(true);
         try {
-          const result = await ipcRenderer.invoke(
+          const result = await await tauriInvoke(
             'git:readAsepriteFile',
             currentRepository,
             selectedFile,
@@ -1004,7 +1005,7 @@ function GitClient() {
                 <Space>
                   <span>{branch.name}</span>
                   <Text type="secondary" style={{ fontSize: 11 }}>
-                    {formatDate(branch.lastCommitDate)}
+                    {formatDate(branch.lastCommitDate || branch.date)}
                   </Text>
                 </Space>
               </Option>
@@ -1508,7 +1509,9 @@ function GitClient() {
               </div>
               <div className="detail-row">
                 <Text type="secondary">Date</Text>
-                <Text>{new Date(selectedCommit.date).toLocaleString()}</Text>
+                <Text>
+                  {formatGitDate(selectedCommit.date, (d) => d.toLocaleString())}
+                </Text>
               </div>
               <div className="detail-row message">
                 <Text>{selectedCommit.message}</Text>
@@ -1929,7 +1932,7 @@ function GitClient() {
               <List.Item.Meta
                 avatar={<BranchesOutlined />}
                 title={branch.name}
-                description={formatDate(branch.lastCommitDate)}
+                description={formatDate(branch.lastCommitDate || branch.date)}
               />
             </List.Item>
           )}
@@ -2357,7 +2360,7 @@ function GitClient() {
                     <Text strong>{stash.message || `stash@{${index}}`}</Text>
                     <Space size="small">
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        {stash.date}
+                        {formatDate(stash.date)}
                       </Text>
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         by {stash.author_name}

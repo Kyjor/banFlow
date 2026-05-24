@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 import MDEditor from '@uiw/react-md-editor';
 import Layout from '../../layouts/App';
 import '@uiw/react-md-editor/markdown-editor.css';
@@ -7,6 +7,7 @@ import '@uiw/react-md-editor/markdown-editor.css';
 class TextEditor extends Component {
   constructor(props) {
     super(props);
+    this.projectName = localStorage.getItem('currentProject');
 
     this.state = {
       boards: [],
@@ -16,11 +17,14 @@ class TextEditor extends Component {
     };
   }
 
-  componentDidMount() {
-    const newState = ipcRenderer.sendSync(
-      'api:initializeProjectState',
-      this.projectName,
-    );
+  async componentDidMount() {
+    if (!this.projectName) {
+      return;
+    }
+
+    const newState = await tauriSendSync('api:initializeProjectState', {
+      projectName: this.projectName,
+    });
 
     this.setState(newState);
   }

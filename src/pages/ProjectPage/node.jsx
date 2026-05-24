@@ -30,6 +30,7 @@ ItemRender.propTypes = {
 function Node(props) {
   const [isEditing, setIsEditing] = useState(false);
   const [isFirstEdit, setIsFirstEdit] = useState(false);
+  const [tagColors, setTagColors] = useState({});
   const {
     deleteNode,
     index,
@@ -61,6 +62,27 @@ function Node(props) {
 
   const isDragDisabled = node.isLocked;
 
+  useEffect(() => {
+    const loadTagColors = async () => {
+      try {
+        const globalTags = await TagController.getTags();
+        if (Array.isArray(globalTags)) {
+          const map = {};
+          globalTags.forEach((tag) => {
+            map[tag.title || tag.id] = tag.color || '';
+          });
+          setTagColors(map);
+        } else {
+          setTagColors({});
+        }
+      } catch (e) {
+        console.error('[Node] Error loading global tags:', e);
+        setTagColors({});
+      }
+    };
+    loadTagColors();
+  }, []);
+
   const renderDueDate = () => {
     if (!node.dueDate) return null;
 
@@ -81,7 +103,8 @@ function Node(props) {
   };
 
   const renderLabels = () => {
-    if (!node.labels || node.labels.length === 0) return null;
+    // Tags are Trello labels (canonical); skip duplicate label row when tags exist
+    if (node.tags?.length || !node.labels || node.labels.length === 0) return null;
 
     return (
       <div style={{ marginTop: '8px' }}>
@@ -119,13 +142,6 @@ function Node(props) {
   const renderTags = () => {
     if (!node.tags || node.tags.length === 0) return null;
 
-    // Get tag colors from global tags
-    const globalTags = TagController.getTags() || [];
-    const tagMap = {};
-    globalTags.forEach((tag) => {
-      tagMap[tag.title || tag.id] = tag.color || '';
-    });
-
     return (
       <div
         style={{
@@ -135,11 +151,14 @@ function Node(props) {
           gap: '4px',
         }}
       >
-        {node.tags.map((tag) => (
-          <Tag key={tag} color={tagMap[tag] || 'default'} style={{ margin: 0 }}>
-            {tag}
-          </Tag>
-        ))}
+        {node.tags.map((tag) => {
+          const color = tagColors[tag] || 'default';
+          return (
+            <Tag key={tag} color={color} style={{ margin: 0 }}>
+              {tag}
+            </Tag>
+          );
+        })}
       </div>
     );
   };

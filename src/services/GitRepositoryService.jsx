@@ -1,4 +1,6 @@
-const fs = require('fs');
+// TODO: fs is a Node.js module and won't work in the browser/Tauri frontend
+// This needs to be refactored to use Tauri file system commands
+// import fs from 'fs'; // Commented out - needs Tauri replacement
 
 export default class GitRepositoryService {
   constructor(lokiService) {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const ISO8601ServiceInstance = require('./ISO8601Service').default;
+import ISO8601ServiceInstance from './ISO8601Service';
 
 const ParentService = {
   /**
@@ -47,11 +47,15 @@ const ParentService = {
   },
 
   createParent(lokiService, parentTitle, trelloData) {
+    console.log('[ParentService] createParent called:', { parentTitle, trelloData: !!trelloData });
     const { parents } = lokiService;
 
+    console.log('[ParentService] Current parents count:', parents.data.length);
     const nextId = parents.data.length
       ? parents.chain().simplesort('$loki', true).data()[0].$loki + 1
       : 1;
+
+    console.log('[ParentService] Next parent ID:', nextId);
 
     const parentData = {
       id: `parent-${nextId}`,
@@ -64,20 +68,25 @@ const ParentService = {
     };
 
     if (trelloData) {
-      console.log('trelloData', trelloData);
+      console.log('[ParentService] Adding trelloData to parent');
       parentData.trello = trelloData;
     }
 
+    console.log('[ParentService] Inserting parent into database');
     const newParent = parents.insert(parentData);
+    console.log('[ParentService] Parent inserted:', newParent);
+    
+    console.log('[ParentService] Adding parent to order');
     this.addParentToOrder(lokiService, `parent-${nextId}`);
-    lokiService.saveDB();
-
+    
+    console.log('[ParentService] Parent created successfully');
     return newParent;
   },
 
   addParentToOrder(lokiService, newParentId) {
+    console.log('[ParentService] addParentToOrder called:', newParentId);
     lokiService.parentOrder.insert({ parentId: newParentId });
-    lokiService.saveDB();
+    console.log('[ParentService] Parent added to order');
   },
 
   deleteParent(lokiService, parentId) {

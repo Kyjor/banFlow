@@ -1,7 +1,7 @@
 # banFlow: Kanban and Time Tracking Made Easy
 *Beware: this project is in a VERY early state and I would not recommend using it yet for an actual project. You may lose all data.*
 
-**banFlow** is a desktop Electron application that combines project management with integrated time tracking. It's designed to be an all-in-one solution for individuals who want to manage their tasks, track time, and maintain documentation without needing separate tools like a Kanban board and Excel spreadsheets.
+**banFlow** is a desktop application (Tauri) that combines project management with integrated time tracking. It's designed to be an all-in-one solution for individuals who want to manage their tasks, track time, and maintain documentation without needing separate tools like a Kanban board and Excel spreadsheets.
 
 ## Core Features
 
@@ -63,12 +63,11 @@
 
 ## Technical Architecture
 
-- **Frontend**: React with Ant Design UI components
-- **Backend**: Electron main process with IPC (Inter-Process Communication)
-- **Data Storage**: LokiJS (in-memory database) for local data persistence
+- **Frontend**: React with Ant Design UI components (Vite)
+- **Backend**: Tauri (Rust) with invoke commands for data and system APIs
+- **Data Storage**: LokiJS-backed persistence via Tauri commands
 - **File Handling**: Custom services for Git operations, Aseprite files, images, etc.
-- **Build System**: Webpack with TypeScript support
-- **State Management**: React component state with IPC for main/renderer communication
+- **Build System**: Vite + Tauri CLI
 
 ## Use Case
 
@@ -89,7 +88,7 @@ banFlow is designed for:
 ## Key Differentiators
 
 1. **Integrated Time Tracking**: Unlike separate Kanban boards, banFlow tracks time directly on tasks
-2. **Desktop Application**: Native Electron app with full system integration
+2. **Desktop Application**: Native app via Tauri with system integration
 3. **Git-First**: Built-in Git client with enhanced diff viewing
 4. **Documentation Hub**: Markdown editor with cross-referencing and backlinks
 5. **All-in-One**: Combines multiple tools (Kanban, time tracking, docs, Git) in one interface
@@ -99,7 +98,7 @@ banFlow is designed for:
 - `/src/pages/`: Main application pages (Dashboard, ProjectPage, DocsPage, Git, Analytics, etc.)
 - `/src/components/`: Reusable UI components (KanbanBoard, Timer, NodeModal, etc.)
 - `/src/services/`: Business logic services (GitService, TimerService, NodeService, etc.)
-- `/src/main/`: Electron main process code
+- `/src-tauri/`: Rust backend (commands, persistence, platform APIs)
 - `/src/api/`: API controllers for data operations
 
 ## License
@@ -132,9 +131,3 @@ Markdown document editor and reader:
 <br/>
 Project settings:
 <img width="2560" height="1408" alt="Screenshot From 2026-02-16 14-22-29" src="https://github.com/user-attachments/assets/c2018cda-fec3-4fa9-930a-496067ee4ea5" />
-
-
-## License
-banFlow is copyright, All Rights Reserved, Kyjor, LLC 2024.
-
-Feel free to use the program itself in the development of projects, commercial or personal. You can also build banFlow yourself and use it freely for personal reasons. Please also do not distribute builds of banFlow to others.

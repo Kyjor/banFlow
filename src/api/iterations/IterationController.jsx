@@ -1,8 +1,8 @@
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../utils/tauri';
 
 /**
  * @class IterationController
- * @desc Interacts with the ipcRenderer to perform CRUD operations on nodes. This is the interface between the UI and the database.
+ * @desc Tauri invoke layer for iterations (UI ↔ backend).
  */
 const IterationController = {
   /**
@@ -12,8 +12,8 @@ const IterationController = {
    * @returns {array} iteration - all iterations
    * @permission {Read}
    */
-  getIterations() {
-    return ipcRenderer.sendSync('api:getIterations');
+  async getIterations() {
+    return await tauriSendSync('api:getIterations');
   },
 
   /**
@@ -24,20 +24,20 @@ const IterationController = {
    * @returns {object} iteration - the newly created iteration
    * @permission {Modification}
    */
-  createIteration(iterationTitle) {
-    return ipcRenderer.sendSync('api:createIteration', iterationTitle);
+  async createIteration(iterationTitle) {
+    return await tauriSendSync('api:createIteration', iterationTitle);
   },
 
-  deleteIteration(iterationId) {
-    ipcRenderer.sendSync('api:deleteIteration', iterationId);
+  async deleteIteration(iterationId) {
+    await tauriSendSync('api:deleteIteration', iterationId);
   },
 
-  selectIteration(iterationId) {
-    ipcRenderer.sendSync('api:selectIteration', iterationId);
+  async selectIteration(iterationId) {
+    await tauriSendSync('api:selectIteration', iterationId);
   },
 
-  updateIterationProperty(propertyToUpdate, iterationId, newValue) {
-    return ipcRenderer.sendSync(
+  async updateIterationProperty(propertyToUpdate, iterationId, newValue) {
+    return await tauriSendSync(
       'api:updateIterationProperty',
       propertyToUpdate,
       iterationId,

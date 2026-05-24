@@ -1,12 +1,2 @@
-*       text    eol=lf
-*.exe   binary
-*.png   binary
-*.jpg   binary
-*.jpeg  binary
-*.ico   binary
-*.icns  binary
-*.eot   binary
-*.otf   binary
-*.ttf   binary
-*.woff  binary
-*.woff2 binary
+jmdict-all-3.6.1.json filter=lfs diff=lfs merge=lfs -text
+public/jmdict-all-3.6.1.json filter=lfs diff=lfs merge=lfs -text

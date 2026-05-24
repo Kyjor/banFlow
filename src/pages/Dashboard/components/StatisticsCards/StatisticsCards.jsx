@@ -118,8 +118,4 @@ StatisticsCards.propTypes = {
   isAggregate: PropTypes.bool,
 };
 
-StatisticsCards.defaultProps = {
-  isAggregate: false,
-};
-
 export default StatisticsCards;

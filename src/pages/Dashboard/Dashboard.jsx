@@ -26,8 +26,7 @@ import {
 import { PlusOutlined } from '@ant-design/icons';
 import dateFormat from 'dateformat';
 import moment from 'moment';
-import { ipcRenderer } from 'electron';
-import TabPane from 'antd/lib/tabs/TabPane';
+import { tauriOn } from '../../utils/tauri';
 import Layout from '../../layouts/App';
 // Components
 import ProjectListContainer from '../../components/Projects/ProjectListContainer';
@@ -42,6 +41,7 @@ import StatisticsCards from './components/StatisticsCards/StatisticsCards';
 import AggregateView from './components/AggregateView/AggregateView';
 import {
   loadMultipleProjectsData,
+  loadProjectData,
   getAllProjectNames,
 } from './utils/projectDataLoader';
 import {
@@ -52,6 +52,40 @@ import {
 } from './utils/statisticsCalculations';
 
 const { Text } = Typography;
+
+function collectionToIdMap(items) {
+  if (!items) {
+    return {};
+  }
+  if (!Array.isArray(items)) {
+    return items;
+  }
+  return items.reduce((acc, item) => {
+    if (item?.id) {
+      acc[item.id] = item;
+    }
+    return acc;
+  }, {});
+}
+
+function normalizeParentOrder(parentOrder) {
+  if (!Array.isArray(parentOrder)) {
+    return [];
+  }
+  return parentOrder.map((entry) => {
+    if (typeof entry === 'string') {
+      return entry;
+    }
+    return entry?.parentId ?? entry?.parent_id ?? entry;
+  });
+}
+
+function metadataTitles(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+  return items.map((item) => item?.title ?? item?.name ?? item).filter(Boolean);
+}
 
 /**
  * Home
@@ -67,17 +101,17 @@ class Dashboard extends Component {
     const savedSelectedProjects = localStorage.getItem(
       'dashboardSelectedProjects',
     );
-    const allProjects = getAllProjectNames();
+    // Initialize with empty array, will load in componentDidMount
     const initialSelectedProjects = savedSelectedProjects
       ? JSON.parse(savedSelectedProjects)
-      : allProjects; // Default to all projects
+      : []; // Will be populated in componentDidMount
 
     this.state = {
       selectedProject: '',
       isLokiLoaded: false,
       // Multi-project state
       viewMode: 'aggregate', // Default to aggregate view
-      availableProjects: allProjects,
+      availableProjects: [],
       selectedProjects: initialSelectedProjects,
       projectsData: [],
       isLoadingProjects: false,
@@ -91,15 +125,18 @@ class Dashboard extends Component {
     };
 
     const self = this;
-    ipcRenderer.on('UpdateCurrentProject', function (e, projectName) {
+    tauriOn('UpdateCurrentProject', function (e, projectName) {
       self.lokiServiceLoadedCallback(projectName);
+    }).then((unlisten) => {
+      // Store unlisten function for cleanup
+      this.unlistenUpdateCurrentProject = unlisten;
     });
   }
 
-  componentDidMount() {
-    this.loadAvailableProjects();
+  async componentDidMount() {
+    await this.loadAvailableProjects();
     // Load all projects by default
-    const allProjects = getAllProjectNames();
+    const allProjects = await getAllProjectNames();
     if (allProjects.length > 0) {
       this.setState(
         {
@@ -114,50 +151,56 @@ class Dashboard extends Component {
   }
 
   componentWillUnmount() {
-    ipcRenderer.removeAllListeners('UpdateCurrentProject');
+    if (this.unlistenUpdateCurrentProject) {
+      this.unlistenUpdateCurrentProject();
+    }
   }
 
-  // eslint-disable-next-line react/no-unused-class-component-methods
-  lokiServiceLoadedCallback = (projectName) => {
-    const nodeTypeList = NodeController.getNodeTypes();
-    const nodeTypeArray = [];
-    const nodeStateList = NodeController.getNodeStates();
-    const nodeStateArray = [];
-    const tagList = TagController.getTags();
-    const tagArray = [];
-
-    nodeTypeList.forEach((thisNodeType) => {
-      nodeTypeArray.push(thisNodeType.title);
-    });
-    nodeStateList.forEach((thisNodeState) => {
-      nodeStateArray.push(thisNodeState.title);
-    });
-    tagList.forEach((thisTag) => {
-      tagArray.push(thisTag.title);
-    });
-
-    // Normalize project name - remove .json extension if present
+  loadSingleProjectState = async (projectName) => {
     let normalizedProjectName = projectName ? projectName.trim() : '';
+    if (!normalizedProjectName) {
+      return;
+    }
     if (normalizedProjectName.endsWith('.json')) {
       normalizedProjectName = normalizedProjectName
         .slice(0, normalizedProjectName.lastIndexOf('.json'))
         .trim();
     }
 
-    const newState = {
-      ...this.state,
-      nodes: NodeController.getNodes(),
-      parents: ParentController.getParents(),
-      parentOrder: ParentController.getParentOrder(),
-      nodeTypes: nodeTypeArray,
-      nodeStates: nodeStateArray,
-      selectedProject: normalizedProjectName,
-      tags: tagArray,
-      timerPreferences: TimerController.getTimerPreferences(),
-      isLokiLoaded: true,
-    };
+    localStorage.setItem('currentProject', normalizedProjectName);
 
-    this.setState(newState);
+    try {
+      const data = await loadProjectData(normalizedProjectName);
+      const timerPreferences = await TimerController.getTimerPreferences();
+
+      this.setState((prevState) => ({
+        ...prevState,
+        selectedProject: normalizedProjectName,
+        nodes: collectionToIdMap(data.nodes),
+        parents: collectionToIdMap(data.parents),
+        parentOrder: normalizeParentOrder(data.parentOrder),
+        nodeTypes: metadataTitles(data.nodeTypes),
+        nodeStates: metadataTitles(data.nodeStates),
+        tags: metadataTitles(data.tags),
+        timerPreferences,
+        isLokiLoaded: true,
+      }));
+    } catch (error) {
+      console.error('[Dashboard] Failed to load single project:', error);
+      message.error('Failed to load project data');
+      this.setState((prevState) => ({
+        ...prevState,
+        selectedProject: normalizedProjectName,
+        isLokiLoaded: false,
+        nodes: null,
+        parents: null,
+      }));
+    }
+  };
+
+  // eslint-disable-next-line react/no-unused-class-component-methods
+  lokiServiceLoadedCallback = async (projectName) => {
+    await this.loadSingleProjectState(projectName);
   };
 
   // eslint-disable-next-line class-methods-use-this
@@ -207,7 +250,6 @@ class Dashboard extends Component {
   updateSelectedProject = (projectName) => {
     if (projectName) {
       const normalizedName = projectName.trim();
-      // Reset loading state when selecting a new project
       this.setState({
         selectedProject: normalizedName,
         viewMode: 'single',
@@ -215,18 +257,47 @@ class Dashboard extends Component {
         nodes: null,
         parents: null,
       });
-      ProjectController.openProject(normalizedName);
+      this.loadSingleProjectState(normalizedName);
     }
   };
 
-  loadAvailableProjects = () => {
+  loadAvailableProjects = async () => {
     try {
-      const projects = getAllProjectNames();
+      const projects = await getAllProjectNames();
       this.setState({ availableProjects: projects });
+      return projects;
     } catch (error) {
       console.error('Error loading available projects:', error);
       message.error('Failed to load available projects');
+      return [];
     }
+  };
+
+  handleProjectsChanged = async () => {
+    const { selectedProjects, availableProjects: previousAvailable } =
+      this.state;
+    const allProjects = await this.loadAvailableProjects();
+    if (allProjects.length === 0) {
+      return;
+    }
+
+    const hadAllSelected =
+      previousAvailable.length > 0 &&
+      selectedProjects.length === previousAvailable.length;
+    const nextSelected = hadAllSelected
+      ? allProjects
+      : [
+          ...new Set([
+            ...selectedProjects.filter((p) => allProjects.includes(p)),
+            ...allProjects.filter((p) => !selectedProjects.includes(p)),
+          ]),
+        ];
+
+    this.setState({ selectedProjects: nextSelected }, () => {
+      if (nextSelected.length > 0) {
+        this.loadProjectsData(nextSelected);
+      }
+    });
   };
 
   // eslint-disable-next-line react/no-unused-class-component-methods
@@ -503,6 +574,131 @@ class Dashboard extends Component {
       }
     }
 
+    const dashboardTabItems = [
+      {
+        key: 'aggregate',
+        label: 'All Projects',
+        children: (
+          <AggregateView
+            projectsData={projectsData}
+            selectedProjects={selectedProjects}
+            onProjectClick={this.handleProjectClick}
+            isLoading={isLoadingProjects}
+            dayCellRender={this.dayCellRender}
+            dateCellRender={this.dateCellRender}
+          />
+        ),
+      },
+      {
+        key: 'single',
+        label: 'Single Project',
+        children: selectedProject ? (
+          <>
+            <PageHeader
+              ghost={false}
+              title={
+                <Link to={`/projectPage/${selectedProject}`}>
+                  {selectedProject}
+                </Link>
+              }
+              extra={[
+                <Button
+                  key="open-project"
+                  type="primary"
+                  style={{ minWidth: 140 }}
+                >
+                  <Link
+                    to={`/projectPage/${selectedProject}`}
+                    style={{ color: '#fff' }}
+                  >
+                    Open Project
+                  </Link>
+                </Button>,
+              ]}
+            >
+              {singleProjectStats && (
+                <StatisticsCards stats={singleProjectStats} />
+              )}
+            </PageHeader>
+            {isLokiLoaded ? (
+              <div style={{ marginTop: '24px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '16px',
+                    marginTop: '24px',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '50%',
+                      paddingRight: '8px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        borderRadius: '12px',
+                        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
+                        padding: '20px',
+                        border: '1px solid rgba(0, 0, 0, 0.06)',
+                        height: '400px',
+                        overflow: 'auto',
+                      }}
+                    >
+                      <Calendar
+                        value={moment(selectedDate)}
+                        onSelect={(date) => {
+                          this.setState({ selectedDate: date });
+                        }}
+                        dateCellRender={this.dateCellRender}
+                        fullscreen={false}
+                        validRange={[
+                          moment(selectedDate).startOf('month'),
+                          moment(selectedDate).endOf('month'),
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      width: '50%',
+                      paddingLeft: '8px',
+                    }}
+                  >
+                    <DayByDayCalendar
+                      dayCellRender={this.dayCellRender}
+                      currentDate={selectedDate}
+                      onDateChange={(date) => {
+                        this.setState({ selectedDate: date });
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Spin size="large" />
+                <div style={{ marginTop: '16px', color: '#666' }}>
+                  Loading project data...
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '40px',
+              color: '#999',
+            }}
+          >
+            Select a project to view details
+          </div>
+        ),
+      },
+    ];
+
     return (
       <Layout>
         <div className="home">
@@ -511,6 +707,7 @@ class Dashboard extends Component {
               <ProjectListContainer
                 openProjectDetails={this.updateSelectedProject}
                 selectedProject={selectedProject}
+                onProjectsChanged={this.handleProjectsChanged}
               />
             </div>
             <div className="dashboard-content">
@@ -544,128 +741,8 @@ class Dashboard extends Component {
                 activeKey={viewMode}
                 onChange={this.handleViewModeChange}
                 defaultActiveKey="aggregate"
-              >
-                <TabPane tab="All Projects" key="aggregate">
-                  <AggregateView
-                    projectsData={projectsData}
-                    selectedProjects={selectedProjects}
-                    onProjectClick={this.handleProjectClick}
-                    isLoading={isLoadingProjects}
-                    dayCellRender={this.dayCellRender}
-                    dateCellRender={this.dateCellRender}
-                  />
-                </TabPane>
-                <TabPane tab="Single Project" key="single">
-                  {selectedProject ? (
-                    <>
-                      <PageHeader
-                        ghost={false}
-                        title={
-                          <Link to={`/projectPage/${selectedProject}`}>
-                            {selectedProject}
-                          </Link>
-                        }
-                        extra={[
-                          <Button
-                            key="open-project"
-                            type="primary"
-                            style={{ minWidth: 140 }}
-                          >
-                            <Link
-                              to={`/projectPage/${selectedProject}`}
-                              style={{ color: '#fff' }}
-                            >
-                              Open Project
-                            </Link>
-                          </Button>,
-                        ]}
-                      >
-                        {singleProjectStats && (
-                          <StatisticsCards stats={singleProjectStats} />
-                        )}
-                      </PageHeader>
-                      {isLokiLoaded ? (
-                        <div style={{ marginTop: '24px' }}>
-                          {/* Bottom section with two calendars */}
-                          <div
-                            style={{
-                              display: 'flex',
-                              gap: '16px',
-                              marginTop: '24px',
-                            }}
-                          >
-                            {/* Left: Full Calendar */}
-                            <div
-                              style={{
-                                width: '50%',
-                                paddingRight: '8px',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  background: 'rgba(255, 255, 255, 0.95)',
-                                  borderRadius: '12px',
-                                  boxShadow: '0 6px 24px rgba(0, 0, 0, 0.1)',
-                                  padding: '20px',
-                                  border: '1px solid rgba(0, 0, 0, 0.06)',
-                                  height: '400px',
-                                  overflow: 'auto',
-                                }}
-                              >
-                                <Calendar
-                                  value={moment(selectedDate)}
-                                  onSelect={(date) => {
-                                    this.setState({ selectedDate: date });
-                                  }}
-                                  dateCellRender={this.dateCellRender}
-                                  fullscreen={false}
-                                  validRange={[
-                                    moment(selectedDate).startOf('month'),
-                                    moment(selectedDate).endOf('month'),
-                                  ]}
-                                />
-                              </div>
-                            </div>
-                            {/* Right: Day by Day Calendar */}
-                            <div
-                              style={{
-                                width: '50%',
-                                paddingLeft: '8px',
-                              }}
-                            >
-                              <DayByDayCalendar
-                                dayCellRender={this.dayCellRender}
-                                currentDate={selectedDate}
-                                onDateChange={(date) => {
-                                  this.setState({ selectedDate: date });
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ textAlign: 'center', padding: '40px' }}>
-                          <Spin size="large" />
-                          <div style={{ marginTop: '16px', color: '#666' }}>
-                            Loading project data...
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div
-                      style={{
-                        textAlign: 'center',
-                        padding: '40px',
-                        color: '#999',
-                      }}
-                    >
-                      Select a project to view details
-                    </div>
-                  )}
-                </TabPane>
-              </Tabs>
-
+                items={dashboardTabItems}
+              />
               {/* Quick Add Modal */}
               <Modal
                 title="Quick Add Todo"

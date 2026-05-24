@@ -181,10 +181,10 @@ class Analytics extends Component {
     };
   }
 
-  componentDidMount() {
-    this.loadAvailableProjects();
+  async componentDidMount() {
+    await this.loadAvailableProjects();
     // Default to all projects
-    const availableProjects = getAllProjectNames();
+    const availableProjects = await getAllProjectNames();
     this.setState(
       { availableProjects, selectedProjects: availableProjects },
       () => {
@@ -195,8 +195,8 @@ class Analytics extends Component {
     );
   }
 
-  loadAvailableProjects = () => {
-    const availableProjects = getAllProjectNames();
+  loadAvailableProjects = async () => {
+    const availableProjects = await getAllProjectNames();
     this.setState({ availableProjects });
   };
 

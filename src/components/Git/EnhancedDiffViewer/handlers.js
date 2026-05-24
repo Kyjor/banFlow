@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { ipcRenderer } from 'electron';
+import { tauriInvoke, tauriSendSync, tauriSend, tauriOn } from '../../../utils/tauri';
 import { message } from 'antd';
 
 export const useStagingHandlers = (
@@ -206,7 +206,7 @@ export const useEditHandlers = (
   const loadFileForEditing = useCallback(async () => {
     if (!selectedFile || !currentRepository) return;
     try {
-      const result = await ipcRenderer.invoke(
+      const result = await await tauriInvoke(
         'git:readFile',
         currentRepository,
         selectedFile,
@@ -232,7 +232,7 @@ export const useEditHandlers = (
     if (!selectedFile || !currentRepository) return;
     setIsSaving(true);
     try {
-      const result = await ipcRenderer.invoke(
+      const result = await await tauriInvoke(
         'git:writeFile',
         currentRepository,
         selectedFile,
@@ -323,7 +323,7 @@ export const useInlineEditHandlers = (
       return;
     setIsSaving(true);
     try {
-      const result = await ipcRenderer.invoke(
+      const result = await await tauriInvoke(
         'git:readFile',
         currentRepository,
         selectedFile,
@@ -361,7 +361,7 @@ export const useInlineEditHandlers = (
       });
 
       const newContent = fileLines.join('\n');
-      const writeResult = await ipcRenderer.invoke(
+      const writeResult = await await tauriInvoke(
         'git:writeFile',
         currentRepository,
         selectedFile,

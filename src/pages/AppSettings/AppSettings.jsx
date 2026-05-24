@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react';
+import React, { Component, memo } from 'react';
 import {
   Tabs,
   Card,
@@ -26,7 +26,12 @@ import {
   ReloadOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons';
-import { ipcRenderer } from 'electron';
+import {
+  tauriInvoke,
+  tauriSendSync,
+  tauriSend,
+  openExternalUrl,
+} from '../../utils/tauri';
 import BackupManager from './BackupManager';
 import Layout from '../../layouts/App';
 import APIKeyInput from '../../components/APIKeyInput/APIKeyInput';
@@ -36,12 +41,16 @@ const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
+const IS_LINUX =
+  typeof navigator !== 'undefined' && /Linux/i.test(navigator.userAgent);
+
 // Backup Manager Component
 
-class AppSettings extends PureComponent {
+class AppSettings extends Component {
   constructor(props) {
     super(props);
     this.trelloKey = `eeccec930a673bbbd5b6142ff96d85d9`;
+    localStorage.setItem('trelloKey', this.trelloKey);
     this.authLink = `https://trello.com/1/authorize?expiration=30days&scope=read,write&response_type=token&key=${this.trelloKey}`;
 
     // Load app settings from localStorage
@@ -84,45 +93,55 @@ class AppSettings extends PureComponent {
       // Game
       gameModeEnabled: appSettings.gameModeEnabled || false,
 
+      // Linux launch (X11 for timer always-on-top on Wayland)
+      preferX11: false,
+      x11RestartNeeded: false,
+
       // UI State
       activeTab: 'appearance',
       saving: false,
     };
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     // Load data path from main process if available
-    ipcRenderer
-      .invoke('app:getDataPath')
-      .then((path) => {
-        if (path) {
-          this.setState({ dataPath: path });
-        }
-        return undefined;
-      })
-      .catch((error) => {
-        console.error('Failed to get data path:', error);
-      });
+    // TODO: Implement app:getDataPath Tauri command if needed
+    // try {
+    //   const path = await tauriInvoke('app:getDataPath');
+    //   if (path) {
+    //     this.setState({ dataPath: path });
+    //   }
+    // } catch (error) {
+    //   console.error('Failed to get data path:', error);
+    // }
 
     // Load game mode state
-    ipcRenderer
-      .invoke('game:getState')
-      .then((state) => {
-        if (state) {
-          this.setState({ gameModeEnabled: state.isEnabled || false });
-          gameService.setEnabled(state.isEnabled || false);
-        }
-        return undefined;
-      })
-      .catch((error) => {
-        console.error('Failed to get game state:', error);
-      });
+    try {
+      const state = await tauriInvoke('game:getState');
+      if (state) {
+        this.setState({ gameModeEnabled: state.isEnabled || false });
+        gameService.setEnabled(state.isEnabled || false);
+      }
+    } catch (error) {
+      console.error('Failed to get game state:', error);
+    }
 
     // Apply theme on mount
     this.applyTheme();
+
+    if (IS_LINUX) {
+      try {
+        const prefs = await tauriInvoke('utils:getLaunchPrefs');
+        this.setState({
+          preferX11: Boolean(prefs?.preferX11),
+        });
+      } catch (error) {
+        console.error('Failed to load launch preferences:', error);
+      }
+    }
   }
 
-  saveSetting = (key, value) => {
+  saveSetting = async (key, value) => {
     const appSettings = JSON.parse(localStorage.getItem('appSettings') || '{}');
     appSettings[key] = value;
     localStorage.setItem('appSettings', JSON.stringify(appSettings));
@@ -151,8 +170,8 @@ class AppSettings extends PureComponent {
     // Update game service when game mode changes
     if (key === 'gameModeEnabled') {
       gameService.setEnabled(value);
-      ipcRenderer.invoke('game:saveState', {
-        inventory: gameService.getInventory(),
+      await tauriInvoke('game:saveState', {
+        ...gameService.getInventory(),
         stats: gameService.getStats(),
         isEnabled: value,
       });
@@ -165,13 +184,15 @@ class AppSettings extends PureComponent {
     if (backupEnabled && backupInterval && maxBackups) {
       // Get all projects and start/update backup schedules
       try {
-        const projects = (await ipcRenderer.invoke('api:getProjects')) || [];
+        const projects = (await tauriInvoke('project:getProjects')) || [];
         await Promise.all(
           projects.map(async (project) => {
-            const projectName = project.text || project.name || project;
+            const raw = project.text || project.name || project;
+            const projectName =
+              typeof raw === 'string' ? raw.replace(/\.json~?$/, '') : raw;
             if (projectName && !projectName.startsWith('_')) {
-              await ipcRenderer.invoke('backup:stopSchedule', projectName);
-              await ipcRenderer.invoke(
+              await tauriInvoke('backup:stopSchedule', projectName);
+              await tauriInvoke(
                 'backup:startSchedule',
                 projectName,
                 backupInterval,
@@ -186,12 +207,14 @@ class AppSettings extends PureComponent {
     } else {
       // Stop all backup schedules
       try {
-        const projects = (await ipcRenderer.invoke('api:getProjects')) || [];
+        const projects = (await tauriInvoke('project:getProjects')) || [];
         await Promise.all(
           projects.map(async (project) => {
-            const projectName = project.text || project.name || project;
+            const raw = project.text || project.name || project;
+            const projectName =
+              typeof raw === 'string' ? raw.replace(/\.json~?$/, '') : raw;
             if (projectName && !projectName.startsWith('_')) {
-              await ipcRenderer.invoke('backup:stopSchedule', projectName);
+              await tauriInvoke('backup:stopSchedule', projectName);
             }
           }),
         );
@@ -290,7 +313,35 @@ class AppSettings extends PureComponent {
     }, 500);
   };
 
-  handleReset = () => {
+  handlePreferX11Change = async (checked) => {
+    try {
+      await tauriInvoke('utils:saveLaunchPrefs', { preferX11: checked });
+      this.setState({ preferX11: checked, x11RestartNeeded: true });
+      message.info('Restart banFlow to apply the display backend change.');
+    } catch (error) {
+      console.error('Failed to save launch preferences:', error);
+      message.error('Failed to save display preference');
+    }
+  };
+
+  handleRestartApp = async () => {
+    try {
+      await tauriInvoke('utils:restartApp');
+    } catch (error) {
+      console.error('Failed to restart application:', error);
+      message.error('Failed to restart application');
+    }
+  };
+
+  handleReset = async () => {
+    if (IS_LINUX) {
+      try {
+        await tauriInvoke('utils:saveLaunchPrefs', { preferX11: false });
+      } catch (error) {
+        console.error('Failed to reset launch preferences:', error);
+      }
+    }
+
     this.setState({
       theme: 'light',
       primaryColor: '#1890ff',
@@ -311,12 +362,26 @@ class AppSettings extends PureComponent {
       debugMode: false,
       devTools: false,
       gameModeEnabled: false,
+      preferX11: false,
+      x11RestartNeeded: IS_LINUX,
     });
-    message.info('Settings reset to defaults');
+    message.info(
+      IS_LINUX
+        ? 'Settings reset to defaults. Restart banFlow to apply display changes.'
+        : 'Settings reset to defaults',
+    );
   };
 
-  handleAuthApp = () => {
-    window.open(this.authLink, '_blank');
+  handleAuthApp = async () => {
+    try {
+      await openExternalUrl(this.authLink);
+      message.info(
+        'Authorize in your browser, then paste the token below and click Save.',
+      );
+    } catch (error) {
+      console.error('Failed to open Trello authorization URL:', error);
+      message.error('Could not open Trello authorization page');
+    }
   };
 
   handleGradientChange = (index, color) => {
@@ -350,6 +415,8 @@ class AppSettings extends PureComponent {
       debugMode,
       devTools,
       gameModeEnabled,
+      preferX11,
+      x11RestartNeeded,
       activeTab,
       saving,
     } = this.state;
@@ -724,7 +791,11 @@ class AppSettings extends PureComponent {
                     <Divider />
                     <div>
                       <Text strong>Trello API Token</Text>
-                      <APIKeyInput />
+                      <APIKeyInput
+                        onSaved={(trelloToken) =>
+                          this.setState({ trelloToken })
+                        }
+                      />
                     </div>
                     <Button onClick={this.handleAuthApp} type="primary">
                       Authorize Trello
@@ -770,16 +841,13 @@ class AppSettings extends PureComponent {
                     suffix={
                       <Button
                         type="link"
-                        onClick={() => {
-                          ipcRenderer
-                            .invoke('app:openDataPath')
-                            .then(() => {
-                              message.info('Opening data folder');
-                              return undefined;
-                            })
-                            .catch((error) => {
-                              console.error('Failed to open data path:', error);
-                            });
+                        onClick={async () => {
+                          try {
+                            await tauriInvoke('app:openDataPath');
+                            message.info('Opening data folder');
+                          } catch (error) {
+                            console.error('Failed to open data path:', error);
+                          }
                         }}
                       >
                         Open Folder
@@ -873,15 +941,19 @@ class AppSettings extends PureComponent {
                         try {
                           // Get all projects and backup each
                           const projects =
-                            (await ipcRenderer.invoke('api:getProjects')) || [];
+                            (await tauriInvoke('project:getProjects')) || [];
 
                           const results = await Promise.all(
                             projects.map(async (project) => {
-                              const projectName =
+                              const raw =
                                 project.text || project.name || project;
+                              const projectName =
+                                typeof raw === 'string'
+                                  ? raw.replace(/\.json~?$/, '')
+                                  : raw;
                               if (projectName && !projectName.startsWith('_')) {
                                 try {
-                                  const result = await ipcRenderer.invoke(
+                                  const result = await tauriInvoke(
                                     'backup:create',
                                     projectName,
                                   );
@@ -1026,6 +1098,51 @@ class AppSettings extends PureComponent {
         ),
         children: (
           <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            {IS_LINUX && (
+              <Card title="Linux Display" size="small">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div>
+                      <Text strong>Use X11 display backend</Text>
+                      <Paragraph
+                        type="secondary"
+                        style={{ margin: 0, fontSize: 12 }}
+                      >
+                        Improves timer always-on-top on Wayland (Fedora/GNOME).
+                        Requires a restart.
+                      </Paragraph>
+                    </div>
+                    <Switch
+                      checked={preferX11}
+                      onChange={this.handlePreferX11Change}
+                    />
+                  </div>
+                  {x11RestartNeeded && (
+                    <Alert
+                      message="Restart required"
+                      description="Quit and reopen banFlow, or restart now to apply the display backend."
+                      type="info"
+                      showIcon
+                      action={
+                        <Button
+                          size="small"
+                          icon={<ReloadOutlined />}
+                          onClick={this.handleRestartApp}
+                        >
+                          Restart now
+                        </Button>
+                      }
+                    />
+                  )}
+                </Space>
+              </Card>
+            )}
             <Card title="Developer Options" size="small">
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div
@@ -1142,4 +1259,5 @@ class AppSettings extends PureComponent {
   }
 }
 
-export default AppSettings;
+// Route re-creates `<AppSettings />` elements every parent render; default memo shallow-compares a new `{}` each time and fails.
+export default memo(AppSettings, () => true);

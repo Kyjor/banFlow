@@ -1,11 +1,8 @@
-const simpleGit = require('simple-git');
-const path = require('path');
-const fs = require('fs');
-const https = require('https');
-const { URL } = require('url');
-const crypto = require('crypto');
-const { execSync } = require('child_process');
-const os = require('os');
+// TODO: These Node.js modules won't work in the browser/Tauri frontend
+// These need to be refactored to use Tauri commands
+import simpleGit from 'simple-git';
+// Note: Node.js built-ins (path, fs, https, crypto, child_process, os) are not available in browser
+// These will need to be replaced with Tauri commands
 
 export default class GitService {
   constructor() {
@@ -1413,10 +1410,10 @@ export default class GitService {
   }
 
   static getOAuthUrl(state, codeChallenge) {
-    const clientId = process.env.GITHUB_CLIENT_ID || 'Ov23liBd1HNOGPQyC90C';
+    const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID || 'Ov23liBd1HNOGPQyC90C';
     // Use localhost for development (more reliable on Linux), custom protocol for production
     const redirectUri =
-      process.env.NODE_ENV === 'production'
+      import.meta.env.MODE === 'production'
         ? 'banflow://oauth/callback'
         : 'http://localhost:3001/oauth/callback';
     const scope = 'repo user';
@@ -1433,11 +1430,11 @@ export default class GitService {
 
   static async exchangeOAuthCode(code, codeVerifier) {
     return new Promise((resolve, reject) => {
-      const clientId = process.env.GITHUB_CLIENT_ID || 'Ov23liBd1HNOGPQyC90C';
-      const clientSecret = process.env.GITHUB_CLIENT_SECRET || ''; // Not needed for PKCE
+      const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID || 'Ov23liBd1HNOGPQyC90C';
+      const clientSecret = import.meta.env.VITE_GITHUB_CLIENT_SECRET || ''; // Not needed for PKCE
       // Use localhost for development (more reliable on Linux), custom protocol for production
       const redirectUri =
-        process.env.NODE_ENV === 'production'
+        import.meta.env.MODE === 'production'
           ? 'banflow://oauth/callback'
           : 'http://localhost:3001/oauth/callback';
 

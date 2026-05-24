@@ -14,7 +14,7 @@ function formatTime(seconds) {
   return `${minutes}m`;
 }
 
-function ActivityHeatmap({ data, title = 'Activity Heatmap' }) {
+function ActivityHeatmap({ data = {}, title = 'Activity Heatmap' }) {
   if (!data || Object.keys(data).length === 0) {
     return (
       <Card title={title} className="time-chart-card">
@@ -107,11 +107,6 @@ function ActivityHeatmap({ data, title = 'Activity Heatmap' }) {
 ActivityHeatmap.propTypes = {
   data: PropTypes.shape({}), // { 'YYYY-MM-DD': seconds }
   title: PropTypes.string,
-};
-
-ActivityHeatmap.defaultProps = {
-  data: {},
-  title: 'Activity Heatmap',
 };
 
 export default ActivityHeatmap;
